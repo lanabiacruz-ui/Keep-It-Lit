@@ -13,6 +13,7 @@ class MainMenu:
         image_path = (
             Path(__file__).resolve().parent.parent
             / "assets"
+            / "maps"
             / "ui"
             / "menu.png"
         )
@@ -35,60 +36,31 @@ class MainMenu:
 
         self.selected = 0
 
-        self.menu_x = int(self.width * 0.315)
-        self.menu_y = int(self.height * 0.405)
-
-        self.option_height = int(self.height * 0.067)
+        self.menu_x = 376
+        self.menu_y = 245
+        self.option_height = 33
 
         self.font = pygame.font.Font(None,42)
         self.small_font = pygame.font.Font(None,24)
 
 
-
     def get_option_rect(self, index):
 
-        y = (
-            self.menu_y
-            + index * self.option_height
-        )
+        y = 227.25 + index * 33
 
         return pygame.Rect(
-            self.menu_x - 18,
-            y - 5,
-            int(self.width * 0.285),
-            self.option_height - 4
+            376,
+            y,
+            290,
+            38
         )
-
 
     def draw(self):
 
-        # Dibujar imagen de fondo
         self.screen.blit(
             self.background,
             (0, 0)
         )
-
-        cover = pygame.Rect(
-            int(self.width * 0.275),
-            int(self.height * 0.365),
-            int(self.width * 0.30),
-            int(self.height * 0.30)
-        )
-
-        surface = pygame.Surface(
-            cover.size,
-            pygame.SRCALPHA
-        )
-
-        surface.fill(
-            (0, 45, 120, 190)
-        )
-
-        self.screen.blit(
-            surface,
-            cover.topleft
-        )
-
 
         for i in range(len(self.options)):
 
@@ -115,23 +87,9 @@ class MainMenu:
 
     def draw_option(self, index):
 
-        text, action = self.options[index]
+        if index == self.selected:
 
-        rect = self.get_option_rect(index)
-
-        selected = (
-            index == self.selected
-        )
-
-
-        if selected:
-
-            pygame.draw.rect(
-                self.screen,
-                (24, 125, 205),
-                rect,
-                border_radius=3
-            )
+            rect = self.get_option_rect(index)
 
             pygame.draw.rect(
                 self.screen,
@@ -141,7 +99,6 @@ class MainMenu:
                 border_radius=3
             )
 
-            # Flecha
             arrow = self.font.render(
                 "▶",
                 True,
@@ -159,24 +116,6 @@ class MainMenu:
                 arrow,
                 arrow_rect
             )
-
-        label = self.font.render(
-            text,
-            True,
-            (255, 255, 255)
-        )
-
-        label_rect = label.get_rect(
-            midleft=(
-                rect.left + 40,
-                rect.centery
-            )
-        )
-
-        self.screen.blit(
-            label,
-            label_rect
-        )
 
     def handle_event(self, event):
 
