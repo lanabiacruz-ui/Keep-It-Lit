@@ -31,4 +31,5 @@ class WorldMap:
                 -camera.y
             )
         )
+        
         )
