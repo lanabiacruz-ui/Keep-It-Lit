@@ -5,53 +5,53 @@ class CollisionMap:
 
     def __init__(self):
 
-        # Tamaño del mapa
-        self.world_width = 1312
-        self.world_height = 1199
+        # Tamaño del mapa (coincide con assets/maps/region_01/mapabeta.png)
+        self.world_width = 512
+        self.world_height = 468
 
         
         # HABITACIONES
 
         # Habitación superior
         self.habitacion_superior = pygame.Rect(
-            420, 65,
-            675, 240
+            164, 25,
+            263, 94
         )
 
         # Habitación central / inicio
         self.habitacion_central = pygame.Rect(
-            435, 365,
-            680, 550
+            170, 142,
+            265, 215
         )
 
         # Habitación izquierda
         self.habitacion_izquierda = pygame.Rect(
-            90, 350,
-            220, 195
+            35, 137,
+            86, 76
         )
 
         # Habitación derecha
         self.habitacion_derecha = pygame.Rect(
-            815, 350,
-            250, 195
+            318, 137,
+            98, 76
         )
 
         # Habitación inferior izquierda
         self.habitacion_inferior = pygame.Rect(
-            115, 925,
-            285, 155
+            45, 361,
+            111, 61
         )
 
         # Habitación del jefe
         self.habitacion_jefe = pygame.Rect(
-            765, 750,
-            345, 310
+            299, 293,
+            135, 121
         )
 
         # Interior de la cabaña
         self.cabana = pygame.Rect(
-            465, 850,
-            185, 170
+            181, 332,
+            72, 66
         )
 
         
@@ -60,38 +60,38 @@ class CollisionMap:
 
         # Central → habitación superior
         self.camino_superior = pygame.Rect(
-            525, 225,
-            575, 140
+            205, 88,
+            224, 55
         )
 
         # Central → izquierda
         self.camino_izquierda = pygame.Rect(
-            300, 430,
-            145, 45
+            117, 168,
+            57, 18
         )
 
         # Central → derecha
         self.camino_derecha = pygame.Rect(
-            665, 430,
-            150, 45
+            260, 168,
+            59, 18
         )
 
         # Izquierda → inferior
         self.camino_inferior = pygame.Rect(
-            170, 535,
-            50, 390
+            66, 209,
+            20, 152
         )
 
         # Central → jefe
         self.camino_jefe = pygame.Rect(
-            905, 535,
-            50, 215
+            353, 209,
+            20, 84
         )
 
         # Central → cabaña
         self.camino_cabana = pygame.Rect(
-            525, 545,
-            50, 305
+            205, 213,
+            20, 119
         )
 
         
@@ -152,7 +152,7 @@ class CollisionMap:
 
     def can_move(self, rect):
 
-        # Revisa las  esquinas del jugador
+        # Revisa las esquinas del jugador
         puntos = [
 
             (rect.left, rect.top),
@@ -170,3 +170,4 @@ class CollisionMap:
                 return False
 
         return True
+        
