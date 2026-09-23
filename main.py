@@ -92,6 +92,12 @@ while running:
         game.update(dt)
 
 
+    # Limpiamos toda la pantalla ANTES de dibujar el estado actual.
+    # Esto evita que queden pixeles de un frame anterior (ej: el mapa
+    # del gameplay pegado debajo del menú) si algún draw() no cubre
+    # el 100% de la pantalla.
+    screen.fill((0, 0, 0))
+
     if current_state == "menu":
 
         menu.draw()
@@ -105,4 +111,3 @@ while running:
 
 
 pygame.quit()
- 
