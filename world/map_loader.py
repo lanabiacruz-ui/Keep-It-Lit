@@ -7,7 +7,7 @@ class WorldMap:
         base = Path(__file__).resolve().parent.parent
 
         # Cargar el mapa
-        map_path = base / "mapabeta.png"
+        map_path = base / "assets" / "maps" / "region_01" / "mapabeta.png"
 
         self.image = pygame.image.load(
             str(map_path)
@@ -30,4 +30,5 @@ class WorldMap:
                 -camera.x,
                 -camera.y
             )
+        )
         )
