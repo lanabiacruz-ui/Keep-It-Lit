@@ -7,20 +7,30 @@ class Player:
 
     def __init__(self, x, y, width=32, height=32):
 
-        # (x, y) es el CENTRO del jugador 
-        self.rect = pygame.Rect(
+        self.image_rect = pygame.Rect(
             x - width // 2,
             y - height // 2,
             width,
             height
         )
 
+
+        hitbox_width = 18
+        hitbox_height = 18
+
+        self.rect = pygame.Rect(
+            x - hitbox_width // 2,
+            y - hitbox_height // 2,
+            hitbox_width,
+            hitbox_height
+        )
+
         self.movement = PlayerMovement()
 
         self.moving = False
 
-        # Color placeholder hasta tener el spritesheet real
         self.color = (220, 70, 70)
+
 
     def update(self, dt, collision_map):
 
@@ -30,9 +40,14 @@ class Player:
             dt
         )
 
+        self.image_rect.center = self.rect.center
+
+
     def draw(self, screen, camera):
 
-        screen_rect = camera.apply(self.rect)
+        screen_rect = camera.apply(
+            self.image_rect
+        )
 
         pygame.draw.rect(
             screen,

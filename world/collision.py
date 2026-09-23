@@ -5,130 +5,157 @@ class CollisionMap:
 
     def __init__(self):
 
-        # Tamaño del mapa (coincide con assets/maps/region_01/mapabeta.png)
-        self.world_width = 512
-        self.world_height = 468
+        # =====================================================
+        # ZONAS CAMINABLES
+        # Coordenadas del mapa ORIGINAL: 512 x 468
+        # =====================================================
 
-        
-        # HABITACIONES
+        self.walkable = [
 
-        # Habitación superior
-        self.habitacion_superior = pygame.Rect(
-            164, 25,
-            263, 94
-        )
+            # -------------------------------------------------
+            # HABITACIÓN SUPERIOR
+            # -------------------------------------------------
+            pygame.Rect(
+                172, 31,
+                94, 59
+            ),
 
-        # Habitación central / inicio
-        self.habitacion_central = pygame.Rect(
-            170, 142,
-            265, 215
-        )
+            # -------------------------------------------------
+            # HABITACIÓN CENTRAL
+            # -------------------------------------------------
+            pygame.Rect(
+                181, 151,
+                87, 61
+            ),
 
-        # Habitación izquierda
-        self.habitacion_izquierda = pygame.Rect(
-            35, 137,
-            86, 76
-        )
+            # -------------------------------------------------
+            # HABITACIÓN IZQUIERDA
+            # -------------------------------------------------
+            pygame.Rect(
+                42, 150,
+                74, 62
+            ),
 
-        # Habitación derecha
-        self.habitacion_derecha = pygame.Rect(
-            318, 137,
-            98, 76
-        )
+            # -------------------------------------------------
+            # HABITACIÓN DERECHA
+            # -------------------------------------------------
+            pygame.Rect(
+                335, 150,
+                80, 62
+            ),
 
-        # Habitación inferior izquierda
-        self.habitacion_inferior = pygame.Rect(
-            45, 361,
-            111, 61
-        )
+            # -------------------------------------------------
+            # HABITACIÓN INFERIOR IZQUIERDA
+            # -------------------------------------------------
+            pygame.Rect(
+                48, 378,
+                64, 49
+            ),
 
-        # Habitación del jefe
-        self.habitacion_jefe = pygame.Rect(
-            299, 293,
-            135, 121
-        )
+            # -------------------------------------------------
+            # HABITACIÓN GRANDE INFERIOR DERECHA
+            # -------------------------------------------------
+            pygame.Rect(
+                315, 309,
+                119, 109
+            ),
 
-        # Interior de la cabaña
-        self.cabana = pygame.Rect(
-            181, 332,
-            72, 66
-        )
+            # -------------------------------------------------
+            # CABAÑA
+            # -------------------------------------------------
+            pygame.Rect(
+                184, 350,
+                78, 57
+            ),
 
-        
-        # CAMINOS / CONEXIONES
-        
 
-        # Central → habitación superior
-        self.camino_superior = pygame.Rect(
-            205, 88,
-            224, 55
-        )
+            # =================================================
+            # CAMINOS
+            # =================================================
 
-        # Central → izquierda
-        self.camino_izquierda = pygame.Rect(
-            117, 168,
-            57, 18
-        )
+            # Central -> superior
+            pygame.Rect(
+                215, 88,
+                20, 65
+            ),
 
-        # Central → derecha
-        self.camino_derecha = pygame.Rect(
-            260, 168,
-            59, 18
-        )
+            # Central -> izquierda
+            pygame.Rect(
+                112, 180,
+                72, 17
+            ),
 
-        # Izquierda → inferior
-        self.camino_inferior = pygame.Rect(
-            66, 209,
-            20, 152
-        )
+            # Central -> derecha
+            pygame.Rect(
+                265, 180,
+                72, 17
+            ),
 
-        # Central → jefe
-        self.camino_jefe = pygame.Rect(
-            353, 209,
-            20, 84
-        )
+            # Izquierda -> inferior
+            pygame.Rect(
+                70, 207,
+                18, 174
+            ),
 
-        # Central → cabaña
-        self.camino_cabana = pygame.Rect(
-            205, 213,
-            20, 119
-        )
+            # Derecha -> habitación grande
+            pygame.Rect(
+                370, 207,
+                19, 105
+            ),
 
-        
-        # ZONAS POR LAS QUE SE PUEDE CAMINAR
-        
-
-        self.zonas_caminables = [
-
-            # Habitaciones
-            self.habitacion_superior,
-            self.habitacion_central,
-            self.habitacion_izquierda,
-            self.habitacion_derecha,
-            self.habitacion_inferior,
-            self.habitacion_jefe,
-            self.cabana,
-
-            # Conexiones
-            self.camino_superior,
-            self.camino_izquierda,
-            self.camino_derecha,
-            self.camino_inferior,
-            self.camino_jefe,
-            self.camino_cabana
+            # Central -> cabaña
+            pygame.Rect(
+                214, 210,
+                20, 143
+            )
         ]
 
-    
-    # ¿SE PUEDE CAMINAR EN ESTA POSICIÓN?
 
-    def is_walkable(self, x, y):
+        # =====================================================
+        # OBJETOS QUE BLOQUEAN
+        # =====================================================
 
-        # Fuera del mapa
-        if x < 0 or y < 0:
-            return False
+        self.obstacles = [
 
-        if x >= self.world_width or y >= self.world_height:
-            return False
+            # -----------------------------
+            # CAMA
+            # -----------------------------
+            pygame.Rect(
+                187, 356,
+                25, 20
+            ),
+
+            # -----------------------------
+            # MUEBLE
+            # -----------------------------
+            pygame.Rect(
+                216, 356,
+                20, 12
+            ),
+
+            # -----------------------------
+            # COMPUTADORA
+            # -----------------------------
+            pygame.Rect(
+                235, 356,
+                16, 18
+            ),
+
+            # -----------------------------
+            # MUEBLE INFERIOR
+            # -----------------------------
+            pygame.Rect(
+                218, 389,
+                20, 11
+            )
+        ]
+
+
+    # =========================================================
+    # COMPROBAR SI UN PUNTO SE PUEDE PISAR
+    # =========================================================
+
+    def point_is_walkable(self, x, y):
 
         point = pygame.Rect(
             int(x),
@@ -137,37 +164,64 @@ class CollisionMap:
             1
         )
 
-        
-        # caminable
-        for zona in self.zonas_caminables:
+        # Primero tiene que estar dentro
+        # de una zona caminable
 
-            if zona.colliderect(point):
-                return True
+        inside_walkable = False
 
-        return False
+        for zone in self.walkable:
 
-    
-    # ¿PUEDE EL JUGADOR MOVERSE?
-    
+            if zone.colliderect(point):
+
+                inside_walkable = True
+                break
+
+        if not inside_walkable:
+            return False
+
+
+        # Después comprobamos obstáculos
+
+        for obstacle in self.obstacles:
+
+            if obstacle.colliderect(point):
+                return False
+
+
+        return True
+
+
+    # =========================================================
+    # COMPROBAR JUGADOR ENTERO
+    # =========================================================
 
     def can_move(self, rect):
 
-        # Revisa las esquinas del jugador
-        puntos = [
+        # Puntos del hitbox
 
+        points = [
+
+            # arriba
             (rect.left, rect.top),
-
+            (rect.centerx, rect.top),
             (rect.right - 1, rect.top),
 
-            (rect.left, rect.bottom - 1),
+            # medio
+            (rect.left, rect.centery),
+            (rect.right - 1, rect.centery),
 
+            # abajo
+            (rect.left, rect.bottom - 1),
+            (rect.centerx, rect.bottom - 1),
             (rect.right - 1, rect.bottom - 1)
         ]
 
-        for x, y in puntos:
 
-            if not self.is_walkable(x, y):
+        for x, y in points:
+
+            if not self.point_is_walkable(x, y):
+
                 return False
 
+
         return True
-        
