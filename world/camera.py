@@ -23,7 +23,7 @@ class Camera:
         self.x = player.rect.centerx - self.screen_width // 2
         self.y = player.rect.centery - self.screen_height // 2
 
-        # Limitar cámara al tamaño del mundo
+        # Limitar cam
         self.x = max(
             0,
             min(self.x, self.world_width - self.screen_width)
@@ -35,10 +35,7 @@ class Camera:
         )
 
     def apply(self, rect: pygame.Rect) -> pygame.Rect:
-        """
-        Convierte coordenadas del mundo
-        a coordenadas de pantalla.
-        """
+        
 
         return pygame.Rect(
             rect.x - self.x,

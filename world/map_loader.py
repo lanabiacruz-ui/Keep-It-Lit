@@ -6,24 +6,24 @@ class WorldMap:
     def __init__(self):
         base = Path(__file__).resolve().parent.parent
 
-        # Cargar el mapa
+        # Cargar mapa
         map_path = base / "mapabeta.png"
 
         self.image = pygame.image.load(
             str(map_path)
         ).convert()
 
-        # Tamaño del mapa
+        # Tamaño mapa
         self.width = self.image.get_width()
         self.height = self.image.get_height()
 
-        # Rectángulo del mapa
+        # Rect del mapa
         self.rect = self.image.get_rect(
             topleft=(0, 0)
         )
 
     def draw(self, screen, camera):
-        # Dibujar el mapa teniendo en cuenta la cámara
+        # Dibuja mapa
         screen.blit(
             self.image,
             (

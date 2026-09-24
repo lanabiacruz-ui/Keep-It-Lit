@@ -5,7 +5,7 @@ class CollisionMap:
 
     def __init__(self):
 
-        # Tamaño del mapa
+        # Tamaño mapa
         self.world_width = 1312
         self.world_height = 1199
 
@@ -119,11 +119,9 @@ class CollisionMap:
         ]
 
     
-    # ¿SE PUEDE CAMINAR EN ESTA POSICIÓN?
 
     def is_walkable(self, x, y):
 
-        # Fuera del mapa
         if x < 0 or y < 0:
             return False
 
@@ -138,7 +136,6 @@ class CollisionMap:
         )
 
         
-        # caminable
         for zona in self.zonas_caminables:
 
             if zona.colliderect(point):
@@ -147,12 +144,11 @@ class CollisionMap:
         return False
 
     
-    # ¿PUEDE EL JUGADOR MOVERSE?
-    
+
 
     def can_move(self, rect):
 
-        # Revisa las  esquinas del jugador
+        # Revisa esquinass
         puntos = [
 
             (rect.left, rect.top),

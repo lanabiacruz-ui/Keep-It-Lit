@@ -19,8 +19,6 @@ class PlayerMovement:
         dx = 0
         dy = 0
 
-      
-        # MOVIMIENTO
         
 
         if keys[pygame.K_a] or keys[pygame.K_LEFT]:
@@ -35,8 +33,7 @@ class PlayerMovement:
         if keys[pygame.K_s] or keys[pygame.K_DOWN]:
             dy += 1
 
-        
-        # comprobar si se está moviendo
+
        
 
         moving = dx != 0 or dy != 0
@@ -45,7 +42,6 @@ class PlayerMovement:
             return False
 
       
-        # evita que el jugador se mueva más rápido en diagonal
       
 
         direction = pygame.Vector2(
@@ -59,7 +55,6 @@ class PlayerMovement:
         dy = direction.y * self.speed * dt
 
         
-        # movimiento horizontal
         
 
         new_rect = player_rect.copy()
@@ -71,7 +66,6 @@ class PlayerMovement:
             player_rect.x = new_rect.x
 
        
-        # movimiento vertical
        
 
         new_rect = player_rect.copy()
