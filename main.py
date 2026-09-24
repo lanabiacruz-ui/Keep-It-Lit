@@ -1,6 +1,7 @@
 import pygame
 
 from states.main_menu import MainMenu
+from states.new_game import NewGame
 
 pygame.init()
 
@@ -19,54 +20,90 @@ clock = pygame.time.Clock()
 
 menu = MainMenu(screen)
 
+# El estado de gameplay se crea recién cuando se
+# elige "Nueva partida" (todavía no existe al arrancar)
+game = None
+
+# "menu" o "gameplay"
+current_state = "menu"
+
 
 running = True
 
 while running:
 
+    dt = clock.tick(60) / 1000
+
     for event in pygame.event.get():
+
         if event.type == pygame.QUIT:
 
             running = False
 
-        action = menu.handle_event(
-            event
-        )
+        if current_state == "menu":
 
-        if action == "new_game":
-
-            print(
-                "Nueva partida"
+            action = menu.handle_event(
+                event
             )
 
-        elif action == "continue_game":
+            if action == "new_game":
 
-            print(
-                "Continuar partida"
+                # Arranca una partida nueva y cambia de pantalla
+                game = NewGame(screen)
+
+                current_state = "gameplay"
+
+            elif action == "continue_game":
+
+                print(
+                    "Continuar partida"
+                )
+
+            elif action == "settings":
+
+                print(
+                    "Configuraciones"
+                )
+
+            elif action == "achievements":
+
+                print(
+                    "Logros"
+                )
+
+            elif action == "quit":
+
+                running = False
+
+        elif current_state == "gameplay":
+
+            result = game.handle_event(
+                event
             )
 
-        elif action == "settings":
+            if result == "menu":
 
-            print(
-                "Configuraciones"
-            )
-
-        elif action == "achievements":
-
-            print(
-                "Logros"
-            )
-
-        elif action == "quit":
-
-            running = False
+                # ESC durante el juego vuelve al menú
+                current_state = "menu"
 
 
-    menu.draw()
+    if current_state == "gameplay":
+
+        game.update(dt)
+
+
+    screen.fill((0, 0, 0))
+
+    if current_state == "menu":
+
+        menu.draw()
+
+    elif current_state == "gameplay":
+
+        game.draw()
+
 
     pygame.display.flip()
-
-    clock.tick(60)
 
 
 pygame.quit()
