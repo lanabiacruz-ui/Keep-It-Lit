@@ -9,7 +9,7 @@ class WorldMap:
         base = Path(__file__).resolve().parent.parent
 
 
-        # Cargar mapa
+       
         map_path = base / "mapabeta.png"
 
         map_path = (
@@ -26,11 +26,11 @@ class WorldMap:
         ).convert()
 
 
-        # Tamaño mapa
+     
         self.width = self.image.get_width()
         self.height = self.image.get_height()
 
-        # Rect del mapa
+      
 
         self.width = self.image.get_width()
         self.height = self.image.get_height()
@@ -42,7 +42,7 @@ class WorldMap:
 
     def draw(self, screen, camera):
 
-        # Dibuja mapa
+       
         scaled_map = pygame.transform.scale(
             self.image,
                 (camera.scaled_width, camera.scaled_height)
