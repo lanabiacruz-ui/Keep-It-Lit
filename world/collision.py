@@ -2,164 +2,130 @@ import pygame
 
 
 class CollisionMap:
-
     def __init__(self):
 
-      
+        
+        self.world_width = 1920
+        self.world_height = 1080
+
+     
 
         self.walkable = [
 
-            pygame.Rect(
-                172, 31,
-                94, 59
-            ),
+            # Sala superior izquierda
+            pygame.Rect(316, 44, 272, 176),
 
-          
-            pygame.Rect(
-                181, 151,
-                87, 61
-            ),
+            # Sala superior central (la de la biblioteca)
+            pygame.Rect(856, 36, 184, 142),
 
-          
-            pygame.Rect(
-                42, 150,
-                74, 62
-            ),
+            # Sala superior derecha
+            pygame.Rect(1248, 56, 280, 164),
 
-          
-            pygame.Rect(
-                335, 150,
-                80, 62
-            ),
+            # Sala grande izquierda
+            pygame.Rect(148, 336, 500, 408),
 
-          
-            pygame.Rect(
-                48, 378,
-                64, 49
-            ),
+            # Sala central (el "hub" en el medio del mapa)
+            pygame.Rect(836, 400, 216, 220),
 
-            
-            pygame.Rect(
-                315, 309,
-                119, 109
-            ),
+            # Sala grande derecha
+            pygame.Rect(1244, 388, 436, 284),
+
+            # Cabaña (interior)
+            pygame.Rect(820, 900, 240, 144),
 
            
-            pygame.Rect(
-                184, 350,
-                78, 57
-            ),
 
-          
-         
-            
-            pygame.Rect(
-                215, 88,
-                20, 65
-            ),
+            # Superior izquierda -> superior central
+            pygame.Rect(580, 124, 324, 24),
 
-            
-            pygame.Rect(
-                112, 180,
-                72, 17
-            ),
+            # Superior derecha -> superior central
+            pygame.Rect(992, 124, 264, 24),
 
-          
-            pygame.Rect(
-                265, 180,
-                72, 17
-            ),
+            # Superior central -> sala central (vertical)
+            pygame.Rect(932, 170, 20, 240),
 
-          
-            pygame.Rect(
-                70, 207,
-                18, 174
-            ),
+            # Sala grande izquierda -> sala central
+            pygame.Rect(640, 504, 204, 28),
 
-           
-            pygame.Rect(
-                370, 207,
-                19, 105
-            ),
+            # Sala central -> sala grande derecha
+            pygame.Rect(1044, 504, 208, 32),
 
-            
-            pygame.Rect(
-                214, 210,
-                20, 143
-            )
+            # Sala central -> cabaña (vertical)
+            pygame.Rect(932, 612, 24, 296),
         ]
-
-        
-        self.obstacles = [
-
-          
-            pygame.Rect(
-                187, 356,
-                25, 20
-            ),
-
-           
-            pygame.Rect(
-                216, 356,
-                20, 12
-            ),
-
-          
-            pygame.Rect(
-                235, 356,
-                16, 18
-            ),
-
-          
-            pygame.Rect(
-                218, 389,
-                20, 11
-            )
-        ]
-
-   
-    def point_is_walkable(self, x, y):
 
        
+
+        self.obstacles = [
+
+            # Biblioteca (sala superior central)
+            pygame.Rect(866, 34, 40, 66),
+
+            # Mesa oscura (sala superior central)
+            pygame.Rect(902, 100, 92, 40),
+
+            # Cocina (cabaña, pared derecha)
+            pygame.Rect(1022, 892, 41, 155),
+
+            # Escritorio con computadora y silla (cabaña)
+            pygame.Rect(877, 942, 69, 73),
+
+            # Cama (cabaña, esquina inferior izquierda)
+            pygame.Rect(816, 988, 61, 59),
+        ]
+
+    
+        self.spawn_points = {
+
+            "player_start": (944, 510),
+
+            "cabana": (984, 944),
+
+            "habitacion_central": (944, 510),
+            "habitacion_superior_izquierda": (452, 132),
+            "habitacion_superior_centro": (950, 160),
+            "habitacion_superior_derecha": (1388, 138),
+            "habitacion_izquierda": (398, 540),
+            "habitacion_derecha": (1462, 530),
+        }
+
+   
+
+    def point_is_walkable(self, x, y):
+
+        # Evitar salir del mapa
         if x < 0 or y < 0:
             return False
 
-        point = pygame.Rect(
-            int(x),
-            int(y),
-            1,
-            1
-        )
+        x = int(x)
+        y = int(y)
 
-      
-
+        
         inside_walkable = False
 
         for zone in self.walkable:
 
-            if zone.colliderect(point):
+            if zone.collidepoint(x, y):
                 inside_walkable = True
                 break
 
         if not inside_walkable:
             return False
 
-     
+       
         for obstacle in self.obstacles:
 
-            if obstacle.colliderect(point):
+            if obstacle.collidepoint(x, y):
                 return False
 
         return True
 
-   
-
+  
     def can_move(self, rect):
 
-        # Puntos del hitbox del jugador
+        
         points = [
 
-           
             (rect.left, rect.top),
             (rect.centerx, rect.top),
             (rect.right - 1, rect.top),
@@ -167,13 +133,11 @@ class CollisionMap:
             (rect.left, rect.centery),
             (rect.right - 1, rect.centery),
 
-          
             (rect.left, rect.bottom - 1),
             (rect.centerx, rect.bottom - 1),
             (rect.right - 1, rect.bottom - 1)
         ]
 
-      
         for x, y in points:
 
             if not self.point_is_walkable(x, y):
