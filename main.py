@@ -5,7 +5,7 @@ from states.menu_carga import MenuCarga
 from states.loading import Loading
 from states.new_game import NewGame
 
-from core.save_manager import create_new_save
+from core.Save_manager import create_new_save
 
 pygame.init()
 
