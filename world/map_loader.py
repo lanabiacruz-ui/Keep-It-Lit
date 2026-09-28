@@ -52,7 +52,4 @@ class WorldMap:
             scaled_map,
                 (-int(camera.x), -int(camera.y))
         )
-                -int(camera.x),
-                -int(camera.y)
-            )
-        )
+
