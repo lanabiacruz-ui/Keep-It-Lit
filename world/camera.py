@@ -26,14 +26,14 @@ class Camera:
         self.y = 0
 
     def update(self, player):
-        # Centrar la cámara en el jugador
+        
         player_x = player.rect.centerx * self.zoom
         player_y = player.rect.centery * self.zoom
 
         self.x = player_x - self.screen_width // 2
         self.y = player_y - self.screen_height // 2
 
-        # Limitar la cámara a los bordes del mapa
+      
         max_x = max(0, self.scaled_width - self.screen_width)
         max_y = max(0, self.scaled_height - self.screen_height)
 
