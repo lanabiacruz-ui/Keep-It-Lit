@@ -3,6 +3,7 @@ import pygame
 from states.main_menu import MainMenu
 from states.menu_carga import MenuCarga
 from states.loading import Loading
+from states.comic import Comic
 from states.new_game import NewGame
 
 from core.Save_manager import create_new_save
@@ -26,12 +27,12 @@ menu = MainMenu(screen)
 
 name_menu = None
 loading = None
+comic = None
 game = None
-
 
 player_name = ""
 
-
+# "menu", "name_input", "loading", "comic" o "gameplay"
 current_state = "menu"
 
 
@@ -55,7 +56,7 @@ while running:
 
             if action == "new_game":
 
-                
+                # Nueva partida -> pantalla para poner el nombre
                 name_menu = MenuCarga(screen)
 
                 current_state = "name_input"
@@ -90,12 +91,12 @@ while running:
 
             if result == "back":
 
-                
+                # ESC o la X vuelven al menú principal
                 current_state = "menu"
 
             elif result is not None:
 
-               
+                # ("start", nombre): se guarda y pasa a loading
                 player_name = result[1]
 
                 save_path = create_new_save(
@@ -110,6 +111,15 @@ while running:
 
                 current_state = "loading"
 
+        elif current_state == "comic":
+
+            if comic.handle_event(event) == "done":
+
+                
+                game = NewGame(screen, player_name)
+
+                current_state = "gameplay"
+
         elif current_state == "gameplay":
 
             result = game.handle_event(
@@ -118,7 +128,6 @@ while running:
 
             if result == "menu":
 
-                
                 current_state = "menu"
 
 
@@ -126,10 +135,13 @@ while running:
 
         if loading.update(dt) == "done":
 
-            
-            game = NewGame(screen, player_name)
+            comic = Comic(screen)
 
-            current_state = "gameplay"
+            current_state = "comic"
+
+    elif current_state == "comic":
+
+        comic.update(dt)
 
     elif current_state == "gameplay":
 
@@ -150,6 +162,10 @@ while running:
 
         loading.draw()
 
+    elif current_state == "comic":
+
+        comic.draw()
+
     elif current_state == "gameplay":
 
         game.draw()
@@ -159,5 +175,4 @@ while running:
 
 
 pygame.quit()
-
 
