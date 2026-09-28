@@ -7,7 +7,7 @@ class Player:
 
     def __init__(self, x, y, width=20, height=20):
 
-        # Cuadrado que se dibuja
+       
         self.image_rect = pygame.Rect(
             x - width // 2,
             y - height // 2,
@@ -15,8 +15,7 @@ class Player:
             height
         )
 
-        # Hitbox (lo que choca con las paredes),
-        # un poco más chico que el cuadrado
+      
         hitbox_width = 12
         hitbox_height = 12
 
