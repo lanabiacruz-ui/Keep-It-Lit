@@ -5,8 +5,9 @@ from player.movement import PlayerMovement
 
 class Player:
 
-    def __init__(self, x, y, width=32, height=32):
+    def __init__(self, x, y, width=20, height=20):
 
+        # Cuadrado que se dibuja
         self.image_rect = pygame.Rect(
             x - width // 2,
             y - height // 2,
@@ -14,9 +15,10 @@ class Player:
             height
         )
 
-
-        hitbox_width = 18
-        hitbox_height = 18
+        # Hitbox (lo que choca con las paredes),
+        # un poco más chico que el cuadrado
+        hitbox_width = 12
+        hitbox_height = 12
 
         self.rect = pygame.Rect(
             x - hitbox_width // 2,
@@ -31,7 +33,6 @@ class Player:
 
         self.color = (220, 70, 70)
 
-
     def update(self, dt, collision_map):
 
         self.moving = self.movement.update(
@@ -41,7 +42,6 @@ class Player:
         )
 
         self.image_rect.center = self.rect.center
-
 
     def draw(self, screen, camera):
 
