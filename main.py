@@ -5,6 +5,7 @@ from states.menu_carga import MenuCarga
 from states.loading import Loading
 from states.comic import Comic
 from states.new_game import NewGame
+from states.startup import Startup
 
 from core.Save_manager import create_new_save
 
@@ -18,11 +19,11 @@ screen = pygame.display.set_mode(
 )
 
 pygame.display.set_caption(
-    "Soulmon"
+    "Keep It Lit"
 )
 
 clock = pygame.time.Clock()
-
+startup = Startup(screen)
 menu = MainMenu(screen)
 
 name_menu = None
@@ -32,8 +33,8 @@ game = None
 
 player_name = ""
 
-# "menu", "name_input", "loading", "comic" o "gameplay"
-current_state = "menu"
+
+current_state = "startup"
 
 
 running = True
@@ -47,6 +48,12 @@ while running:
         if event.type == pygame.QUIT:
 
             running = False
+        
+        if current_state == "startup":
+
+            if startup.update(dt) == "done":
+
+                current_state = "menu"
 
         if current_state == "menu":
 
@@ -56,7 +63,7 @@ while running:
 
             if action == "new_game":
 
-                # Nueva partida -> pantalla para poner el nombre
+                
                 name_menu = MenuCarga(screen)
 
                 current_state = "name_input"
@@ -91,12 +98,12 @@ while running:
 
             if result == "back":
 
-                # ESC o la X vuelven al menú principal
+              
                 current_state = "menu"
 
             elif result is not None:
 
-                # ("start", nombre): se guarda y pasa a loading
+             
                 player_name = result[1]
 
                 save_path = create_new_save(
@@ -149,8 +156,12 @@ while running:
 
 
     screen.fill((0, 0, 0))
+    
+    if current_state == "startup":
 
-    if current_state == "menu":
+        startup.draw()
+
+    elif current_state == "menu":
 
         menu.draw()
 
