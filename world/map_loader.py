@@ -43,21 +43,15 @@ class WorldMap:
     def draw(self, screen, camera):
 
         # Dibuja mapa
-        screen.blit(
-
-
         scaled_map = pygame.transform.scale(
-
             self.image,
-            (
-                camera.scaled_width,
-                camera.scaled_height
-            )
+                (camera.scaled_width, camera.scaled_height)
         )
 
         screen.blit(
             scaled_map,
-            (
+                (-int(camera.x), -int(camera.y))
+        )
                 -int(camera.x),
                 -int(camera.y)
             )
