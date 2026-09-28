@@ -8,48 +8,47 @@ class WorldMap:
 
         base = Path(__file__).resolve().parent.parent
 
-
-       
-        map_path = base / "mapabeta.png"
-
         map_path = (
             base
             / "assets"
             / "maps"
             / "region_01"
-            / "mapabeta.png"
+            / "mapa.png"
         )
-
 
         self.image = pygame.image.load(
             str(map_path)
         ).convert()
 
-
-     
+       
         self.width = self.image.get_width()
         self.height = self.image.get_height()
-
-      
-
-        self.width = self.image.get_width()
-        self.height = self.image.get_height()
-
 
         self.rect = self.image.get_rect(
             topleft=(0, 0)
         )
 
+       
+        self._scaled = None
+        self._scaled_size = None
+
     def draw(self, screen, camera):
 
-       
-        scaled_map = pygame.transform.scale(
-            self.image,
-                (camera.scaled_width, camera.scaled_height)
+        size = (
+            camera.scaled_width,
+            camera.scaled_height
         )
+
+        if self._scaled_size != size:
+
+            self._scaled = pygame.transform.scale(
+                self.image,
+                size
+            )
+
+            self._scaled_size = size
 
         screen.blit(
-            scaled_map,
-                (-int(camera.x), -int(camera.y))
+            self._scaled,
+            (-camera.x, -camera.y)
         )
-
