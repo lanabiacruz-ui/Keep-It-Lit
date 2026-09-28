@@ -17,7 +17,7 @@ class NewGame:
         self.world_map = WorldMap()
         self.collision_map = CollisionMap()
 
-        # El jugador aparece en la cabaña de madera
+     
         spawn_x, spawn_y = get_spawn_point(
             self.collision_map,
             "cabana"
@@ -31,6 +31,9 @@ class NewGame:
             self.collision_map.world_width,
             self.collision_map.world_height,
         )
+
+      
+        self.camera.update(self.player)
 
     def handle_event(self, event):
 
@@ -46,7 +49,9 @@ class NewGame:
     def update(self, dt):
 
         self.player.update(dt, self.collision_map)
-        self.camera.update(self.player)
+
+      
+        self.camera.update(self.player, dt)
 
     def draw(self):
 
