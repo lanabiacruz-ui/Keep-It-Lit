@@ -8,9 +8,10 @@ from player.player import Player
 
 
 class NewGame:
-    def __init__(self, screen):
+    def __init__(self, screen, player_name="Jugador"):
 
         self.screen = screen
+        self.player_name = player_name
         self.width, self.height = screen.get_size()
 
         self.world_map = WorldMap()
