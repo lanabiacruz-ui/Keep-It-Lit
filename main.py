@@ -1,7 +1,11 @@
 import pygame
 
 from states.main_menu import MainMenu
+from states.menu_carga import MenuCarga
+from states.loading import Loading
 from states.new_game import NewGame
+
+from core.save_manager import create_new_save
 
 pygame.init()
 
@@ -20,11 +24,14 @@ clock = pygame.time.Clock()
 
 menu = MainMenu(screen)
 
-# El estado de gameplay se crea recién cuando se
-# elige "Nueva partida" (todavía no existe al arrancar)
+name_menu = None
+loading = None
 game = None
 
-# "menu" o "gameplay"
+
+player_name = ""
+
+
 current_state = "menu"
 
 
@@ -48,10 +55,10 @@ while running:
 
             if action == "new_game":
 
-                # Arranca una partida nueva y cambia de pantalla
-                game = NewGame(screen)
+                
+                name_menu = MenuCarga(screen)
 
-                current_state = "gameplay"
+                current_state = "name_input"
 
             elif action == "continue_game":
 
@@ -75,6 +82,34 @@ while running:
 
                 running = False
 
+        elif current_state == "name_input":
+
+            result = name_menu.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                
+                current_state = "menu"
+
+            elif result is not None:
+
+               
+                player_name = result[1]
+
+                save_path = create_new_save(
+                    player_name
+                )
+
+                print(
+                    f"Partida '{player_name}' guardada en {save_path}"
+                )
+
+                loading = Loading(screen)
+
+                current_state = "loading"
+
         elif current_state == "gameplay":
 
             result = game.handle_event(
@@ -83,11 +118,20 @@ while running:
 
             if result == "menu":
 
-                # ESC durante el juego vuelve al menú
+                
                 current_state = "menu"
 
 
-    if current_state == "gameplay":
+    if current_state == "loading":
+
+        if loading.update(dt) == "done":
+
+            
+            game = NewGame(screen, player_name)
+
+            current_state = "gameplay"
+
+    elif current_state == "gameplay":
 
         game.update(dt)
 
@@ -98,6 +142,14 @@ while running:
 
         menu.draw()
 
+    elif current_state == "name_input":
+
+        name_menu.draw()
+
+    elif current_state == "loading":
+
+        loading.draw()
+
     elif current_state == "gameplay":
 
         game.draw()
@@ -107,3 +159,5 @@ while running:
 
 
 pygame.quit()
+
+
