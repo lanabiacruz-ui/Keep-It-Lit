@@ -1,148 +1,104 @@
-import pygame
+import pygame,sys
+from ruta import *
+from config import *
 
+# Inicializar Pygame
+pygame.init()
 
-class PlayerAnimation:
+pantalla = pygame.display.set_mode((ANCHO, ALTO))
+reloj = pygame.time.Clock()
 
-    def __init__(self, sprite_path):
+# --- CONFIGURACIÓN DEL JUGADOR ---
+jugador_x, jugador_y = 400, 300
+jugador_velocidad = velocidad_jugador
 
-        self.sheet = pygame.image.load(
-            sprite_path
-        ).convert_alpha()
+# 1. Diccionario para organizar TODOS tus sprites por acción/dirección
+# Reemplaza los nombres de archivo por tus imágenes reales
+sprites = {
+    "quieto": [pygame.image.load("quieto.png").convert_alpha()],
+    "derecha": [
+        pygame.image.load(en).convert_alpha(),
+        pygame.image.load("der_2.png").convert_alpha(),
+        pygame.image.load("der_3.png").convert_alpha(),
+        pygame.image.load("der_4.png").convert_alpha()
+    ],
+    "izquierda": [
+        pygame.image.load("izq_1.png").convert_alpha(),
+        pygame.image.load("izq_2.png").convert_alpha(),
+        pygame.image.load("izq_3.png").convert_alpha(),
+        pygame.image.load("izq_4.png").convert_alpha()
+    ],
+    "arriba": [
+        pygame.image.load("arr_1.png").convert_alpha(),
+        pygame.image.load("arr_2.png").convert_alpha()
+    ],
+    "abajo": [
+        pygame.image.load("aba_1.png").convert_alpha(),
+        pygame.image.load("aba_2.png").convert_alpha()
+    ]
+}
 
-        self.frames = {
-            "up": [],
-            "down": [],
-            "left": [],
-            "right": []
-        }
+# Variables de control de animación
+accion_actual = "quieto"
+indice_sprite = 0
+tiempo_animacion = 0
+velocidad_animacion = 0.2  # Controla qué tan rápido cambian los sprites (menor = más lento)
+# -----------------------------------------------------------
 
-        self.direction = "down"
-        self.current_frame = 0
-        self.timer = 0
-        self.animation_speed = 0.12
+ejecutando = True
+while ejecutando:
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
+            ejecutando = False
 
-        self.sprite_width = 48
-        self.sprite_height = 64
+    # 2. Captura de movimiento y cambio de acción
+    teclas = pygame.key.get_pressed()
+    moviendose = False
+    nueva_accion = "quieto"
 
-        self.load_sprites()
+    if teclas[pygame.K_LEFT]:
+        jugador_x -= jugador_velocidad
+        nueva_accion = "izquierda"
+        moviendose = True
+    elif teclas[pygame.K_RIGHT]:
+        jugador_x += jugador_velocidad
+        nueva_accion = "derecha"
+        moviendose = True
+    elif teclas[pygame.K_UP]:
+        jugador_y -= jugador_velocidad
+        nueva_accion = "arriba"
+        moviendose = True
+    elif teclas[pygame.K_DOWN]:
+        jugador_y += jugador_velocidad
+        nueva_accion = "abajo"
+        moviendose = True
 
-    def remove_background(self, image):
+    # 3. Lógica matemática para recorrer las listas de sprites
+    if moviendose:
+        # Si cambia de dirección, reiniciamos la animación para que no salte frames viejos
+        if nueva_accion != accion_actual:
+            accion_actual = nueva_accion
+            indice_sprite = 0
+            tiempo_animacion = 0
+        
+        # Avanzamos el temporizador
+        tiempo_animacion += velocidad_animacion
+        # El truco: convertimos el tiempo flotante a un índice entero válido para la lista
+        indice_sprite = int(tiempo_animacion) % len(sprites[accion_actual])
+    else:
+        accion_actual = "quieto"
+        indice_sprite = 0
+        tiempo_animacion = 0
 
-        image = image.convert_alpha()
+    # 4. Dibujar
+    pantalla.fill((30, 30, 30))  # Dibuja tu mapa aquí debajo
+    
+    # Seleccionamos el sprite exacto usando la acción y el índice actual
+    sprite_a_dibujar = sprites[accion_actual][indice_sprite]
+    pantalla.blit(sprite_a_dibujar, (jugador_x, jugador_y))
 
-        width, height = image.get_size()
+    pygame.display.flip()
+    reloj.tick(60)
 
-        for x in range(width):
-
-            for y in range(height):
-
-                r, g, b, a = image.get_at((x, y))
-
-                if (
-                    abs(r - g) < 8
-                    and abs(g - b) < 8
-                    and r > 180
-                ):
-
-                    image.set_at(
-                        (x, y),
-                        (255, 255, 255, 0)
-                    )
-
-        return image
-
-    def load_sprites(self):
-
-        up = [
-            pygame.Rect(330, 40, 145, 210),
-            pygame.Rect(600, 40, 145, 210),
-            pygame.Rect(875, 40, 145, 210),
-            pygame.Rect(1150, 40, 145, 210)
-        ]
-
-        down = [
-            pygame.Rect(330, 290, 145, 210),
-            pygame.Rect(600, 290, 145, 210),
-            pygame.Rect(875, 290, 145, 210),
-            pygame.Rect(1150, 290, 145, 210)
-        ]
-
-        left = [
-            pygame.Rect(330, 540, 145, 210),
-            pygame.Rect(600, 540, 145, 210),
-            pygame.Rect(875, 540, 145, 210),
-            pygame.Rect(1150, 540, 145, 210)
-        ]
-
-        right = [
-            pygame.Rect(330, 785, 145, 210),
-            pygame.Rect(600, 785, 145, 210),
-            pygame.Rect(875, 785, 145, 210),
-            pygame.Rect(1150, 785, 145, 210)
-        ]
-
-        self.frames["up"] = self.create_frames(up)
-        self.frames["down"] = self.create_frames(down)
-        self.frames["left"] = self.create_frames(left)
-        self.frames["right"] = self.create_frames(right)
-
-    def create_frames(self, rectangles):
-
-        frames = []
-
-        for rect in rectangles:
-
-            frame = self.sheet.subsurface(
-                rect
-            ).copy()
-
-            frame = self.remove_background(frame)
-
-            frame = pygame.transform.scale(
-                frame,
-                (
-                    self.sprite_width,
-                    self.sprite_height
-                )
-            )
-
-            frames.append(frame)
-
-        return frames
-
-    def set_direction(self, direction):
-
-        if direction != self.direction:
-
-            self.direction = direction
-            self.current_frame = 0
-            self.timer = 0
-
-    def update(self, moving, dt):
-
-        if not moving:
-
-            self.current_frame = 0
-            self.timer = 0
-
-            return
-
-        self.timer += dt
-
-        if self.timer >= self.animation_speed:
-
-            self.timer = 0
-
-            self.current_frame += 1
-
-            if self.current_frame >= len(
-                self.frames[self.direction]
-            ):
-
-                self.current_frame = 0
-
-    def get_image(self, moving):
-
-        return self.frames[
-            self.direction
-        ][self.current_frame]
+pygame.quit()
+sys.exit()
