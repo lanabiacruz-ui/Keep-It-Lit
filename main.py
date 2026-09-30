@@ -2,6 +2,7 @@ import pygame
 
 from states.main_menu import MainMenu
 from states.menu_carga import MenuCarga
+from states.continue_game import ContinueGame
 from states.loading import Loading
 from states.comic import Comic
 from states.new_game import NewGame
@@ -27,11 +28,17 @@ startup = Startup(screen)
 menu = MainMenu(screen)
 
 name_menu = None
+continue_menu = None
 loading = None
 comic = None
 game = None
 
 player_name = ""
+
+
+current_save_path = None
+pending_save_data = None
+is_continue = False
 
 
 current_state = "startup"
@@ -46,6 +53,10 @@ while running:
     for event in pygame.event.get():
 
         if event.type == pygame.QUIT:
+
+            if current_state == "gameplay" and game is not None:
+
+                game.save_progress()
 
             running = False
         
@@ -70,9 +81,9 @@ while running:
 
             elif action == "continue_game":
 
-                print(
-                    "Continuar partida"
-                )
+                continue_menu = ContinueGame(screen)
+
+                current_state = "continue"
 
             elif action == "settings":
 
@@ -110,9 +121,45 @@ while running:
                     player_name
                 )
 
-                print(
-                    f"Partida '{player_name}' guardada en {save_path}"
+                if save_path is None:
+
+                    
+                    name_menu.message = (
+                        "No hay espacio. Borrá una partida primero."
+                    )
+
+                else:
+
+                    current_save_path = save_path
+                    pending_save_data = None
+                    is_continue = False
+
+                    loading = Loading(screen)
+
+                    current_state = "loading"
+
+        elif current_state == "continue":
+
+            result = continue_menu.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                current_state = "menu"
+
+            elif result is not None:
+
+                _, save_path, save_data = result
+
+                player_name = save_data.get(
+                    "player_name",
+                    "Jugador"
                 )
+
+                current_save_path = save_path
+                pending_save_data = save_data
+                is_continue = True
 
                 loading = Loading(screen)
 
@@ -123,7 +170,11 @@ while running:
             if comic.handle_event(event) == "done":
 
                 
-                game = NewGame(screen, player_name)
+                game = NewGame(
+                    screen,
+                    player_name,
+                    save_path=current_save_path
+                )
 
                 current_state = "gameplay"
 
@@ -142,9 +193,22 @@ while running:
 
         if loading.update(dt) == "done":
 
-            comic = Comic(screen)
+            if is_continue:
 
-            current_state = "comic"
+                game = NewGame(
+                    screen,
+                    player_name,
+                    save_path=current_save_path,
+                    save_data=pending_save_data
+                )
+
+                current_state = "gameplay"
+
+            else:
+
+                comic = Comic(screen)
+
+                current_state = "comic"
 
     elif current_state == "comic":
 
@@ -169,6 +233,10 @@ while running:
 
         name_menu.draw()
 
+    elif current_state == "continue":
+
+        continue_menu.draw()
+
     elif current_state == "loading":
 
         loading.draw()
@@ -186,4 +254,3 @@ while running:
 
 
 pygame.quit()
-
