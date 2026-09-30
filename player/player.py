@@ -1,84 +1,146 @@
 import pygame
+from pathlib import Path
 
 from player.movement import PlayerMovement
-from player.animation import PlayerAnimation
 
 
 class Player:
+    CELL_WIDTH = 176
+    CELL_HEIGHT = 226
 
-    def __init__(self, x, y, width=48, height=64):
+    BOTTOM_MARGIN = 6
 
-        self.animation = PlayerAnimation(
-            "assets/maps/player/player.png"
-        )
+    ROWS = ["up", "down", "left", "right"]
 
-        hitbox_width = 20
-        hitbox_height = 14
-
-        self.rect = pygame.Rect(
-            x - hitbox_width // 2,
-            y - hitbox_height // 2,
-            hitbox_width,
-            hitbox_height
-        )
+    def __init__(self, x, y, width=34, height=46):
 
         self.image_rect = pygame.Rect(
-            0,
-            0,
+            x - width // 2,
+            y - height // 2,
             width,
             height
         )
 
-        self.image_rect.center = self.rect.center
+        hitbox_width = 16
+        hitbox_height = 12
+
+        self.rect = pygame.Rect(
+            x - hitbox_width // 2,
+            self.image_rect.bottom - hitbox_height - 3,
+            hitbox_width,
+            hitbox_height
+        )
 
         self.movement = PlayerMovement()
 
         self.moving = False
+        self.direction = "down"
+
+        self.animation_timer = 0
+        self.animation_frame = 0
+
+        base = Path(__file__).resolve().parent.parent
+
+        image_path = (
+            base
+            / "assets"
+            / "maps"
+            / "player"
+            / "player_frames.png"
+        )
+
+        sheet = pygame.image.load(
+            image_path
+        ).convert_alpha()
+
+        self.frames = self.load_frames(sheet)
+
+    def load_frames(self, sheet):
+
+        frames = {}
+
+        for row, direction in enumerate(self.ROWS):
+
+            frames[direction] = []
+
+            for col in range(4):
+
+                area = pygame.Rect(
+                    col * self.CELL_WIDTH,
+                    row * self.CELL_HEIGHT,
+                    self.CELL_WIDTH,
+                    self.CELL_HEIGHT
+                )
+
+                sprite = sheet.subsurface(
+                    area
+                ).copy()
+
+                frames[direction].append(
+                    sprite
+                )
+
+        return frames
 
     def update(self, dt, collision_map):
 
-        self.moving = self.movement.update(
+        result = self.movement.update(
             self.rect,
             collision_map,
             dt
         )
 
-        keys = pygame.key.get_pressed()
+        self.moving = result[0]
 
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
+        if result[1] is not None:
+            self.direction = result[1]
 
-            self.animation.set_direction("up")
-
-        elif keys[pygame.K_s] or keys[pygame.K_DOWN]:
-
-            self.animation.set_direction("down")
-
-        elif keys[pygame.K_a] or keys[pygame.K_LEFT]:
-
-            self.animation.set_direction("left")
-
-        elif keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-
-            self.animation.set_direction("right")
-
-        self.animation.update(
-            self.moving,
-            dt
+        self.image_rect.midbottom = (
+            self.rect.centerx,
+            self.rect.bottom + 3
         )
 
-        self.image_rect.center = self.rect.center
+        if self.moving:
+
+            self.animation_timer += dt
+
+            if self.animation_timer >= 0.12:
+
+                self.animation_timer = 0
+
+                self.animation_frame += 1
+
+                self.animation_frame %= len(
+                    self.frames[self.direction]
+                )
+
+        else:
+
+            self.animation_frame = 0
 
     def draw(self, screen, camera):
 
-        screen_rect = camera.apply(
-            self.image_rect
+        frame = self.frames[
+            self.direction
+        ][
+            self.animation_frame
+        ]
+
+        scale = self.image_rect.height / self.CELL_HEIGHT
+
+        sprite = pygame.transform.smoothscale(
+            frame,
+            (
+                round(self.CELL_WIDTH * scale),
+                self.image_rect.height
+            )
         )
 
-        image = self.animation.get_image(
-            self.moving
+        dest = sprite.get_rect(
+            midbottom=camera.apply(self.image_rect).midbottom
         )
 
         screen.blit(
-            image,
-            screen_rect
+            sprite,
+            dest
         )
