@@ -5,7 +5,6 @@ class PlayerMovement:
 
     def __init__(self, speed=140):
 
-       
         self.speed = speed
 
         self._rest_x = 0.0
@@ -42,9 +41,8 @@ class PlayerMovement:
             self._rest_x = 0.0
             self._rest_y = 0.0
 
-            return False
+            return False, None
 
-        
         direction = pygame.Vector2(
             dx,
             dy
@@ -62,7 +60,17 @@ class PlayerMovement:
         self._move(player_rect, collision_map, step_x, 0)
         self._move(player_rect, collision_map, 0, step_y)
 
-        return True
+        # Direccion para la animacion (en diagonal gana izquierda/derecha)
+        if dx < 0:
+            facing = "left"
+        elif dx > 0:
+            facing = "right"
+        elif dy < 0:
+            facing = "up"
+        else:
+            facing = "down"
+
+        return True, facing
 
     def _move(
         self,

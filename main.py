@@ -7,7 +7,7 @@ from states.loading import Loading
 from states.comic import Comic
 from states.new_game import NewGame
 from states.startup import Startup
-
+from states.settings import Settings
 from core.Save_manager import create_new_save
 
 pygame.init()
@@ -28,6 +28,7 @@ startup = Startup(screen)
 menu = MainMenu(screen)
 
 name_menu = None
+settings_menu = None
 continue_menu = None
 loading = None
 comic = None
@@ -48,7 +49,7 @@ running = True
 
 while running:
 
-    dt = clock.tick(60) / 1000
+    dt = min(clock.tick(60) / 1000, 0.05)
 
     for event in pygame.event.get():
 
@@ -60,11 +61,6 @@ while running:
 
             running = False
         
-        if current_state == "startup":
-
-            if startup.update(dt) == "done":
-
-                current_state = "menu"
 
         if current_state == "menu":
 
@@ -84,12 +80,12 @@ while running:
                 continue_menu = ContinueGame(screen)
 
                 current_state = "continue"
-
+            
             elif action == "settings":
 
-                print(
-                    "Configuraciones"
-                )
+                settings_menu = Settings(screen)
+
+                current_state = "settings"
 
             elif action == "achievements":
 
@@ -165,6 +161,12 @@ while running:
 
                 current_state = "loading"
 
+        elif current_state == "settings":
+
+            if settings_menu.handle_event(event) == "back":
+
+                current_state = "menu"
+
         elif current_state == "comic":
 
             if comic.handle_event(event) == "done":
@@ -189,7 +191,13 @@ while running:
                 current_state = "menu"
 
 
-    if current_state == "loading":
+    if current_state == "startup":
+
+        if startup.update(dt) == "done":
+
+            current_state = "menu"
+
+    elif current_state == "loading":
 
         if loading.update(dt) == "done":
 
@@ -229,6 +237,10 @@ while running:
 
         menu.draw()
 
+    elif current_state == "settings":
+
+        settings_menu.draw()
+        
     elif current_state == "name_input":
 
         name_menu.draw()

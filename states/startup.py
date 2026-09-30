@@ -4,7 +4,7 @@ from pathlib import Path
 
 class Startup:
 
-    def __init__(self, screen, duration=0.6):
+    def __init__(self, screen, duration=1.2):
 
         self.screen = screen
         self.width, self.height = screen.get_size()
