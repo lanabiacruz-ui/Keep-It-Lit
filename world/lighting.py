@@ -3,18 +3,24 @@ import pygame
 
 class PlayerLight:
 
-    def __init__(self, screen_size, radius=220, darkness_alpha=245):
+    def __init__(self, screen_size, darkness_alpha=245):
         self.screen_size = tuple(screen_size)
-        self.radius = int(radius)
         self.darkness_alpha = int(darkness_alpha)
-      
+
         self._darkness = pygame.Surface(
             self.screen_size,
             pygame.SRCALPHA
         )
 
-       
-        self._light = self._create_light_surface(self.radius)
+
+        self._cache = {}
+
+    def _get_light(self, radius):
+
+        if radius not in self._cache:
+            self._cache[radius] = self._create_light_surface(radius)
+
+        return self._cache[radius]
 
     def _create_light_surface(self, radius):
         size = radius * 2 + 2
@@ -26,7 +32,6 @@ class PlayerLight:
 
         center = radius + 1
 
-       
         for r in range(radius, -1, -2):
 
             strength = 1.0 - (r / radius)
@@ -45,38 +50,27 @@ class PlayerLight:
 
         return light
 
-    def draw(self, screen, player, camera):
+    def draw(self, screen, camera, sources):
 
-        
+
         self._darkness.fill(
             (0, 0, 0, self.darkness_alpha)
         )
 
-       
-        player_screen = camera.apply(player.rect)
+        for wx, wy, radius in sources:
 
-        light_center = player_screen.center
+            light = self._get_light(int(radius))
 
-       
-        light_rect = self._light.get_rect(
-            center=light_center
-        )
+            sx = int(wx * camera.zoom - camera.x)
+            sy = int(wy * camera.zoom - camera.y)
 
-        
-        self._darkness.blit(
-            self._light,
-            light_rect,
-            special_flags=pygame.BLEND_RGBA_SUB
-        )
+            self._darkness.blit(
+                light,
+                light.get_rect(center=(sx, sy)),
+                special_flags=pygame.BLEND_RGBA_SUB
+            )
 
         screen.blit(
             self._darkness,
             (0, 0)
-        )
-
-        pygame.draw.circle(
-            screen,
-            (255, 225, 130),
-            light_center,
-            3
         )

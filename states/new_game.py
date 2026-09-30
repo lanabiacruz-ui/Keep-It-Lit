@@ -7,6 +7,15 @@ from world.camera import Camera
 from world.spawn import get_spawn_point
 from player.player import Player
 from world.lighting import PlayerLight
+from world.items import MatchItem
+from ui.hud import Hud
+
+
+PLAYER_LIGHT_RADIUS = 100
+MATCH_LIGHT_RADIUS = 60  
+
+
+MATCH_POS = (818, 1002)
 
 
 class NewGame:
@@ -32,7 +41,6 @@ class NewGame:
             "cabana"
         )
 
-        # Si la partida guardada tiene posicion, se usa esa
         spawn_x = self.save_data.get("x", spawn_x)
         spawn_y = self.save_data.get("y", spawn_y)
 
@@ -49,9 +57,25 @@ class NewGame:
 
         self.light = PlayerLight(
             (self.width, self.height),
-            radius=220,
             darkness_alpha=245
         )
+
+        self.hud = Hud((self.width, self.height))
+
+
+        self.has_match = bool(self.save_data.get("has_match", False))
+
+        if self.has_match:
+            self.match_item = None
+            self.equip_match()
+        else:
+            self.match_item = MatchItem(*MATCH_POS)
+
+    def equip_match(self):
+       
+        self.has_match = True
+        self.hud.equip("fosforo")
+        self.player.set_torch(True)
 
     def save_progress(self):
 
@@ -64,7 +88,8 @@ class NewGame:
             self.save_path,
             player_name=self.player_name,
             x=x,
-            y=y
+            y=y,
+            has_match=self.has_match
         )
 
     def handle_event(self, event):
@@ -74,6 +99,15 @@ class NewGame:
             if event.key == pygame.K_ESCAPE:
                 self.save_progress()
                 return "menu"
+
+            if event.key == pygame.K_e:
+
+                if (
+                    self.match_item is not None
+                    and self.match_item.is_near(self.player)
+                ):
+                    self.match_item = None
+                    self.equip_match()
 
         return None
 
@@ -90,13 +124,42 @@ class NewGame:
             self.camera
         )
 
+        if self.match_item is not None:
+            self.match_item.draw(self.screen, self.camera)
+
         self.player.draw(
             self.screen,
             self.camera
         )
 
+
+        sources = []
+
+        if self.match_item is not None:
+            sources.append((
+                self.match_item.rect.centerx,
+                self.match_item.rect.centery,
+                MATCH_LIGHT_RADIUS
+            ))
+
+        if self.has_match:
+            sources.append((
+                self.player.rect.centerx,
+                self.player.rect.centery,
+                PLAYER_LIGHT_RADIUS
+            ))
+
         self.light.draw(
             self.screen,
-            self.player,
-            self.camera
+            self.camera,
+            sources
         )
+
+  
+        if (
+            self.match_item is not None
+            and self.match_item.is_near(self.player)
+        ):
+            self.match_item.draw_prompt(self.screen, self.camera)
+
+        self.hud.draw(self.screen)

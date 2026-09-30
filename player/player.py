@@ -12,8 +12,7 @@ class Player:
 
     ROWS = ["up", "down", "left", "right"]
 
-    # Posicion (x, y, ancho, alto) de cada muñeco dentro de player.png.
-    # Filas: arriba, abajo, izquierda, derecha. 4 frames por fila.
+
     SHEET_RECTS = [
         [(326, 37, 151, 209), (597, 36, 150, 213),
          (869, 36, 151, 214), (1141, 36, 150, 209)],
@@ -23,6 +22,18 @@ class Player:
          (862, 539, 155, 209), (1138, 539, 155, 208)],
         [(316, 780, 158, 207), (589, 780, 161, 207),
          (868, 781, 158, 207), (1141, 782, 157, 206)],
+    ]
+
+
+    SHEET_RECTS_PHOSPHOR = [
+        [(341, 48, 150, 206), (594, 46, 151, 209),
+         (847, 47, 149, 208), (1099, 47, 150, 208)],
+        [(325, 295, 168, 209), (581, 294, 166, 210),
+         (834, 294, 168, 211), (1087, 294, 169, 211)],
+        [(328, 541, 159, 208), (585, 541, 157, 208),
+         (840, 541, 159, 208), (1092, 541, 160, 208)],
+        [(333, 783, 158, 205), (588, 783, 155, 204),
+         (847, 783, 157, 205), (1099, 783, 157, 206)],
     ]
 
     def __init__(self, x, y, width=34, height=46):
@@ -52,13 +63,17 @@ class Player:
         self.animation_timer = 0
         self.animation_frame = 0
 
+        self.has_torch = False
+
         base = Path(__file__).resolve().parent.parent
         player_dir = base / "assets" / "maps" / "player"
 
-        # Si existe player_frames.png (hoja ya recortada 4x4) se usa esa.
-        # Si no, se usa player.png y se recorta automaticamente.
+
         frames_path = player_dir / "player_frames.png"
         sheet_path = player_dir / "player.png"
+        torch_path = player_dir / "player_phosphor.png"
+
+        self.frame_scale = None
 
         if frames_path.exists():
 
@@ -75,6 +90,23 @@ class Player:
             ).convert()
 
             self.frames = self.load_frames_from_sheet(sheet)
+
+        self.frames_torch = None
+
+        if torch_path.exists():
+
+            torch_sheet = pygame.image.load(
+                str(torch_path)
+            ).convert()
+
+            self.frames_torch = self.load_frames_from_sheet(
+                torch_sheet,
+                self.SHEET_RECTS_PHOSPHOR
+            )
+
+    def set_torch(self, value):
+
+        self.has_torch = bool(value) and self.frames_torch is not None
 
     def load_frames(self, sheet):
 
@@ -106,8 +138,7 @@ class Player:
     @staticmethod
     def _remove_background(crop):
 
-        # Deja opaco solo lo oscuro (contorno) y lo azul grisaceo (cuerpo).
-        # El fondo de cuadritos claros queda transparente.
+        
         result = pygame.Surface(
             crop.get_size(),
             pygame.SRCALPHA
@@ -121,13 +152,20 @@ class Player:
 
                 avg = (r + g + b) / 3
 
-                if avg < 110 or (b - r > 12 and avg < 210):
+                if (
+                    avg < 110
+                    or (b - r > 12 and avg < 210)
+                    or (r - b > 40 and avg < 250)
+                ):
 
                     result.set_at((px, py), (r, g, b, 255))
 
         return result
 
-    def load_frames_from_sheet(self, sheet):
+    def load_frames_from_sheet(self, sheet, rects=None):
+
+        if rects is None:
+            rects = self.SHEET_RECTS
 
         crops = {}
         max_w = 1
@@ -137,7 +175,7 @@ class Player:
 
             crops[direction] = []
 
-            for rect in self.SHEET_RECTS[row]:
+            for rect in rects[row]:
 
                 crop = sheet.subsurface(
                     pygame.Rect(rect)
@@ -150,10 +188,15 @@ class Player:
                 max_w = max(max_w, crop.get_width())
                 max_h = max(max_h, crop.get_height())
 
-        scale = min(
-            (self.CELL_WIDTH - 12) / max_w,
-            (self.CELL_HEIGHT - 12) / max_h
-        )
+  
+        if self.frame_scale is None:
+
+            self.frame_scale = min(
+                (self.CELL_WIDTH - 12) / max_w,
+                (self.CELL_HEIGHT - 12) / max_h
+            )
+
+        scale = self.frame_scale
 
         frames = {}
 
@@ -230,7 +273,12 @@ class Player:
 
     def draw(self, screen, camera):
 
-        frame = self.frames[
+        if self.has_torch and self.frames_torch is not None:
+            frames = self.frames_torch
+        else:
+            frames = self.frames
+
+        frame = frames[
             self.direction
         ][
             self.animation_frame
