@@ -1,4 +1,5 @@
 import math
+import random
 from pathlib import Path
 
 import pygame
@@ -10,7 +11,13 @@ from world.camera import Camera
 from world.spawn import get_spawn_point
 from player.player import Player
 from world.lighting import PlayerLight
-from world.items import MatchItem
+from world.items import (
+    MatchItem,
+    WorldItem,
+    load_item_defs,
+    load_spawn_zones,
+    make_spawn_items
+)
 from ui.hud import Hud
 
 
@@ -21,6 +28,9 @@ MATCH_POS = (818, 1002)
 
 # Cuanto dura prendido el fosforo (vida), en segundos. Baja rapido.
 MATCH_DURATION = 12.0
+
+# Cuanto tarda en desaparecer un aviso en pantalla (segundos).
+MESSAGE_TIME = 2.2
 
 # Cuenta regresiva (en segundos) cuando no hay luz, antes de perder.
 NO_LIGHT_COUNTDOWN = 10.0
@@ -97,6 +107,50 @@ class NewGame:
         else:
             self.match_item = MatchItem(*MATCH_POS)
 
+        # ---------- Objetos (madera, aceite, cera) ----------
+
+        self.item_defs = load_item_defs()
+
+        saved_inv = self.save_data.get("inventory", [])
+
+        for i in range(self.hud.SLOTS):
+
+            if i < len(saved_inv) and saved_inv[i] in self.item_defs:
+                self.hud.items[i] = saved_inv[i]
+
+        self.collected = set(self.save_data.get("collected", []))
+
+        self.item_seed = self.save_data.get(
+            "item_seed",
+            random.randint(0, 10 ** 9)
+        )
+
+        self.world_items = make_spawn_items(
+            load_spawn_zones(),
+            self.item_defs,
+            self.collision_map,
+            self.item_seed,
+            self.collected
+        )
+
+        print(
+            f"[items] {len(self.item_defs)} tipos de item, "
+            f"{len(self.world_items)} objetos en el mapa"
+        )
+
+        # F3 = ver donde estan los objetos (para probar)
+        self.debug_items = False
+        self.debug_font = pygame.font.Font(None, 22)
+
+        # Efectos temporales
+        self.speed_timer = 0.0
+        self.burn_factor = 1.0
+        self.burn_timer = 0.0
+
+        # Aviso en pantalla
+        self.message = ""
+        self.message_timer = 0.0
+
         # Cuenta regresiva cuando no hay luz. None = no esta corriendo.
         self.no_light_timer = None
 
@@ -160,6 +214,149 @@ class NewGame:
         self.hud.equip(None)
         self.player.set_torch(False)
 
+    # ---------- objetos ----------
+
+    def show_message(self, text):
+
+        self.message = text
+        self.message_timer = MESSAGE_TIME
+
+    def _nearest_item(self):
+
+        near = [
+            it for it in self.world_items
+            if it.is_near(self.player)
+        ]
+
+        if not near:
+            return None
+
+        px, py = self.player.rect.center
+
+        return min(
+            near,
+            key=lambda it: pygame.Vector2(it.rect.center).distance_to(
+                (px, py)
+            )
+        )
+
+    def pick_up_item(self, item):
+
+        if None not in self.hud.items:
+
+            self.show_message("Inventario lleno")
+
+            return
+
+        slot = self.hud.items.index(None)
+
+        self.hud.items[slot] = item.item_id
+
+        self.world_items.remove(item)
+
+        if item.spawn_id is not None:
+            self.collected.add(item.spawn_id)
+
+        name = self.item_defs[item.item_id].get("nombre", item.item_id)
+
+        self.show_message(f"Agarraste {name}")
+
+    def drop_item(self, slot):
+
+        item_id = self.hud.items[slot]
+
+        if item_id is None:
+            return
+
+        x, y = self.player.rect.center
+
+        self.world_items.append(WorldItem(item_id, x, y))
+
+        self.hud.items[slot] = None
+
+    def use_item(self, slot):
+
+        item_id = self.hud.items[slot]
+
+        if item_id is None:
+            return
+
+        data = self.item_defs.get(item_id, {})
+
+        if data.get("requiere_fosforo") and not self.has_match:
+
+            self.show_message("Necesitas el fosforo encendido")
+
+            return
+
+        effects = data.get("efectos", [])
+
+        # No gastar madera si la llama ya esta al maximo
+        if (
+            any(e.get("tipo") == "vida_sumar" for e in effects)
+            and not any(e.get("tipo") == "vida_fijar" for e in effects)
+            and self.vida >= 1.0
+        ):
+
+            self.show_message("La llama ya esta al maximo")
+
+            return
+
+        for effect in effects:
+
+            kind = effect.get("tipo")
+
+            if kind == "vida_sumar":
+
+                self.vida = min(1.0, self.vida + effect["valor"])
+
+            elif kind == "vida_fijar":
+
+                self.vida = effect["valor"]
+
+            elif kind == "velocidad":
+
+                self.player.movement.speed_mult = effect["multiplicador"]
+                self.speed_timer = effect["duracion"]
+
+            elif kind == "consumo_lento":
+
+                self.burn_factor = effect["factor"]
+                self.burn_timer = effect["duracion"]
+
+        self.hud.items[slot] = None
+
+        self.show_message(f"Usaste {data.get('nombre', item_id)}")
+
+    def _draw_debug_items(self):
+
+        for item in self.world_items:
+
+            center = self.camera.apply(item.rect).center
+
+            pygame.draw.circle(
+                self.screen, (255, 230, 80), center, 22, width=3
+            )
+
+            label = self.debug_font.render(
+                item.item_id, True, (255, 230, 80)
+            )
+
+            self.screen.blit(
+                label,
+                label.get_rect(midtop=(center[0], center[1] + 26))
+            )
+
+        px, py = self.player.rect.center
+
+        info = self.debug_font.render(
+            f"F3  jugador=({px}, {py})  objetos={len(self.world_items)}",
+            True,
+            (255, 230, 80)
+        )
+
+        self.screen.blit(info, (12, self.height - 30))
+
     # ---------- guardado ----------
 
     def save_progress(self):
@@ -175,7 +372,10 @@ class NewGame:
             x=x,
             y=y,
             has_match=self.has_match,
-            coins=self.coins
+            coins=self.coins,
+            inventory=list(self.hud.items),
+            collected=sorted(self.collected),
+            item_seed=self.item_seed
         )
 
     # ---------- eventos ----------
@@ -193,6 +393,10 @@ class NewGame:
 
                 return "menu"
 
+            if event.key == pygame.K_F3:
+
+                self.debug_items = not self.debug_items
+
             if event.key == pygame.K_e:
 
                 if (
@@ -203,10 +407,18 @@ class NewGame:
                     self.match_item = None
                     self.equip_match()
 
+                else:
+
+                    item = self._nearest_item()
+
+                    if item is not None:
+                        self.pick_up_item(item)
+
             # 1 = seleccionar la cosa iluminadora equipada
             if event.key == pygame.K_1:
 
                 self.selected_slot = "equipped"
+                self.hud.selected = None
 
             # 2, 3, 4, 5 = seleccionar cada slot del inventario (0 a 3)
             elif event.key in (
@@ -228,9 +440,27 @@ class NewGame:
 
                 else:
 
-                    # Los slots de inventario todavia no tienen items
-                    # reales, asi que por ahora no hay nada que soltar.
-                    pass
+                    self.drop_item(self.selected_slot)
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+
+            slot = self.hud.slot_at(event.pos)
+
+            # Click izquierdo: seleccionar el slot
+            if event.button == 1 and slot is not None:
+
+                self.selected_slot = slot
+                self.hud.selected = slot
+
+            # Click derecho: usar el item (el del slot bajo el mouse,
+            # o si no hay, el del slot seleccionado)
+            elif event.button == 3:
+
+                if slot is None and isinstance(self.selected_slot, int):
+                    slot = self.selected_slot
+
+                if slot is not None:
+                    self.use_item(slot)
 
         return None
 
@@ -244,9 +474,26 @@ class NewGame:
 
             self.camera.update(self.player, dt)
 
+            if self.speed_timer > 0:
+
+                self.speed_timer -= dt
+
+                if self.speed_timer <= 0:
+                    self.player.movement.speed_mult = 1.0
+
+            if self.burn_timer > 0:
+
+                self.burn_timer -= dt
+
+                if self.burn_timer <= 0:
+                    self.burn_factor = 1.0
+
+            if self.message_timer > 0:
+                self.message_timer -= dt
+
             if self.has_match:
 
-                self.vida -= dt / MATCH_DURATION
+                self.vida -= dt * self.burn_factor / MATCH_DURATION
 
                 if self.vida <= 0:
 
@@ -314,6 +561,9 @@ class NewGame:
         if self.match_item is not None:
             self.match_item.draw(self.screen, self.camera)
 
+        for item in self.world_items:
+            item.draw(self.screen, self.camera)
+
         self.player.draw(
             self.screen,
             self.camera
@@ -361,23 +611,33 @@ class NewGame:
         ):
             self.match_item.draw_prompt(self.screen, self.camera)
 
+        elif self.state == "playing":
+
+            near_item = self._nearest_item()
+
+            if near_item is not None:
+                near_item.draw_prompt(self.screen, self.camera)
+
         self.hud.draw(
             self.screen,
             vida=self.vida if self.has_match else 0.0,
             escudo=self.escudo,
             countdown=self.no_light_timer,
-            coins=self.coins
+            coins=self.coins,
+            equipped_selected=self.selected_slot == "equipped"
         )
 
-        if self.selected_slot == "equipped":
+        self.hud.draw_overlay(
+            self.screen,
+            self.item_defs,
+            pygame.mouse.get_pos(),
+            pygame.mouse.get_pressed()[0],
+            self.message if self.message_timer > 0 else ""
+        )
 
-            pygame.draw.rect(
-                self.screen,
-                (255, 225, 120),
-                self.hud.equipped_rect.inflate(8, 8),
-                width=3,
-                border_radius=10
-            )
+        if self.debug_items:
+
+            self._draw_debug_items()
 
         if self.state in ("dying", "lost"):
 

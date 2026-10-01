@@ -1,0 +1,27 @@
+{
+    "madera": {
+        "nombre": "Madera",
+        "descripcion": "Alimenta la llama: suma 25% de vida al fósforo.",
+        "requiere_fosforo": true,
+        "efectos": [
+            {"tipo": "vida_sumar", "valor": 0.25}
+        ]
+    },
+    "aceite": {
+        "nombre": "Aceite",
+        "descripcion": "Deja la vida del fósforo en 75%, sin importar cuánta tenga. Además te da velocidad por 6 segundos.",
+        "requiere_fosforo": true,
+        "efectos": [
+            {"tipo": "vida_fijar", "valor": 0.75},
+            {"tipo": "velocidad", "multiplicador": 1.3, "duracion": 6}
+        ]
+    },
+    "cera": {
+        "nombre": "Cera",
+        "descripcion": "El fósforo se consume a la mitad de velocidad durante 20 segundos.",
+        "requiere_fosforo": true,
+        "efectos": [
+            {"tipo": "consumo_lento", "factor": 0.5, "duracion": 20}
+        ]
+    }
+}

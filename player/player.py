@@ -36,7 +36,7 @@ class Player:
          (847, 783, 157, 205), (1099, 783, 157, 206)],
     ]
 
-    def __init__(self, x, y, width=34, height=46):
+    def __init__(self, x, y, width=54, height=74):
 
         self.image_rect = pygame.Rect(
             x - width // 2,
@@ -48,9 +48,13 @@ class Player:
         hitbox_width = 6
         hitbox_height = 4
 
+        # Los pies quedan donde estaban con el tamano anterior (46 px),
+        # asi el personaje no aparece corrido al hacerlo mas grande.
+        feet_y = y + 46 // 2
+
         self.rect = pygame.Rect(
             x - hitbox_width // 2,
-            self.image_rect.bottom - hitbox_height - 3,
+            feet_y - hitbox_height - 3,
             hitbox_width,
             hitbox_height
         )

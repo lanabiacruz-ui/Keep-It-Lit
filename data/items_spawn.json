@@ -1,0 +1,148 @@
+{
+    "zonas": [
+        {
+            "id": "madera_01",
+            "item": "madera",
+            "pos": [
+                1025,
+                104
+            ]
+        },
+        {
+            "id": "madera_02",
+            "item": "madera",
+            "pos": [
+                693,
+                127
+            ]
+        },
+        {
+            "id": "madera_03",
+            "item": "madera",
+            "pos": [
+                772,
+                138
+            ]
+        },
+        {
+            "id": "madera_04",
+            "item": "madera",
+            "pos": [
+                942,
+                203
+            ]
+        },
+        {
+            "id": "madera_05",
+            "item": "madera",
+            "pos": [
+                933,
+                291
+            ]
+        },
+        {
+            "id": "madera_06",
+            "item": "madera",
+            "pos": [
+                1032,
+                416
+            ]
+        },
+        {
+            "id": "madera_07",
+            "item": "madera",
+            "pos": [
+                839,
+                430
+            ]
+        },
+        {
+            "id": "madera_08",
+            "item": "madera",
+            "pos": [
+                957,
+                511
+            ]
+        },
+        {
+            "id": "madera_09",
+            "item": "madera",
+            "pos": [
+                840,
+                613
+            ]
+        },
+        {
+            "id": "madera_10",
+            "item": "madera",
+            "pos": [
+                948,
+                709
+            ]
+        },
+        {
+            "id": "madera_11",
+            "item": "madera",
+            "pos": [
+                987,
+                1010
+            ]
+        },
+        {
+            "id": "madera_12",
+            "item": "madera",
+            "pos": [
+                940,
+                1037
+            ]
+        },
+        {
+            "id": "aceite_01",
+            "item": "aceite",
+            "pos": [
+                1086,
+                142
+            ]
+        },
+        {
+            "id": "aceite_02",
+            "item": "aceite",
+            "pos": [
+                1132,
+                518
+            ]
+        },
+        {
+            "id": "aceite_03",
+            "item": "aceite",
+            "pos": [
+                861,
+                612
+            ]
+        },
+        {
+            "id": "cera_01",
+            "item": "cera",
+            "pos": [
+                1110,
+                136
+            ]
+        },
+        {
+            "id": "cera_02",
+            "item": "cera",
+            "pos": [
+                968,
+                499
+            ]
+        },
+        {
+            "id": "cera_03",
+            "item": "cera",
+            "pos": [
+                740,
+                525
+            ]
+        }
+    ]
+}

@@ -1,9 +1,17 @@
 {
-    "player_name": "hols",
-    "created_at": "2026-09-30T22:41:24",
-    "last_played": "2026-09-30T22:49:20",
-    "x": 949,
-    "y": 488,
-    "has_match": true,
-    "coins": 0
+    "player_name": "l",
+    "created_at": "2026-09-30T23:40:19",
+    "last_played": "2026-09-30T23:40:54",
+    "x": 881,
+    "y": 397,
+    "has_match": false,
+    "coins": 0,
+    "inventory": [
+        null,
+        null,
+        null,
+        null
+    ],
+    "collected": [],
+    "item_seed": 466855235
 }

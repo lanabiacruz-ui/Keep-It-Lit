@@ -3,9 +3,12 @@ import pygame
 
 class PlayerMovement:
 
-    def __init__(self, speed=140):
+    def __init__(self, speed=95):
 
         self.speed = speed
+
+        # Multiplicador temporal (aceite, etc.). 1.0 = normal
+        self.speed_mult = 1.0
 
         self._rest_x = 0.0
         self._rest_y = 0.0
@@ -48,8 +51,8 @@ class PlayerMovement:
             dy
         ).normalize()
 
-        self._rest_x += direction.x * self.speed * dt
-        self._rest_y += direction.y * self.speed * dt
+        self._rest_x += direction.x * self.speed * self.speed_mult * dt
+        self._rest_y += direction.y * self.speed * self.speed_mult * dt
 
         step_x = int(self._rest_x)
         step_y = int(self._rest_y)
