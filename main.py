@@ -7,6 +7,7 @@ from states.loading import Loading
 from states.comic import Comic
 from states.new_game import NewGame
 from states.startup import Startup
+from states.settings import Settings
 
 from core.Save_manager import create_new_save
 
@@ -26,7 +27,7 @@ pygame.display.set_caption(
 clock = pygame.time.Clock()
 startup = Startup(screen)
 menu = MainMenu(screen)
-
+settings_menu = None
 name_menu = None
 continue_menu = None
 loading = None
@@ -90,10 +91,10 @@ while running:
 
             elif action == "settings":
 
-                print(
-                    "Configuraciones"
-                )
+                settings_menu = Settings(screen)
 
+                current_state = "settings"
+    
             elif action == "achievements":
 
                 print(
@@ -103,6 +104,12 @@ while running:
             elif action == "quit":
 
                 running = False
+
+        elif current_state == "settings":
+
+            if settings_menu.handle_event(event) == "back":
+
+                current_state = "menu"
 
         elif current_state == "name_input":
 
@@ -213,6 +220,9 @@ while running:
                 comic = Comic(screen)
 
                 current_state = "comic"
+    elif current_state == "settings":
+
+        settings_menu.update(dt)
 
     elif current_state == "comic":
 
@@ -234,6 +244,10 @@ while running:
     elif current_state == "menu":
 
         menu.draw()
+        
+    elif current_state == "settings":
+
+        settings_menu.draw()
 
     elif current_state == "name_input":
 

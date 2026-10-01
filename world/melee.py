@@ -179,6 +179,35 @@ class Melee:
  
     # ---------- golpes ----------
  
+    def _rect_touched(self, rect, pivot, swept, arc):
+        """True si algun punto del rect cae dentro de la parte del
+        area que el fosforo ya barrio."""
+ 
+        step = 3
+ 
+        xs = list(range(rect.left, rect.right, step)) + [rect.right - 1]
+        ys = list(range(rect.top, rect.bottom, step)) + [rect.bottom - 1]
+ 
+        for x in xs:
+            for y in ys:
+ 
+                dx = x - pivot[0]
+                dy = y - pivot[1]
+ 
+                dist = math.hypot(dx, dy)
+ 
+                if dist < INNER_RADIUS or dist > OUTER_RADIUS:
+                    continue
+ 
+                rel = (
+                    math.atan2(dy, dx) - self.start_angle + math.pi
+                ) % math.tau - math.pi
+ 
+                if 0 <= rel <= min(swept, arc):
+                    return True
+ 
+        return False
+ 
     def new_hits(self, targets, pivot):
         """Objetivos (con .rect en coordenadas del mundo) que el
         fosforo acaba de tocar. Cada uno se golpea una sola vez por
@@ -195,6 +224,17 @@ class Melee:
         for target in targets:
  
             if id(target) in self._hit_ids:
+                continue
+ 
+            # Objetos grandes y alargados (puertas): se prueba el
+            # borde real y no solo el centro.
+            if getattr(target, "precise_hit", False):
+ 
+                if self._rect_touched(target.rect, pivot, swept, arc):
+ 
+                    self._hit_ids.add(id(target))
+                    hits.append(target)
+ 
                 continue
  
             tx, ty = target.rect.center

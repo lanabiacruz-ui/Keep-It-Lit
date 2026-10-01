@@ -19,6 +19,7 @@ from world.items import (
     make_spawn_items
 )
 from world.melee import Melee, TrainingDummy
+from world.doors import DoorManager, Door
 from ui.hud import Hud
 
 
@@ -73,6 +74,11 @@ class NewGame:
         self.world_map = WorldMap()
         self.collision_map = CollisionMap()
 
+
+        # Puertas: las rotas (guardadas) no vuelven a aparecer
+        self.doors = DoorManager(self.save_data.get("broken_doors", []))
+        self.collision_map.doors = self.doors
+
         spawn_x, spawn_y = get_spawn_point(
             self.collision_map,
             "cabana"
@@ -94,7 +100,7 @@ class NewGame:
 
         self.light = PlayerLight(
             (self.width, self.height),
-            darkness_alpha=245
+            darkness_alpha=250
         )
 
         self.hud = Hud((self.width, self.height))
@@ -462,7 +468,7 @@ class NewGame:
         """Todo lo que el fosforo puede golpear (cada uno con .rect y
         .take_damage(n))."""
 
-        return self.dummies
+        return self.dummies + self.doors.doors
 
     def start_attack(self):
 
@@ -491,7 +497,14 @@ class NewGame:
         self.melee.update(dt, pivot, self._mouse_world())
 
         for target in self.melee.new_hits(self.combat_targets(), pivot):
-            target.take_damage(self.melee.damage)
+
+            result = target.take_damage(self.melee.damage)
+
+            # Cada golpe a una puerta le saca vida al fosforo
+            if isinstance(target, Door):
+                self.vida -= result
+
+        self.doors.update(dt)
 
         for dummy in self.dummies:
             dummy.update(dt)
@@ -519,6 +532,7 @@ class NewGame:
                 for i, item_id in enumerate(self.hud.items)
             ],
             collected=sorted(self.collected),
+            broken_doors=sorted(self.doors.broken_ids),
             item_seed=self.item_seed
         )
 
@@ -731,6 +745,8 @@ class NewGame:
 
         for item in self.world_items:
             item.draw(self.screen, self.camera)
+
+        self.doors.draw(self.screen, self.camera)
 
         for dummy in self.dummies:
             dummy.draw(self.screen, self.camera)

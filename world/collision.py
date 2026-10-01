@@ -7,6 +7,7 @@ class CollisionMap:
         
         self.world_width = 1920
         self.world_height = 1080
+        self.doors = None
 
      
 
@@ -112,6 +113,7 @@ class CollisionMap:
         if not inside_walkable:
             return False
 
+        
        
         for obstacle in self.obstacles:
 
@@ -142,5 +144,12 @@ class CollisionMap:
 
             if not self.point_is_walkable(x, y):
                 return False
+            if self.doors is not None:
+
+                for door in self.doors.doors:
+
+                    if door.rect.collidepoint(x, y):
+                        return False
+
 
         return True
