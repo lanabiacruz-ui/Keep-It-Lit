@@ -1,3 +1,5 @@
+import math
+
 import pygame
 from pathlib import Path
 
@@ -13,7 +15,19 @@ class Hud:
 
     SLOTS = 5
 
-    def __init__(self, screen_size, scale=0.6, equipped_scale=0.75):
+    # Area util (sin transparencia) de cada marco de barra, medida
+    # sobre el PNG original. El relleno comparte el mismo lienzo,
+    # asi que recortarlo con este rectangulo alcanza para "vaciarlo".
+    VIDA_BBOX = (7, 7, 248, 41)
+    ESCUDO_BBOX = (2, 6, 185, 34)
+
+    def __init__(
+        self,
+        screen_size,
+        scale=0.6,
+        equipped_scale=0.75,
+        bar_scale=1.0
+    ):
 
         w, h = screen_size
 
@@ -51,7 +65,7 @@ class Hud:
 
         # Items del inventario (por ahora vacio; el fosforo NO va aca)
         self.items = [None] * self.SLOTS
-        self.selected = 0
+        self.selected = None
 
         self.bar_rect = self.bar.get_rect(
             midbottom=(w // 2, h - 12)
@@ -70,15 +84,136 @@ class Hud:
         ]
 
         # Item equipado: a la izquierda de la hotbar
-        # (cambia esta posicion si lo queres en otro lado)
         self.equipped_rect = self.equipped_frame.get_rect(
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
         )
 
+        # ---------- Vida y escudo ----------
+
+        self.vida_frame = scaled(load("hud_barra2.png"), bar_scale)
+        self.vida_fill = scaled(load("hud_vida_relleno.png"), bar_scale)
+
+        self.escudo_frame = scaled(load("hud_barra1.png"), bar_scale)
+        self.escudo_fill = scaled(load("hud_escudo_relleno.png"), bar_scale)
+
+        self.vida_bbox = tuple(
+            round(v * bar_scale) for v in self.VIDA_BBOX
+        )
+
+        self.escudo_bbox = tuple(
+            round(v * bar_scale) for v in self.ESCUDO_BBOX
+        )
+
+        margin = 18
+
+        self.vida_pos = (margin, margin)
+
+        self.escudo_pos = (
+            margin,
+            margin + self.vida_frame.get_height() + 8
+        )
+
+        self.countdown_font = pygame.font.Font(None, 90)
+
+        # Monedas (arriba a la derecha)
+        self.coin_icon = scaled(load("hud_monedas.png"), bar_scale)
+
+        self.coin_rect = self.coin_icon.get_rect(
+            topright=(w - margin, margin)
+        )
+
+        self.coin_font = pygame.font.Font(None, 32)
+
     def equip(self, name):
         self.equipped = name
 
-    def draw(self, screen):
+    def _draw_bar(self, screen, frame, fill, pos, pct, bbox):
+
+        screen.blit(frame, pos)
+
+        pct = max(0.0, min(1.0, pct))
+
+        if pct <= 0:
+            return
+
+        x1, y1, x2, y2 = bbox
+
+        width = x2 if pct >= 1 else round(
+            x1 + (x2 - x1) * pct
+        )
+
+        width = max(1, min(width, fill.get_width()))
+
+        crop = fill.subsurface(
+            pygame.Rect(0, 0, width, fill.get_height())
+        )
+
+        screen.blit(crop, pos)
+
+    def draw(
+        self,
+        screen,
+        vida=1.0,
+        escudo=0.0,
+        countdown=None,
+        coins=0
+    ):
+
+        # Vida y escudo, arriba a la izquierda
+        self._draw_bar(
+            screen,
+            self.vida_frame,
+            self.vida_fill,
+            self.vida_pos,
+            vida,
+            self.vida_bbox
+        )
+
+        self._draw_bar(
+            screen,
+            self.escudo_frame,
+            self.escudo_fill,
+            self.escudo_pos,
+            escudo,
+            self.escudo_bbox
+        )
+
+        # Monedas, arriba a la derecha
+        screen.blit(self.coin_icon, self.coin_rect)
+
+        coin_text = self.coin_font.render(
+            str(coins),
+            True,
+            (255, 255, 255)
+        )
+
+        coin_text_rect = coin_text.get_rect(
+            center=(
+                self.coin_rect.centerx,
+                self.coin_rect.centery
+            )
+        )
+
+        screen.blit(coin_text, coin_text_rect)
+
+        # Contador de "sin luz" (10 -> 0), centrado arriba
+        if countdown is not None:
+
+            seconds_left = max(0, math.ceil(countdown))
+
+            color = (255, 90, 70) if seconds_left <= 3 else (255, 255, 255)
+
+            number = self.countdown_font.render(
+                str(seconds_left),
+                True,
+                color
+            )
+
+            number_rect = number.get_rect(
+                midtop=(screen.get_width() // 2, 18)
+            )
+
+            screen.blit(number, number_rect)
 
         # Hotbar
         screen.blit(self.bar, self.bar_rect)

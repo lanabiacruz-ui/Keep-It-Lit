@@ -1,8 +1,9 @@
 {
-    "player_name": "Test",
-    "created_at": "2026-09-30T11:03:14",
-    "last_played": "2026-09-30T11:07:54",
-    "x": 1376,
-    "y": 452,
-    "has_match": true
+    "player_name": "hols",
+    "created_at": "2026-09-30T22:41:24",
+    "last_played": "2026-09-30T22:49:20",
+    "x": 949,
+    "y": 488,
+    "has_match": true,
+    "coins": 0
 }

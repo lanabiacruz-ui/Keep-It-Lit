@@ -7,7 +7,7 @@ from states.loading import Loading
 from states.comic import Comic
 from states.new_game import NewGame
 from states.startup import Startup
-from states.settings import Settings
+
 from core.Save_manager import create_new_save
 
 pygame.init()
@@ -28,14 +28,12 @@ startup = Startup(screen)
 menu = MainMenu(screen)
 
 name_menu = None
-settings_menu = None
 continue_menu = None
 loading = None
 comic = None
 game = None
 
 player_name = ""
-
 
 current_save_path = None
 pending_save_data = None
@@ -55,12 +53,21 @@ while running:
 
         if event.type == pygame.QUIT:
 
-            if current_state == "gameplay" and game is not None:
+            if (
+                current_state == "gameplay"
+                and game is not None
+                and game.state == "playing"
+            ):
 
                 game.save_progress()
 
             running = False
         
+        if current_state == "startup":
+
+            if startup.update(dt) == "done":
+
+                current_state = "menu"
 
         if current_state == "menu":
 
@@ -80,12 +87,12 @@ while running:
                 continue_menu = ContinueGame(screen)
 
                 current_state = "continue"
-            
+
             elif action == "settings":
 
-                settings_menu = Settings(screen)
-
-                current_state = "settings"
+                print(
+                    "Configuraciones"
+                )
 
             elif action == "achievements":
 
@@ -119,7 +126,8 @@ while running:
 
                 if save_path is None:
 
-                    
+                    # Los 3 slots estan ocupados: no se pisa ninguna
+                    # partida, se avisa y se queda en la pantalla.
                     name_menu.message = (
                         "No hay espacio. Borrá una partida primero."
                     )
@@ -161,12 +169,6 @@ while running:
 
                 current_state = "loading"
 
-        elif current_state == "settings":
-
-            if settings_menu.handle_event(event) == "back":
-
-                current_state = "menu"
-
         elif current_state == "comic":
 
             if comic.handle_event(event) == "done":
@@ -191,13 +193,7 @@ while running:
                 current_state = "menu"
 
 
-    if current_state == "startup":
-
-        if startup.update(dt) == "done":
-
-            current_state = "menu"
-
-    elif current_state == "loading":
+    if current_state == "loading":
 
         if loading.update(dt) == "done":
 
@@ -224,7 +220,9 @@ while running:
 
     elif current_state == "gameplay":
 
-        game.update(dt)
+        if game.update(dt) == "menu":
+
+            current_state = "menu"
 
 
     screen.fill((0, 0, 0))
@@ -237,10 +235,6 @@ while running:
 
         menu.draw()
 
-    elif current_state == "settings":
-
-        settings_menu.draw()
-        
     elif current_state == "name_input":
 
         name_menu.draw()
