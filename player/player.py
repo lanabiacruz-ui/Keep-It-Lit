@@ -45,8 +45,8 @@ class Player:
             height
         )
 
-        hitbox_width = 16
-        hitbox_height = 12
+        hitbox_width = 6
+        hitbox_height = 4
 
         self.rect = pygame.Rect(
             x - hitbox_width // 2,
