@@ -75,6 +75,31 @@ def list_slots():
     return slots
 
 
+def name_exists(player_name):
+    """True si ya hay una partida guardada con ese nombre.
+
+    Ignora mayusculas y espacios de los costados ("Juan" y " juan "
+    son el mismo nombre). Los slots vacios (partidas borradas) no
+    cuentan, asi que un nombre se puede volver a usar despues de
+    borrar su partida.
+    """
+
+    wanted = str(player_name).strip().casefold()
+
+    if not wanted:
+        return False
+
+    for slot in list_slots():
+
+        if slot["empty"]:
+            continue
+
+        if slot["player_name"].strip().casefold() == wanted:
+            return True
+
+    return False
+
+
 def get_free_slot():
 
 

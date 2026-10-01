@@ -1,6 +1,8 @@
 import pygame
 from pathlib import Path
 
+from core.Save_manager import name_exists
+
 
 class MenuCarga:
 
@@ -95,6 +97,7 @@ class MenuCarga:
             if event.key == pygame.K_BACKSPACE:
 
                 self.name = self.name[:-1]
+                self.message = ""
 
             elif event.key in (
                 pygame.K_RETURN,
@@ -106,6 +109,10 @@ class MenuCarga:
                 if not final_name:
 
                     self.message = "Escribí un nombre para continuar"
+
+                elif name_exists(final_name):
+
+                    self.message = "Ese nombre ya fue utilizado. Elegí otro."
 
                 else:
 

@@ -1,10 +1,10 @@
 {
-    "player_name": "l",
-    "created_at": "2026-09-30T23:52:09",
-    "last_played": "2026-09-30T23:52:35",
-    "x": 916,
-    "y": 564,
-    "has_match": false,
+    "player_name": "holes",
+    "created_at": "2026-10-01T00:29:57",
+    "last_played": "2026-10-01T00:31:14",
+    "x": 935,
+    "y": 439,
+    "has_match": true,
     "coins": 0,
     "inventory": [
         null,
@@ -12,6 +12,12 @@
         null,
         null
     ],
-    "collected": [],
-    "item_seed": 300110217
+    "collected": [
+        "aceite_03#0",
+        "cera_02#0",
+        "madera_08#0",
+        "madera_09#0",
+        "madera_10#0"
+    ],
+    "item_seed": 216936521
 }

@@ -18,6 +18,7 @@ from world.items import (
     load_spawn_zones,
     make_spawn_items
 )
+from world.melee import Melee, TrainingDummy
 from ui.hud import Hud
 
 
@@ -26,8 +27,13 @@ MATCH_LIGHT_RADIUS = 60
 
 MATCH_POS = (818, 1002)
 
-# Cuanto dura prendido el fosforo (vida), en segundos. Baja rapido.
-MATCH_DURATION = 12.0
+# Cuanto dura prendido el fosforo (vida), en segundos. Corto para dar
+# tension, pero lo bastante largo para explorar y decidir que hacer.
+MATCH_DURATION = 30.0
+
+# A que altura del sprite esta el "centro" del personaje (0 = pies,
+# 1 = cabeza). De ahi sale el area de ataque.
+TORSO_HEIGHT = 0.5
 
 # Maximo de unidades iguales por slot (se puede cambiar por item con
 # "max_pila" en data/items.json).
@@ -163,6 +169,15 @@ class NewGame:
         self.speed_timer = 0.0
         self.burn_factor = 1.0
         self.burn_timer = 0.0
+
+        # ---------- Combate ----------
+        self.melee = Melee()
+
+        # Munecos de practica (F5). Mas adelante aca van los enemigos.
+        self.dummies = []
+
+        # F4 = ver el area de ataque (para probar)
+        self.debug_combat = False
 
         # Aviso en pantalla
         self.message = ""
@@ -354,6 +369,16 @@ class NewGame:
 
             return
 
+        # No gastar cera si ya hay una activa
+        if (
+            any(e.get("tipo") == "consumo_lento" for e in effects)
+            and self.burn_timer > 0
+        ):
+
+            self.show_message("La cera ya esta haciendo efecto")
+
+            return
+
         for effect in effects:
 
             kind = effect.get("tipo")
@@ -409,6 +434,70 @@ class NewGame:
 
         self.screen.blit(info, (12, self.height - 30))
 
+    # ---------- combate ----------
+
+    def _attack_pivot(self):
+        """Desde donde sale el area de ataque: el torso del jugador."""
+
+        # El sprite se dibuja a tamano real (sin zoom) apoyado en los
+        # pies, asi que el torso queda unos pixeles de pantalla arriba
+        # de los pies; hay que pasarlos a unidades del mundo.
+        rect = self.player.image_rect
+
+        lift = rect.height * TORSO_HEIGHT / self.camera.zoom
+
+        return (rect.centerx, rect.bottom - lift)
+
+    def _mouse_world(self):
+        """Posicion del mouse en coordenadas del mundo."""
+
+        mx, my = pygame.mouse.get_pos()
+
+        return (
+            (mx + self.camera.x) / self.camera.zoom,
+            (my + self.camera.y) / self.camera.zoom
+        )
+
+    def combat_targets(self):
+        """Todo lo que el fosforo puede golpear (cada uno con .rect y
+        .take_damage(n))."""
+
+        return self.dummies
+
+    def start_attack(self):
+
+        if not self.has_match:
+            return
+
+        if not self.melee.start():
+            return
+
+        # El personaje mira hacia donde pega
+        dx = math.cos(self.melee.aim)
+        dy = math.sin(self.melee.aim)
+
+        if abs(dx) > abs(dy):
+            self.player.direction = "right" if dx > 0 else "left"
+        else:
+            self.player.direction = "down" if dy > 0 else "up"
+
+    def _update_combat(self, dt):
+
+        if not self.has_match:
+            self.melee.cancel()
+
+        pivot = self._attack_pivot()
+
+        self.melee.update(dt, pivot, self._mouse_world())
+
+        for target in self.melee.new_hits(self.combat_targets(), pivot):
+            target.take_damage(self.melee.damage)
+
+        for dummy in self.dummies:
+            dummy.update(dt)
+
+        self.dummies = [d for d in self.dummies if not d.dead]
+
     # ---------- guardado ----------
 
     def save_progress(self):
@@ -451,6 +540,16 @@ class NewGame:
             if event.key == pygame.K_F3:
 
                 self.debug_items = not self.debug_items
+
+            if event.key == pygame.K_F4:
+
+                self.debug_combat = not self.debug_combat
+
+            if event.key == pygame.K_F5:
+
+                wx, wy = self._mouse_world()
+
+                self.dummies.append(TrainingDummy(wx, wy))
 
             if event.key == pygame.K_e:
 
@@ -507,6 +606,15 @@ class NewGame:
                 self.selected_slot = slot
                 self.hud.selected = slot
 
+            # Click izquierdo fuera del inventario: pegar con el fosforo
+            elif (
+                event.button == 1
+                and not self.hud.bar_rect.collidepoint(event.pos)
+                and not self.hud.equipped_rect.collidepoint(event.pos)
+            ):
+
+                self.start_attack()
+
             # Click derecho: usar el item (el del slot bajo el mouse,
             # o si no hay, el del slot seleccionado)
             elif event.button == 3:
@@ -536,17 +644,22 @@ class NewGame:
                 if self.speed_timer <= 0:
                     self.player.movement.speed_mult = 1.0
 
-            if self.burn_timer > 0:
-
-                self.burn_timer -= dt
-
-                if self.burn_timer <= 0:
-                    self.burn_factor = 1.0
-
             if self.message_timer > 0:
                 self.message_timer -= dt
 
+            self._update_combat(dt)
+
             if self.has_match:
+
+                # La cera ralentiza el consumo por tiempo limitado.
+                # Su tiempo solo corre mientras el fosforo esta prendido.
+                if self.burn_timer > 0:
+
+                    self.burn_timer -= dt
+
+                    if self.burn_timer <= 0:
+                        self.burn_timer = 0.0
+                        self.burn_factor = 1.0
 
                 self.vida -= dt * self.burn_factor / MATCH_DURATION
 
@@ -619,6 +732,9 @@ class NewGame:
         for item in self.world_items:
             item.draw(self.screen, self.camera)
 
+        for dummy in self.dummies:
+            dummy.draw(self.screen, self.camera)
+
         self.player.draw(
             self.screen,
             self.camera
@@ -660,6 +776,21 @@ class NewGame:
             sources
         )
 
+        # El golpe va encima de la oscuridad, para que brille
+        self.melee.draw(
+            self.screen,
+            self.camera,
+            self._attack_pivot()
+        )
+
+        if self.debug_combat:
+
+            self.melee.draw_debug(
+                self.screen,
+                self.camera,
+                self._attack_pivot()
+            )
+
         if (
             self.match_item is not None
             and self.match_item.is_near(self.player)
@@ -681,6 +812,20 @@ class NewGame:
             coins=self.coins,
             equipped_selected=self.selected_slot == "equipped"
         )
+
+        if self.state == "playing" and self.has_match and self.burn_timer > 0:
+
+            txt = f"Cera: {math.ceil(self.burn_timer)}s"
+
+            font = self.hud.msg_font
+
+            shadow = font.render(txt, True, (0, 0, 0))
+            label = font.render(txt, True, (255, 225, 140))
+
+            pos = label.get_rect(midtop=(self.width // 2, 18))
+
+            self.screen.blit(shadow, pos.move(1, 1))
+            self.screen.blit(label, pos)
 
         self.hud.draw_overlay(
             self.screen,
