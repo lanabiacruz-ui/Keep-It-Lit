@@ -12,7 +12,7 @@ class Camera:
         screen_height,
         world_width,
         world_height,
-        zoom=3,
+        zoom=4,
         smoothing=8
     ):
         self.screen_width = screen_width
