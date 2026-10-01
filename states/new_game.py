@@ -29,6 +29,10 @@ MATCH_POS = (818, 1002)
 # Cuanto dura prendido el fosforo (vida), en segundos. Baja rapido.
 MATCH_DURATION = 12.0
 
+# Maximo de unidades iguales por slot (se puede cambiar por item con
+# "max_pila" en data/items.json).
+MAX_STACK = 15
+
 # Cuanto tarda en desaparecer un aviso en pantalla (segundos).
 MESSAGE_TIME = 2.2
 
@@ -115,8 +119,21 @@ class NewGame:
 
         for i in range(self.hud.SLOTS):
 
-            if i < len(saved_inv) and saved_inv[i] in self.item_defs:
-                self.hud.items[i] = saved_inv[i]
+            if i >= len(saved_inv):
+                break
+
+            entry = saved_inv[i]
+
+            # Formato nuevo: [id, cantidad]. Formato viejo: solo el id.
+            if isinstance(entry, (list, tuple)) and len(entry) == 2:
+                item_id, count = entry[0], int(entry[1])
+            else:
+                item_id, count = entry, 1
+
+            if item_id in self.item_defs and count > 0:
+
+                self.hud.items[i] = item_id
+                self.hud.counts[i] = min(count, self._max_stack(item_id))
 
         self.collected = set(self.save_data.get("collected", []))
 
@@ -240,17 +257,42 @@ class NewGame:
             )
         )
 
+    def _max_stack(self, item_id):
+
+        return int(
+            self.item_defs.get(item_id, {}).get("max_pila", MAX_STACK)
+        )
+
+    def _slot_for(self, item_id):
+        """Slot donde entra 1 unidad: primero una pila que no este
+        llena, despues un slot vacio. None si no hay lugar."""
+
+        limit = self._max_stack(item_id)
+
+        for i, stored in enumerate(self.hud.items):
+
+            if stored == item_id and self.hud.counts[i] < limit:
+                return i
+
+        for i, stored in enumerate(self.hud.items):
+
+            if stored is None:
+                return i
+
+        return None
+
     def pick_up_item(self, item):
 
-        if None not in self.hud.items:
+        slot = self._slot_for(item.item_id)
+
+        if slot is None:
 
             self.show_message("Inventario lleno")
 
             return
 
-        slot = self.hud.items.index(None)
-
         self.hud.items[slot] = item.item_id
+        self.hud.counts[slot] += 1
 
         self.world_items.remove(item)
 
@@ -260,6 +302,15 @@ class NewGame:
         name = self.item_defs[item.item_id].get("nombre", item.item_id)
 
         self.show_message(f"Agarraste {name}")
+
+    def _remove_one(self, slot):
+
+        self.hud.counts[slot] -= 1
+
+        if self.hud.counts[slot] <= 0:
+
+            self.hud.counts[slot] = 0
+            self.hud.items[slot] = None
 
     def drop_item(self, slot):
 
@@ -272,7 +323,8 @@ class NewGame:
 
         self.world_items.append(WorldItem(item_id, x, y))
 
-        self.hud.items[slot] = None
+        # Suelta de a una unidad
+        self._remove_one(slot)
 
     def use_item(self, slot):
 
@@ -324,7 +376,7 @@ class NewGame:
                 self.burn_factor = effect["factor"]
                 self.burn_timer = effect["duracion"]
 
-        self.hud.items[slot] = None
+        self._remove_one(slot)
 
         self.show_message(f"Usaste {data.get('nombre', item_id)}")
 
@@ -373,7 +425,10 @@ class NewGame:
             y=y,
             has_match=self.has_match,
             coins=self.coins,
-            inventory=list(self.hud.items),
+            inventory=[
+                [item_id, self.hud.counts[i]] if item_id else None
+                for i, item_id in enumerate(self.hud.items)
+            ],
             collected=sorted(self.collected),
             item_seed=self.item_seed
         )

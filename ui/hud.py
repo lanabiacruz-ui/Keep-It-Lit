@@ -84,6 +84,9 @@ class Hud:
 
         # Items del inventario (por ahora vacio; el fosforo NO va aca)
         self.items = [None] * self.SLOTS
+
+        # Cuantas unidades hay en cada slot (se apilan las iguales)
+        self.counts = [0] * self.SLOTS
         self.selected = None
 
         slot_size = self.slot.get_width()
@@ -166,6 +169,7 @@ class Hud:
         self.tip_title_font = pygame.font.Font(None, 26)
         self.tip_font = pygame.font.Font(None, 22)
         self.msg_font = pygame.font.Font(None, 28)
+        self.count_font = pygame.font.Font(None, 26)
 
         self._slot_icons = {}
 
@@ -421,6 +425,23 @@ class Hud:
                         center=self.slot_rect(i).center
                     )
                 )
+
+            # Cantidad (solo si hay mas de una)
+            if self.items[i] is not None and self.counts[i] > 1:
+
+                txt = str(self.counts[i])
+
+                shadow = self.count_font.render(txt, True, (30, 34, 40))
+                text = self.count_font.render(txt, True, (255, 255, 255))
+
+                pos = text.get_rect(
+                    bottomright=self.slot_rect(i).bottomright
+                )
+
+                pos.move_ip(-5, -4)
+
+                screen.blit(shadow, pos.move(1, 1))
+                screen.blit(text, pos)
 
         # Item equipado (con imagen de seleccion si esta elegido)
         if equipped_selected:
