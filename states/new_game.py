@@ -635,9 +635,8 @@ class NewGame:
         self.melee.cancel()
 
     def _open_chest(self, chest):
-        """El cofre suelta sus items al piso y queda en espera."""
-
-        chest.start_cooldown(self.chests.wait)
+        """El cofre suelta sus items al piso. Se puede abrir varias veces
+        (10 a 15, al azar); cuando se acaban queda en espera."""
 
         drops = self.chests.spawn_drops(
             chest, self.collision_map, self.item_defs
@@ -645,7 +644,18 @@ class NewGame:
 
         self.world_items.extend(drops)
 
-        self.show_message(f"Cofre abierto: salieron {len(drops)} cosas")
+        exhausted = self.chests.consume_use(chest)
+
+        if exhausted:
+
+            self.show_message(
+                f"Salieron {len(drops)} cosas. El cofre se vacio, "
+                f"volve en {format_time(self.chests.wait)}"
+            )
+
+        else:
+
+            self.show_message(f"Cofre abierto: salieron {len(drops)} cosas")
 
     def _close_minigame(self, result):
 

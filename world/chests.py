@@ -35,7 +35,10 @@ DROP_DELAY = 0.07
 
 DEFAULTS = {
     "espera_segundos": 180,
-    "items_por_cofre": [10, 15],
+    # Cuantas veces se puede abrir un cofre antes de quedar en espera
+    "aperturas_por_cofre": [10, 15],
+    # Probabilidad (peso) de que una apertura suelte N objetos
+    "items_por_apertura": {"3": 50, "4": 35, "5": 15},
     "pesos": {"moneda": 1},
     "cofres": [],
 }
@@ -85,7 +88,7 @@ class Chest:
     """Un cofre del mapa. Es un objetivo mas de los golpes del fosforo
     (tiene .rect y .take_damage)."""
 
-    def __init__(self, chest_id, x, y, cooldown=0.0):
+    def __init__(self, chest_id, x, y, cooldown=0.0, uses_left=None):
 
         self.id = chest_id
 
@@ -98,6 +101,10 @@ class Chest:
 
         # Segundos que faltan para poder abrirlo de nuevo (0 = listo)
         self.cooldown = float(cooldown)
+
+        # Aperturas que le quedan antes de quedar en espera
+        # (None = todavia no se sorteo, se sortea en la primera apertura)
+        self.uses_left = uses_left
 
         # True mientras el minijuego de este cofre esta abierto
         self.busy = False
@@ -228,9 +235,22 @@ class ChestManager:
 
         self.wait = float(config["espera_segundos"])
 
-        low, high = config["items_por_cofre"]
-        self.min_items = int(low)
-        self.max_items = int(high)
+        low, high = config["aperturas_por_cofre"]
+        self.min_uses = max(1, int(low))
+        self.max_uses = max(self.min_uses, int(high))
+
+        # {cantidad de objetos: peso}
+        self.count_weights = {}
+
+        for key, weight in dict(config["items_por_apertura"]).items():
+
+            try:
+                self.count_weights[int(key)] = float(weight)
+            except (TypeError, ValueError):
+                continue
+
+        if not self.count_weights:
+            self.count_weights = {3: 50.0, 4: 35.0, 5: 15.0}
 
         self.weights = dict(config["pesos"])
 
@@ -246,13 +266,39 @@ class ChestManager:
             except (KeyError, TypeError, ValueError):
                 continue
 
+            cooldown, uses_left = self._read_saved(saved.get(chest_id))
+
             self.chests.append(
-                Chest(chest_id, x, y, float(saved.get(chest_id, 0.0)))
+                Chest(chest_id, x, y, cooldown, uses_left)
             )
 
         self.font = pygame.font.Font(None, 24)
 
         print(f"[cofres] {len(self.chests)} cofres en el mapa")
+
+    @staticmethod
+    def _read_saved(value):
+        """Lee lo guardado de un cofre. Acepta el formato viejo (solo los
+        segundos de espera) y el nuevo ({"espera": s, "usos": n})."""
+
+        if isinstance(value, dict):
+
+            try:
+                cooldown = float(value.get("espera", 0.0))
+            except (TypeError, ValueError):
+                cooldown = 0.0
+
+            uses = value.get("usos")
+
+            if not isinstance(uses, int) or uses <= 0:
+                uses = None
+
+            return cooldown, uses
+
+        try:
+            return float(value or 0.0), None
+        except (TypeError, ValueError):
+            return 0.0, None
 
     @property
     def blocking_rects(self):
@@ -271,13 +317,27 @@ class ChestManager:
             chest.draw(screen, camera, self.font)
 
     def save_data(self):
-        """{id: segundos que faltan} solo de los que estan en espera."""
+        """{id: {"espera": segundos que faltan, "usos": aperturas que le
+        quedan}} solo de los cofres en espera o ya empezados."""
 
-        return {
-            c.id: round(c.cooldown, 1)
-            for c in self.chests
-            if c.cooldown > 0
-        }
+        data = {}
+
+        for c in self.chests:
+
+            if c.cooldown <= 0 and c.uses_left is None:
+                continue
+
+            entry = {}
+
+            if c.cooldown > 0:
+                entry["espera"] = round(c.cooldown, 1)
+
+            if c.uses_left is not None:
+                entry["usos"] = c.uses_left
+
+            data[c.id] = entry
+
+        return data
 
     def nearest_ready(self, pos, max_dist):
         """El cofre listo mas cercano a `pos` (None si no hay ninguno
@@ -301,11 +361,40 @@ class ChestManager:
 
     # ---------- drops ----------
 
+    def roll_count(self):
+        """Cuantos objetos salen en esta apertura (3 a 5), segun las
+        probabilidades de data/chests.json."""
+
+        counts = list(self.count_weights)
+        weights = [self.count_weights[n] for n in counts]
+
+        return random.choices(counts, weights=weights, k=1)[0]
+
+    def consume_use(self, chest):
+        """Gasta una apertura del cofre. La primera vez sortea cuantas
+        aperturas tiene (10 a 15). Cuando se acaban queda en espera.
+        Devuelve True si el cofre se quedo sin aperturas."""
+
+        if chest.uses_left is None:
+
+            chest.uses_left = random.randint(self.min_uses, self.max_uses)
+
+        chest.uses_left -= 1
+
+        if chest.uses_left <= 0:
+
+            chest.uses_left = None
+            chest.start_cooldown(self.wait)
+
+            return True
+
+        return False
+
     def roll_ids(self):
-        """Que sale en esta apertura: de 10 a 15 al azar, segun los
+        """Que sale en esta apertura: 3 a 5 objetos al azar, segun los
         pesos de data/chests.json."""
 
-        count = random.randint(self.min_items, self.max_items)
+        count = self.roll_count()
 
         ids = list(self.weights)
         weights = [self.weights[i] for i in ids]

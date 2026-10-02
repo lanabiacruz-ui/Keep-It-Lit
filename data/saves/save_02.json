@@ -1,0 +1,44 @@
+{
+    "player_name": "o",
+    "created_at": "2026-10-02T01:27:55",
+    "last_played": "2026-10-02T01:31:58",
+    "x": 474,
+    "y": 56,
+    "has_match": true,
+    "coins": 19,
+    "inventory": [
+        null,
+        null,
+        null,
+        [
+            "madera",
+            9
+        ]
+    ],
+    "collected": [
+        "aceite_03#0",
+        "madera_02#0",
+        "madera_03#0",
+        "madera_04#0",
+        "madera_05#0",
+        "madera_08#0",
+        "madera_09#0",
+        "madera_10#0",
+        "madera_11#0",
+        "madera_12#0"
+    ],
+    "broken_doors": [
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "sup_central_abajo",
+        "sup_izq_central",
+        "sup_izq_sala"
+    ],
+    "chests": {
+        "cofre_02": {
+            "espera": 135.5
+        }
+    },
+    "item_seed": 732665280
+}
