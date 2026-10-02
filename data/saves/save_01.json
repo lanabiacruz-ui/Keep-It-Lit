@@ -1,0 +1,21 @@
+{
+    "player_name": "chi",
+    "created_at": "2026-10-02T00:22:07",
+    "last_played": "2026-10-02T00:22:42",
+    "x": 951,
+    "y": 479,
+    "has_match": true,
+    "coins": 0,
+    "inventory": [
+        null,
+        null,
+        null,
+        null
+    ],
+    "collected": [],
+    "broken_doors": [
+        "cabana",
+        "hub_abajo"
+    ],
+    "item_seed": 110613425
+}
