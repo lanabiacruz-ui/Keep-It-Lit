@@ -149,6 +149,85 @@ class WorldItem(MatchItem):
         if icon is not None:
             self.original = icon
 
+        # Las monedas se juntan solas al pasar cerca (sin apretar E)
+        self.auto = item_id == "moneda"
+
+        # Animacion de "salir del cofre" (None = quieto en el piso)
+        self.fly = None
+        self._lift = 0.0
+
+    def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45):
+        """Sale disparado de `src` y cae en `dst` (como un dispenser)."""
+
+        self.fly = {
+            "src": src,
+            "dst": dst,
+            "delay": delay,
+            "t": 0.0,
+            "dur": duration,
+            "h": height,
+        }
+
+        self.rect.center = (round(src[0]), round(src[1]))
+
+    def update_fly(self, dt):
+
+        f = self.fly
+
+        if f is None:
+            return
+
+        if f["delay"] > 0:
+            f["delay"] -= dt
+            return
+
+        f["t"] += dt / f["dur"]
+
+        if f["t"] >= 1.0:
+
+            self.rect.center = (round(f["dst"][0]), round(f["dst"][1]))
+            self.fly = None
+            self._lift = 0.0
+
+            return
+
+        t = f["t"]
+
+        x = f["src"][0] + (f["dst"][0] - f["src"][0]) * t
+        y = f["src"][1] + (f["dst"][1] - f["src"][1]) * t
+
+        self.rect.center = (round(x), round(y))
+
+        # Arco: sube y baja (0 al principio y al final)
+        self._lift = f["h"] * 4 * t * (1 - t)
+
+    def is_near(self, player):
+
+        # En el aire no se puede agarrar
+        if self.fly is not None:
+            return False
+
+        return super().is_near(player)
+
+    def draw(self, screen, camera):
+
+        f = self.fly
+
+        # Todavia "dentro" del cofre
+        if f is not None and f["delay"] > 0:
+            return
+
+        sprite = self._get_sprite(camera.zoom)
+
+        dest = camera.apply(self.rect)
+
+        lift = int(self._lift * camera.zoom)
+
+        screen.blit(
+            sprite,
+            sprite.get_rect(center=(dest.centerx, dest.centery - lift))
+        )
+
 
 def make_spawn_items(zones, defs, collision_map, seed, collected):
     """Crea los items de cada zona en un punto caminable al azar.

@@ -20,7 +20,9 @@ from world.items import (
 )
 from world.melee import Melee, TrainingDummy
 from world.doors import DoorManager, Door
+from world.chests import ChestManager, Chest, format_time
 from ui.hud import Hud
+from ui.chest_minigame import ChestMinigame
 
 
 PLAYER_LIGHT_RADIUS = 100
@@ -48,6 +50,15 @@ NO_LIGHT_COUNTDOWN = 10.0
 
 # Debajo de este % de vida, la luz empieza a parpadear.
 FLICKER_THRESHOLD = 0.25
+
+# A que distancia (unidades del mundo) del cofre sirve la ganzua.
+GANZUA_DISTANCE = 48
+
+# A que distancia se juntan solas las monedas del piso.
+COIN_PICKUP_DISTANCE = 14
+
+# Cada cuanto hace dano la luz con polvora (segundos).
+POLVORA_TICK = 0.5
 
 # Cuanto tarda la pantalla en ponerse del todo negra al perder.
 FADE_DURATION = 1.2
@@ -78,6 +89,14 @@ class NewGame:
         # Puertas: las rotas (guardadas) no vuelven a aparecer
         self.doors = DoorManager(self.save_data.get("broken_doors", []))
         self.collision_map.doors = self.doors
+
+        # Cofres: la espera de cada uno se guarda en la partida
+        self.chests = ChestManager(self.save_data.get("chests", {}))
+        self.collision_map.obstacles.extend(self.chests.blocking_rects)
+
+        # Minijuego del cofre (None = cerrado)
+        self.minigame = None
+        self.minigame_chest = None
 
         spawn_x, spawn_y = get_spawn_point(
             self.collision_map,
@@ -176,6 +195,18 @@ class NewGame:
         self.burn_factor = 1.0
         self.burn_timer = 0.0
 
+        # Polvora: la luz hace dano mientras dura
+        self.polvora_timer = 0.0
+        self.polvora_dps = 0.0
+        self._polvora_acc = 0.0
+
+        # Resina: cura de a poco. regen_left = cuanta vida falta sumar
+        self.regen_left = 0.0
+        self.regen_rate = 0.0
+
+        # Radio de la luz en pantalla (px), lo calcula draw()
+        self._light_radius_px = PLAYER_LIGHT_RADIUS
+
         # ---------- Combate ----------
         self.melee = Melee()
 
@@ -247,6 +278,7 @@ class NewGame:
 
         # Se le acabo la vida al fosforo: se consume, no queda tirado
         self.vida = 0.0
+        self.regen_left = 0.0
         self.has_match = False
         self.match_item = None
         self.hud.equip(None)
@@ -263,7 +295,7 @@ class NewGame:
 
         near = [
             it for it in self.world_items
-            if it.is_near(self.player)
+            if not it.auto and it.is_near(self.player)
         ]
 
         if not near:
@@ -303,6 +335,13 @@ class NewGame:
         return None
 
     def pick_up_item(self, item):
+
+        if item.item_id == "moneda":
+
+            self.coins += 1
+            self.world_items.remove(item)
+
+            return
 
         slot = self._slot_for(item.item_id)
 
@@ -385,6 +424,46 @@ class NewGame:
 
             return
 
+        # No gastar polvora si ya hay una activa
+        if (
+            any(e.get("tipo") == "luz_dano" for e in effects)
+            and self.polvora_timer > 0
+        ):
+
+            self.show_message("La polvora ya esta haciendo efecto")
+
+            return
+
+        # No gastar resina si la llama ya esta al maximo o ya hay una activa
+        if any(e.get("tipo") == "vida_gradual" for e in effects):
+
+            if self.vida >= 1.0:
+
+                self.show_message("La llama ya esta al maximo")
+
+                return
+
+            if self.regen_left > 0:
+
+                self.show_message("La resina ya esta haciendo efecto")
+
+                return
+
+        # Ganzua: necesita un cofre listo cerca
+        chest = None
+
+        if any(e.get("tipo") == "abrir_cofre" for e in effects):
+
+            chest = self.chests.nearest_ready(
+                self.player.rect.center, GANZUA_DISTANCE
+            )
+
+            if chest is None:
+
+                self.show_message("No hay un cofre listo cerca")
+
+                return
+
         for effect in effects:
 
             kind = effect.get("tipo")
@@ -406,6 +485,23 @@ class NewGame:
 
                 self.burn_factor = effect["factor"]
                 self.burn_timer = effect["duracion"]
+
+            elif kind == "luz_dano":
+
+                self.polvora_dps = effect.get("dano_por_segundo", 1)
+                self.polvora_timer = effect["duracion"]
+                self._polvora_acc = 0.0
+
+            elif kind == "vida_gradual":
+
+                # Suma `valor` de vida repartido en `duracion` segundos
+                # (sin pasar del 100%)
+                self.regen_left = effect["valor"]
+                self.regen_rate = effect["valor"] / effect["duracion"]
+
+            elif kind == "abrir_cofre" and chest is not None:
+
+                self._open_chest(chest)
 
         self._remove_one(slot)
 
@@ -468,7 +564,7 @@ class NewGame:
         """Todo lo que el fosforo puede golpear (cada uno con .rect y
         .take_damage(n))."""
 
-        return self.dummies + self.doors.doors
+        return self.dummies + self.doors.doors + self.chests.chests
 
     def start_attack(self):
 
@@ -504,12 +600,72 @@ class NewGame:
             if isinstance(target, Door):
                 self.vida -= result
 
+            # Pegarle a un cofre abre el minijuego
+            elif isinstance(target, Chest):
+                self._on_chest_hit(target)
+
         self.doors.update(dt)
 
         for dummy in self.dummies:
             dummy.update(dt)
 
         self.dummies = [d for d in self.dummies if not d.dead]
+
+    # ---------- cofres ----------
+
+    def _on_chest_hit(self, chest):
+
+        if chest.busy:
+            return
+
+        if chest.cooldown > 0:
+
+            self.show_message(
+                f"Cofre vacio. Volve en {format_time(chest.cooldown)}"
+            )
+
+            return
+
+        chest.busy = True
+
+        self.minigame_chest = chest
+        self.minigame = ChestMinigame((self.width, self.height))
+
+        # Se corta el golpe en curso
+        self.melee.cancel()
+
+    def _open_chest(self, chest):
+        """El cofre suelta sus items al piso y queda en espera."""
+
+        chest.start_cooldown(self.chests.wait)
+
+        drops = self.chests.spawn_drops(
+            chest, self.collision_map, self.item_defs
+        )
+
+        self.world_items.extend(drops)
+
+        self.show_message(f"Cofre abierto: salieron {len(drops)} cosas")
+
+    def _close_minigame(self, result):
+
+        chest = self.minigame_chest
+
+        self.minigame = None
+        self.minigame_chest = None
+
+        if chest is None:
+            return
+
+        chest.busy = False
+
+        if result == "win":
+
+            self._open_chest(chest)
+
+        elif result == "fail":
+
+            self.show_message("El cofre se cerro. Pegale de nuevo")
 
     # ---------- guardado ----------
 
@@ -533,14 +689,88 @@ class NewGame:
             ],
             collected=sorted(self.collected),
             broken_doors=sorted(self.doors.broken_ids),
+            chests=self.chests.save_data(),
             item_seed=self.item_seed
         )
+
+    # ---------- actualizaciones extra ----------
+
+    def _update_world_extras(self, dt):
+        """Cofres, items que salen volando y monedas."""
+
+        self.chests.update(dt)
+
+        for item in self.world_items:
+            item.update_fly(dt)
+
+        # Las monedas se juntan solas al pasar cerca
+        px, py = self.player.rect.center
+
+        for item in list(self.world_items):
+
+            if (
+                item.auto
+                and item.fly is None
+                and pygame.Vector2(item.rect.center).distance_to((px, py))
+                <= COIN_PICKUP_DISTANCE
+            ):
+
+                self.pick_up_item(item)
+
+    def _update_effects(self, dt):
+        """Polvora y resina. Solo corren con el fosforo prendido."""
+
+        # Resina: sube la vida de a poco
+        if self.regen_left > 0:
+
+            add = min(self.regen_rate * dt, self.regen_left)
+
+            self.vida = min(1.0, self.vida + add)
+            self.regen_left -= add
+
+            if self.vida >= 1.0:
+                self.regen_left = 0.0
+
+        # Polvora: la luz quema lo que alumbra
+        if self.polvora_timer > 0:
+
+            self.polvora_timer = max(0.0, self.polvora_timer - dt)
+            self._polvora_acc += dt
+
+            while self._polvora_acc >= POLVORA_TICK:
+
+                self._polvora_acc -= POLVORA_TICK
+
+                self._burn_with_light(self.polvora_dps * POLVORA_TICK)
+
+    def _burn_with_light(self, amount):
+
+        radius = PLAYER_LIGHT_RADIUS / self.camera.zoom
+
+        px, py = self.player.rect.center
+
+        for target in self.dummies:
+
+            size = max(target.rect.width, target.rect.height) / 2
+
+            dist = pygame.Vector2(target.rect.center).distance_to((px, py))
+
+            if dist <= radius + size:
+                target.take_damage(amount)
 
     # ---------- eventos ----------
 
     def handle_event(self, event):
 
         if self.state != "playing":
+            return None
+
+        # Con el minijuego abierto, solo el minijuego recibe los eventos
+        if self.minigame is not None:
+
+            if self.minigame.handle_event(event) == "cancel":
+                self._close_minigame("cancel")
+
             return None
 
         if event.type == pygame.KEYDOWN:
@@ -647,7 +877,9 @@ class NewGame:
 
         if self.state == "playing":
 
-            self.player.update(dt, self.collision_map)
+            # Con el minijuego abierto el jugador no se mueve
+            if self.minigame is None:
+                self.player.update(dt, self.collision_map)
 
             self.camera.update(self.player, dt)
 
@@ -661,7 +893,18 @@ class NewGame:
             if self.message_timer > 0:
                 self.message_timer -= dt
 
-            self._update_combat(dt)
+            if self.minigame is None:
+
+                self._update_combat(dt)
+
+            else:
+
+                result = self.minigame.update(dt)
+
+                if result is not None:
+                    self._close_minigame(result)
+
+            self._update_world_extras(dt)
 
             if self.has_match:
 
@@ -674,6 +917,8 @@ class NewGame:
                     if self.burn_timer <= 0:
                         self.burn_timer = 0.0
                         self.burn_factor = 1.0
+
+                self._update_effects(dt)
 
                 self.vida -= dt * self.burn_factor / MATCH_DURATION
 
@@ -748,6 +993,8 @@ class NewGame:
 
         self.doors.draw(self.screen, self.camera)
 
+        self.chests.draw(self.screen, self.camera)
+
         for dummy in self.dummies:
             dummy.draw(self.screen, self.camera)
 
@@ -780,6 +1027,8 @@ class NewGame:
 
                 radius *= flicker
 
+            self._light_radius_px = radius
+
             sources.append((
                 self.player.rect.centerx,
                 self.player.rect.centery,
@@ -791,6 +1040,22 @@ class NewGame:
             self.camera,
             sources
         )
+
+        # Polvora: aro naranja en el borde de la luz
+        if self.has_match and self.polvora_timer > 0:
+
+            cx = int(self.player.rect.centerx * self.camera.zoom - self.camera.x)
+            cy = int(self.player.rect.centery * self.camera.zoom - self.camera.y)
+
+            pulse = 2 + int(abs(math.sin(self._flicker_time * 6 + self.polvora_timer * 5)) * 3)
+
+            pygame.draw.circle(
+                self.screen,
+                (255, 140, 40),
+                (cx, cy),
+                int(self._light_radius_px),
+                pulse
+            )
 
         # El golpe va encima de la oscuridad, para que brille
         self.melee.draw(
@@ -829,19 +1094,37 @@ class NewGame:
             equipped_selected=self.selected_slot == "equipped"
         )
 
-        if self.state == "playing" and self.has_match and self.burn_timer > 0:
+        if self.state == "playing" and self.has_match:
 
-            txt = f"Cera: {math.ceil(self.burn_timer)}s"
+            status = []
+
+            if self.burn_timer > 0:
+                status.append(
+                    (f"Cera: {math.ceil(self.burn_timer)}s", (255, 225, 140))
+                )
+
+            if self.polvora_timer > 0:
+                status.append(
+                    (f"Polvora: {math.ceil(self.polvora_timer)}s", (255, 150, 70))
+                )
+
+            if self.regen_left > 0:
+                secs = math.ceil(self.regen_left / self.regen_rate)
+                status.append((f"Resina: {secs}s", (200, 150, 90)))
 
             font = self.hud.msg_font
 
-            shadow = font.render(txt, True, (0, 0, 0))
-            label = font.render(txt, True, (255, 225, 140))
+            for i, (txt, color) in enumerate(status):
 
-            pos = label.get_rect(midtop=(self.width // 2, 18))
+                shadow = font.render(txt, True, (0, 0, 0))
+                label = font.render(txt, True, color)
 
-            self.screen.blit(shadow, pos.move(1, 1))
-            self.screen.blit(label, pos)
+                pos = label.get_rect(
+                    midtop=(self.width // 2, 18 + i * 28)
+                )
+
+                self.screen.blit(shadow, pos.move(1, 1))
+                self.screen.blit(label, pos)
 
         self.hud.draw_overlay(
             self.screen,
@@ -854,6 +1137,10 @@ class NewGame:
         if self.debug_items:
 
             self._draw_debug_items()
+
+        if self.minigame is not None:
+
+            self.minigame.draw(self.screen)
 
         if self.state in ("dying", "lost"):
 

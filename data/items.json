@@ -37,5 +37,29 @@
                 "duracion": 15
             }
         ]
+    },
+        "ganzua": {
+        "nombre": "Ganzúa",
+        "descripcion": "Abre un cofre cercano sin hacer el minijuego. No salta la espera de 3 minutos.",
+        "requiere_fosforo": false,
+        "efectos": [
+            { "tipo": "abrir_cofre" }
+        ]
+    },
+    "polvora": {
+        "nombre": "Pólvora",
+        "descripcion": "Durante 20 segundos tu luz quema y daña a los enemigos que alumbra.",
+        "requiere_fosforo": true,
+        "efectos": [
+            { "tipo": "luz_dano", "dano_por_segundo": 1, "duracion": 20 }
+        ]
+    },
+    "resina": {
+        "nombre": "Resina",
+        "descripcion": "Recupera 67% de vida del fósforo de a poco: la barra sube lento hasta completarlo.",
+        "requiere_fosforo": true,
+        "efectos": [
+            { "tipo": "vida_gradual", "valor": 0.67, "duracion": 10 }
+        ]
     }
 }

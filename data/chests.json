@@ -1,0 +1,19 @@
+{
+    "espera_segundos": 180,
+    "items_por_cofre": [10, 15],
+    "pesos": {
+        "moneda": 38,
+        "madera": 18,
+        "aceite": 12,
+        "cera": 12,
+        "resina": 8,
+        "polvora": 8,
+        "ganzua": 4
+    },
+    "cofres": [
+        { "id": "cofre_01", "pos": [367, 76]  },
+        { "id": "cofre_02", "pos": [494, 79]  },
+        { "id": "cofre_03", "pos": [374, 189] },
+        { "id": "cofre_04", "pos": [497, 184] }
+    ]
+}
