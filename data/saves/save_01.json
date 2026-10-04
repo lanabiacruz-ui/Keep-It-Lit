@@ -1,43 +1,53 @@
 {
-    "player_name": "hols",
-    "created_at": "2026-10-04T05:16:51",
-    "last_played": "2026-10-04T05:18:30",
-    "x": 899,
-    "y": 87,
+    "player_name": "o",
+    "created_at": "2026-10-04T18:38:51",
+    "last_played": "2026-10-04T19:19:38",
+    "x": 944,
+    "y": 144,
     "has_match": true,
-    "light": "fosforo",
-    "coins": 99908,
+    "light": "vela",
+    "coins": 99845,
     "inventory": [
-        null,
-        null,
-        null,
+        [
+            "polvora",
+            2
+        ],
+        [
+            "resina",
+            2
+        ],
+        [
+            "aceite",
+            1
+        ],
         null
     ],
     "collected": [
-        "aceite_03#0",
+        "aceite_02#0",
         "cera_02#0",
+        "madera_01#0",
+        "madera_02#0",
         "madera_03#0",
         "madera_04#0",
         "madera_05#0",
-        "madera_07#0",
         "madera_08#0",
-        "madera_09#0",
-        "madera_10#0",
-        "madera_11#0",
-        "madera_12#0"
+        "madera_10#0"
     ],
     "broken_doors": [
         "cabana",
         "hub_abajo",
         "hub_arriba",
+        "hub_derecha",
+        "sala_der",
         "sup_central_abajo",
         "sup_izq_central",
         "sup_izq_sala"
     ],
     "chests": {
         "cofre_02": {
-            "usos": 11
+            "usos": 8
         }
     },
-    "item_seed": 294633767
+    "item_seed": 421821102,
+    "arena_wave": 1
 }

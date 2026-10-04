@@ -61,10 +61,20 @@ GATE = pygame.Rect(1236, 500, 10, 40)
 # Oleadas (para balancear, se cambia todo aca)
 # ---------------------------------------------------------------
 
-# Cuantos enemigos trae cada oleada. Despues de la ultima definida
-# sigue subiendo de a ENEMIES_STEP hasta ENEMIES_MAX.
-WAVE_ENEMIES = {1: 1, 2: 4, 3: 6}
-ENEMIES_STEP = 2
+# Que trae cada oleada: (pinos, troncos). Los pinos rebotan y te
+# pegan al chocarte; los troncos disparan 3 bolas que rebotan.
+# Despues de la ultima definida sube PINOS_STEP pinos y TRONCOS_STEP
+# troncos por oleada, sin pasar de ENEMIES_MAX en total.
+WAVE_COMPOSITION = {
+    1: (1, 0),
+    2: (4, 0),
+    3: (5, 1),
+    4: (5, 2),
+    5: (4, 4),
+}
+PINOS_STEP = 1
+TRONCOS_STEP = 1
+TRONCOS_MAX = 8
 ENEMIES_MAX = 16
 
 # Monedas de premio por oleada (la 1 vale 18). Despues de la ultima
@@ -96,20 +106,46 @@ ESCAPE_REVIVE_LIFE = 0.15
 ENEMY_DRAW_SIZE = 14       # tamano dibujado (unidades del mundo)
 ENEMY_HITBOX = (12, 10)    # lo que choca y lo que golpea el fosforo
 
-ENEMY_ACCEL = 320.0        # cuanto empuja hacia el jugador
-ENEMY_DRAG = 1.6           # frenado natural (para poder girar)
-ENEMY_BOUNCE_SPEED = 170.0 # velocidad del rebote tras chocarte
-ENEMY_RECOVER_TIME = 0.45  # tras chocar casi no te persigue
+ENEMY_BALL_MULT = 1.8      # velocidad de la bola = velocidad de la oleada x esto
+ENEMY_ACCEL = 320.0        # que tan rapido vuelve a su velocidad tras un empujon
+ENEMY_BOUNCE_AIM = 0.85    # 0 = rebota normal, 1 = sale derecho hacia el jugador
+ENEMY_BOUNCE_JITTER = 6.0  # grados al azar en cada rebote (para que no sea predecible)
+ENEMY_DRAG = 1.6           # frenado del empujon cuando le pegas
+ENEMY_HIT_BOUNCE = 1.2     # velocidad con la que sale rebotado tras chocarte (x bola)
 ENEMY_TOUCH_COOLDOWN = 0.6
-WALL_BOUNCE = 0.75         # cuanta velocidad conserva al rebotar
+WALL_BOUNCE = 1.0          # cuanta velocidad conserva al rebotar (1 = toda)
 ENEMY_KNOCKBACK = 150.0    # empujon cuando le pegas
 ENEMY_STUN_TIME = 0.25
 ENEMY_FLASH_TIME = 0.12
 ENEMY_SPAWN_TIME = 0.8     # aparece transparente y no hace dano
 ENEMY_ANIM_FRAME = 0.15
+ENEMY_SPIN_RATE = 5.0      # cuanto gira mientras rueda (grados por unidad recorrida)
+ENEMY_HOP_DIST = 38.0      # cada cuantas unidades recorridas da un saltito
+ENEMY_HOP_HEIGHT = 3.0     # altura del saltito (unidades del mundo)
 
-SEPARATION = 10.0          # distancia a la que se empujan entre si
-SEPARATION_FORCE = 140.0
+# ---------------------------------------------------------------
+# Tronco (dispara 3 bolas que rebotan)
+# ---------------------------------------------------------------
+
+TRONCO_HITBOX = (14, 12)
+TRONCO_DRAW_SIZE = 16      # tamano dibujado (unidades del mundo)
+TRONCO_HP_EXTRA = 0        # vida = la del pino + esto
+TRONCO_FIRST_DELAY = (1.2, 2.6)  # primera espera (al azar, para que no disparen todos juntos)
+TRONCO_WINDUP = 1.5        # cuanto tarda en cargar antes de soltar las bolas
+TRONCO_SHOOT_TIME = 0.45   # duracion de la animacion de disparo
+TRONCO_COOLDOWN = 2.2      # espera despues de disparar
+TRONCO_HIT_PAUSE = 0.9     # si le pegas mientras carga, se le corta y espera esto
+TRONCO_SHOTS = 3           # bolas por disparo
+TRONCO_SPREAD = 24.0       # grados entre una bola y la siguiente
+TRONCO_LEAD = 0.45         # cuanto adelanta la punteria hacia donde te estas moviendo (seg)
+TRONCO_ANIM_FRAME = 0.12
+
+SHOT_SPEED = 95.0          # unidades del mundo por segundo
+SHOT_HITBOX = 6
+SHOT_DRAW_SIZE = 8
+SHOT_BOUNCES = 2           # cuantas veces rebota (al tercer choque desaparece)
+SHOT_LIFE = 7.0            # maximo de segundos en el aire
+SHOT_DAMAGE_MULT = 1.0     # x el dano de un choque de pino
 
 # ---------------------------------------------------------------
 # Tiempos
@@ -186,17 +222,29 @@ def quantize_radius(radius):
     return max(8, int(round(radius / 8.0)) * 8)
 
 
+def wave_composition(wave):
+    """(pinos, troncos) de una oleada."""
+
+    if wave in WAVE_COMPOSITION:
+        return WAVE_COMPOSITION[wave]
+
+    last = max(WAVE_COMPOSITION)
+    pinos, troncos = WAVE_COMPOSITION[last]
+    extra = max(0, wave - last)
+
+    pinos += PINOS_STEP * extra
+    troncos = min(TRONCOS_MAX, troncos + TRONCOS_STEP * extra)
+
+    # Sin pasarse del maximo de enemigos (se recortan los pinos)
+    pinos = max(0, min(pinos, ENEMIES_MAX - troncos))
+
+    return pinos, troncos
+
+
 def enemies_for_wave(wave):
+    """Cuantos enemigos trae la oleada en total."""
 
-    if wave in WAVE_ENEMIES:
-        return WAVE_ENEMIES[wave]
-
-    last = max(WAVE_ENEMIES)
-
-    return min(
-        ENEMIES_MAX,
-        WAVE_ENEMIES[last] + ENEMIES_STEP * (wave - last)
-    )
+    return sum(wave_composition(wave))
 
 
 def base_reward(wave):
@@ -286,6 +334,11 @@ class Enemy:
     sala (paredes y obstaculos). Es un objetivo mas de los golpes del
     fosforo (tiene .rect y .take_damage)."""
 
+    # fixed: no se mueve solo (los otros rebotan contra el)
+    # contact_damage: te saca vida al tocarte
+    fixed = False
+    contact_damage = True
+
     def __init__(self, x, y, hp, max_speed, spawn_delay=0.0):
 
         self.rect = pygame.Rect(0, 0, *ENEMY_HITBOX)
@@ -298,9 +351,11 @@ class Enemy:
         self.max_hp = hp
         self.max_speed = max_speed
 
+        # Velocidad de "bola": rebota siempre a este ritmo
+        self.ball_speed = max_speed * ENEMY_BALL_MULT
+
         self.flash = 0.0
         self.stun = 0.0
-        self.recover = 0.0
         self.touch_cd = 0.0
 
         # Mientras es > 0 el enemigo esta apareciendo: no se mueve,
@@ -309,6 +364,10 @@ class Enemy:
 
         self.anim_t = random.uniform(0, 1)
         self.last_target = pygame.Vector2(x, y)
+
+        # Para dibujarlo rodando y saltando como una pelota
+        self.spin = random.uniform(0, 360)
+        self.hop_t = random.uniform(0, 1)
 
     @property
     def dead(self):
@@ -340,20 +399,24 @@ class Enemy:
         return amount
 
     def bounce_from(self, point):
-        """Rebota despues de chocar al jugador."""
+        """Sale rebotado despues de chocar al jugador."""
 
         away = self.pos - pygame.Vector2(point)
 
         if away.length_squared() < 0.01:
             away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
 
-        self.vel = away.normalize() * ENEMY_BOUNCE_SPEED
-        self.recover = ENEMY_RECOVER_TIME
+        self.vel = away.normalize() * self.ball_speed * ENEMY_HIT_BOUNCE
         self.touch_cd = ENEMY_TOUCH_COOLDOWN
 
     # ---------- movimiento ----------
 
-    def update(self, dt, target, collision_map, others):
+    def update(self, dt, target, collision_map, others=None):
+        """Es una pelota: NO camina ni gira hacia el jugador. Va en
+        linea recta y solo cambia de direccion al rebotar (contra las
+        paredes, los bloques del mapa o otro enemigo). En cada rebote
+        sale apuntando hacia donde esta el jugador, asi siempre rebota
+        cerca suyo para pegarle."""
 
         self.last_target = pygame.Vector2(target)
         self.anim_t += dt
@@ -370,48 +433,98 @@ class Enemy:
 
             return
 
-        if self.stun > 0:
-            self.stun = max(0.0, self.stun - dt)
-
-        if self.recover > 0:
-            self.recover = max(0.0, self.recover - dt)
-
-        # Ir directo hacia el jugador (acelerando, asi puede girar)
         to_target = pygame.Vector2(target) - self.pos
-        dist = to_target.length()
 
-        if dist > 0.01 and self.stun <= 0:
+        if self.stun > 0:
 
-            push = ENEMY_ACCEL * (0.25 if self.recover > 0 else 1.0)
+            # Empujon del golpe: se frena solo, sin controlarse
+            self.stun = max(0.0, self.stun - dt)
+            self.vel *= max(0.0, 1.0 - ENEMY_DRAG * dt)
 
-            self.vel += to_target / dist * push * dt
-
-        # Separarse de los otros enemigos
-        for other in others:
-
-            if other is self or other.spawning:
-                continue
-
-            away = self.pos - other.pos
-            length = away.length()
-
-            if 0 < length < SEPARATION:
-                self.vel += away / length * SEPARATION_FORCE * dt
-
-        self.vel *= max(0.0, 1.0 - ENEMY_DRAG * dt)
-
-        # Velocidad maxima (el rebote y el golpe pueden pasarla un rato)
-        if self.stun > 0 or self.recover > 0:
-            limit = ENEMY_BOUNCE_SPEED * 1.2
         else:
-            limit = self.max_speed
+
+            self._keep_speed(dt, to_target)
+
+        before = self.pos.copy()
+
+        hit_x, hit_y = self._move(dt, collision_map)
+
+        if hit_x or hit_y:
+            self.aim_after_bounce(to_target, hit_x, hit_y)
+
+        # Rueda y salta segun lo que recorrio (no camina)
+        moved = self.pos.distance_to(before)
+        side = 1.0 if self.vel.x >= 0 else -1.0
+
+        self.spin = (self.spin + side * moved * ENEMY_SPIN_RATE) % 360.0
+        self.hop_t = (self.hop_t + moved / ENEMY_HOP_DIST) % 1.0
+
+    def _keep_speed(self, dt, to_target):
+        """Mantiene la velocidad de bola SIN cambiar la direccion."""
 
         speed = self.vel.length()
 
-        if speed > limit:
-            self.vel *= limit / speed
+        # Recien aparecido (o frenado del todo): sale disparado hacia
+        # el jugador, y de ahi en adelante solo rebota
+        if speed < 1.0:
 
-        self._move(dt, collision_map)
+            if to_target.length_squared() > 0.01:
+                direction = to_target.normalize()
+            else:
+                direction = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+            direction = direction.rotate(
+                random.uniform(-ENEMY_BOUNCE_JITTER, ENEMY_BOUNCE_JITTER)
+            )
+
+            self.vel = direction * self.ball_speed
+
+            return
+
+        if speed < self.ball_speed:
+            speed = min(self.ball_speed, speed + ENEMY_ACCEL * dt)
+        else:
+            speed = max(self.ball_speed, speed - ENEMY_ACCEL * dt)
+
+        self.vel.scale_to_length(speed)
+
+    def aim_after_bounce(self, to_target, hit_x, hit_y, away=None):
+        """Despues de rebotar, la direccion del rebote se acerca a la
+        direccion hacia el jugador (sin volver a meterse en la pared
+        que acaba de tocar)."""
+
+        speed = self.vel.length()
+
+        if speed < 1.0 or to_target.length_squared() < 0.01:
+            return
+
+        current = self.vel / speed
+        want = to_target.normalize()
+
+        mix = current * (1.0 - ENEMY_BOUNCE_AIM) + want * ENEMY_BOUNCE_AIM
+
+        if mix.length_squared() < 0.0001:
+            return
+
+        mix = mix.normalize().rotate(
+            random.uniform(-ENEMY_BOUNCE_JITTER, ENEMY_BOUNCE_JITTER)
+        )
+
+        # Nunca apuntar de nuevo contra la pared que acaba de tocar
+        if hit_x and mix.x * current.x < 0:
+            mix.x = current.x * 0.3
+
+        if hit_y and mix.y * current.y < 0:
+            mix.y = current.y * 0.3
+
+        # Ni contra el enemigo con el que acaba de chocar
+        if away is not None and mix.dot(away) < 0:
+            mix = mix - away * mix.dot(away) + away * 0.3
+
+        if mix.length_squared() < 0.0001:
+            return
+
+        self.vel = mix.normalize() * speed
 
     def _free(self, rect, collision_map):
         """True si el enemigo puede estar en `rect`: dentro de la sala
@@ -420,6 +533,11 @@ class Enemy:
         return ROOM.contains(rect) and collision_map.can_move(rect)
 
     def _move(self, dt, collision_map):
+        """Mueve al enemigo y rebota contra paredes y bloques del mapa.
+        Devuelve (choco_en_x, choco_en_y)."""
+
+        hit_x = False
+        hit_y = False
 
         # Eje X
         nx = self.pos.x + self.vel.x * dt
@@ -432,9 +550,9 @@ class Enemy:
             self.rect.centerx = test.centerx
 
         else:
-            self.vel.x = (
-                -self.vel.x * WALL_BOUNCE if abs(self.vel.x) > 25 else 0.0
-            )
+
+            hit_x = True
+            self.vel.x = -self.vel.x * WALL_BOUNCE
 
         # Eje Y
         ny = self.pos.y + self.vel.y * dt
@@ -447,9 +565,32 @@ class Enemy:
             self.rect.centery = test.centery
 
         else:
-            self.vel.y = (
-                -self.vel.y * WALL_BOUNCE if abs(self.vel.y) > 25 else 0.0
-            )
+
+            hit_y = True
+            self.vel.y = -self.vel.y * WALL_BOUNCE
+
+        return hit_x, hit_y
+
+    def push(self, offset, collision_map):
+        """Mueve al enemigo `offset` (para separarlo de otro), solo si
+        hay lugar. Prueba cada eje por separado."""
+
+        nx = self.pos.x + offset.x
+        test = self.rect.copy()
+        test.centerx = round(nx)
+
+        if self._free(test, collision_map):
+            self.pos.x = nx
+            self.rect.centerx = test.centerx
+
+        ny = self.pos.y + offset.y
+        test = self.rect.copy()
+        test.centery = round(ny)
+
+        if self._free(test, collision_map):
+            self.pos.y = ny
+            self.rect.centery = test.centery
+
 
     # ---------- dibujo ----------
 
@@ -463,10 +604,564 @@ class Enemy:
 
         else:
 
-            index = int(self.anim_t / ENEMY_ANIM_FRAME) % len(frames)
-            img = frames[index]
+            # Sin animacion de caminar: es una pelota, usa un solo
+            # cuadro y se lo hace rodar
+            img = frames[0]
 
             # Herido = mas oscuro (asi se nota sin barras de vida)
+            if self.hp < self.max_hp:
+
+                shade = int(255 * (0.55 + 0.45 * self.hp / self.max_hp))
+
+                img = img.copy()
+                img.fill(
+                    (shade, shade, shade, 255),
+                    special_flags=pygame.BLEND_RGBA_MULT
+                )
+
+        if not self.spawning:
+            img = pygame.transform.rotate(img, self.spin)
+
+        if self.spawning:
+
+            k = 1.0 - max(0.0, self.spawn_t) / ENEMY_SPAWN_TIME
+
+            img = img.copy()
+            img.set_alpha(int(50 + 150 * max(0.0, min(1.0, k))))
+
+        dest = camera.apply(self.rect)
+
+        # Saltito (la sombra se queda en el piso)
+        hop = 0
+        if not self.spawning:
+            hop = int(
+                abs(math.sin(self.hop_t * math.pi))
+                * ENEMY_HOP_HEIGHT * camera.zoom
+            )
+
+        # Sombra
+        shadow = pygame.Surface(
+            (int(dest.width * 1.3), int(dest.height * 0.6)),
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(dest.centerx, dest.bottom))
+        )
+
+        screen.blit(
+            img,
+            img.get_rect(
+                center=(dest.centerx, dest.centery - hop)
+            )
+        )
+
+
+def _overlap_depth(a, b):
+    """Cuanto se pisan dos rects (para separarlos)."""
+
+    overlap_x = min(a.rect.right, b.rect.right) - max(a.rect.left, b.rect.left)
+    overlap_y = min(a.rect.bottom, b.rect.bottom) - max(a.rect.top, b.rect.top)
+
+    return max(1.0, min(overlap_x, overlap_y))
+
+
+def bounce_enemies(enemies, collision_map, target=None):
+    """Choque entre enemigos: si se tocan, rebotan hacia otro lado y
+    se separan para no quedar pegados. Los troncos no se mueven: el
+    pino rebota contra ellos como contra una pared. Si se pasa `target`
+    (posicion del jugador) cada uno se reorienta hacia el despues del
+    choque."""
+
+    live = [e for e in enemies if not e.spawning and not e.dead]
+
+    for i, a in enumerate(live):
+
+        for b in live[i + 1:]:
+
+            if not a.rect.colliderect(b.rect):
+                continue
+
+            normal = b.pos - a.pos
+
+            if normal.length_squared() < 0.01:
+                normal = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+            normal = normal.normalize()
+
+            # Dos troncos: solo se separan
+            if a.fixed and b.fixed:
+
+                depth = _overlap_depth(a, b) / 2.0 + 1.0
+
+                a.push(-normal * depth, collision_map)
+                b.push(normal * depth, collision_map)
+
+                continue
+
+            # Un tronco y un pino: el pino rebota contra el tronco
+            if a.fixed or b.fixed:
+
+                mobile, wall = (b, a) if a.fixed else (a, b)
+
+                away = mobile.pos - wall.pos
+
+                if away.length_squared() < 0.01:
+                    away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+                away = away.normalize()
+
+                closing = mobile.vel.dot(away)
+
+                if closing < 0:
+
+                    mobile.vel -= away * (2.0 * closing)
+
+                    if target is not None:
+
+                        mobile.aim_after_bounce(
+                            pygame.Vector2(target) - mobile.pos,
+                            False, False, away
+                        )
+
+                mobile.push(away * (_overlap_depth(a, b) + 1.0), collision_map)
+
+                continue
+
+            # Dos pinos: choque elastico entre iguales (intercambian la
+            # velocidad que llevaban uno contra el otro)
+            closing = (a.vel - b.vel).dot(normal)
+
+            if closing > 0:
+
+                a.vel -= normal * closing
+                b.vel += normal * closing
+
+                # Si quedaron casi quietos, se empujan igual
+                for e, sign in ((a, -1), (b, 1)):
+
+                    if e.vel.length() < 40:
+                        e.vel = normal * sign * max(40.0, e.ball_speed * 0.6)
+
+                if target is not None:
+
+                    a.aim_after_bounce(
+                        pygame.Vector2(target) - a.pos, False, False, -normal
+                    )
+                    b.aim_after_bounce(
+                        pygame.Vector2(target) - b.pos, False, False, normal
+                    )
+
+            # Separarlos para que no queden uno dentro del otro
+            depth = _overlap_depth(a, b) / 2.0 + 1.0
+
+            a.push(-normal * depth, collision_map)
+            b.push(normal * depth, collision_map)
+
+
+# ---------------------------------------------------------------
+# Imagenes del tronco y de la bola (opcionales: si falta alguna se
+# dibuja un reemplazo)
+# ---------------------------------------------------------------
+
+def load_strip(path):
+    """Tira horizontal de cuadros cuadrados (ancho de cuadro = alto).
+    Devuelve la lista de cuadros, o [] si no existe el archivo."""
+
+    sheet = load_image(path)
+
+    if sheet is None or sheet.get_height() <= 0:
+        return []
+
+    fw = sheet.get_height()
+
+    return [
+        sheet.subsurface((i * fw, 0, fw, fw)).copy()
+        for i in range(max(1, sheet.get_width() // fw))
+    ]
+
+
+class TroncoArt:
+    """Imagenes del tronco y de sus bolas (se cargan una sola vez).
+
+      assets/maps/combate/tronco.png          56x56   (reposo)
+      assets/maps/combate/tronco_carga.png    56x56 o tira de cuadros 56x56
+      assets/maps/combate/tronco_disparo.png  tira de cuadros 56x56 (4)
+      assets/maps/combate/tronco_golpe.png    56x56   (cuando le pegas)
+      assets/maps/combate/bola_enemiga.png    24x24   (la bola)
+    """
+
+    def __init__(self):
+
+        idle = load_strip(COMBAT_DIR / "tronco.png")
+        charge = load_strip(COMBAT_DIR / "tronco_carga.png")
+        shoot = load_strip(COMBAT_DIR / "tronco_disparo.png")
+        hit = load_image(COMBAT_DIR / "tronco_golpe.png")
+        shot = load_image(COMBAT_DIR / "bola_enemiga.png")
+
+        self.idle = idle or [self._placeholder("idle")]
+        self.charge = charge or [
+            self._placeholder("charge", k) for k in (0.4, 1.0)
+        ]
+        self.shoot = shoot or [
+            self._placeholder("shoot", k) for k in (0.0, 0.5, 1.0)
+        ]
+
+        if hit is None:
+
+            hit = self.idle[0].copy()
+            hit.fill((170, 170, 170, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+        self.hit = hit
+        self.shot = shot if shot is not None else self._shot_placeholder()
+
+        self._zoom = None
+        self._scaled = None
+
+    @staticmethod
+    def _placeholder(mode, k=0.0):
+
+        surf = pygame.Surface((56, 56), pygame.SRCALPHA)
+
+        # cuerpo del tronco
+        pygame.draw.rect(surf, (118, 78, 44), (12, 8, 32, 44), border_radius=6)
+        pygame.draw.rect(surf, (60, 36, 18), (12, 8, 32, 44), 3, border_radius=6)
+        pygame.draw.line(surf, (80, 50, 26), (20, 14), (20, 46), 2)
+        pygame.draw.line(surf, (80, 50, 26), (36, 14), (36, 46), 2)
+
+        # ojos
+        pygame.draw.circle(surf, (20, 10, 10), (22, 20), 3)
+        pygame.draw.circle(surf, (20, 10, 10), (34, 20), 3)
+
+        # boca: se abre y se pone naranja cuando carga o dispara
+        mouth_h = 4 + int(10 * k) if mode != "idle" else 3
+        color = (20, 10, 10) if mode == "idle" else (
+            255, int(140 - 80 * k), 40
+        )
+
+        pygame.draw.ellipse(
+            surf, color, (22, 30, 12, mouth_h)
+        )
+
+        return surf
+
+    @staticmethod
+    def _shot_placeholder():
+
+        surf = pygame.Surface((24, 24), pygame.SRCALPHA)
+
+        pygame.draw.circle(surf, (255, 90, 40, 110), (12, 12), 12)
+        pygame.draw.circle(surf, (255, 150, 60), (12, 12), 8)
+        pygame.draw.circle(surf, (255, 235, 170), (12, 12), 4)
+
+        return surf
+
+    def get(self, zoom):
+        """Todo ya escalado al zoom actual."""
+
+        if self._zoom != zoom:
+
+            tpx = max(1, int(TRONCO_DRAW_SIZE * zoom))
+            spx = max(1, int(SHOT_DRAW_SIZE * zoom))
+
+            def scale(frames):
+                return [pygame.transform.scale(f, (tpx, tpx)) for f in frames]
+
+            self._scaled = {
+                "idle": scale(self.idle),
+                "charge": scale(self.charge),
+                "shoot": scale(self.shoot),
+                "hit": pygame.transform.scale(self.hit, (tpx, tpx)),
+                "shot": pygame.transform.scale(self.shot, (spx, spx)),
+            }
+
+            self._zoom = zoom
+
+        return self._scaled
+
+
+# ---------------------------------------------------------------
+# Bola que dispara el tronco
+# ---------------------------------------------------------------
+
+class Shot:
+    """Bola que rebota SHOT_BOUNCES veces contra las paredes y los
+    bloques del mapa; al siguiente choque desaparece. Si te toca, te
+    saca vida y desaparece."""
+
+    def __init__(self, pos, angle):
+
+        self.pos = pygame.Vector2(pos)
+        self.vel = pygame.Vector2(SHOT_SPEED, 0).rotate(angle)
+
+        self.rect = pygame.Rect(0, 0, SHOT_HITBOX, SHOT_HITBOX)
+        self.rect.center = (round(self.pos.x), round(self.pos.y))
+
+        self.bounces_left = SHOT_BOUNCES
+        self.life = SHOT_LIFE
+        self.t = 0.0
+        self.dead = False
+
+    def _free(self, rect, collision_map):
+
+        return ROOM.contains(rect) and collision_map.can_move(rect)
+
+    def update(self, dt, collision_map):
+
+        self.t += dt
+        self.life -= dt
+
+        if self.life <= 0:
+
+            self.dead = True
+
+            return
+
+        hit = False
+
+        # Eje X
+        nx = self.pos.x + self.vel.x * dt
+        test = self.rect.copy()
+        test.centerx = round(nx)
+
+        if self._free(test, collision_map):
+
+            self.pos.x = nx
+            self.rect.centerx = test.centerx
+
+        else:
+
+            hit = True
+            self.vel.x = -self.vel.x
+
+        # Eje Y
+        ny = self.pos.y + self.vel.y * dt
+        test = self.rect.copy()
+        test.centery = round(ny)
+
+        if self._free(test, collision_map):
+
+            self.pos.y = ny
+            self.rect.centery = test.centery
+
+        else:
+
+            hit = True
+            self.vel.y = -self.vel.y
+
+        if hit:
+
+            # Los dos primeros choques rebotan, el tercero la rompe
+            if self.bounces_left <= 0:
+                self.dead = True
+            else:
+                self.bounces_left -= 1
+
+    def draw(self, screen, camera, art):
+
+        img = art.get(camera.zoom)["shot"]
+
+        # Late un poco para que se note en la oscuridad
+        pulse = 0.85 + 0.15 * math.sin(self.t * 14)
+
+        size = max(1, int(img.get_width() * pulse))
+
+        if size != img.get_width():
+            img = pygame.transform.scale(img, (size, size))
+
+        center = camera.apply(self.rect).center
+
+        screen.blit(img, img.get_rect(center=center))
+
+
+# ---------------------------------------------------------------
+# Tronco
+# ---------------------------------------------------------------
+
+class Tronco(Enemy):
+    """No camina: se queda en su lugar, carga un buen rato y suelta
+    3 bolas abiertas en abanico hacia donde te podrias mover (donde
+    estas y para los costados, adelantandose si te estas moviendo).
+    Despues hace la animacion de disparo y espera para el siguiente.
+    Si le pegas mientras carga se le corta el disparo.
+    No te hace dano al tocarlo."""
+
+    fixed = True
+    contact_damage = False
+
+    IDLE = "idle"
+    WINDUP = "windup"
+    SHOOT = "shoot"
+
+    def __init__(self, x, y, hp, spawn_delay=0.0):
+
+        super().__init__(x, y, hp, 0.0, spawn_delay)
+
+        self.rect = pygame.Rect(0, 0, *TRONCO_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.phase = self.IDLE
+        self.phase_t = random.uniform(*TRONCO_FIRST_DELAY)
+
+        # Velocidad del jugador (para adelantar la punteria)
+        self.target_vel = pygame.Vector2()
+        self._prev_target = None
+
+        self._shots = []
+
+    # ---------- golpes ----------
+
+    def take_damage(self, amount):
+
+        result = super().take_damage(amount)
+
+        # Le pegaste mientras cargaba: se le corta el disparo
+        if result and self.phase == self.WINDUP:
+
+            self.phase = self.IDLE
+            self.phase_t = TRONCO_HIT_PAUSE
+
+        return result
+
+    # ---------- disparo ----------
+
+    def take_shots(self):
+        """Las bolas que acaba de soltar (y se vacia la lista)."""
+
+        shots, self._shots = self._shots, []
+
+        return shots
+
+    def _fire(self, target):
+
+        # Hacia donde vas a estar: la posicion de ahora mas lo que te
+        # moves en TRONCO_LEAD segundos (sin salirse de la sala)
+        aim = pygame.Vector2(target) + self.target_vel * TRONCO_LEAD
+
+        aim.x = max(ROOM.left + 4, min(ROOM.right - 4, aim.x))
+        aim.y = max(ROOM.top + 4, min(ROOM.bottom - 4, aim.y))
+
+        direction = aim - self.pos
+
+        if direction.length_squared() < 0.01:
+            direction = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        base = pygame.Vector2(1, 0).angle_to(direction)
+
+        for k in range(TRONCO_SHOTS):
+
+            offset = (k - (TRONCO_SHOTS - 1) / 2.0) * TRONCO_SPREAD
+
+            self._shots.append(Shot(self.pos, base + offset))
+
+    # ---------- movimiento / estado ----------
+
+    def update(self, dt, target, collision_map, others=None):
+
+        target = pygame.Vector2(target)
+
+        self.last_target = target.copy()
+        self.anim_t += dt
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.touch_cd > 0:
+            self.touch_cd = max(0.0, self.touch_cd - dt)
+
+        if self.spawn_t > 0:
+
+            self.spawn_t -= dt
+            self._prev_target = target
+
+            return
+
+        # Velocidad del jugador, suavizada
+        if self._prev_target is not None and dt > 0:
+
+            raw = (target - self._prev_target) / dt
+
+            self.target_vel += (raw - self.target_vel) * min(1.0, dt * 8.0)
+
+        self._prev_target = target
+
+        # Empujon del golpe: se desliza un poco y se frena
+        if self.stun > 0:
+
+            self.stun = max(0.0, self.stun - dt)
+            self.vel *= max(0.0, 1.0 - 6.0 * dt)
+
+            hit_x, hit_y = self._move(dt, collision_map)
+
+            if hit_x or hit_y:
+                self.vel = pygame.Vector2()
+
+            return
+
+        self.vel = pygame.Vector2()
+
+        self.phase_t -= dt
+
+        if self.phase_t > 0:
+            return
+
+        if self.phase == self.IDLE:
+
+            self.phase = self.WINDUP
+            self.phase_t = TRONCO_WINDUP
+
+        elif self.phase == self.WINDUP:
+
+            self._fire(target)
+
+            self.phase = self.SHOOT
+            self.phase_t = TRONCO_SHOOT_TIME
+
+        else:
+
+            self.phase = self.IDLE
+            self.phase_t = TRONCO_COOLDOWN
+
+    # ---------- dibujo ----------
+
+    def draw(self, screen, camera, art):
+
+        sprites = art.get(camera.zoom)
+
+        shake = 0
+
+        if self.flash > 0:
+
+            img = sprites["hit"]
+
+        else:
+
+            if self.phase == self.WINDUP:
+
+                frames = sprites["charge"]
+                index = int(self.anim_t / TRONCO_ANIM_FRAME) % len(frames)
+
+                # Tiembla cada vez mas fuerte hasta soltar las bolas
+                k = 1.0 - max(0.0, self.phase_t) / TRONCO_WINDUP
+                shake = int(math.sin(self.anim_t * 55) * 1.5 * k * camera.zoom)
+
+            elif self.phase == self.SHOOT:
+
+                frames = sprites["shoot"]
+                progress = 1.0 - max(0.0, self.phase_t) / TRONCO_SHOOT_TIME
+                index = min(len(frames) - 1, int(progress * len(frames)))
+
+            else:
+
+                frames = sprites["idle"]
+                index = int(self.anim_t / (TRONCO_ANIM_FRAME * 4)) % len(frames)
+
+            img = frames[index]
+
+            # Herido = mas oscuro
             if self.hp < self.max_hp:
 
                 shade = int(255 * (0.55 + 0.45 * self.hp / self.max_hp))
@@ -503,7 +1198,7 @@ class Enemy:
             img,
             img.get_rect(
                 midbottom=(
-                    dest.centerx,
+                    dest.centerx + shake,
                     dest.bottom + int(2 * camera.zoom)
                 )
             )
@@ -729,7 +1424,9 @@ class Arena:
         self.mode = None            # "escape" / "noescape"
 
         self.enemies = []
+        self.shots = []
         self.art = EnemyArt()
+        self.tronco_art = TroncoArt()
 
         self.chest = None
         self.reward = 0
@@ -919,9 +1616,16 @@ class Arena:
 
     def _spawn_wave(self, game):
 
-        count = enemies_for_wave(self.wave)
+        pinos, troncos = wave_composition(self.wave)
+
+        # Mezclados, asi los troncos no aparecen todos al final
+        kinds = ["pino"] * pinos + ["tronco"] * troncos
+        random.shuffle(kinds)
+
+        count = len(kinds)
 
         hp = min(ENEMY_HP_MAX, ENEMY_HP_BASE + self.wave)
+        tronco_hp = min(ENEMY_HP_MAX, hp + TRONCO_HP_EXTRA)
 
         speed = min(
             ENEMY_SPEED_MAX,
@@ -939,6 +1643,7 @@ class Arena:
         ]
 
         self.enemies = []
+        self.shots = []
 
         for i in range(count):
 
@@ -971,9 +1676,17 @@ class Arena:
             if pos is None:
                 pos = corners[i % len(corners)]
 
-            self.enemies.append(
-                Enemy(pos[0], pos[1], hp, speed, spawn_delay=i * 0.15)
-            )
+            if kinds[i] == "tronco":
+
+                self.enemies.append(
+                    Tronco(pos[0], pos[1], tronco_hp, spawn_delay=i * 0.15)
+                )
+
+            else:
+
+                self.enemies.append(
+                    Enemy(pos[0], pos[1], hp, speed, spawn_delay=i * 0.15)
+                )
 
     def _wave_cleared(self, game):
 
@@ -1093,9 +1806,9 @@ class Arena:
         self._open_gate(game)
 
         self.enemies = []
+        self.shots = []
         self.chest = None
         self.reward = 0
-        self.wave = 1
         self.mode = None
         self.banner_t = 0.0
         self.state = self.IDLE
@@ -1219,7 +1932,16 @@ class Arena:
         for enemy in self.enemies:
             enemy.update(dt, target, game.collision_map, self.enemies)
 
-        # Choque con el jugador
+            # Los troncos sueltan sus bolas
+            if enemy.fixed:
+                self.shots.extend(enemy.take_shots())
+
+        # Entre ellos tambien rebotan
+        bounce_enemies(self.enemies, game.collision_map, target)
+
+        for shot in self.shots:
+            shot.update(dt, game.collision_map)
+
         body = pygame.Rect(0, 0, 10, 16)
         body.midbottom = (p.rect.centerx, p.rect.bottom)
 
@@ -1228,9 +1950,13 @@ class Arena:
             ENEMY_DAMAGE + ENEMY_DAMAGE_STEP * (self.wave - 1)
         )
 
+        # Choque con el jugador (solo los que pegan al tocar: los pinos)
         for enemy in self.enemies:
 
-            if enemy.spawning or enemy.touch_cd > 0 or enemy.dead:
+            if (
+                enemy.spawning or enemy.touch_cd > 0 or enemy.dead
+                or not enemy.contact_damage
+            ):
                 continue
 
             if enemy.rect.colliderect(body):
@@ -1239,6 +1965,21 @@ class Arena:
                     game.vida -= damage
 
                 enemy.bounce_from(body.center)
+
+        # Bolas de los troncos
+        for shot in self.shots:
+
+            if shot.dead:
+                continue
+
+            if shot.rect.colliderect(body):
+
+                if p.hurt(shot.pos):
+                    game.vida -= damage * SHOT_DAMAGE_MULT
+
+                shot.dead = True
+
+        self.shots = [s for s in self.shots if not s.dead]
 
         # Los que murieron (los golpes ya se aplicaron antes)
         for enemy in self.enemies:
@@ -1258,6 +1999,9 @@ class Arena:
             return
 
         if not self.enemies:
+
+            self.shots = []
+
             self._wave_cleared(game)
 
     def _death_puff(self, pos):
@@ -1298,7 +2042,11 @@ class Arena:
         """Enemigos, cofre y barrera (debajo de la oscuridad)."""
 
         for enemy in self.enemies:
-            enemy.draw(screen, camera, self.art)
+
+            enemy.draw(
+                screen, camera,
+                self.tronco_art if enemy.fixed else self.art
+            )
 
         if self.chest is not None and not self.chest.done:
             self.chest.draw(screen, camera)
@@ -1319,6 +2067,10 @@ class Arena:
 
         if self.chest is not None and not self.chest.done:
             self.chest.draw_glow(screen, camera)
+
+        # Las bolas se ven siempre, aunque no las alumbres
+        for shot in self.shots:
+            shot.draw(screen, camera, self.tronco_art)
 
         if self.ring_t is not None:
 

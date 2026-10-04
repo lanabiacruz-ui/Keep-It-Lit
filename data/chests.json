@@ -3,8 +3,8 @@
     "aperturas_por_cofre": [10, 15],
     "items_por_apertura": { "3": 50, "4": 35, "5": 15 },
     "pesos": {
-        "moneda": 36,
-        "madera": 30,
+        "moneda": 42,
+        "madera": 24,
         "cera": 10,
         "aceite": 10,
         "resina": 7,

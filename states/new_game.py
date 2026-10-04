@@ -104,6 +104,9 @@ class NewGame:
         # Sala de combate (la sala grande de la derecha)
         self.arena = Arena((self.width, self.height))
 
+        # La oleada que sigue (las que ya pasaste no se repiten)
+        self.arena.wave = max(1, int(self.save_data.get("arena_wave", 1)))
+
         # Minijuego del cofre (None = cerrado)
         self.minigame = None
         self.minigame_chest = None
@@ -165,6 +168,11 @@ class NewGame:
         # El golpe se crea antes porque equip_match() le avisa que luz hay
         self.melee = Melee()
 
+        # Furia de la vela: cuenta atras hasta la proxima furia y
+        # cuanto le queda a la que esta activa (ver world/lights.py)
+        self.fury_timer = 0.0
+        self.fury_left = 0.0
+
         # Luces tiradas en el piso (cada una recuerda su vida)
         self.light_drops = []
 
@@ -191,6 +199,20 @@ class NewGame:
                 item_id, count = entry[0], int(entry[1])
             else:
                 item_id, count = entry, 1
+
+            # Las luces (fosforo, vela) nunca van al inventario: si una
+            # partida vieja las tenia ahi, quedan tiradas en el piso
+            if item_id in LIGHTS and count > 0:
+
+                for _ in range(count):
+
+                    px, py = self.player.rect.center
+
+                    self.light_drops.append(
+                        LightItem(item_id, px + random.randint(-12, 12), py)
+                    )
+
+                continue
 
             if item_id in self.item_defs and count > 0:
 
@@ -308,6 +330,52 @@ class NewGame:
         self.hud.equip(self.light_type)
         self.player.set_torch(True, self.light_type)
         self.melee.set_light(self.light_type)
+        self._reset_fury()
+
+    def _reset_fury(self):
+        """Apaga la furia y reinicia la espera para la proxima."""
+
+        self.fury_left = 0.0
+        self.fury_timer = light_stats(self.light_type).get("furia_cada", 0)
+        self.melee.set_fury(1.0)
+
+    def _update_fury(self, dt):
+        """Cada `furia_cada` segundos la luz entra en furia durante
+        `furia_duracion` segundos: pega `furia_velocidad` veces mas
+        rapido. Solo corre con la luz prendida."""
+
+        if not self.has_match:
+
+            if self.fury_left > 0 or self.melee.fury:
+                self._reset_fury()
+
+            return
+
+        stats = light_stats(self.light_type)
+        every = stats.get("furia_cada", 0)
+        length = stats.get("furia_duracion", 0)
+
+        if every <= 0 or length <= 0:
+            return
+
+        if self.fury_left > 0:
+
+            self.fury_left -= dt
+
+            if self.fury_left <= 0:
+
+                self.fury_left = 0.0
+                self.fury_timer = every
+                self.melee.set_fury(1.0)
+
+        else:
+
+            self.fury_timer -= dt
+
+            if self.fury_timer <= 0:
+
+                self.fury_left = length
+                self.melee.set_fury(stats.get("furia_velocidad", 1.0))
 
     def _light_radius(self):
         """Radio de la luz equipada, en pixeles de pantalla."""
@@ -353,6 +421,7 @@ class NewGame:
         self.has_match = False
         self.hud.equip(None)
         self.player.set_torch(False)
+        self._reset_fury()
 
     # ---------- objetos ----------
 
@@ -411,6 +480,31 @@ class NewGame:
             # Las monedas del cofre de la sala de combate valen mas
             self.coins += getattr(item, "value", 1)
             self.world_items.remove(item)
+
+            return
+
+        # Fosforo / vela: NUNCA al inventario. Se equipan directo en el
+        # casillero aislado (y solo si no hay otra luz encendida).
+        if item.item_id in LIGHTS:
+
+            if self.has_match:
+
+                self.show_message("Ya tenes una luz encendida")
+
+                return
+
+            self.world_items.remove(item)
+
+            if item.spawn_id is not None:
+                self.collected.add(item.spawn_id)
+
+            self.equip_match(item.item_id, 1.0)
+
+            name = self.item_defs.get(item.item_id, {}).get(
+                "nombre", item.item_id
+            )
+
+            self.show_message(f"Equipaste {name}")
 
             return
 
@@ -667,6 +761,11 @@ class NewGame:
         if not self.melee.start():
             return
 
+        # Cada golpe gasta un poco de luz (aunque no le pegues a nada).
+        # En furia no gasta. El fosforo gasta bastante mas que la vela.
+        if not self.melee.fury:
+            self.vida -= light_stats(self.light_type).get("golpe_costo", 0.0)
+
         # El personaje mira hacia donde pega
         dx = math.cos(self.melee.aim)
         dy = math.sin(self.melee.aim)
@@ -680,6 +779,8 @@ class NewGame:
 
         if not self.has_match:
             self.melee.cancel()
+
+        self._update_fury(dt)
 
         pivot = self._attack_pivot()
 
@@ -843,7 +944,8 @@ class NewGame:
             collected=sorted(self.collected),
             broken_doors=sorted(self.doors.broken_ids),
             chests=self.chests.save_data(),
-            item_seed=self.item_seed
+            item_seed=self.item_seed,
+            arena_wave=self.arena.wave
         )
 
     # ---------- actualizaciones extra ----------
@@ -1327,6 +1429,11 @@ class NewGame:
             if self.burn_timer > 0:
                 status.append(
                     (f"Cera: {math.ceil(self.burn_timer)}s", (255, 225, 140))
+                )
+
+            if self.fury_left > 0:
+                status.append(
+                    (f"Furia: {math.ceil(self.fury_left)}s", (255, 120, 50))
                 )
 
             if self.polvora_timer > 0:
