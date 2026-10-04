@@ -12,15 +12,17 @@ DOORS_DIR = (
 
 # ---------------------------------------------------------------
 # Tipos de puerta
-#   hits:  golpes para romperla (None = el fosforo no la puede romper)
-#   cost:  cuanta vida del fosforo (0.0 a 1.0) gasta CADA golpe.
+#   hits:  golpes para romperla (None = no se rompe a golpes)
+#   cost:  cuanta vida de la luz (0.0 a 1.0) gasta CADA golpe.
 #          El fosforo dura 30 s, asi que 0.05 = 1.5 s de luz.
+#   Que luz puede romper cada tipo se define en world/lights.py
+#   ("rompe"): la gris solo la rompe la vela.
 # ---------------------------------------------------------------
 DOOR_TYPES = {
     "comun": {"hits": 2, "cost": 0.05},
     "verde": {"hits": 6, "cost": 0.05},
-    # Se rompen con otro objeto que ilumina (todavia no existe)
-    "gris": {"hits": None, "cost": 0.0},
+    # Solo se rompe con la vela
+    "gris": {"hits": 4, "cost": 0.05},
     # Se abre con otro objeto (todavia no existe)
     "azul": {"hits": None, "cost": 0.0},
 }
@@ -111,8 +113,13 @@ class Door:
 
         return self.max_hits is not None
 
+    def resist(self):
+        """La luz no puede con esta puerta: solo destella, sin dano."""
+
+        self.flash = FLASH_TIME
+
     def take_damage(self, amount):
-        """Devuelve cuanta vida del fosforo cuesta este golpe."""
+        """Devuelve cuanta vida de la luz cuesta este golpe."""
 
         self.flash = FLASH_TIME
 

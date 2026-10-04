@@ -164,6 +164,11 @@ class NewGame:
         # Luces tiradas en el piso (cada una recuerda su vida)
         self.light_drops = []
 
+        # Furia de la vela: fury_charge cuenta hasta furia_cada; despues
+        # fury_left baja mientras pega rapidisimo (ver world/lights.py)
+        self.fury_charge = 0.0
+        self.fury_left = 0.0
+
         if self.has_match:
             self.equip_match(self.light_type)
         else:
@@ -188,7 +193,12 @@ class NewGame:
             else:
                 item_id, count = entry, 1
 
-            if item_id in self.item_defs and count > 0:
+            # Las luces (fosforo, vela) no van al inventario
+            if (
+                item_id in self.item_defs
+                and item_id not in LIGHTS
+                and count > 0
+            ):
 
                 self.hud.items[i] = item_id
                 self.hud.counts[i] = min(count, self._max_stack(item_id))
@@ -304,6 +314,48 @@ class NewGame:
         self.hud.equip(self.light_type)
         self.player.set_torch(True)
         self.melee.set_light(self.light_type)
+        self._reset_fury()
+
+    def _reset_fury(self):
+        """Corta la furia y vuelve a empezar la cuenta de 20 s."""
+
+        self.fury_charge = 0.0
+        self.fury_left = 0.0
+        self.melee.set_fury(1.0)
+
+    def _update_fury(self, dt):
+        """Cada `furia_cada` segundos la luz (la vela) entra en furia
+        `furia_duracion` segundos y pega `furia_velocidad` veces mas
+        rapido. Solo corre con la luz equipada."""
+
+        stats = light_stats(self.light_type)
+        every = stats.get("furia_cada", 0)
+
+        if not self.has_match or not every:
+
+            if self.fury_left > 0 or self.fury_charge > 0:
+                self._reset_fury()
+
+            return
+
+        if self.fury_left > 0:
+
+            self.fury_left -= dt
+
+            if self.fury_left <= 0:
+                self._reset_fury()
+
+            return
+
+        self.fury_charge += dt
+
+        if self.fury_charge >= every:
+
+            self.fury_charge = every
+            self.fury_left = stats["furia_duracion"]
+            self.melee.set_fury(stats["furia_velocidad"])
+
+            self.show_message("Furia de la vela!")
 
     def _light_radius(self):
         """Radio de la luz equipada, en pixeles de pantalla."""
@@ -339,6 +391,7 @@ class NewGame:
         self.has_match = False
         self.hud.equip(None)
         self.player.set_torch(False)
+        self._reset_fury()
 
     def _burn_out(self):
 
@@ -349,6 +402,7 @@ class NewGame:
         self.has_match = False
         self.hud.equip(None)
         self.player.set_torch(False)
+        self._reset_fury()
 
     # ---------- objetos ----------
 
@@ -409,6 +463,26 @@ class NewGame:
 
             return
 
+        # Fosforo y vela: se equipan solos en el slot aislado, nunca van
+        # al inventario
+        if item.item_id in LIGHTS:
+
+            if self.has_match:
+
+                self.show_message("Ya tenes una luz equipada")
+
+                return
+
+            self.world_items.remove(item)
+
+            self.equip_match(item.item_id, 1.0)
+
+            self.show_message(
+                f"Equipaste {light_stats(item.item_id)['nombre']}"
+            )
+
+            return
+
         slot = self._slot_for(item.item_id)
 
         if slot is None:
@@ -463,7 +537,7 @@ class NewGame:
 
         if data.get("requiere_fosforo") and not self.has_match:
 
-            self.show_message("Necesitas el fosforo encendido")
+            self.show_message("Necesitas una luz encendida")
 
             return
 
@@ -514,16 +588,6 @@ class NewGame:
                 self.show_message("La resina ya esta haciendo efecto")
 
                 return
-
-        # Fosforo / vela: solo sirven si no hay ninguna luz encendida
-        if (
-            any(e.get("tipo") == "encender" for e in effects)
-            and self.has_match
-        ):
-
-            self.show_message("Ya tenes una luz encendida")
-
-            return
 
         # Ganzua: necesita un cofre listo cerca
         chest = None
@@ -578,13 +642,6 @@ class NewGame:
             elif kind == "abrir_cofre" and chest is not None:
 
                 self._open_chest(chest)
-
-            elif kind == "encender":
-
-                self.equip_match(
-                    effect.get("luz", "fosforo"),
-                    effect.get("vida", 1.0)
-                )
 
         self._remove_one(slot)
 
@@ -671,20 +728,36 @@ class NewGame:
         if not self.has_match:
             self.melee.cancel()
 
+        self._update_fury(dt)
+
+        # En furia, con el click apretado pega solo y rapidisimo
+        if self.fury_left > 0:
+
+            pos = pygame.mouse.get_pos()
+
+            if (
+                pygame.mouse.get_pressed()[0]
+                and not self.hud.bar_rect.collidepoint(pos)
+                and not self.hud.equipped_rect.collidepoint(pos)
+            ):
+                self.start_attack()
+
         pivot = self._attack_pivot()
 
         self.melee.update(dt, pivot, self._mouse_world())
 
         for target in self.melee.new_hits(self.combat_targets(), pivot):
 
-            result = target.take_damage(self.melee.damage)
-
-            # Cada golpe a una puerta le saca vida al fosforo
             if isinstance(target, Door):
-                self.vida -= result
+
+                self._hit_door(target)
+
+                continue
+
+            target.take_damage(self.melee.damage)
 
             # Pegarle a un cofre abre el minijuego
-            elif isinstance(target, Chest):
+            if isinstance(target, Chest):
                 self._on_chest_hit(target)
 
         self.doors.update(dt)
@@ -693,6 +766,28 @@ class NewGame:
             dummy.update(dt)
 
         self.dummies = [d for d in self.dummies if not d.dead]
+
+    def _hit_door(self, door):
+        """Cada golpe a una puerta le saca vida a la luz. La gris solo
+        la rompe la vela (ver "rompe" en world/lights.py)."""
+
+        can_break = (
+            door.breakable
+            and door.kind in light_stats(self.light_type)["rompe"]
+        )
+
+        if can_break:
+
+            self.vida -= door.take_damage(self.melee.damage)
+
+            return
+
+        door.resist()
+
+        if door.breakable:
+            self.show_message("Esta puerta es muy dura: hace falta la vela")
+        else:
+            self.show_message("Esta puerta no se rompe a golpes")
 
     # ---------- cofres ----------
 
@@ -1211,6 +1306,13 @@ class NewGame:
 
                 radius *= flicker
 
+            # Furia: la luz late mientras pega rapido
+            if self.fury_left > 0:
+
+                radius *= 1.06 + 0.06 * math.sin(
+                    pygame.time.get_ticks() / 40
+                )
+
             self._light_radius_px = radius
 
             sources.append((
@@ -1288,6 +1390,24 @@ class NewGame:
         if self.state == "playing" and self.has_match:
 
             status = []
+
+            every = light_stats(self.light_type).get("furia_cada", 0)
+
+            if every:
+
+                if self.fury_left > 0:
+
+                    status.append((
+                        f"Furia: {math.ceil(self.fury_left)}s",
+                        (255, 120, 60)
+                    ))
+
+                elif every - self.fury_charge <= 5:
+
+                    status.append((
+                        f"Furia en {math.ceil(every - self.fury_charge)}s",
+                        (255, 225, 140)
+                    ))
 
             if self.burn_timer > 0:
                 status.append(

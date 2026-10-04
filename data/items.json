@@ -74,24 +74,12 @@
     },
     "fosforo": {
         "nombre": "Fósforo",
-        "descripcion": "Luz básica. Se equipa al usarlo y dura 30 segundos.",
-        "requiere_fosforo": false,
-        "efectos": [
-            {
-                "tipo": "encender",
-                "luz": "fosforo"
-            }
-        ]
+        "descripcion": "Luz básica. Al agarrarlo se equipa solo en el slot aislado (no ocupa el inventario) y dura 30 segundos.",
+        "tipo": "luz"
     },
     "vela": {
         "nombre": "Vela",
-        "descripcion": "Alumbra un 40% más lejos y dura 60 segundos, pero pega más lento. Se equipa al usarla.",
-        "requiere_fosforo": false,
-        "efectos": [
-            {
-                "tipo": "encender",
-                "luz": "vela"
-            }
-        ]
+        "descripcion": "Alumbra el doble y dura 60 segundos. Pega lento, pero cada 20 segundos entra en furia y pega rapidísimo. Es la única que rompe las puertas grises. Se equipa sola en el slot aislado.",
+        "tipo": "luz"
     }
 }
