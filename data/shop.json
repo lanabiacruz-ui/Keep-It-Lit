@@ -1,0 +1,22 @@
+{
+    "secciones": [
+        {
+            "nombre": "Luces",
+            "items": [
+                { "id": "fosforo", "precio": 40 },
+                { "id": "vela", "precio": 90 }
+            ]
+        },
+        {
+            "nombre": "Objetos",
+            "items": [
+                { "id": "madera", "precio": 5 },
+                { "id": "cera", "precio": 8 },
+                { "id": "aceite", "precio": 12 },
+                { "id": "resina", "precio": 15 },
+                { "id": "polvora", "precio": 20 },
+                { "id": "ganzua", "precio": 30 }
+            ]
+        }
+    ]
+}

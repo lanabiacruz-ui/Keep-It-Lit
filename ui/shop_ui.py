@@ -1,0 +1,824 @@
+import math
+
+import pygame
+
+from world.items import load_icon
+
+
+# Colores (oscuro, como en el diseno de la tienda)
+C_PANEL = (24, 24, 27)
+C_CARD = (30, 30, 34)
+C_CARD_HOVER = (42, 42, 48)
+C_BORDER = (63, 63, 70)
+C_TEXT = (244, 244, 245)
+C_MUTED = (161, 161, 170)
+C_RED = (248, 113, 113)
+C_BADGE = (251, 146, 60)
+
+# Color del cuadradito de fondo de cada icono
+TILE_COLORS = {
+    "fosforo": (66, 36, 10),
+    "vela": (16, 40, 86),
+    "madera": (60, 36, 12),
+    "cera": (44, 44, 48),
+    "aceite": (16, 50, 18),
+    "resina": (36, 30, 92),
+    "polvora": (80, 20, 20),
+    "ganzua": (14, 36, 80),
+}
+
+MAX_PER_ITEM = 99
+
+
+class ShopUI:
+    """Ventana de la tienda: productos a la izquierda, carrito a la
+    derecha.
+
+    handle_event devuelve:
+      None                  -> no paso nada importante
+      "close"               -> cerrar la tienda
+      ("buy", {id: cant})   -> el jugador confirmo la compra
+    """
+
+    PANEL_W = 900
+    PANEL_H = 520
+    PAD = 24
+
+    LIST_W = 570
+    COLS = 3
+    CARD_W = 182
+    CARD_H = 104
+    GAP = 12
+
+    ROW_H = 46
+    FOOT_H = 118
+
+    def __init__(self, screen_size, catalog, item_defs, coins):
+
+        self.sw, self.sh = screen_size
+        self.catalog = catalog
+        self.defs = item_defs
+        self.coins = int(coins)
+
+        self.prices = {
+            it["id"]: it["precio"]
+            for sec in catalog
+            for it in sec["items"]
+        }
+
+        # {id: cantidad}, en el orden en que se fueron agregando
+        self.cart = {}
+
+        self.message = ""
+        self.message_timer = 0.0
+
+        self.scroll = 0.0
+        self.cart_scroll = 0.0
+
+        self.title_font = pygame.font.Font(None, 46)
+        self.section_font = pygame.font.Font(None, 26)
+        self.name_font = pygame.font.Font(None, 28)
+        self.small_font = pygame.font.Font(None, 23)
+        self.tiny_font = pygame.font.Font(None, 21)
+        self.button_font = pygame.font.Font(None, 30)
+
+        self.panel = pygame.Rect(0, 0, self.PANEL_W, self.PANEL_H)
+        self.panel.center = (self.sw // 2, self.sh // 2)
+
+        top = self.panel.y + 84
+
+        self.list_rect = pygame.Rect(
+            self.panel.x + self.PAD,
+            top,
+            self.LIST_W,
+            self.panel.bottom - self.PAD - 24 - top
+        )
+
+        cart_x = self.list_rect.right + 24
+
+        self.cart_rect = pygame.Rect(
+            cart_x,
+            top,
+            self.panel.right - self.PAD - cart_x,
+            self.list_rect.height
+        )
+
+        self.rows_rect = pygame.Rect(
+            self.cart_rect.x + 8,
+            self.cart_rect.y + 50,
+            self.cart_rect.width - 16,
+            self.cart_rect.height - 50 - self.FOOT_H
+        )
+
+        foot_top = self.cart_rect.bottom - self.FOOT_H
+
+        self.total_pos_y = foot_top + 14
+
+        self.trash_rect = pygame.Rect(0, 0, 40, 40)
+        self.trash_rect.bottomright = (
+            self.cart_rect.right - 16,
+            self.cart_rect.bottom - 16
+        )
+
+        self.buy_rect = pygame.Rect(
+            self.cart_rect.x + 16,
+            self.trash_rect.y,
+            self.trash_rect.x - 8 - (self.cart_rect.x + 16),
+            40
+        )
+
+        # Cabecera: [X] y monedas arriba a la derecha
+        self.coin_pill = pygame.Rect(
+            self.panel.right - self.PAD - 112,
+            self.panel.y + self.PAD,
+            112,
+            36
+        )
+
+        self.close_rect = pygame.Rect(
+            self.coin_pill.x - 12 - 36,
+            self.coin_pill.y,
+            36,
+            36
+        )
+
+        self.arrow_center = (
+            self.list_rect.centerx,
+            self.list_rect.bottom - 22
+        )
+
+        self.dim = pygame.Surface((self.sw, self.sh), pygame.SRCALPHA)
+        self.dim.fill((0, 0, 0, 175))
+
+        self._icons = {}
+
+        self._layout()
+
+    # ---------- datos ----------
+
+    def item_name(self, item_id):
+
+        data = self.defs.get(item_id, {})
+
+        return data.get("nombre", item_id.capitalize())
+
+    def total(self):
+
+        return sum(self.prices[i] * q for i, q in self.cart.items())
+
+    def _icon(self, item_id, size):
+
+        key = (item_id, size)
+
+        if key not in self._icons:
+
+            icon = load_icon(item_id)
+
+            if icon is not None:
+                icon = pygame.transform.smoothscale(icon, (size, size))
+
+            self._icons[key] = icon
+
+        return self._icons[key]
+
+    def _flash(self, text):
+
+        self.message = text
+        self.message_timer = 2.0
+
+    # ---------- layout ----------
+
+    def _layout(self):
+        """Posiciones de secciones y tarjetas dentro del area scrolleable
+        (coordenadas relativas al tope del area)."""
+
+        self.labels = []
+        self.cards = []
+
+        y = 0
+
+        for sec in self.catalog:
+
+            self.labels.append((y, sec["nombre"]))
+
+            y += 30
+
+            for i, it in enumerate(sec["items"]):
+
+                col = i % self.COLS
+                row = i // self.COLS
+
+                rect = pygame.Rect(
+                    col * (self.CARD_W + self.GAP),
+                    y + row * (self.CARD_H + self.GAP),
+                    self.CARD_W,
+                    self.CARD_H
+                )
+
+                self.cards.append((rect, it["id"]))
+
+            rows = math.ceil(len(sec["items"]) / self.COLS)
+
+            y += rows * (self.CARD_H + self.GAP) + 6
+
+        self.content_h = y
+
+        self.max_scroll = max(0, self.content_h - self.list_rect.height)
+
+    def _cart_rows(self):
+        """[(id, cant, rect_fila, rect_menos, rect_mas)] en pantalla."""
+
+        rows = []
+
+        for n, (item_id, qty) in enumerate(self.cart.items()):
+
+            y = self.rows_rect.y + n * self.ROW_H - int(self.cart_scroll)
+
+            row = pygame.Rect(
+                self.rows_rect.x, y, self.rows_rect.width, self.ROW_H - 4
+            )
+
+            plus = pygame.Rect(row.right - 26, row.y + 12, 20, 20)
+            minus = pygame.Rect(plus.x - 26, row.y + 12, 20, 20)
+
+            rows.append((item_id, qty, row, minus, plus))
+
+        return rows
+
+    def _cart_max_scroll(self):
+
+        return max(
+            0, len(self.cart) * self.ROW_H - self.rows_rect.height
+        )
+
+    # ---------- carrito ----------
+
+    def add(self, item_id, amount=1):
+
+        current = self.cart.get(item_id, 0)
+
+        self.cart[item_id] = min(MAX_PER_ITEM, current + amount)
+
+    def remove(self, item_id, amount=1):
+
+        if item_id not in self.cart:
+            return
+
+        self.cart[item_id] -= amount
+
+        if self.cart[item_id] <= 0:
+            del self.cart[item_id]
+
+        self.cart_scroll = min(self.cart_scroll, self._cart_max_scroll())
+
+    def clear(self):
+
+        self.cart.clear()
+        self.cart_scroll = 0.0
+
+    # ---------- eventos ----------
+
+    def _card_at(self, pos):
+
+        if not self.list_rect.collidepoint(pos):
+            return None
+
+        x = pos[0] - self.list_rect.x
+        y = pos[1] - self.list_rect.y + int(self.scroll)
+
+        for rect, item_id in self.cards:
+
+            if rect.collidepoint(x, y):
+                return item_id
+
+        return None
+
+    def handle_event(self, event):
+
+        if event.type == pygame.KEYDOWN:
+
+            if event.key in (pygame.K_ESCAPE, pygame.K_e):
+                return "close"
+
+            return None
+
+        if event.type == pygame.MOUSEWHEEL:
+
+            pos = pygame.mouse.get_pos()
+
+            if self.cart_rect.collidepoint(pos):
+
+                self.cart_scroll = max(
+                    0,
+                    min(
+                        self._cart_max_scroll(),
+                        self.cart_scroll - event.y * 40
+                    )
+                )
+
+            else:
+
+                self.scroll = max(
+                    0,
+                    min(self.max_scroll, self.scroll - event.y * 50)
+                )
+
+            return None
+
+        if event.type != pygame.MOUSEBUTTONDOWN:
+            return None
+
+        if event.button not in (1, 3):
+            return None
+
+        pos = event.pos
+
+        # ---- tarjetas ----
+        card = self._card_at(pos)
+
+        if card is not None:
+
+            if event.button == 1:
+                self.add(card)
+            else:
+                self.remove(card)
+
+            return None
+
+        if event.button != 1:
+            return None
+
+        # ---- cerrar ----
+        if self.close_rect.collidepoint(pos):
+            return "close"
+
+        # ---- flechita de scroll ----
+        if (
+            self.scroll < self.max_scroll - 1
+            and math.dist(pos, self.arrow_center) <= 17
+        ):
+
+            self.scroll = self.max_scroll
+
+            return None
+
+        # ---- filas del carrito (+ y -) ----
+        if self.rows_rect.collidepoint(pos):
+
+            for item_id, _, _, minus, plus in self._cart_rows():
+
+                if minus.collidepoint(pos):
+                    self.remove(item_id)
+                    return None
+
+                if plus.collidepoint(pos):
+                    self.add(item_id)
+                    return None
+
+            return None
+
+        # ---- tacho ----
+        if self.trash_rect.collidepoint(pos):
+
+            self.clear()
+
+            return None
+
+        # ---- comprar ----
+        if self.buy_rect.collidepoint(pos):
+
+            total = self.total()
+
+            if total <= 0:
+                return None
+
+            if total > self.coins:
+
+                self._flash("No te alcanzan las monedas")
+
+                return None
+
+            return ("buy", dict(self.cart))
+
+        return None
+
+    def update(self, dt):
+
+        if self.message_timer > 0:
+            self.message_timer -= dt
+
+    # ---------- dibujo ----------
+
+    def _text(self, screen, font, text, color, **anchor):
+
+        img = font.render(text, True, color)
+
+        screen.blit(img, img.get_rect(**anchor))
+
+        return img
+
+    @staticmethod
+    def _wrap(font, text, max_width):
+
+        lines = []
+        line = ""
+
+        for word in text.split():
+
+            test = f"{line} {word}".strip()
+
+            if line and font.size(test)[0] > max_width:
+                lines.append(line)
+                line = word
+            else:
+                line = test
+
+        if line:
+            lines.append(line)
+
+        return lines
+
+    def _draw_coin_amount(self, screen, amount, color, midright):
+        """Moneda + numero, alineado a la derecha en `midright`."""
+
+        text = self.name_font.render(str(amount), True, color)
+
+        text_rect = text.get_rect(midright=midright)
+
+        screen.blit(text, text_rect)
+
+        coin = self._icon("moneda", 20)
+
+        if coin is not None:
+
+            screen.blit(
+                coin,
+                coin.get_rect(midright=(text_rect.left - 6, midright[1]))
+            )
+
+    def _draw_card(self, screen, rect, item_id, hover):
+
+        pygame.draw.rect(
+            screen, C_CARD_HOVER if hover else C_CARD, rect,
+            border_radius=10
+        )
+
+        pygame.draw.rect(
+            screen, C_BORDER, rect, width=1, border_radius=10
+        )
+
+        # Cuadradito con el icono
+        tile = pygame.Rect(0, 0, 46, 46)
+        tile.midtop = (rect.centerx, rect.y + 10)
+
+        pygame.draw.rect(
+            screen, TILE_COLORS.get(item_id, (44, 44, 50)), tile,
+            border_radius=8
+        )
+
+        icon = self._icon(item_id, 34)
+
+        if icon is not None:
+            screen.blit(icon, icon.get_rect(center=tile.center))
+
+        self._text(
+            screen, self.name_font, self.item_name(item_id), C_TEXT,
+            midtop=(rect.centerx, tile.bottom + 6)
+        )
+
+        self._text(
+            screen, self.tiny_font,
+            f"{self.prices[item_id]} monedas", C_MUTED,
+            midtop=(rect.centerx, tile.bottom + 28)
+        )
+
+        # Cuantas hay en el carrito
+        qty = self.cart.get(item_id, 0)
+
+        if qty > 0:
+
+            badge = pygame.Rect(0, 0, 26, 22)
+            badge.topright = (rect.right - 6, rect.y + 6)
+
+            pygame.draw.rect(screen, C_BADGE, badge, border_radius=11)
+
+            self._text(
+                screen, self.tiny_font, str(qty), (30, 18, 8),
+                center=badge.center
+            )
+
+    def _draw_list(self, screen, mouse):
+
+        screen.set_clip(self.list_rect)
+
+        oy = self.list_rect.y - int(self.scroll)
+
+        for y, name in self.labels:
+
+            self._text(
+                screen, self.section_font, name, C_MUTED,
+                topleft=(self.list_rect.x + 2, oy + y + 4)
+            )
+
+        hover_id = self._card_at(mouse)
+
+        for rect, item_id in self.cards:
+
+            self._draw_card(
+                screen,
+                rect.move(self.list_rect.x, oy),
+                item_id,
+                item_id == hover_id
+            )
+
+        screen.set_clip(None)
+
+        # Flechita "hay mas abajo"
+        if self.scroll < self.max_scroll - 1:
+
+            pygame.draw.circle(
+                screen, C_CARD_HOVER, self.arrow_center, 17
+            )
+
+            pygame.draw.circle(
+                screen, C_BORDER, self.arrow_center, 17, 1
+            )
+
+            ax, ay = self.arrow_center
+
+            pygame.draw.lines(
+                screen, C_TEXT, False,
+                [(ax - 6, ay - 3), (ax, ay + 4), (ax + 6, ay - 3)], 2
+            )
+
+            pygame.draw.line(
+                screen, C_TEXT, (ax, ay - 6), (ax, ay + 3), 2
+            )
+
+    def _draw_cart_icon(self, screen, x, y):
+        """Carrito de compras chiquito (lineas)."""
+
+        pygame.draw.lines(
+            screen, C_TEXT, False,
+            [(x, y + 2), (x + 4, y + 2), (x + 7, y + 13), (x + 19, y + 13),
+             (x + 21, y + 5), (x + 6, y + 5)], 2
+        )
+
+        pygame.draw.circle(screen, C_TEXT, (x + 9, y + 18), 2)
+        pygame.draw.circle(screen, C_TEXT, (x + 17, y + 18), 2)
+
+    def _draw_trash_icon(self, screen, rect, color):
+
+        cx, cy = rect.center
+
+        pygame.draw.line(
+            screen, color, (cx - 8, cy - 7), (cx + 8, cy - 7), 2
+        )
+
+        pygame.draw.line(
+            screen, color, (cx - 3, cy - 10), (cx + 3, cy - 10), 2
+        )
+
+        pygame.draw.lines(
+            screen, color, False,
+            [(cx - 6, cy - 5), (cx - 5, cy + 9), (cx + 5, cy + 9),
+             (cx + 6, cy - 5)], 2
+        )
+
+        pygame.draw.line(
+            screen, color, (cx - 2, cy - 2), (cx - 2, cy + 6), 1
+        )
+
+        pygame.draw.line(
+            screen, color, (cx + 2, cy - 2), (cx + 2, cy + 6), 1
+        )
+
+    def _draw_cart(self, screen, mouse):
+
+        pygame.draw.rect(
+            screen, C_CARD, self.cart_rect, border_radius=12
+        )
+
+        pygame.draw.rect(
+            screen, C_BORDER, self.cart_rect, width=1, border_radius=12
+        )
+
+        # Cabecera
+        self._draw_cart_icon(
+            screen, self.cart_rect.x + 16, self.cart_rect.y + 14
+        )
+
+        self._text(
+            screen, self.name_font, "Carrito", C_TEXT,
+            midleft=(self.cart_rect.x + 46, self.cart_rect.y + 25)
+        )
+
+        # Filas
+        if not self.cart:
+
+            lines = self._wrap(
+                self.small_font,
+                "Tocá un producto para agregarlo.",
+                self.rows_rect.width - 20
+            )
+
+            for n, line in enumerate(lines):
+
+                self._text(
+                    screen, self.small_font, line, C_MUTED,
+                    midtop=(
+                        self.rows_rect.centerx,
+                        self.rows_rect.y + 24 + n * 22
+                    )
+                )
+
+        else:
+
+            screen.set_clip(self.rows_rect)
+
+            for item_id, qty, row, minus, plus in self._cart_rows():
+
+                icon = self._icon(item_id, 28)
+
+                if icon is not None:
+                    screen.blit(
+                        icon, icon.get_rect(midleft=(row.x + 4, row.centery))
+                    )
+
+                self._text(
+                    screen, self.small_font, self.item_name(item_id), C_TEXT,
+                    topleft=(row.x + 40, row.y + 4)
+                )
+
+                price = self.prices[item_id]
+
+                self._text(
+                    screen, self.tiny_font,
+                    f"{qty} × {price} = {qty * price}", C_MUTED,
+                    topleft=(row.x + 40, row.y + 22)
+                )
+
+                for rect, symbol in ((minus, "-"), (plus, "+")):
+
+                    hover = rect.collidepoint(mouse)
+
+                    pygame.draw.rect(
+                        screen,
+                        C_CARD_HOVER if hover else C_PANEL,
+                        rect,
+                        border_radius=5
+                    )
+
+                    pygame.draw.rect(
+                        screen, C_BORDER, rect, width=1, border_radius=5
+                    )
+
+                    self._text(
+                        screen, self.small_font, symbol, C_TEXT,
+                        center=rect.center
+                    )
+
+            screen.set_clip(None)
+
+        # Pie: total, aviso y botones
+        foot_top = self.cart_rect.bottom - self.FOOT_H
+
+        pygame.draw.line(
+            screen, C_BORDER,
+            (self.cart_rect.x + 12, foot_top),
+            (self.cart_rect.right - 12, foot_top)
+        )
+
+        total = self.total()
+
+        self._text(
+            screen, self.small_font, "Total", C_MUTED,
+            midleft=(self.cart_rect.x + 16, self.total_pos_y + 10)
+        )
+
+        self._draw_coin_amount(
+            screen,
+            total,
+            C_RED if total > self.coins else C_TEXT,
+            (self.cart_rect.right - 16, self.total_pos_y + 10)
+        )
+
+        if self.message_timer > 0:
+
+            self._text(
+                screen, self.tiny_font, self.message, C_RED,
+                midtop=(self.cart_rect.centerx, self.total_pos_y + 32)
+            )
+
+        # Comprar
+        enabled = total > 0
+
+        hover = enabled and self.buy_rect.collidepoint(mouse)
+
+        pygame.draw.rect(
+            screen,
+            C_CARD_HOVER if hover else C_PANEL,
+            self.buy_rect,
+            border_radius=10
+        )
+
+        pygame.draw.rect(
+            screen,
+            C_TEXT if enabled else C_BORDER,
+            self.buy_rect,
+            width=1,
+            border_radius=10
+        )
+
+        self._text(
+            screen, self.button_font, "Comprar",
+            C_TEXT if enabled else C_MUTED,
+            center=self.buy_rect.center
+        )
+
+        # Tacho
+        hover = self.trash_rect.collidepoint(mouse)
+
+        pygame.draw.rect(
+            screen,
+            C_CARD_HOVER if hover else C_PANEL,
+            self.trash_rect,
+            border_radius=10
+        )
+
+        pygame.draw.rect(
+            screen, C_BORDER, self.trash_rect, width=1, border_radius=10
+        )
+
+        self._draw_trash_icon(
+            screen,
+            self.trash_rect,
+            C_TEXT if self.cart else C_MUTED
+        )
+
+    def draw(self, screen):
+
+        mouse = pygame.mouse.get_pos()
+
+        screen.blit(self.dim, (0, 0))
+
+        pygame.draw.rect(
+            screen, C_PANEL, self.panel, border_radius=16
+        )
+
+        pygame.draw.rect(
+            screen, C_BORDER, self.panel, width=1, border_radius=16
+        )
+
+        # Cabecera
+        self._text(
+            screen, self.title_font, "Tienda", C_TEXT,
+            midleft=(self.panel.x + self.PAD, self.coin_pill.centery)
+        )
+
+        # Cerrar
+        hover = self.close_rect.collidepoint(mouse)
+
+        pygame.draw.rect(
+            screen,
+            C_CARD_HOVER if hover else C_CARD,
+            self.close_rect,
+            border_radius=10
+        )
+
+        pygame.draw.rect(
+            screen, C_BORDER, self.close_rect, width=1, border_radius=10
+        )
+
+        cx, cy = self.close_rect.center
+
+        pygame.draw.line(screen, C_TEXT, (cx - 6, cy - 6), (cx + 6, cy + 6), 2)
+        pygame.draw.line(screen, C_TEXT, (cx - 6, cy + 6), (cx + 6, cy - 6), 2)
+
+        # Monedas que tenes
+        pygame.draw.rect(
+            screen, C_CARD, self.coin_pill, border_radius=18
+        )
+
+        pygame.draw.rect(
+            screen, C_BORDER, self.coin_pill, width=1, border_radius=18
+        )
+
+        self._draw_coin_amount(
+            screen,
+            self.coins,
+            C_TEXT,
+            (self.coin_pill.right - 14, self.coin_pill.centery)
+        )
+
+        self._draw_list(screen, mouse)
+
+        self._draw_cart(screen, mouse)
+
+        # Ayuda abajo
+        self._text(
+            screen, self.tiny_font,
+            "Click: agregar   ·   Click derecho: quitar   ·   Rueda: bajar   ·   E / Esc: cerrar",
+            C_MUTED,
+            midbottom=(self.panel.centerx, self.panel.bottom - 8)
+        )

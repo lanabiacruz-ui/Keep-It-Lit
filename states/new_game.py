@@ -21,8 +21,10 @@ from world.items import (
 from world.melee import Melee, TrainingDummy
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
+from world.shop import Shopkeeper, load_catalog, price_table
 from ui.hud import Hud
 from ui.chest_minigame import ChestMinigame
+from ui.shop_ui import ShopUI
 
 
 PLAYER_LIGHT_RADIUS = 100
@@ -98,6 +100,12 @@ class NewGame:
         self.minigame = None
         self.minigame_chest = None
 
+        # Tienda: el vendedor del mapa y la ventana (None = cerrada)
+        self.shopkeeper = Shopkeeper()
+        self.catalog = load_catalog()
+        self.shop_prices = price_table(self.catalog)
+        self.shop = None
+
         spawn_x, spawn_y = get_spawn_point(
             self.collision_map,
             "cabana"
@@ -135,6 +143,10 @@ class NewGame:
 
         # Escudo: por ahora solo se muestra, arranca vacio
         self.escudo = 0.0
+
+        # Que tan rapido se consume la luz de base (1.0 = fosforo,
+        # 0.5 = vela: dura el doble)
+        self.base_burn = 1.0
 
         if self.has_match:
             self.match_item = None
@@ -278,6 +290,7 @@ class NewGame:
 
         # Se le acabo la vida al fosforo: se consume, no queda tirado
         self.vida = 0.0
+        self.base_burn = 1.0
         self.regen_left = 0.0
         self.has_match = False
         self.match_item = None
@@ -449,6 +462,16 @@ class NewGame:
 
                 return
 
+        # Fosforo / vela: solo sirven si no hay ninguna luz encendida
+        if (
+            any(e.get("tipo") == "encender" for e in effects)
+            and self.has_match
+        ):
+
+            self.show_message("Ya tenes una luz encendida")
+
+            return
+
         # Ganzua: necesita un cofre listo cerca
         chest = None
 
@@ -502,6 +525,12 @@ class NewGame:
             elif kind == "abrir_cofre" and chest is not None:
 
                 self._open_chest(chest)
+
+            elif kind == "encender":
+
+                self.vida = effect.get("vida", 1.0)
+                self.base_burn = effect.get("consumo", 1.0)
+                self.equip_match()
 
         self._remove_one(slot)
 
@@ -635,8 +664,9 @@ class NewGame:
         self.melee.cancel()
 
     def _open_chest(self, chest):
-        """El cofre suelta sus items al piso. Se puede abrir varias veces
-        (10 a 15, al azar); cuando se acaban queda en espera."""
+        """El cofre suelta sus items al piso y queda en espera."""
+
+        chest.start_cooldown(self.chests.wait)
 
         drops = self.chests.spawn_drops(
             chest, self.collision_map, self.item_defs
@@ -644,18 +674,7 @@ class NewGame:
 
         self.world_items.extend(drops)
 
-        exhausted = self.chests.consume_use(chest)
-
-        if exhausted:
-
-            self.show_message(
-                f"Salieron {len(drops)} cosas. El cofre se vacio, "
-                f"volve en {format_time(self.chests.wait)}"
-            )
-
-        else:
-
-            self.show_message(f"Cofre abierto: salieron {len(drops)} cosas")
+        self.show_message(f"Cofre abierto: salieron {len(drops)} cosas")
 
     def _close_minigame(self, result):
 
@@ -676,6 +695,48 @@ class NewGame:
         elif result == "fail":
 
             self.show_message("El cofre se cerro. Pegale de nuevo")
+
+    # ---------- tienda ----------
+
+    def _open_shop(self):
+
+        self.shop = ShopUI(
+            (self.width, self.height),
+            self.catalog,
+            self.item_defs,
+            self.coins
+        )
+
+        # Se corta el golpe en curso
+        self.melee.cancel()
+
+    def _buy(self, cart):
+        """Cobra el carrito y el vendedor escupe todo lo comprado."""
+
+        total = sum(
+            self.shop_prices.get(item_id, 0) * qty
+            for item_id, qty in cart.items()
+        )
+
+        if total <= 0 or total > self.coins:
+            return
+
+        self.coins -= total
+
+        ids = []
+
+        for item_id, qty in cart.items():
+
+            if item_id in self.shop_prices:
+                ids.extend([item_id] * qty)
+
+        drops = self.shopkeeper.spit(ids, self.collision_map)
+
+        self.world_items.extend(drops)
+
+        self.shop = None
+
+        self.show_message(f"Compraste {len(ids)} cosas")
 
     # ---------- guardado ----------
 
@@ -709,6 +770,8 @@ class NewGame:
         """Cofres, items que salen volando y monedas."""
 
         self.chests.update(dt)
+
+        self.shopkeeper.update(dt)
 
         for item in self.world_items:
             item.update_fly(dt)
@@ -783,6 +846,19 @@ class NewGame:
 
             return None
 
+        # Con la tienda abierta, solo la tienda recibe los eventos
+        if self.shop is not None:
+
+            result = self.shop.handle_event(event)
+
+            if result == "close":
+                self.shop = None
+
+            elif isinstance(result, tuple) and result[0] == "buy":
+                self._buy(result[1])
+
+            return None
+
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_ESCAPE:
@@ -821,6 +897,10 @@ class NewGame:
 
                     if item is not None:
                         self.pick_up_item(item)
+
+                    # Si no hay nada para agarrar, hablarle al vendedor
+                    elif self.shopkeeper.can_talk(self.player):
+                        self._open_shop()
 
             # 1 = seleccionar la cosa iluminadora equipada
             if event.key == pygame.K_1:
@@ -887,6 +967,14 @@ class NewGame:
 
         if self.state == "playing":
 
+            # Con la tienda abierta el tiempo se detiene (ni se gasta
+            # el fosforo ni corre la cuenta regresiva)
+            if self.shop is not None:
+
+                self.shop.update(dt)
+
+                return None
+
             # Con el minijuego abierto el jugador no se mueve
             if self.minigame is None:
                 self.player.update(dt, self.collision_map)
@@ -930,7 +1018,9 @@ class NewGame:
 
                 self._update_effects(dt)
 
-                self.vida -= dt * self.burn_factor / MATCH_DURATION
+                self.vida -= (
+                    dt * self.burn_factor * self.base_burn / MATCH_DURATION
+                )
 
                 if self.vida <= 0:
 
@@ -1004,6 +1094,8 @@ class NewGame:
         self.doors.draw(self.screen, self.camera)
 
         self.chests.draw(self.screen, self.camera)
+
+        self.shopkeeper.draw(self.screen, self.camera)
 
         for dummy in self.dummies:
             dummy.draw(self.screen, self.camera)
@@ -1095,6 +1187,12 @@ class NewGame:
             if near_item is not None:
                 near_item.draw_prompt(self.screen, self.camera)
 
+            elif (
+                self.shop is None
+                and self.shopkeeper.can_talk(self.player)
+            ):
+                self.shopkeeper.draw_prompt(self.screen, self.camera)
+
         self.hud.draw(
             self.screen,
             vida=self.vida if self.has_match else 0.0,
@@ -1151,6 +1249,10 @@ class NewGame:
         if self.minigame is not None:
 
             self.minigame.draw(self.screen)
+
+        if self.shop is not None:
+
+            self.shop.draw(self.screen)
 
         if self.state in ("dying", "lost"):
 
