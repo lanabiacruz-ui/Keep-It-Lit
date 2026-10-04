@@ -26,6 +26,10 @@ CLOCK_SIZE = 10
 FLASH_TIME = 0.12
 SHAKE_TIME = 0.18
 
+# Cuanto se ve el cofre abierto despues de cada apertura (cuando todavia
+# le quedan usos y no entra en espera)
+OPEN_SHOW_TIME = 0.7
+
 # Los items caen a esta distancia del cofre (unidades del mundo)
 DROP_MIN_DIST = 16
 DROP_MAX_DIST = 40
@@ -112,6 +116,9 @@ class Chest:
         self.flash = 0.0
         self.shake = 0.0
 
+        # Segundos que se muestra abierto tras una apertura
+        self.open_time = 0.0
+
         self._zoom = None
         self._closed = None
         self._open = None
@@ -150,6 +157,14 @@ class Chest:
         if self.shake > 0:
             self.shake = max(0.0, self.shake - dt)
 
+        if self.open_time > 0:
+            self.open_time = max(0.0, self.open_time - dt)
+
+    def show_open(self, seconds=OPEN_SHOW_TIME):
+        """Lo muestra abierto un ratito (cofre_abierto.png)."""
+
+        self.open_time = float(seconds)
+
     # ---------- dibujo ----------
 
     def _prepare(self, zoom):
@@ -187,7 +202,7 @@ class Chest:
 
         dest = camera.apply(self.rect)
 
-        if self.cooldown > 0:
+        if self.cooldown > 0 or self.open_time > 0:
             sprite = self._open
         elif self.flash > 0:
             sprite = self._flash_closed

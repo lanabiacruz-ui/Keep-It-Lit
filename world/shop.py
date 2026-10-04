@@ -12,6 +12,14 @@ DATA_FILE = (
     Path(__file__).resolve().parent.parent / "data" / "shop.json"
 )
 
+MOUTH_IMAGE = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "maps"
+    / "tienda"
+    / "vendedor_boca.png"
+)
+
 # Catalogo por si falta data/shop.json
 DEFAULT_CATALOG = [
     {
@@ -116,6 +124,16 @@ class Shopkeeper:
             str(HUD_DIR / "E.png")
         ).convert_alpha()
 
+        # Boca abierta (vendedor_boca.png); None si falta el archivo
+        try:
+            self.mouth_img = pygame.image.load(
+                str(MOUTH_IMAGE)
+            ).convert_alpha()
+        except (pygame.error, FileNotFoundError):
+            self.mouth_img = None
+
+        self._mouth_cache = {}
+
         # Segundos que le quedan escupiendo (0 = quieto)
         self.spit_time = 0.0
 
@@ -206,6 +224,20 @@ class Shopkeeper:
 
         mouth = pygame.Rect(0, 0, rx, ry)
         mouth.center = center
+
+        if self.mouth_img is not None:
+
+            size = (max(1, rx), max(1, ry))
+
+            if size not in self._mouth_cache:
+
+                self._mouth_cache[size] = pygame.transform.smoothscale(
+                    self.mouth_img, size
+                )
+
+            screen.blit(self._mouth_cache[size], mouth.topleft)
+
+            return
 
         pygame.draw.ellipse(screen, (46, 12, 12), mouth)
 

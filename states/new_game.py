@@ -12,13 +12,14 @@ from world.spawn import get_spawn_point
 from player.player import Player
 from world.lighting import PlayerLight
 from world.items import (
-    MatchItem,
+    LightItem,
     WorldItem,
     load_item_defs,
     load_spawn_zones,
     make_spawn_items
 )
 from world.melee import Melee, TrainingDummy
+from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
 from world.shop import Shopkeeper, load_catalog, price_table
@@ -27,8 +28,8 @@ from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 
 
-PLAYER_LIGHT_RADIUS = 100
-MATCH_LIGHT_RADIUS = 60
+# Radio de luz, consumo y espera entre golpes de cada luz (fosforo,
+# vela...): se cambian en world/lights.py
 
 MATCH_POS = (818, 1002)
 
@@ -61,6 +62,9 @@ COIN_PICKUP_DISTANCE = 14
 
 # Cada cuanto hace dano la luz con polvora (segundos).
 POLVORA_TICK = 0.5
+
+# F8 = trampa de prueba: suma esta cantidad de monedas.
+DEBUG_COINS = 100000
 
 # Cuanto tarda la pantalla en ponerse del todo negra al perder.
 FADE_DURATION = 1.2
@@ -144,15 +148,26 @@ class NewGame:
         # Escudo: por ahora solo se muestra, arranca vacio
         self.escudo = 0.0
 
+        # Que luz esta equipada: "fosforo" o "vela" (ver world/lights.py)
+        self.light_type = self.save_data.get("light", "fosforo")
+
+        if self.light_type not in LIGHTS:
+            self.light_type = "fosforo"
+
         # Que tan rapido se consume la luz de base (1.0 = fosforo,
-        # 0.5 = vela: dura el doble)
+        # 0.5 = vela: dura el doble). Lo fija equip_match().
         self.base_burn = 1.0
 
+        # El golpe se crea antes porque equip_match() le avisa que luz hay
+        self.melee = Melee()
+
+        # Luces tiradas en el piso (cada una recuerda su vida)
+        self.light_drops = []
+
         if self.has_match:
-            self.match_item = None
-            self.equip_match()
+            self.equip_match(self.light_type)
         else:
-            self.match_item = MatchItem(*MATCH_POS)
+            self.light_drops.append(LightItem("fosforo", *MATCH_POS))
 
         # ---------- Objetos (madera, aceite, cera) ----------
 
@@ -217,10 +232,11 @@ class NewGame:
         self.regen_rate = 0.0
 
         # Radio de la luz en pantalla (px), lo calcula draw()
-        self._light_radius_px = PLAYER_LIGHT_RADIUS
+        self._light_radius_px = self._light_radius()
 
         # ---------- Combate ----------
-        self.melee = Melee()
+        # (self.melee ya se creo arriba, junto con la luz)
+        self.melee.set_light(self.light_type)
 
         # Munecos de practica (F5). Mas adelante aca van los enemigos.
         self.dummies = []
@@ -267,20 +283,58 @@ class NewGame:
 
     # ---------- fosforo ----------
 
-    def equip_match(self):
+    def equip_match(self, kind=None, life=None):
+        """Equipa una luz (fosforo o vela).
 
-        # OJO: no se reinicia self.vida aca. Si el fosforo ya se habia
-        # usado un poco y lo soltaste, al agarrarlo de nuevo tiene que
-        # seguir con la vida que le quedaba, no volver a llenarse.
+        kind -> cual (None = la que ya estaba)
+        life -> con cuanta vida (None = no se toca self.vida)"""
+
+        # OJO: la vida solo cambia si se pasa `life`. Si la luz ya se
+        # habia usado un poco y la soltaste, al agarrarla de nuevo tiene
+        # que seguir con la vida que le quedaba, no volver a llenarse.
+        if kind in LIGHTS:
+            self.light_type = kind
+
+        if life is not None:
+            self.vida = max(0.0, min(1.0, float(life)))
+
+        self.base_burn = light_stats(self.light_type)["consumo"]
+
         self.has_match = True
-        self.hud.equip("fosforo")
+        self.hud.equip(self.light_type)
         self.player.set_torch(True)
+        self.melee.set_light(self.light_type)
+
+    def _light_radius(self):
+        """Radio de la luz equipada, en pixeles de pantalla."""
+
+        return light_stats(self.light_type)["radio"]
+
+    def _nearest_light_drop(self):
+        """La luz del piso mas cercana a la que se llega (o None)."""
+
+        near = [d for d in self.light_drops if d.is_near(self.player)]
+
+        if not near:
+            return None
+
+        px, py = self.player.rect.center
+
+        return min(
+            near,
+            key=lambda d: pygame.Vector2(d.rect.center).distance_to(
+                (px, py)
+            )
+        )
 
     def _drop_match(self):
 
         x, y = self.player.rect.center
 
-        self.match_item = MatchItem(x, y)
+        # Queda en el piso con la vida que le quedaba
+        self.light_drops.append(
+            LightItem(self.light_type, x, y, life=self.vida)
+        )
 
         self.has_match = False
         self.hud.equip(None)
@@ -293,7 +347,6 @@ class NewGame:
         self.base_burn = 1.0
         self.regen_left = 0.0
         self.has_match = False
-        self.match_item = None
         self.hud.equip(None)
         self.player.set_torch(False)
 
@@ -528,9 +581,10 @@ class NewGame:
 
             elif kind == "encender":
 
-                self.vida = effect.get("vida", 1.0)
-                self.base_burn = effect.get("consumo", 1.0)
-                self.equip_match()
+                self.equip_match(
+                    effect.get("luz", "fosforo"),
+                    effect.get("vida", 1.0)
+                )
 
         self._remove_one(slot)
 
@@ -664,9 +718,12 @@ class NewGame:
         self.melee.cancel()
 
     def _open_chest(self, chest):
-        """El cofre suelta sus items al piso y queda en espera."""
+        """El cofre suelta sus items al piso. Cada cofre se puede abrir
+        10 a 15 veces (se sortea la primera vez); cuando se le acaban,
+        queda en espera."""
 
-        chest.start_cooldown(self.chests.wait)
+        # Gasta una apertura. True = era la ultima y ya quedo en espera.
+        exhausted = self.chests.consume_use(chest)
 
         drops = self.chests.spawn_drops(
             chest, self.collision_map, self.item_defs
@@ -674,7 +731,21 @@ class NewGame:
 
         self.world_items.extend(drops)
 
-        self.show_message(f"Cofre abierto: salieron {len(drops)} cosas")
+        # Se ve abierto un ratito (si quedo en espera, ya se ve abierto)
+        chest.show_open()
+
+        if exhausted:
+
+            self.show_message(
+                f"Cofre abierto: salieron {len(drops)} cosas. "
+                "Se quedo vacio"
+            )
+
+        else:
+
+            self.show_message(
+                f"Cofre abierto: salieron {len(drops)} cosas"
+            )
 
     def _close_minigame(self, result):
 
@@ -753,6 +824,7 @@ class NewGame:
             x=x,
             y=y,
             has_match=self.has_match,
+            light=self.light_type,
             coins=self.coins,
             inventory=[
                 [item_id, self.hud.counts[i]] if item_id else None
@@ -818,7 +890,7 @@ class NewGame:
 
     def _burn_with_light(self, amount):
 
-        radius = PLAYER_LIGHT_RADIUS / self.camera.zoom
+        radius = self._light_radius() / self.camera.zoom
 
         px, py = self.player.rect.center
 
@@ -881,15 +953,22 @@ class NewGame:
 
                 self.dummies.append(TrainingDummy(wx, wy))
 
+            # F8 = +100000 monedas (para probar)
+            if event.key == pygame.K_F8:
+
+                self.coins += DEBUG_COINS
+
+                self.show_message(f"+{DEBUG_COINS} monedas")
+
             if event.key == pygame.K_e:
 
-                if (
-                    self.match_item is not None
-                    and self.match_item.is_near(self.player)
-                ):
+                drop = self._nearest_light_drop()
 
-                    self.match_item = None
-                    self.equip_match()
+                # Luz del piso: se equipa si no tenes otra encendida
+                if drop is not None and not self.has_match:
+
+                    self.light_drops.remove(drop)
+                    self.equip_match(drop.kind, drop.life)
 
                 else:
 
@@ -901,6 +980,9 @@ class NewGame:
                     # Si no hay nada para agarrar, hablarle al vendedor
                     elif self.shopkeeper.can_talk(self.player):
                         self._open_shop()
+
+                    elif drop is not None:
+                        self.show_message("Ya tenes una luz encendida")
 
             # 1 = seleccionar la cosa iluminadora equipada
             if event.key == pygame.K_1:
@@ -1085,8 +1167,8 @@ class NewGame:
             self.camera
         )
 
-        if self.match_item is not None:
-            self.match_item.draw(self.screen, self.camera)
+        for drop in self.light_drops:
+            drop.draw(self.screen, self.camera)
 
         for item in self.world_items:
             item.draw(self.screen, self.camera)
@@ -1107,17 +1189,17 @@ class NewGame:
 
         sources = []
 
-        if self.match_item is not None:
+        for drop in self.light_drops:
 
             sources.append((
-                self.match_item.rect.centerx,
-                self.match_item.rect.centery,
-                MATCH_LIGHT_RADIUS
+                drop.rect.centerx,
+                drop.rect.centery,
+                drop.light_radius
             ))
 
         if self.has_match:
 
-            radius = PLAYER_LIGHT_RADIUS
+            radius = self._light_radius()
 
             if self.vida < FLICKER_THRESHOLD:
 
@@ -1174,11 +1256,12 @@ class NewGame:
                 self._attack_pivot()
             )
 
-        if (
-            self.match_item is not None
-            and self.match_item.is_near(self.player)
-        ):
-            self.match_item.draw_prompt(self.screen, self.camera)
+        near_drop = (
+            None if self.has_match else self._nearest_light_drop()
+        )
+
+        if near_drop is not None:
+            near_drop.draw_prompt(self.screen, self.camera)
 
         elif self.state == "playing":
 

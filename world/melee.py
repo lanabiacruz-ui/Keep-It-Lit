@@ -2,6 +2,8 @@ import math
 from pathlib import Path
  
 import pygame
+
+from world.lights import light_stats
  
  
 HUD_DIR = (
@@ -49,6 +51,13 @@ GLOW_TIME = 0.12
 # derecha (-45 grados en pantalla) y el palito mide unos 23 px.
 SPRITE_HEAD_ANGLE = -45
 SPRITE_STICK_PX = 23
+
+# La vela (icon_vela.png, 64x64): la llama apunta hacia arriba (-90
+# grados en pantalla) y la vela entera mide unos 60 px de alto. Se
+# dibuja de VELA_LENGTH unidades del mundo.
+VELA_HEAD_ANGLE = -90
+VELA_SPRITE_PX = 60
+VELA_LENGTH = 15
  
  
 def arc_points(cx, cy, radius, a0, a1, steps=14):
@@ -89,6 +98,10 @@ class Melee:
         self.cooldown = 0.0
         self.glow = 0.0
         self.glow_angle = 0.0
+
+        # Que luz se esta usando para pegar y cuanto espera entre golpes
+        self.kind = "fosforo"
+        self.cooldown_time = COOLDOWN
  
         self._hit_ids = set()
  
@@ -125,6 +138,21 @@ class Melee:
  
         return DAMAGE
  
+    def set_light(self, kind):
+        """Cambia la luz con la que se pega (fosforo, vela...): cambia
+        el sprite del golpe y la espera entre golpes."""
+
+        self.kind = kind
+        self.cooldown_time = light_stats(kind)["cooldown"]
+
+        # Obliga a rearmar el sprite en el proximo dibujo
+        self._sprite_zoom = None
+
+    def _head_angle(self):
+        """Hacia donde mira la punta (la llama) en el PNG."""
+
+        return VELA_HEAD_ANGLE if self.kind == "vela" else SPRITE_HEAD_ANGLE
+
     def can_attack(self):
  
         return not self.swinging and self.cooldown <= 0
@@ -173,7 +201,7 @@ class Melee:
  
             self.t = 1.0
             self.swinging = False
-            self.cooldown = COOLDOWN
+            self.cooldown = self.cooldown_time
             self.glow = GLOW_TIME
             self.glow_angle = self.end_angle
  
@@ -266,25 +294,35 @@ class Melee:
     # ---------- dibujo ----------
  
     def _get_sprite(self, zoom):
- 
+
         if self._sprite_zoom != zoom:
- 
-            original = pygame.image.load(
-                str(HUD_DIR / "item_fosforo.png")
-            ).convert_alpha()
- 
-            scale = STICK_LENGTH / SPRITE_STICK_PX
- 
+
+            if self.kind == "vela":
+
+                original = pygame.image.load(
+                    str(HUD_DIR / "icon_vela.png")
+                ).convert_alpha()
+
+                scale = VELA_LENGTH / VELA_SPRITE_PX
+
+            else:
+
+                original = pygame.image.load(
+                    str(HUD_DIR / "item_fosforo.png")
+                ).convert_alpha()
+
+                scale = STICK_LENGTH / SPRITE_STICK_PX
+
             size = max(
                 1,
                 round(original.get_width() * scale * zoom)
             )
- 
+
             self._sprite = pygame.transform.scale(original, (size, size))
             self._sprite_zoom = zoom
- 
+
         return self._sprite
- 
+
     @staticmethod
     def _to_screen(camera, x, y):
  
@@ -345,7 +383,7 @@ class Melee:
  
             sprite = pygame.transform.rotate(
                 self._get_sprite(camera.zoom),
-                SPRITE_HEAD_ANGLE - math.degrees(angle)
+                self._head_angle() - math.degrees(angle)
             )
  
             # El palito queda un poco corrido del centro del sprite

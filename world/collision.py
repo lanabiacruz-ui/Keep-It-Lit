@@ -73,6 +73,24 @@ class CollisionMap:
 
             # Cama (cabaña, esquina inferior izquierda)
             pygame.Rect(816, 988, 61, 59),
+
+            # Vendedor rojo + la botella (sala superior central, detras
+            # de la mesa)
+            pygame.Rect(921, 62, 72, 38),
+
+            # ---- Sala grande derecha (la de combate) ----
+
+            # Estructura en forma de "I": barra de arriba, barra de
+            # abajo y el tallo que las une
+            pygame.Rect(1384, 449, 159, 23),
+            pygame.Rect(1393, 579, 152, 30),
+            pygame.Rect(1446, 449, 33, 160),
+
+            # Bloque de la izquierda
+            pygame.Rect(1308, 507, 35, 45),
+
+            # Bloque de la derecha
+            pygame.Rect(1594, 501, 36, 42),
         ]
 
     

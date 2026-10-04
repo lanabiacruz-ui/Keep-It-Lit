@@ -1,8 +1,57 @@
 import math
+from pathlib import Path
 
 import pygame
 
 from world.items import load_icon
+
+
+TIENDA_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "maps"
+    / "tienda"
+)
+
+# Nombre de cada imagen de la tienda (los nombres son los de los PNG
+# tal cual estan en assets/maps/tienda/)
+IMAGES = {
+    "panel": "tienda_panel.png",
+    "cart": "tienda_carrito.png",
+    "card": "tienda_tarjeta.png",
+    "card_hover": "tienda_tarjeta_hover.png",
+    "tile": "tienda_icono_fondo.png",
+    "badge": "tienda_badge.png",
+    "row": "tienda_fila.png",
+    "plus": "tienda_mas.png.png",
+    "minus": "tienda_menos.png",
+    "buy": "tienda_boton_comprar.png",
+    "buy_hover": "tienda_boton_comprar_hover.png",
+    "buy_off": "tienda_boton_comprar.off.png",
+    "trash": "tienda_boton_tacho.png",
+    "arrow": "tienda_flecha.png",
+    "coins": "tienda_monedas.png",
+    "close": "2026_10_04_05p_Kleki.png",
+}
+
+_raw_cache = {}
+
+
+def _load_raw(key):
+    """Imagen original de la tienda (None si el archivo no esta, asi la
+    tienda cae al dibujo hecho con codigo)."""
+
+    if key not in _raw_cache:
+
+        path = TIENDA_DIR / IMAGES[key]
+
+        try:
+            _raw_cache[key] = pygame.image.load(str(path)).convert_alpha()
+        except (pygame.error, FileNotFoundError):
+            print(f"[tienda] Falta la imagen {path.name}")
+            _raw_cache[key] = None
+
+    return _raw_cache[key]
 
 
 # Colores (oscuro, como en el diseno de la tienda)
@@ -132,12 +181,12 @@ class ShopUI:
             self.panel.right - self.PAD - 112,
             self.panel.y + self.PAD,
             112,
-            36
+            40
         )
 
         self.close_rect = pygame.Rect(
             self.coin_pill.x - 12 - 36,
-            self.coin_pill.y,
+            self.coin_pill.y + 2,
             36,
             36
         )
@@ -151,6 +200,7 @@ class ShopUI:
         self.dim.fill((0, 0, 0, 175))
 
         self._icons = {}
+        self._imgs = {}
 
         self._layout()
 
@@ -180,6 +230,44 @@ class ShopUI:
             self._icons[key] = icon
 
         return self._icons[key]
+
+    def _img(self, key, size=None, shade=0):
+        """Imagen de la tienda lista para dibujar.
+
+        size  -> si se pasa y es distinta a la original, se reescala
+        shade -> > 0 aclara (hover), < 0 oscurece (apagado)
+        Devuelve None si la imagen no esta (se usa el dibujo viejo)."""
+
+        cache_key = (key, size, shade)
+
+        if cache_key not in self._imgs:
+
+            img = _load_raw(key)
+
+            if img is not None:
+
+                if size is not None and img.get_size() != tuple(size):
+                    img = pygame.transform.smoothscale(img, size)
+
+                if shade > 0:
+
+                    img = img.copy()
+                    img.fill(
+                        (shade, shade, shade, 0),
+                        special_flags=pygame.BLEND_RGB_ADD
+                    )
+
+                elif shade < 0:
+
+                    img = img.copy()
+                    img.fill(
+                        (-shade, -shade, -shade, 0),
+                        special_flags=pygame.BLEND_RGB_SUB
+                    )
+
+            self._imgs[cache_key] = img
+
+        return self._imgs[cache_key]
 
     def _flash(self, text):
 
@@ -438,10 +526,23 @@ class ShopUI:
 
         return lines
 
-    def _draw_coin_amount(self, screen, amount, color, midright):
-        """Moneda + numero, alineado a la derecha en `midright`."""
+    def _draw_coin_amount(
+        self, screen, amount, color, midright, max_w=90
+    ):
+        """Moneda + numero, alineado a la derecha en `midright`. Si el
+        numero es muy ancho se achica para que entre en `max_w`."""
 
         text = self.name_font.render(str(amount), True, color)
+
+        if text.get_width() > max_w:
+
+            text = pygame.transform.smoothscale(
+                text,
+                (
+                    max_w,
+                    max(1, int(text.get_height() * max_w / text.get_width()))
+                )
+            )
 
         text_rect = text.get_rect(midright=midright)
 
@@ -458,23 +559,41 @@ class ShopUI:
 
     def _draw_card(self, screen, rect, item_id, hover):
 
-        pygame.draw.rect(
-            screen, C_CARD_HOVER if hover else C_CARD, rect,
-            border_radius=10
+        card_img = self._img(
+            "card_hover" if hover else "card", rect.size
         )
 
-        pygame.draw.rect(
-            screen, C_BORDER, rect, width=1, border_radius=10
-        )
+        if card_img is not None:
+
+            screen.blit(card_img, rect.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen, C_CARD_HOVER if hover else C_CARD, rect,
+                border_radius=10
+            )
+
+            pygame.draw.rect(
+                screen, C_BORDER, rect, width=1, border_radius=10
+            )
 
         # Cuadradito con el icono
         tile = pygame.Rect(0, 0, 46, 46)
         tile.midtop = (rect.centerx, rect.y + 10)
 
-        pygame.draw.rect(
-            screen, TILE_COLORS.get(item_id, (44, 44, 50)), tile,
-            border_radius=8
-        )
+        tile_img = self._img("tile", tile.size)
+
+        if tile_img is not None:
+
+            screen.blit(tile_img, tile.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen, TILE_COLORS.get(item_id, (44, 44, 50)), tile,
+                border_radius=8
+            )
 
         icon = self._icon(item_id, 34)
 
@@ -497,10 +616,22 @@ class ShopUI:
 
         if qty > 0:
 
-            badge = pygame.Rect(0, 0, 26, 22)
-            badge.topright = (rect.right - 6, rect.y + 6)
+            badge_img = self._img("badge")
 
-            pygame.draw.rect(screen, C_BADGE, badge, border_radius=11)
+            if badge_img is not None:
+
+                badge = badge_img.get_rect(
+                    topright=(rect.right - 6, rect.y + 6)
+                )
+
+                screen.blit(badge_img, badge.topleft)
+
+            else:
+
+                badge = pygame.Rect(0, 0, 26, 22)
+                badge.topright = (rect.right - 6, rect.y + 6)
+
+                pygame.draw.rect(screen, C_BADGE, badge, border_radius=11)
 
             self._text(
                 screen, self.tiny_font, str(qty), (30, 18, 8),
@@ -536,24 +667,35 @@ class ShopUI:
         # Flechita "hay mas abajo"
         if self.scroll < self.max_scroll - 1:
 
-            pygame.draw.circle(
-                screen, C_CARD_HOVER, self.arrow_center, 17
-            )
+            arrow_img = self._img("arrow", (34, 34))
 
-            pygame.draw.circle(
-                screen, C_BORDER, self.arrow_center, 17, 1
-            )
+            if arrow_img is not None:
 
-            ax, ay = self.arrow_center
+                screen.blit(
+                    arrow_img,
+                    arrow_img.get_rect(center=self.arrow_center)
+                )
 
-            pygame.draw.lines(
-                screen, C_TEXT, False,
-                [(ax - 6, ay - 3), (ax, ay + 4), (ax + 6, ay - 3)], 2
-            )
+            else:
 
-            pygame.draw.line(
-                screen, C_TEXT, (ax, ay - 6), (ax, ay + 3), 2
-            )
+                pygame.draw.circle(
+                    screen, C_CARD_HOVER, self.arrow_center, 17
+                )
+
+                pygame.draw.circle(
+                    screen, C_BORDER, self.arrow_center, 17, 1
+                )
+
+                ax, ay = self.arrow_center
+
+                pygame.draw.lines(
+                    screen, C_TEXT, False,
+                    [(ax - 6, ay - 3), (ax, ay + 4), (ax + 6, ay - 3)], 2
+                )
+
+                pygame.draw.line(
+                    screen, C_TEXT, (ax, ay - 6), (ax, ay + 3), 2
+                )
 
     def _draw_cart_icon(self, screen, x, y):
         """Carrito de compras chiquito (lineas)."""
@@ -595,13 +737,21 @@ class ShopUI:
 
     def _draw_cart(self, screen, mouse):
 
-        pygame.draw.rect(
-            screen, C_CARD, self.cart_rect, border_radius=12
-        )
+        cart_img = self._img("cart", self.cart_rect.size)
 
-        pygame.draw.rect(
-            screen, C_BORDER, self.cart_rect, width=1, border_radius=12
-        )
+        if cart_img is not None:
+
+            screen.blit(cart_img, self.cart_rect.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen, C_CARD, self.cart_rect, border_radius=12
+            )
+
+            pygame.draw.rect(
+                screen, C_BORDER, self.cart_rect, width=1, border_radius=12
+            )
 
         # Cabecera
         self._draw_cart_icon(
@@ -638,6 +788,11 @@ class ShopUI:
 
             for item_id, qty, row, minus, plus in self._cart_rows():
 
+                row_img = self._img("row", row.size)
+
+                if row_img is not None:
+                    screen.blit(row_img, row.topleft)
+
                 icon = self._icon(item_id, 28)
 
                 if icon is not None:
@@ -658,9 +813,21 @@ class ShopUI:
                     topleft=(row.x + 40, row.y + 22)
                 )
 
-                for rect, symbol in ((minus, "-"), (plus, "+")):
+                for rect, symbol, key in (
+                    (minus, "-", "minus"), (plus, "+", "plus")
+                ):
 
                     hover = rect.collidepoint(mouse)
+
+                    btn_img = self._img(
+                        key, rect.size, shade=40 if hover else 0
+                    )
+
+                    if btn_img is not None:
+
+                        screen.blit(btn_img, rect.topleft)
+
+                        continue
 
                     pygame.draw.rect(
                         screen,
@@ -715,20 +882,35 @@ class ShopUI:
 
         hover = enabled and self.buy_rect.collidepoint(mouse)
 
-        pygame.draw.rect(
-            screen,
-            C_CARD_HOVER if hover else C_PANEL,
-            self.buy_rect,
-            border_radius=10
-        )
+        if not enabled:
+            buy_key = "buy_off"
+        elif hover:
+            buy_key = "buy_hover"
+        else:
+            buy_key = "buy"
 
-        pygame.draw.rect(
-            screen,
-            C_TEXT if enabled else C_BORDER,
-            self.buy_rect,
-            width=1,
-            border_radius=10
-        )
+        buy_img = self._img(buy_key, self.buy_rect.size)
+
+        if buy_img is not None:
+
+            screen.blit(buy_img, self.buy_rect.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen,
+                C_CARD_HOVER if hover else C_PANEL,
+                self.buy_rect,
+                border_radius=10
+            )
+
+            pygame.draw.rect(
+                screen,
+                C_TEXT if enabled else C_BORDER,
+                self.buy_rect,
+                width=1,
+                border_radius=10
+            )
 
         self._text(
             screen, self.button_font, "Comprar",
@@ -739,22 +921,37 @@ class ShopUI:
         # Tacho
         hover = self.trash_rect.collidepoint(mouse)
 
-        pygame.draw.rect(
-            screen,
-            C_CARD_HOVER if hover else C_PANEL,
-            self.trash_rect,
-            border_radius=10
-        )
+        if not self.cart:
+            shade = -70
+        elif hover:
+            shade = 40
+        else:
+            shade = 0
 
-        pygame.draw.rect(
-            screen, C_BORDER, self.trash_rect, width=1, border_radius=10
-        )
+        trash_img = self._img("trash", self.trash_rect.size, shade=shade)
 
-        self._draw_trash_icon(
-            screen,
-            self.trash_rect,
-            C_TEXT if self.cart else C_MUTED
-        )
+        if trash_img is not None:
+
+            screen.blit(trash_img, self.trash_rect.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen,
+                C_CARD_HOVER if hover else C_PANEL,
+                self.trash_rect,
+                border_radius=10
+            )
+
+            pygame.draw.rect(
+                screen, C_BORDER, self.trash_rect, width=1, border_radius=10
+            )
+
+            self._draw_trash_icon(
+                screen,
+                self.trash_rect,
+                C_TEXT if self.cart else C_MUTED
+            )
 
     def draw(self, screen):
 
@@ -762,13 +959,21 @@ class ShopUI:
 
         screen.blit(self.dim, (0, 0))
 
-        pygame.draw.rect(
-            screen, C_PANEL, self.panel, border_radius=16
-        )
+        panel_img = self._img("panel", self.panel.size)
 
-        pygame.draw.rect(
-            screen, C_BORDER, self.panel, width=1, border_radius=16
-        )
+        if panel_img is not None:
+
+            screen.blit(panel_img, self.panel.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen, C_PANEL, self.panel, border_radius=16
+            )
+
+            pygame.draw.rect(
+                screen, C_BORDER, self.panel, width=1, border_radius=16
+            )
 
         # Cabecera
         self._text(
@@ -779,36 +984,60 @@ class ShopUI:
         # Cerrar
         hover = self.close_rect.collidepoint(mouse)
 
-        pygame.draw.rect(
-            screen,
-            C_CARD_HOVER if hover else C_CARD,
-            self.close_rect,
-            border_radius=10
+        close_img = self._img(
+            "close", self.close_rect.size, shade=40 if hover else 0
         )
 
-        pygame.draw.rect(
-            screen, C_BORDER, self.close_rect, width=1, border_radius=10
-        )
+        if close_img is not None:
 
-        cx, cy = self.close_rect.center
+            screen.blit(close_img, self.close_rect.topleft)
 
-        pygame.draw.line(screen, C_TEXT, (cx - 6, cy - 6), (cx + 6, cy + 6), 2)
-        pygame.draw.line(screen, C_TEXT, (cx - 6, cy + 6), (cx + 6, cy - 6), 2)
+        else:
+
+            pygame.draw.rect(
+                screen,
+                C_CARD_HOVER if hover else C_CARD,
+                self.close_rect,
+                border_radius=10
+            )
+
+            pygame.draw.rect(
+                screen, C_BORDER, self.close_rect, width=1, border_radius=10
+            )
+
+            cx, cy = self.close_rect.center
+
+            pygame.draw.line(
+                screen, C_TEXT, (cx - 6, cy - 6), (cx + 6, cy + 6), 2
+            )
+
+            pygame.draw.line(
+                screen, C_TEXT, (cx - 6, cy + 6), (cx + 6, cy - 6), 2
+            )
 
         # Monedas que tenes
-        pygame.draw.rect(
-            screen, C_CARD, self.coin_pill, border_radius=18
-        )
+        coins_img = self._img("coins", self.coin_pill.size)
 
-        pygame.draw.rect(
-            screen, C_BORDER, self.coin_pill, width=1, border_radius=18
-        )
+        if coins_img is not None:
+
+            screen.blit(coins_img, self.coin_pill.topleft)
+
+        else:
+
+            pygame.draw.rect(
+                screen, C_CARD, self.coin_pill, border_radius=18
+            )
+
+            pygame.draw.rect(
+                screen, C_BORDER, self.coin_pill, width=1, border_radius=18
+            )
 
         self._draw_coin_amount(
             screen,
             self.coins,
             C_TEXT,
-            (self.coin_pill.right - 14, self.coin_pill.centery)
+            (self.coin_pill.right - 14, self.coin_pill.centery),
+            max_w=58
         )
 
         self._draw_list(screen, mouse)

@@ -38,12 +38,14 @@
             }
         ]
     },
-        "ganzua": {
+    "ganzua": {
         "nombre": "Ganzúa",
         "descripcion": "Abre un cofre cercano sin hacer el minijuego. No salta la espera de 3 minutos.",
         "requiere_fosforo": false,
         "efectos": [
-            { "tipo": "abrir_cofre" }
+            {
+                "tipo": "abrir_cofre"
+            }
         ]
     },
     "polvora": {
@@ -51,7 +53,11 @@
         "descripcion": "Durante 20 segundos tu luz quema y daña a los enemigos que alumbra.",
         "requiere_fosforo": true,
         "efectos": [
-            { "tipo": "luz_dano", "dano_por_segundo": 1, "duracion": 20 }
+            {
+                "tipo": "luz_dano",
+                "dano_por_segundo": 1,
+                "duracion": 20
+            }
         ]
     },
     "resina": {
@@ -59,7 +65,33 @@
         "descripcion": "Recupera 67% de vida del fósforo de a poco: la barra sube lento hasta completarlo.",
         "requiere_fosforo": true,
         "efectos": [
-            { "tipo": "vida_gradual", "valor": 0.67, "duracion": 10 }
+            {
+                "tipo": "vida_gradual",
+                "valor": 0.67,
+                "duracion": 10
+            }
+        ]
+    },
+    "fosforo": {
+        "nombre": "Fósforo",
+        "descripcion": "Luz básica. Se equipa al usarlo y dura 30 segundos.",
+        "requiere_fosforo": false,
+        "efectos": [
+            {
+                "tipo": "encender",
+                "luz": "fosforo"
+            }
+        ]
+    },
+    "vela": {
+        "nombre": "Vela",
+        "descripcion": "Alumbra un 40% más lejos y dura 60 segundos, pero pega más lento. Se equipa al usarla.",
+        "requiere_fosforo": false,
+        "efectos": [
+            {
+                "tipo": "encender",
+                "luz": "vela"
+            }
         ]
     }
 }

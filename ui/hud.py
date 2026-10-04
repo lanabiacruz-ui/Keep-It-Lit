@@ -13,6 +13,25 @@ HUD_DIR = (
 )
 
 
+def format_coins(amount):
+    """Monedas para el cuadro del HUD, que es chico: de 10000 para arriba
+    se abrevia (100000 -> '100k', 12500 -> '12.5k', 2000000 -> '2M')."""
+
+    amount = int(amount)
+
+    if amount < 10000:
+        return str(amount)
+
+    if amount < 999950:
+        value, suffix = amount / 1000, "k"
+    else:
+        value, suffix = amount / 1000000, "M"
+
+    text = f"{value:.1f}".rstrip("0").rstrip(".")
+
+    return text + suffix
+
+
 class Hud:
 
     SLOTS = 4
@@ -25,6 +44,10 @@ class Hud:
 
     # Centro (x, y) del "0" dentro de hud_monedas.png (110x60 px)
     COIN_TEXT_CENTER = (78, 30)
+
+    # Ancho maximo (px del PNG original) del numero: lo que hay a la
+    # derecha de la moneda dibujada
+    COIN_TEXT_MAX_W = 44
 
     def __init__(
         self,
@@ -63,7 +86,8 @@ class Hud:
         )
 
         self.equipped_icons = {
-            "fosforo": scaled(load("icon_fosforo.png"), equipped_scale)
+            "fosforo": scaled(load("icon_fosforo.png"), equipped_scale),
+            "vela": scaled(load("icon_vela_equipado.png"), equipped_scale)
         }
 
         # Versiones "seleccionado" (reemplazan al contorno dibujado)
@@ -75,6 +99,10 @@ class Hud:
         self.equipped_icons_select = {
             "fosforo": scaled(
                 load("icon_fosforo_select.png"),
+                equipped_scale
+            ),
+            "vela": scaled(
+                load("icon_vela_equipado_select.png"),
                 equipped_scale
             )
         }
@@ -174,6 +202,8 @@ class Hud:
         self._slot_icons = {}
 
         # Monedas (arriba a la derecha)
+        self.coin_scale = bar_scale
+
         self.coin_icon = scaled(load("hud_monedas.png"), bar_scale)
 
         self.coin_rect = self.coin_icon.get_rect(
@@ -371,10 +401,25 @@ class Hud:
         screen.blit(self.coin_icon, self.coin_rect)
 
         coin_text = self.coin_font.render(
-            str(coins),
+            format_coins(coins),
             True,
             (255, 255, 255)
         )
+
+        # Si aun abreviado no entra en el cuadro, se achica
+        max_w = round(self.COIN_TEXT_MAX_W * self.coin_scale)
+
+        if coin_text.get_width() > max_w:
+
+            factor = max_w / coin_text.get_width()
+
+            coin_text = pygame.transform.smoothscale(
+                coin_text,
+                (
+                    max_w,
+                    max(1, int(coin_text.get_height() * factor))
+                )
+            )
 
         coin_text_rect = coin_text.get_rect(
             center=(

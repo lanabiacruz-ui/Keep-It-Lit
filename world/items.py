@@ -4,6 +4,8 @@ import random
 import pygame
 from pathlib import Path
 
+from world.lights import light_stats
+
 HUD_DIR = (
     Path(__file__).resolve().parent.parent
     / "assets"
@@ -227,6 +229,36 @@ class WorldItem(MatchItem):
             sprite,
             sprite.get_rect(center=(dest.centerx, dest.centery - lift))
         )
+
+
+class LightItem(MatchItem):
+    """Luz tirada en el piso (fosforo o vela). Ilumina un poco y se
+    recuerda cuanta vida le quedaba, asi al agarrarla sigue igual."""
+
+    def __init__(self, kind, x, y, life=1.0):
+
+        # La vela es un poco mas grande que el fosforo
+        if kind == "vela":
+            self.WORLD_SIZE = 16
+
+        super().__init__(x, y)
+
+        self.kind = kind
+        self.life = float(life)
+
+        # El fosforo usa el sprite de MatchItem; las demas luces usan su
+        # icono (assets/maps/hud/icon_<luz>.png)
+        if kind != "fosforo":
+
+            icon = load_icon(kind)
+
+            if icon is not None:
+                self.original = icon
+
+    @property
+    def light_radius(self):
+
+        return light_stats(self.kind)["radio_suelo"]
 
 
 def make_spawn_items(zones, defs, collision_map, seed, collected):
