@@ -36,6 +36,23 @@ class Player:
          (847, 783, 157, 205), (1099, 783, 157, 206)],
     ]
 
+    # Hoja del personaje con la vela (assets/maps/player/player_vela.png)
+    SHEET_RECTS_VELA = [
+        [(343, 50, 161, 203), (596, 49, 162, 204),
+         (848, 49, 164, 204), (1101, 49, 163, 204)],
+        [(318, 297, 173, 205), (573, 297, 171, 205),
+         (829, 297, 170, 206), (1082, 297, 173, 206)],
+        [(315, 544, 170, 202), (572, 545, 168, 202),
+         (827, 545, 170, 203), (1084, 545, 167, 202)],
+        [(337, 785, 165, 202), (591, 785, 166, 201),
+         (850, 785, 163, 202), (1102, 785, 168, 202)],
+    ]
+
+    # Golpe recibido: se pone rojo un ratito y queda invulnerable
+    HURT_TIME = 0.30
+    INVULN_TIME = 0.90
+    KNOCKBACK = 120.0
+
     def __init__(self, x, y, width=54, height=74):
 
         self.image_rect = pygame.Rect(
@@ -68,6 +85,13 @@ class Player:
         self.animation_frame = 0
 
         self.has_torch = False
+        self.torch_kind = "fosforo"
+
+        # Golpes recibidos (enemigos)
+        self.hurt_timer = 0.0
+        self.invuln_timer = 0.0
+        self.kb_vel = pygame.Vector2()
+        self._kb_rest = pygame.Vector2()
 
         base = Path(__file__).resolve().parent.parent
         player_dir = base / "assets" / "maps" / "player"
@@ -76,6 +100,7 @@ class Player:
         frames_path = player_dir / "player_frames.png"
         sheet_path = player_dir / "player.png"
         torch_path = player_dir / "player_phosphor.png"
+        vela_path = player_dir / "player_vela.png"
 
         self.frame_scale = None
 
@@ -108,9 +133,72 @@ class Player:
                 self.SHEET_RECTS_PHOSPHOR
             )
 
-    def set_torch(self, value):
+        self.frames_vela = None
 
-        self.has_torch = bool(value) and self.frames_torch is not None
+        if vela_path.exists():
+
+            vela_sheet = pygame.image.load(
+                str(vela_path)
+            ).convert()
+
+            self.frames_vela = self.load_frames_from_sheet(
+                vela_sheet,
+                self.SHEET_RECTS_VELA
+            )
+
+    def set_torch(self, value, kind="fosforo"):
+        """Con luz en la mano el personaje cambia de dibujo: el del
+        fosforo o el de la vela."""
+
+        self.torch_kind = kind
+
+        self.has_torch = bool(value) and (
+            self.frames_torch is not None
+            or self.frames_vela is not None
+        )
+
+    # ---------- golpes recibidos ----------
+
+    def hurt(self, from_pos=None):
+        """Recibe un golpe: se pone rojo, empujon y un rato sin poder
+        recibir otro. Devuelve False si todavia era invulnerable."""
+
+        if self.invuln_timer > 0:
+            return False
+
+        self.hurt_timer = self.HURT_TIME
+        self.invuln_timer = self.INVULN_TIME
+
+        if from_pos is not None:
+
+            away = pygame.Vector2(self.rect.center) - pygame.Vector2(from_pos)
+
+            if away.length_squared() > 0.01:
+                self.kb_vel = away.normalize() * self.KNOCKBACK
+
+        return True
+
+    def _apply_knockback(self, dt, collision_map):
+
+        if self.kb_vel.length_squared() < 4:
+
+            self.kb_vel = pygame.Vector2()
+            self._kb_rest = pygame.Vector2()
+
+            return
+
+        self._kb_rest += self.kb_vel * dt
+
+        step_x = int(self._kb_rest.x)
+        step_y = int(self._kb_rest.y)
+
+        self._kb_rest.x -= step_x
+        self._kb_rest.y -= step_y
+
+        self.movement._move(self.rect, collision_map, step_x, 0)
+        self.movement._move(self.rect, collision_map, 0, step_y)
+
+        self.kb_vel *= max(0.0, 1.0 - 9.0 * dt)
 
     def load_frames(self, sheet):
 
@@ -252,6 +340,14 @@ class Player:
         if result[1] is not None:
             self.direction = result[1]
 
+        if self.hurt_timer > 0:
+            self.hurt_timer = max(0.0, self.hurt_timer - dt)
+
+        if self.invuln_timer > 0:
+            self.invuln_timer = max(0.0, self.invuln_timer - dt)
+
+        self._apply_knockback(dt, collision_map)
+
         self.image_rect.midbottom = (
             self.rect.centerx,
             self.rect.bottom + 3
@@ -277,7 +373,13 @@ class Player:
 
     def draw(self, screen, camera):
 
-        if self.has_torch and self.frames_torch is not None:
+        if (
+            self.has_torch
+            and self.torch_kind == "vela"
+            and self.frames_vela is not None
+        ):
+            frames = self.frames_vela
+        elif self.has_torch and self.frames_torch is not None:
             frames = self.frames_torch
         else:
             frames = self.frames
@@ -297,6 +399,26 @@ class Player:
                 self.image_rect.height
             )
         )
+
+        # Golpe recibido: rojo (como en Minecraft) que se va apagando
+        if self.hurt_timer > 0:
+
+            k = self.hurt_timer / self.HURT_TIME
+
+            sprite.fill(
+                (255, int(255 - 190 * k), int(255 - 190 * k), 255),
+                special_flags=pygame.BLEND_RGBA_MULT
+            )
+
+            sprite.fill(
+                (int(120 * k), 0, 0, 0),
+                special_flags=pygame.BLEND_RGB_ADD
+            )
+
+        # Despues del rojo, parpadea un poco mientras es invulnerable
+        elif self.invuln_timer > 0 and int(self.invuln_timer * 14) % 2:
+
+            sprite.set_alpha(140)
 
         dest = sprite.get_rect(
             midbottom=camera.apply(self.image_rect).midbottom
