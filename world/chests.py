@@ -42,7 +42,7 @@ DEFAULTS = {
     # Cuantas veces se puede abrir un cofre antes de quedar en espera
     "aperturas_por_cofre": [10, 15],
     # Probabilidad (peso) de que una apertura suelte N objetos
-    "items_por_apertura": {"3": 50, "4": 35, "5": 15},
+    "items_por_apertura": {"4": 35, "5": 40, "6": 25},
     "pesos": {"moneda": 1},
     "cofres": [],
 }
@@ -265,7 +265,7 @@ class ChestManager:
                 continue
 
         if not self.count_weights:
-            self.count_weights = {3: 50.0, 4: 35.0, 5: 15.0}
+            self.count_weights = {4: 35.0, 5: 40.0, 6: 25.0}
 
         self.weights = dict(config["pesos"])
 
@@ -377,7 +377,7 @@ class ChestManager:
     # ---------- drops ----------
 
     def roll_count(self):
-        """Cuantos objetos salen en esta apertura (3 a 5), segun las
+        """Cuantos objetos salen en esta apertura (4 a 6), segun las
         probabilidades de data/chests.json."""
 
         counts = list(self.count_weights)
@@ -406,7 +406,7 @@ class ChestManager:
         return False
 
     def roll_ids(self):
-        """Que sale en esta apertura: 3 a 5 objetos al azar, segun los
+        """Que sale en esta apertura: 4 a 6 objetos al azar, segun los
         pesos de data/chests.json."""
 
         count = self.roll_count()

@@ -1,20 +1,51 @@
 {
-    "espera_segundos": 180,
-    "aperturas_por_cofre": [10, 15],
-    "items_por_apertura": { "3": 50, "4": 35, "5": 15 },
-    "pesos": {
-        "moneda": 42,
-        "madera": 24,
-        "cera": 10,
-        "aceite": 10,
-        "resina": 7,
-        "polvora": 5,
-        "ganzua": 2
+  "espera_segundos": 180,
+  "aperturas_por_cofre": [
+    10,
+    15
+  ],
+  "items_por_apertura": {
+    "4": 35,
+    "5": 40,
+    "6": 25
+  },
+  "pesos": {
+    "moneda": 70,
+    "madera": 12,
+    "cera": 5,
+    "aceite": 5,
+    "resina": 4,
+    "polvora": 3,
+    "ganzua": 1
+  },
+  "cofres": [
+    {
+      "id": "cofre_01",
+      "pos": [
+        367,
+        76
+      ]
     },
-    "cofres": [
-        { "id": "cofre_01", "pos": [367, 76]  },
-        { "id": "cofre_02", "pos": [494, 79]  },
-        { "id": "cofre_03", "pos": [374, 189] },
-        { "id": "cofre_04", "pos": [497, 184] }
-    ]
+    {
+      "id": "cofre_02",
+      "pos": [
+        494,
+        79
+      ]
+    },
+    {
+      "id": "cofre_03",
+      "pos": [
+        374,
+        189
+      ]
+    },
+    {
+      "id": "cofre_04",
+      "pos": [
+        497,
+        184
+      ]
+    }
+  ]
 }

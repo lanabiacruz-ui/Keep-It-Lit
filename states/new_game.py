@@ -55,6 +55,10 @@ NO_LIGHT_COUNTDOWN = 10.0
 # Debajo de este % de vida, la luz empieza a parpadear.
 FLICKER_THRESHOLD = 0.25
 
+# Que tan oscuro es todo lo que queda fuera de la luz (0 a 255).
+# 255 = negro total, 200 = se ve algo, 0 = sin oscuridad.
+DARKNESS_ALPHA = 248
+
 # A que distancia (unidades del mundo) del cofre sirve la ganzua.
 GANZUA_DISTANCE = 48
 
@@ -138,7 +142,7 @@ class NewGame:
 
         self.light = PlayerLight(
             (self.width, self.height),
-            darkness_alpha=250
+            darkness_alpha=DARKNESS_ALPHA
         )
 
         self.hud = Hud((self.width, self.height))

@@ -62,7 +62,7 @@ GATE = pygame.Rect(1236, 500, 10, 40)
 # ---------------------------------------------------------------
 
 # Que trae cada oleada: (pinos, troncos). Los pinos rebotan y te
-# pegan al chocarte; los troncos disparan 3 bolas que rebotan.
+# pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan.
 # Despues de la ultima definida sube PINOS_STEP pinos y TRONCOS_STEP
 # troncos por oleada, sin pasar de ENEMIES_MAX en total.
 WAVE_COMPOSITION = {
@@ -100,7 +100,7 @@ ESCAPE_REVIVE_LIFE = 0.15
 
 
 # ---------------------------------------------------------------
-# Enemigo
+# Piña
 # ---------------------------------------------------------------
 
 ENEMY_DRAW_SIZE = 14       # tamano dibujado (unidades del mundo)
@@ -117,9 +117,9 @@ WALL_BOUNCE = 1.0          # cuanta velocidad conserva al rebotar (1 = toda)
 ENEMY_KNOCKBACK = 150.0    # empujon cuando le pegas
 ENEMY_STUN_TIME = 0.25
 ENEMY_FLASH_TIME = 0.12
-ENEMY_SPAWN_TIME = 0.8     # aparece transparente y no hace dano
+ENEMY_SPAWN_TIME = 0.8     # aparece transparente y no hace daño
 ENEMY_ANIM_FRAME = 0.15
-ENEMY_SPIN_RATE = 5.0      # cuanto gira mientras rueda (grados por unidad recorrida)
+ENEMY_SPIN_RATE = 2.0      # cuanto gira mientras rueda (grados por unidad recorrida)
 ENEMY_HOP_DIST = 38.0      # cada cuantas unidades recorridas da un saltito
 ENEMY_HOP_HEIGHT = 3.0     # altura del saltito (unidades del mundo)
 
@@ -130,22 +130,31 @@ ENEMY_HOP_HEIGHT = 3.0     # altura del saltito (unidades del mundo)
 TRONCO_HITBOX = (14, 12)
 TRONCO_DRAW_SIZE = 16      # tamano dibujado (unidades del mundo)
 TRONCO_HP_EXTRA = 0        # vida = la del pino + esto
-TRONCO_FIRST_DELAY = (1.2, 2.6)  # primera espera (al azar, para que no disparen todos juntos)
-TRONCO_WINDUP = 1.5        # cuanto tarda en cargar antes de soltar las bolas
+TRONCO_FIRST_DELAY = (2.0, 3.0)  # primera espera (al azar, para que no disparen todos juntos)
+TRONCO_WINDUP = 1.0        # cuanto tarda quieto apuntandote antes de soltar las bolas
 TRONCO_SHOOT_TIME = 0.45   # duracion de la animacion de disparo
-TRONCO_COOLDOWN = 2.2      # espera despues de disparar
-TRONCO_HIT_PAUSE = 0.9     # si le pegas mientras carga, se le corta y espera esto
+TRONCO_COOLDOWN = 8.0      # segundos entre un disparo y el siguiente
+TRONCO_HIT_PAUSE = 1.5     # si le pegas mientras carga, se le corta y espera esto
 TRONCO_SHOTS = 3           # bolas por disparo
 TRONCO_SPREAD = 24.0       # grados entre una bola y la siguiente
 TRONCO_LEAD = 0.45         # cuanto adelanta la punteria hacia donde te estas moviendo (seg)
 TRONCO_ANIM_FRAME = 0.12
+
+# Movimiento del tronco: te sigue pero manteniendo distancia y sin
+# meterse en tu luz (asi no lo ves ni lo alcanzas a pegar).
+TRONCO_SPEED = 70.0        # unidades del mundo por segundo (el jugador va a 95)
+TRONCO_KEEP_DIST = 60.0    # distancia minima que intenta mantener
+TRONCO_MAX_DIST = 120.0    # distancia maxima a la que se queda (si tu luz es enorme)
+TRONCO_LIGHT_MARGIN = 14.0 # cuanto afuera del borde de tu luz se queda
+TRONCO_BAND = 8.0          # tolerancia: dentro de esta franja no se mueve
+TRONCO_FIRE_EXTRA = 10.0   # puede empezar a cargar si esta a ideal + BAND + esto
 
 SHOT_SPEED = 95.0          # unidades del mundo por segundo
 SHOT_HITBOX = 6
 SHOT_DRAW_SIZE = 8
 SHOT_BOUNCES = 2           # cuantas veces rebota (al tercer choque desaparece)
 SHOT_LIFE = 7.0            # maximo de segundos en el aire
-SHOT_DAMAGE_MULT = 1.0     # x el dano de un choque de pino
+SHOT_DAMAGE_MULT = 3.0     # x el dano de un choque de pino
 
 # ---------------------------------------------------------------
 # Tiempos
@@ -982,13 +991,16 @@ class Shot:
 # ---------------------------------------------------------------
 
 class Tronco(Enemy):
-    """No camina: se queda en su lugar, carga un buen rato y suelta
-    3 bolas abiertas en abanico hacia donde te podrias mover (donde
-    estas y para los costados, adelantandose si te estas moviendo).
-    Despues hace la animacion de disparo y espera para el siguiente.
+    """Te sigue por la sala pero manteniendo distancia: si te acercas
+    retrocede, y se queda siempre afuera del borde de tu luz para que
+    no lo veas. Cuando le toca disparar (cada TRONCO_COOLDOWN segundos)
+    se queda quieto apuntandote y suelta 3 bolas abiertas en abanico
+    hacia donde te podrias mover. Despues hace la animacion de disparo
+    y vuelve a seguirte.
     Si le pegas mientras carga se le corta el disparo.
     No te hace dano al tocarlo."""
 
+    # fixed: es el tipo que dispara (los pinos rebotan contra el)
     fixed = True
     contact_damage = False
 
@@ -998,13 +1010,17 @@ class Tronco(Enemy):
 
     def __init__(self, x, y, hp, spawn_delay=0.0):
 
-        super().__init__(x, y, hp, 0.0, spawn_delay)
+        super().__init__(x, y, hp, TRONCO_SPEED, spawn_delay)
 
         self.rect = pygame.Rect(0, 0, *TRONCO_HITBOX)
         self.rect.center = (round(x), round(y))
 
         self.phase = self.IDLE
         self.phase_t = random.uniform(*TRONCO_FIRST_DELAY)
+
+        # Radio de la luz del jugador en unidades del mundo (lo setea
+        # la arena en cada frame)
+        self.light_radius = 0.0
 
         # Velocidad del jugador (para adelantar la punteria)
         self.target_vel = pygame.Vector2()
@@ -1059,6 +1075,41 @@ class Tronco(Enemy):
 
     # ---------- movimiento / estado ----------
 
+    def _ideal_distance(self):
+        """A que distancia del jugador quiere estar: afuera de su luz
+        (para que no lo vea) y nunca mas cerca que TRONCO_KEEP_DIST."""
+
+        want = max(
+            TRONCO_KEEP_DIST, self.light_radius + TRONCO_LIGHT_MARGIN
+        )
+
+        return min(TRONCO_MAX_DIST, want)
+
+    def _walk(self, dt, direction, collision_map):
+        """Camina hacia `direction`. Si hay una pared o un bloque
+        adelante, prueba rodearlo en diagonal o de costado."""
+
+        step = TRONCO_SPEED * dt
+
+        for angle in (0, 45, -45, 90, -90):
+
+            d = direction.rotate(angle)
+
+            nx = self.pos.x + d.x * step
+            ny = self.pos.y + d.y * step
+
+            test = self.rect.copy()
+            test.center = (round(nx), round(ny))
+
+            if self._free(test, collision_map):
+
+                self.pos.update(nx, ny)
+                self.rect.center = test.center
+
+                return True
+
+        return False
+
     def update(self, dt, target, collision_map, others=None):
 
         target = pygame.Vector2(target)
@@ -1103,27 +1154,64 @@ class Tronco(Enemy):
 
         self.vel = pygame.Vector2()
 
-        self.phase_t -= dt
+        # ---- apuntando: quieto, mirandote hasta soltar las bolas ----
+        if self.phase == self.WINDUP:
 
-        if self.phase_t > 0:
+            self.phase_t -= dt
+
+            if self.phase_t <= 0:
+
+                self._fire(target)
+
+                self.phase = self.SHOOT
+                self.phase_t = TRONCO_SHOOT_TIME
+
             return
 
-        if self.phase == self.IDLE:
+        # ---- animacion de disparo: tambien quieto ----
+        if self.phase == self.SHOOT:
+
+            self.phase_t -= dt
+
+            if self.phase_t <= 0:
+
+                self.phase = self.IDLE
+                self.phase_t = TRONCO_COOLDOWN
+
+            return
+
+        # ---- siguiendote (esperando el proximo disparo) ----
+        self.phase_t = max(0.0, self.phase_t - dt)
+
+        to_player = target - self.pos
+        dist = to_player.length()
+
+        if dist < 0.01:
+            to_player = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+            dist = 0.01
+
+        toward = to_player / dist
+
+        ideal = self._ideal_distance()
+
+        if dist > ideal + TRONCO_BAND:
+
+            self._walk(dt, toward, collision_map)
+
+        elif dist < ideal - TRONCO_BAND:
+
+            # Muy cerca o adentro de la luz: se aleja
+            self._walk(dt, -toward, collision_map)
+
+        # Le toca disparar: cuando ya esta a buena distancia, frena
+        # y empieza a apuntar
+        if (
+            self.phase_t <= 0
+            and dist <= ideal + TRONCO_BAND + TRONCO_FIRE_EXTRA
+        ):
 
             self.phase = self.WINDUP
             self.phase_t = TRONCO_WINDUP
-
-        elif self.phase == self.WINDUP:
-
-            self._fire(target)
-
-            self.phase = self.SHOOT
-            self.phase_t = TRONCO_SHOOT_TIME
-
-        else:
-
-            self.phase = self.IDLE
-            self.phase_t = TRONCO_COOLDOWN
 
     # ---------- dibujo ----------
 
@@ -1929,7 +2017,15 @@ class Arena:
         p = game.player
         target = p.rect.center
 
+        # Radio de la luz del jugador en unidades del mundo (los
+        # troncos se quedan afuera para que no los veas)
+        light_world = game._light_radius() / game.camera.zoom
+
         for enemy in self.enemies:
+
+            if enemy.fixed:
+                enemy.light_radius = light_world
+
             enemy.update(dt, target, game.collision_map, self.enemies)
 
             # Los troncos sueltan sus bolas
