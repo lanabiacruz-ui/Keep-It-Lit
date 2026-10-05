@@ -154,7 +154,7 @@ SHOT_HITBOX = 6
 SHOT_DRAW_SIZE = 8
 SHOT_BOUNCES = 2           # cuantas veces rebota (al tercer choque desaparece)
 SHOT_LIFE = 7.0            # maximo de segundos en el aire
-SHOT_DAMAGE_MULT = 3.0     # x el dano de un choque de pino
+SHOT_DAMAGE_MULT = 4.5     # x el dano de un choque de pino
 
 # ---------------------------------------------------------------
 # Tiempos
