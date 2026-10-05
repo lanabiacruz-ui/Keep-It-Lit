@@ -8,8 +8,18 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 UI_DIR = ROOT_DIR / "assets" / "maps" / "ui"
 
 
+# ---------- IMAGENES DEL TUTORIAL ----------
+# Nombre de cada imagen (se busca dentro de assets/maps/ui/ y, si no
+# esta ahi, en cualquier otra carpeta de assets).
+CHARACTER_IMAGE = "botayuda.png"   # el personaje que ayuda
+FRAME_IMAGE = "texto.png"          # el cuadro donde va el texto
+
+# Recorte de cada imagen (x, y, ancho, alto). Los valores de abajo son
+# para las imagenes actuales, que tienen cosas de sobra alrededor.
+# Si tu imagen nueva ya viene limpia, poné None: usa la imagen entera
+# sin los bordes transparentes.
 CHARACTER_CROP = pygame.Rect(490, 214, 194, 319)
-FRAME_CROP = pygame.Rect(240, 238, 428, 152)
+FRAME_CROP = None   # texto.png nuevo (800x285): se usa entero
 
 
 TUTORIAL_PAGES = [
@@ -21,9 +31,14 @@ TUTORIAL_PAGES = [
     "Q: soltar lo que tengas elegido. ESC: guardar y volver al menu.",
 ]
 
-TEXT_COLOR = (255, 238, 190)
-SHADOW_COLOR = (30, 20, 0)
-HINT_COLOR = (214, 180, 110)
+# Letras azules (oscuras para que se lean sobre el cuadro gris)
+TEXT_COLOR = (25, 60, 150)
+SHADOW_COLOR = (225, 230, 240)
+HINT_COLOR = (60, 95, 170)
+
+# El interior de texto.png es semitransparente: se rellena con este
+# color para que el cuadro no deje ver el mapa por detras.
+FRAME_BACKING = (255, 255, 255)
 
 
 class Tutorial:
@@ -56,14 +71,16 @@ class Tutorial:
         self.age = 0.0
 
 
-        char = self._load_cropped("botayuda.png", CHARACTER_CROP)
-        frame = self._load_cropped("texto.png", FRAME_CROP)
+        char = self._load_cropped(CHARACTER_IMAGE, CHARACTER_CROP)
+        frame = self._load_cropped(FRAME_IMAGE, FRAME_CROP)
 
         if char is None:
             char = self._fallback_character(319)
 
         if frame is None:
             frame = self._fallback_frame(428, 152)
+
+        frame = self._solidify(frame, FRAME_BACKING)
 
         char_w = int(char.get_width() * char_height / char.get_height())
 
@@ -160,6 +177,22 @@ class Tutorial:
 
         return surf
 
+    @staticmethod
+    def _solidify(surf, color):
+        """Pone un fondo solido detras de la silueta del cuadro, asi lo
+        semitransparente del interior no deja ver lo que hay detras."""
+
+        mask = pygame.mask.from_surface(surf, 40)
+
+        base = mask.to_surface(
+            setcolor=(color[0], color[1], color[2], 255),
+            unsetcolor=(0, 0, 0, 0)
+        )
+
+        base.blit(surf, (0, 0))
+
+        return base
+
     @classmethod
     def _load_cropped(cls, name, crop):
         path = cls._find_image(name)
@@ -170,7 +203,10 @@ class Tutorial:
 
         image = pygame.image.load(str(path)).convert_alpha()
 
-        area = crop.clip(image.get_rect())
+        if crop is None:
+            area = image.get_bounding_rect()
+        else:
+            area = crop.clip(image.get_rect())
 
         if area.width <= 0 or area.height <= 0:
             area = image.get_bounding_rect()

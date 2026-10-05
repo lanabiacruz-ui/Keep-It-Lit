@@ -27,6 +27,7 @@ from world.shop import Shopkeeper, load_catalog, price_table
 from ui.hud import Hud
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
+from ui.tutorial import Tutorial
 
 
 # Radio de luz, consumo y espera entre golpes de cada luz (fosforo,
@@ -146,6 +147,12 @@ class NewGame:
         )
 
         self.hud = Hud((self.width, self.height))
+
+        # Tutorial: solo en partida nueva (al continuar no aparece).
+        # Mientras esta abierto el juego queda en pausa.
+        self.tutorial = (
+            None if self.save_data else Tutorial((self.width, self.height))
+        )
 
         self.coins = int(self.save_data.get("coins", 0))
 
@@ -1026,6 +1033,16 @@ class NewGame:
         if self.state != "playing":
             return None
 
+        # Con el tutorial abierto solo el tutorial recibe los eventos
+        # (ESC sigue guardando y volviendo al menu)
+        if self.tutorial is not None and not (
+            event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+        ):
+
+            self.tutorial.handle_event(event)
+
+            return None
+
         # Con el minijuego abierto, solo el minijuego recibe los eventos
         if self.minigame is not None:
 
@@ -1171,6 +1188,17 @@ class NewGame:
     def update(self, dt):
 
         if self.state == "playing":
+
+            # Con el tutorial abierto el tiempo se detiene (si no, la
+            # cuenta regresiva de 10s correria mientras lees)
+            if self.tutorial is not None:
+
+                self.tutorial.update(dt)
+
+                if not self.tutorial.active:
+                    self.tutorial = None
+
+                return None
 
             # Con la tienda abierta el tiempo se detiene (ni se gasta
             # el fosforo ni corre la cuenta regresiva)
@@ -1487,6 +1515,10 @@ class NewGame:
         if self.shop is not None:
 
             self.shop.draw(self.screen)
+
+        if self.tutorial is not None:
+
+            self.tutorial.draw(self.screen)
 
         if self.state in ("dying", "lost"):
 
