@@ -60,10 +60,19 @@ class CollisionMap:
         self.obstacles = [
 
             # Biblioteca (sala superior central)
-            pygame.Rect(866, 34, 40, 66),
+            pygame.Rect(865, 34, 41, 67),
 
-            # Mesa oscura (sala superior central)
-            pygame.Rect(902, 100, 92, 40),
+            # Mesa oscura / mostrador (sala superior central)
+            pygame.Rect(902, 100, 93, 40),
+
+            # Detras del mostrador: el rojito (cabeza y cuerpo), la
+            # botella y el cartel SHOP. Tapa todo el hueco entre la
+            # biblioteca y el estante para que el jugador no pase al
+            # otro lado de la mesa.
+            pygame.Rect(906, 36, 89, 64),
+
+            # Estante de arriba a la derecha (sala superior central)
+            pygame.Rect(979, 36, 61, 26),
 
             # Cocina (cabaña, pared derecha)
             pygame.Rect(1022, 892, 41, 155),
@@ -73,10 +82,6 @@ class CollisionMap:
 
             # Cama (cabaña, esquina inferior izquierda)
             pygame.Rect(816, 988, 61, 59),
-
-            # Vendedor rojo + la botella (sala superior central, detras
-            # de la mesa)
-            pygame.Rect(921, 62, 72, 38),
 
             # ---- Sala grande derecha (la de combate) ----
 

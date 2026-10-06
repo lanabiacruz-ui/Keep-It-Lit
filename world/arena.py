@@ -76,7 +76,7 @@ WAVE_COMPOSITION = {
     6: (4, 7, 3),
 
     # Oleada 7
-    7: (10, 7, 6),
+    7: (10, 5, 6),
 }
 PINOS_STEP = 1
 TRONCOS_STEP = 1

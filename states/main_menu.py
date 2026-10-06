@@ -28,10 +28,12 @@ BREATH_X = 0.010         # cuanto se ensancha (1%)
 LEAF_MAX = 5             # maximo de hojas a la vez
 LEAF_SPAWN = (2.5, 5.5)  # segundos entre una hoja y la siguiente
 LEAF_COLORS = [
-    (232, 164, 62),
-    (214, 190, 84),
-    (196, 108, 58),
-    (158, 190, 92),
+    (28, 84, 44),     # verde oscuro
+    (46, 112, 56),    # verde bosque
+    (72, 140, 66),    # verde medio
+    (104, 168, 78),   # verde hoja
+    (146, 200, 104),  # verde clarito
+    (184, 226, 140),  # verde muy claro
 ]
 
 

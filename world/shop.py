@@ -99,10 +99,10 @@ class Shopkeeper:
     """
 
     # Boca del vendedor (coordenadas del mundo = pixeles de mapa.png)
-    MOUTH = (948, 75)
+    MOUTH = (951, 87)
 
     # Arriba de la cabeza, para el cartel de [E]
-    HEAD_TOP = 62
+    HEAD_TOP = 76
 
     # Desde donde se le puede hablar: alrededor de la mesa (el
     # jugador no puede pasar al otro lado)
@@ -243,8 +243,8 @@ class Shopkeeper:
         # La boca se abre y se cierra con cada item
         wave = abs(math.sin(self._clock * 16))
 
-        rx = int((2.4 + 1.4 * wave) * camera.zoom)
-        ry = int((2.8 + 1.8 * wave) * camera.zoom)
+        rx = int((2.2 + 1.2 * wave) * camera.zoom)
+        ry = int((2.2 + 1.6 * wave) * camera.zoom)
 
         mouth = pygame.Rect(0, 0, rx, ry)
         mouth.center = center
