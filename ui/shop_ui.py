@@ -4,6 +4,7 @@ from pathlib import Path
 import pygame
 
 from world.items import load_icon
+from world.lights import LIGHTS
 
 
 TIENDA_DIR = (
@@ -102,12 +103,18 @@ class ShopUI:
     ROW_H = 46
     FOOT_H = 118
 
-    def __init__(self, screen_size, catalog, item_defs, coins):
+    def __init__(
+        self, screen_size, catalog, item_defs, coins, match_duration=30.0
+    ):
 
         self.sw, self.sh = screen_size
         self.catalog = catalog
         self.defs = item_defs
         self.coins = int(coins)
+        self.match_duration = float(match_duration)
+
+        # Producto del que se esta mostrando la info (click con la rueda)
+        self.info_id = None
 
         self.prices = {
             it["id"]: it["precio"]
@@ -211,6 +218,46 @@ class ShopUI:
         data = self.defs.get(item_id, {})
 
         return data.get("nombre", item_id.capitalize())
+
+    def info_lines(self, item_id):
+        """Texto de la ventanita de info: que hace el objeto o, si es
+        una luz, sus numeros (radio, duracion y furia)."""
+
+        data = self.defs.get(item_id, {})
+
+        lines = []
+
+        if data.get("descripcion"):
+            lines.append(data["descripcion"])
+
+        stats = LIGHTS.get(item_id)
+
+        if stats is None:
+            return lines
+
+        base = LIGHTS["fosforo"]["radio"]
+
+        radio = f"Radio de luz: {stats['radio']}"
+
+        if stats["radio"] != base:
+            radio += f" (x{stats['radio'] / base:g} que el fósforo)"
+
+        duracion = self.match_duration / stats["consumo"]
+
+        lines.append("")
+        lines.append(radio)
+        lines.append(f"Duración: {duracion:g} segundos")
+
+        if stats.get("furia_cada", 0) > 0:
+            lines.append(
+                f"Furia: cada {stats['furia_cada']:g} s entra en furia "
+                f"durante {stats['furia_duracion']:g} s y pega "
+                f"{stats['furia_velocidad']:g} veces más rápido"
+            )
+        else:
+            lines.append("Furia: no tiene")
+
+        return lines
 
     def total(self):
 
@@ -385,6 +432,13 @@ class ShopUI:
 
         if event.type == pygame.KEYDOWN:
 
+            # Con la info abierta, Esc / E solo la cierran
+            if self.info_id is not None:
+
+                self.info_id = None
+
+                return None
+
             if event.key in (pygame.K_ESCAPE, pygame.K_e):
                 return "close"
 
@@ -416,10 +470,27 @@ class ShopUI:
         if event.type != pygame.MOUSEBUTTONDOWN:
             return None
 
-        if event.button not in (1, 3):
+        if event.button not in (1, 2, 3):
             return None
 
         pos = event.pos
+
+        # ---- info con la rueda del mouse (click del medio) ----
+        if event.button == 2:
+
+            card = self._card_at(pos)
+
+            # Tocar el mismo producto otra vez la cierra
+            self.info_id = None if card == self.info_id else card
+
+            return None
+
+        # Con la info abierta, el primer click solo la cierra
+        if self.info_id is not None:
+
+            self.info_id = None
+
+            return None
 
         # ---- tarjetas ----
         card = self._card_at(pos)
@@ -953,6 +1024,65 @@ class ShopUI:
                 C_TEXT if self.cart else C_MUTED
             )
 
+    def _draw_info(self, screen, item_id):
+        """Ventanita con lo que hace el producto (o los numeros de la
+        luz). Se cierra con cualquier click o tecla."""
+
+        width = 420
+        pad = 18
+        max_w = width - pad * 2
+
+        body = []
+
+        for raw in self.info_lines(item_id):
+
+            if raw == "":
+                body.append("")
+                continue
+
+            body.extend(self._wrap(self.small_font, raw, max_w))
+
+        line_h = self.small_font.get_linesize()
+
+        height = pad * 2 + 36 + len(body) * line_h + 22
+
+        box = pygame.Rect(0, 0, width, height)
+        box.center = self.panel.center
+
+        shade = pygame.Surface((self.sw, self.sh), pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 120))
+        screen.blit(shade, (0, 0))
+
+        pygame.draw.rect(screen, C_PANEL, box, border_radius=14)
+        pygame.draw.rect(screen, C_BADGE, box, width=2, border_radius=14)
+
+        icon = self._icon(item_id, 34)
+
+        if icon is not None:
+            screen.blit(icon, (box.x + pad, box.y + pad - 2))
+
+        self._text(
+            screen, self.name_font, self.item_name(item_id), C_TEXT,
+            midleft=(box.x + pad + 44, box.y + pad + 15)
+        )
+
+        y = box.y + pad + 44
+
+        for line in body:
+
+            if line:
+                self._text(
+                    screen, self.small_font, line, C_TEXT,
+                    topleft=(box.x + pad, y)
+                )
+
+            y += line_h
+
+        self._text(
+            screen, self.tiny_font, "Click para cerrar", C_MUTED,
+            midbottom=(box.centerx, box.bottom - 8)
+        )
+
     def draw(self, screen):
 
         mouse = pygame.mouse.get_pos()
@@ -1044,10 +1174,13 @@ class ShopUI:
 
         self._draw_cart(screen, mouse)
 
+        if self.info_id is not None:
+            self._draw_info(screen, self.info_id)
+
         # Ayuda abajo
         self._text(
             screen, self.tiny_font,
-            "Click: agregar   ·   Click derecho: quitar   ·   Rueda: bajar   ·   E / Esc: cerrar",
+            "Click: agregar  ·  Click derecho: quitar  ·  Click en la rueda: info  ·  Rueda: bajar  ·  E / Esc: cerrar",
             C_MUTED,
             midbottom=(self.panel.centerx, self.panel.bottom - 8)
         )

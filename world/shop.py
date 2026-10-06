@@ -108,6 +108,25 @@ class Shopkeeper:
     # jugador no puede pasar al otro lado)
     TALK_RECT = pygame.Rect(902, 100, 92, 40).inflate(44, 60)
 
+    # El cuadrado de la tienda (la salita de arriba). Adentro todo esta
+    # iluminado y la luz del jugador no se gasta.
+    ZONE = pygame.Rect(840, 30, 215, 140)
+
+    # Que tanto se difumina el borde de la luz de la tienda (mundo)
+    ZONE_FEATHER = 22
+
+    def zone_inset(self, player):
+        """Cuanto adentro del cuadrado esta el jugador (0 = en el borde
+        o afuera). Sirve para apagar su luz de a poco al entrar."""
+
+        x, y = player.rect.center
+        z = self.ZONE
+
+        if not z.collidepoint(x, y):
+            return 0.0
+
+        return float(min(x - z.left, z.right - x, y - z.top, z.bottom - y))
+
     # Donde caen los items escupidos: el piso al frente de la mesa
     LAND_RECT = pygame.Rect(878, 146, 140, 30)
 
@@ -145,6 +164,11 @@ class Shopkeeper:
     def busy(self):
 
         return self.spit_time > 0
+
+    def in_zone(self, player):
+        """True si el jugador esta adentro del cuadrado de la tienda."""
+
+        return self.ZONE.collidepoint(player.rect.center)
 
     def can_talk(self, player):
 

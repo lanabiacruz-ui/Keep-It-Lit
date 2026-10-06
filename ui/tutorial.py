@@ -27,7 +27,7 @@ TUTORIAL_PAGES = [
     "Movete con W A S D o con las flechas del teclado.",
     "Click izquierdo: pegar con tu luz. Rompe puertas y abre cofres.",
     "E: agarrar objetos del piso o hablar con el vendedor.",
-    "Teclas 1 a 5: elegir casillero. Click derecho: usar el objeto.",
+    "Teclas 1 a 4: elegir casillero. Click derecho: usar el objeto.",
     "Q: soltar lo que tengas elegido. ESC: guardar y volver al menu.",
 ]
 
@@ -276,6 +276,10 @@ class Tutorial:
         if event.key == pygame.K_ESCAPE:
             return False
 
+        # Solo la barra espaciadora avanza el tutorial
+        if event.key != pygame.K_SPACE:
+            return False
+
         self.index += 1
 
         if self.index >= len(self.pages):
@@ -394,9 +398,9 @@ class Tutorial:
                 last = self.index == len(self.pages) - 1
 
                 text = (
-                    "Presiona una tecla para cerrar"
+                    "Presiona espacio para cerrar"
                     if last
-                    else "Presiona una tecla para seguir"
+                    else "Presiona espacio para seguir"
                 )
 
                 hint = self._text(self.hint_font, text, HINT_COLOR)

@@ -143,22 +143,6 @@
                 740,
                 525
             ]
-        },
-        {
-            "id": "hongo_azul_01",
-            "item": "hongo_azul",
-            "pos": [
-                1100,
-                152
-            ]
-        },
-        {
-            "id": "hongo_azul_02",
-            "item": "hongo_azul",
-            "pos": [
-                850,
-                600
-            ]
         }
     ]
 }

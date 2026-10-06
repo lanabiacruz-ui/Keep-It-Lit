@@ -2506,7 +2506,7 @@ class Arena:
             if isinstance(enemy, Mosquito):
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
                 if enemy.attached and enemy.damage_t <= 0.0:
-                    game.vida = max(0.0, game.vida - MOSQUITO_DAMAGE)
+                    game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
             else:
                 if enemy.fixed:
@@ -2535,7 +2535,7 @@ class Arena:
                 continue
             if enemy.rect.colliderect(body):
                 if p.hurt(enemy.pos):
-                    game.vida -= damage
+                    game.take_damage(damage)
                 enemy.bounce_from(body.center)
 
         for shot in self.shots:
@@ -2543,7 +2543,7 @@ class Arena:
                 continue
             if shot.rect.colliderect(body):
                 if p.hurt(shot.pos):
-                    game.vida -= damage * SHOT_DAMAGE_MULT
+                    game.take_damage(damage * SHOT_DAMAGE_MULT)
                 shot.dead = True
 
         self.shots = [s for s in self.shots if not s.dead]

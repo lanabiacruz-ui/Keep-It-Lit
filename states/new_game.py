@@ -39,6 +39,14 @@ MATCH_POS = (818, 1002)
 # tension, pero lo bastante largo para explorar y decidir que hacer.
 MATCH_DURATION = 30.0
 
+# En el cuadrado de la tienda la luz se recarga: segundos para pasar de
+# 0% a 100% de vida.
+SHOP_RECHARGE_TIME = 4.0
+
+# Al entrar a la tienda la luz del jugador se va apagando de a poco
+# (porque ya esta todo iluminado). Es la distancia (mundo) que tarda.
+SHOP_LIGHT_FADE = 24.0
+
 # A que altura del sprite esta el "centro" del personaje (0 = pies,
 # 1 = cabeza). De ahi sale el area de ataque.
 TORSO_HEIGHT = 0.5
@@ -317,6 +325,26 @@ class NewGame:
         )
 
         self.fade_overlay.fill((0, 0, 0))
+
+    # ---------- dano ----------
+
+    def take_damage(self, amount):
+        """El jugador recibe dano (enemigos, disparos, mosquitos).
+
+        Funciona como el escudo de Fortnite: el escudo es la primera
+        vida y se gasta primero. Cuando se acaba, lo que sobra del
+        golpe le pega a la vida naranja (la de la luz). El escudo
+        existe aunque no tengas la antorcha equipada."""
+
+        if amount <= 0:
+            return
+
+        absorbed = min(self.escudo, amount)
+        self.escudo -= absorbed
+        self.vida -= amount - absorbed
+
+        if self.escudo < 1e-6:
+            self.escudo = 0.0
 
     # ---------- fosforo ----------
 
@@ -789,7 +817,7 @@ class NewGame:
 
         # Cada golpe gasta un poco de luz (aunque no le pegues a nada).
         # En furia no gasta. El fosforo gasta bastante mas que la vela.
-        if not self.melee.fury:
+        if not self.melee.fury and not self._in_shop_zone():
             self.vida -= light_stats(self.light_type).get("golpe_costo", 0.0)
 
         # El personaje mira hacia donde pega
@@ -906,13 +934,44 @@ class NewGame:
 
     # ---------- tienda ----------
 
+    def _in_shop_zone(self):
+        """El jugador esta adentro del cuadrado de la tienda."""
+
+        return self.shopkeeper.in_zone(self.player)
+
+    def _lit_rects(self):
+        """Zonas del mapa que se ven iluminadas aunque no haya luz:
+        el cuadrado de la tienda y, despues del tutorial, la puerta de
+        la cabana (solo la puerta)."""
+
+        rects = [
+            (
+                self.shopkeeper.ZONE,
+                1.0,
+                self.shopkeeper.ZONE_FEATHER
+            )
+        ]
+
+        if self.tutorial is None:
+
+            for door in self.doors.doors:
+
+                if door.id == "cabana" and not door.broken:
+
+                    pulse = 0.8 + 0.2 * math.sin(pygame.time.get_ticks() / 100.0)
+
+                    rects.append((door.rect.inflate(2, 2), pulse, 4))
+
+        return rects
+
     def _open_shop(self):
 
         self.shop = ShopUI(
             (self.width, self.height),
             self.catalog,
             self.item_defs,
-            self.coins
+            self.coins,
+            match_duration=MATCH_DURATION
         )
 
         # Se corta el golpe en curso
@@ -1277,9 +1336,20 @@ class NewGame:
 
                 self._update_effects(dt)
 
-                self.vida -= (
-                    dt * self.burn_factor * self.base_burn / MATCH_DURATION
-                )
+                # En el cuadrado de la tienda la luz no se gasta: se
+                # recarga
+                if self._in_shop_zone():
+
+                    self.vida = min(
+                        1.0, self.vida + dt / SHOP_RECHARGE_TIME
+                    )
+
+                else:
+
+                    self.vida -= (
+                        dt * self.burn_factor * self.base_burn
+                        / MATCH_DURATION
+                    )
 
                 if self.vida <= 0:
 
@@ -1291,8 +1361,9 @@ class NewGame:
 
                     self.no_light_timer = NO_LIGHT_COUNTDOWN
 
-                else:
+                elif not self._in_shop_zone():
 
+                    # (en la tienda esta todo iluminado: no corre)
                     self.no_light_timer -= dt
 
                     if self.no_light_timer <= 0:
@@ -1383,6 +1454,13 @@ class NewGame:
 
             radius = self._light_radius()
 
+            # Adentro de la tienda ya esta todo iluminado: la luz del
+            # jugador se apaga de a poco al entrar (y vuelve al salir)
+            inset = self.shopkeeper.zone_inset(self.player)
+
+            if inset > 0:
+                radius *= max(0.0, 1.0 - inset / SHOP_LIGHT_FADE)
+
             if self.vida < FLICKER_THRESHOLD:
 
                 self._flicker_time += 0.02
@@ -1395,20 +1473,27 @@ class NewGame:
 
             self._light_radius_px = radius
 
-            sources.append((
-                self.player.rect.centerx,
-                self.player.rect.centery,
-                radius
-            ))
+            if radius >= 2:
+
+                sources.append((
+                    self.player.rect.centerx,
+                    self.player.rect.centery,
+                    radius
+                ))
 
         self.light.draw(
             self.screen,
             self.camera,
-            sources
+            sources,
+            self._lit_rects()
         )
 
         # Polvora: aro naranja en el borde de la luz
-        if self.has_match and self.polvora_timer > 0:
+        if (
+            self.has_match
+            and self.polvora_timer > 0
+            and self._light_radius_px >= 2
+        ):
 
             cx = int(self.player.rect.centerx * self.camera.zoom - self.camera.x)
             cy = int(self.player.rect.centery * self.camera.zoom - self.camera.y)
