@@ -38,7 +38,7 @@ LIGHTS = {
     "vela": {
         "nombre": "Vela",
         "radio": 200,
-        "radio_suelo": 120,
+        "radio_suelo": 60,
         "consumo": 0.5,
         "cooldown": 0.40,
         "golpe_costo": 0.006,     # casi nada: la vela dura mucho mas

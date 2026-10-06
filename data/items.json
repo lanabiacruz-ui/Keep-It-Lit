@@ -95,5 +95,16 @@
                 "vida": 1.0
             }
         ]
+    },
+    "hongo_azul": {
+        "nombre": "Hongo azul",
+        "descripcion": "Te da 25% de escudo. El escudo no se gasta con el tiempo.",
+        "requiere_fosforo": false,
+        "efectos": [
+            {
+                "tipo": "escudo_sumar",
+                "valor": 0.25
+            }
+        ]
     }
 }

@@ -1,22 +1,50 @@
 {
-    "secciones": [
+  "secciones": [
+    {
+      "nombre": "Luces",
+      "items": [
         {
-            "nombre": "Luces",
-            "items": [
-                { "id": "fosforo", "precio": 40 },
-                { "id": "vela", "precio": 90 }
-            ]
+          "id": "fosforo",
+          "precio": 25
         },
         {
-            "nombre": "Objetos",
-            "items": [
-                { "id": "madera", "precio": 5 },
-                { "id": "cera", "precio": 8 },
-                { "id": "aceite", "precio": 12 },
-                { "id": "resina", "precio": 15 },
-                { "id": "polvora", "precio": 20 },
-                { "id": "ganzua", "precio": 30 }
-            ]
+          "id": "vela",
+          "precio": 55
         }
-    ]
+      ]
+    },
+    {
+      "nombre": "Objetos",
+      "items": [
+        {
+          "id": "madera",
+          "precio": 2
+        },
+        {
+          "id": "cera",
+          "precio": 4
+        },
+        {
+          "id": "aceite",
+          "precio": 6
+        },
+        {
+          "id": "resina",
+          "precio": 7
+        },
+        {
+          "id": "polvora",
+          "precio": 9
+        },
+        {
+          "id": "ganzua",
+          "precio": 10
+        },
+        {
+          "id": "hongo_azul",
+          "precio": 11
+        }
+      ]
+    }
+  ]
 }

@@ -3,10 +3,10 @@
 Al entrar aparece un menu transparente: Salir / Jugar con escape /
 Jugar sin escape (premio X2). Despues vienen las oleadas:
 
-  - Con escape: si te quedas sin vida te sacan de la sala (perdes la
-    oleada, nada mas). Tambien podes irte caminando.
-  - Sin escape: la entrada se bloquea mientras pelean, y si te quedas
-    sin vida perdes de verdad. El premio vale el doble.
+  - Con escape: podes irte caminando de la sala (cancela la oleada).
+  - Sin escape: la entrada se bloquea mientras pelean. El premio vale
+    el doble.
+  - En los dos modos, si te quedas sin vida perdes la partida de verdad.
 
 Al matar al ultimo enemigo aparece un cofre que brilla y explota,
 tirando las monedas del premio. Cuando las juntas vuelve el menu para
@@ -73,16 +73,22 @@ WAVE_COMPOSITION = {
     5: (4, 4, 0),
 
     # Oleada 6
-    6: (4, 6, 6),
+    6: (4, 7, 3),
 
     # Oleada 7
-    7: (10, 7, 10),
+    7: (10, 7, 6),
 }
 PINOS_STEP = 1
 TRONCOS_STEP = 1
 TRONCOS_MAX = 8
 ENEMIES_MAX = 32
+MOSQUITOS_STEP = 1   # mosquitos que se suman por oleada despues de la ultima definida
 MOSQUITOS_MAX = 20
+
+# Oleada de PRUEBA (solo mosquitos). La usa la partida "Prueba mosquitos".
+# Para cambiar cuantos salen, cambia el 3. Se puede borrar cuando termines.
+MOSQUITO_TEST_WAVE = 99
+MOSQUITO_TEST_COUNT = 3
 
 # Monedas de premio por oleada (la 1 vale 18). Despues de la ultima
 # definida sube REWARD_STEP por oleada. "Sin escape" lo multiplica.
@@ -167,25 +173,28 @@ SHOT_DAMAGE_MULT = 4.5     # x el dano de un choque de pino
 # Mosquito
 # ---------------------------------------------------------------
 
+MOSQUITO_HP = 2   # golpes que aguanta (el fosforo y la vela pegan 1 por golpe)
 MOSQUITO_HITBOX = (9, 7)
 MOSQUITO_DRAW_SIZE = 13
 
-# Distancias
-MOSQUITO_KEEP_DIST = 105.0
-MOSQUITO_MAX_DIST = 175.0
-MOSQUITO_DETECT_DIST = 155.0
+# Vuelo libre por la sala
+MOSQUITO_WANDER_SPEED = 45.0     # velocidad volando libre
+MOSQUITO_TURN_TIME = (0.8, 2.2)  # cada cuanto cambia un poco de rumbo
 
-# Tiempo de advertencia
-MOSQUITO_WARNING_TIME = 3.0
+# Alerta en el HUD: aparece cuando esta a esta distancia EXTRA del borde
+# de tu luz (o sea, antes de que lo toque tu luz)
+MOSQUITO_ALERT_MARGIN = 90.0
 
-# Espera entre ataques
-MOSQUITO_FIRST_WAIT = (2.5, 5.5)
-MOSQUITO_RETRY_WAIT = (2.0, 4.0)
-
-# Ataque rápido
+# Ataque: cuando tu luz lo toca va directo hacia vos y se pega
 MOSQUITO_ATTACK_SPEED = 280.0
 MOSQUITO_ATTACK_ACCEL = 900.0
 MOSQUITO_ATTACH_DIST = 10.0
+
+# Ciclo (segundos)
+MOSQUITO_ATTACH_TIME = 60.0      # pegado: te chupa 1 minuto y se suelta
+MOSQUITO_REST_TIME = 60.0        # despues de soltarte, a este tiempo vuelve a atacar
+MOSQUITO_FLEE_TIME = 8.0         # apenas te suelta, intenta irse (se aleja rapido)
+MOSQUITO_FLEE_SPEED = 85.0
 
 # Daño
 # 0.02 = 2% de la vida de la luz
@@ -273,6 +282,8 @@ def quantize_radius(radius):
 
 def wave_composition(wave):
     """(pinos, troncos, mosquitos) de una oleada."""
+    if wave == MOSQUITO_TEST_WAVE:
+        return 0, 0, MOSQUITO_TEST_COUNT
     if wave in WAVE_COMPOSITION:
         return WAVE_COMPOSITION[wave]
     last = max(WAVE_COMPOSITION)
@@ -1014,60 +1025,47 @@ def load_strip(path):
     ]
 
 class Mosquito(Enemy):
+    """Ciclo: vuela tranquilo -> la luz lo toca y va directo al jugador ->
+    se pega 1 minuto -> se suelta e intenta irse -> a los 60 s vuelve a
+    chuparte (sin necesitar la luz) -> y asi."""
 
     fixed = False
     contact_damage = False
 
-    def __init__(
-        self,
-        x,
-        y,
-        hp,
-        spawn_delay=0.0
-    ):
+    def __init__(self, x, y, hp, spawn_delay=0.0):
 
-        super().__init__(
-            x,
-            y,
-            hp,
-            MOSQUITO_ATTACK_SPEED,
-            spawn_delay
-        )
+        super().__init__(x, y, hp, MOSQUITO_ATTACK_SPEED, spawn_delay)
 
-        self.rect = pygame.Rect(
-            0,
-            0,
-            *MOSQUITO_HITBOX
-        )
+        self.rect = pygame.Rect(0, 0, *MOSQUITO_HITBOX)
+        self.rect.center = (round(x), round(y))
 
-        self.rect.center = (
-            round(x),
-            round(y)
-        )
+        # "wander" = vuela tranquilo esperando que lo toque la luz
+        # "attack" = va directo al jugador
+        # "leave"  = ya te solto: se va y descansa hasta volver
+        self.phase = "wander"
 
-        self.phase = "wait"
-
-        self.phase_t = random.uniform(
-            *MOSQUITO_FIRST_WAIT
-        )
+        self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+        self.turn_t = random.uniform(*MOSQUITO_TURN_TIME)
 
         self.attack_vel = pygame.Vector2()
-
-        self.warning_t = 0.0
-
         self.flash = 0.0
 
         self.attached = False
+        self.attach_offset = pygame.Vector2()
+        self.attach_t = 0.0
 
-        self.damage_t = random.uniform(
-            0,
-            MOSQUITO_DAMAGE_INTERVAL
-        )
+        self.rest_t = 0.0
+        self.flee_t = 0.0
 
-        self.anim_t = random.uniform(
-            0,
-            1
-        )
+        # True si vuelve solo (no lo toco la luz)
+        self.returning = False
+
+        # True mientras esta cerca del jugador y viene a chuparlo pero
+        # todavia no se pego (el HUD muestra la advertencia)
+        self.alert = False
+
+        self.damage_t = random.uniform(0, MOSQUITO_DAMAGE_INTERVAL)
+        self.anim_t = random.uniform(0, 1)
 
     @property
     def dead(self):
@@ -1082,167 +1080,115 @@ class Mosquito(Enemy):
     def take_damage(self, amount):
 
         # Un mosquito pegado NO puede recibir ataques
-        if (
-            self.spawning
-            or self.dead
-            or self.attached
-        ):
+        if self.spawning or self.dead or self.attached:
             return 0
 
         self.hp -= amount
-
         self.flash = MOSQUITO_FLASH_TIME
 
-        # Si lo golpean mientras ataca,
-        # continúa hacia el jugador.
-        self.phase = "attack"
-
-        self.warning_t = 0.0
-
-        self.attack_vel = (
-            self.pos - self.last_target
-        )
-
-        if self.attack_vel.length_squared() < 0.01:
-
-            self.attack_vel = pygame.Vector2(
-                1,
-                0
-            )
-
-        self.attack_vel.scale_to_length(
-            MOSQUITO_ATTACK_SPEED
-        )
+        # Si todavia no te chupo y lo golpean, ataca. Si ya se estaba
+        # yendo, sigue yendose.
+        if self.phase == "wander":
+            self._start_attack()
 
         return amount
 
-    def _cancel_warning(self):
+    def _start_attack(self):
 
-        self.warning_t = 0.0
+        self.phase = "attack"
 
-        self.phase = "wait"
+        to_player = self.last_target - self.pos
 
-        self.phase_t = random.uniform(
-            *MOSQUITO_RETRY_WAIT
-        )
+        if to_player.length_squared() < 0.01:
+            to_player = pygame.Vector2(1, 0)
 
-    def update(
-        self,
-        dt,
-        target,
-        collision_map,
-        light_on,
-        light_radius
-    ):
+        self.attack_vel = to_player.normalize() * MOSQUITO_ATTACK_SPEED
+
+    def _detach(self, target):
+
+        self.attached = False
+        self.phase = "leave"
+        self.rest_t = MOSQUITO_REST_TIME
+        self.flee_t = MOSQUITO_FLEE_TIME
+        self.returning = False
+
+        away = self.pos - target
+
+        if away.length_squared() < 0.01:
+            away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        self.heading = away.normalize()
+        self.turn_t = random.uniform(*MOSQUITO_TURN_TIME)
+
+    def update(self, dt, target, collision_map, light_on, light_radius):
 
         target = pygame.Vector2(target)
-
         self.last_target = target.copy()
 
         self.anim_t += dt
 
         if self.flash > 0:
-
-            self.flash = max(
-                0.0,
-                self.flash - dt
-            )
+            self.flash = max(0.0, self.flash - dt)
 
         if self.spawning:
-
             self.spawn_t -= dt
-
             return
 
-        # Ya está pegado al jugador
+        # -------------------------------------------------------
+        # PEGADO: te chupa 1 minuto y despues se suelta
+        # -------------------------------------------------------
+
         if self.attached:
+
+            self.alert = False
+            self.attach_t -= dt
             self.damage_t -= dt
+
             self.pos = target + self.attach_offset
             self.rect.center = (round(self.pos.x), round(self.pos.y))
+
+            if self.attach_t <= 0:
+                self._detach(target)
+
             return
 
-        to_player = (
-            target - self.pos
-        )
-
-        dist = max(
-            0.01,
-            to_player.length()
-        )
-
+        to_player = target - self.pos
+        dist = max(0.01, to_player.length())
         toward = to_player / dist
 
         # -------------------------------------------------------
-        # SIN LUZ
-        # -------------------------------------------------------
-
-        if not light_on:
-
-            if self.phase in (
-                "warning",
-                "attack"
-            ):
-
-                self._cancel_warning()
-
-                self.attack_vel = (
-                    pygame.Vector2()
-                )
-
-            else:
-
-                self.phase_t = max(
-                    self.phase_t,
-                    random.uniform(
-                        1.0,
-                        2.0
-                    )
-                )
-
-            return
-
-        # -------------------------------------------------------
-        # ATAQUE
+        # ATAQUE: va directo al jugador y se pega
         # -------------------------------------------------------
 
         if self.phase == "attack":
 
-            desired = (
-                toward *
-                MOSQUITO_ATTACK_SPEED
-            )
+            # Si vuelve solo, avisa en el HUD hasta que se pega
+            self.alert = self.returning
 
-            self.attack_vel += (
-                desired -
-                self.attack_vel
-            ) * min(
+            desired = toward * MOSQUITO_ATTACK_SPEED
+
+            self.attack_vel += (desired - self.attack_vel) * min(
                 1.0,
-                MOSQUITO_ATTACK_ACCEL *
-                dt /
-                max(
-                    1.0,
-                    MOSQUITO_ATTACK_SPEED
-                )
+                MOSQUITO_ATTACK_ACCEL * dt / max(1.0, MOSQUITO_ATTACK_SPEED)
             )
 
-            self.vel = self.attack_vel
+            self.vel = self.attack_vel.copy()
+            self._move(dt, collision_map)
 
-            self._move(
-                dt,
-                collision_map
-            )
-
-            if (
-                self.pos.distance_to(target)
-                <= MOSQUITO_ATTACH_DIST
-            ):
+            if self.pos.distance_to(target) <= MOSQUITO_ATTACH_DIST:
 
                 self.attached = True
+                self.alert = False
+                self.attach_t = MOSQUITO_ATTACH_TIME
+
                 offset = self.pos - target
+
                 if offset.length_squared() < 0.01:
                     offset = pygame.Vector2(0, -10)
+
                 if offset.length() > 16:
                     offset.scale_to_length(16)
+
                 self.attach_offset = offset
                 self.vel = pygame.Vector2()
                 self.attack_vel = pygame.Vector2()
@@ -1251,188 +1197,106 @@ class Mosquito(Enemy):
             return
 
         # -------------------------------------------------------
-        # ADVERTENCIA
+        # SE FUE: se aleja y despues vuela tranquilo hasta que
+        # pasa el minuto y vuelve a chuparte
         # -------------------------------------------------------
 
-        if self.phase == "warning":
+        if self.phase == "leave":
 
-            self.warning_t -= dt
+            self.alert = False
+            self.rest_t -= dt
 
-            # Apagó la luz
-            if not light_on:
+            if self.rest_t <= 0:
 
-                self._cancel_warning()
+                self.returning = True
+                self._start_attack()
 
                 return
 
-            # Pasaron los 3 segundos
-            if self.warning_t <= 0:
+            if self.flee_t > 0:
 
-                self.phase = "attack"
+                self.flee_t -= dt
 
-                self.attack_vel = (
-                    toward *
-                    MOSQUITO_ATTACK_SPEED
-                )
+                # Se aleja del jugador
+                self.heading = -toward
 
-                return
+                self._wander(dt, collision_map, MOSQUITO_FLEE_SPEED, turn=False)
 
-            # No dejarlo acercarse demasiado
-            if dist < MOSQUITO_KEEP_DIST:
+            else:
 
-                self._walk(
-                    dt,
-                    -toward,
-                    collision_map
-                )
+                self._wander(dt, collision_map, MOSQUITO_WANDER_SPEED)
 
             return
 
         # -------------------------------------------------------
-        # ESPERA
+        # VUELO LIBRE: tranquilo por el mapa (no huye de la luz)
         # -------------------------------------------------------
 
-        self.phase_t -= dt
+        # Lo toca tu luz -> va directo hacia vos
+        if light_on and dist <= light_radius:
 
-        if (
-            self.phase_t <= 0
-            and light_on
-            and dist <= light_radius
-        ):
-
-            self.phase = "warning"
-
-            self.warning_t = (
-                MOSQUITO_WARNING_TIME
-            )
+            self.alert = False
+            self._start_attack()
 
             return
 
-        # -------------------------------------------------------
-        # MANTENER DISTANCIA
-        # -------------------------------------------------------
+        # Advertencia en el HUD: esta cerca pero todavia no lo toca la luz
+        self.alert = light_on and dist <= light_radius + MOSQUITO_ALERT_MARGIN
 
-        ideal = max(
-            MOSQUITO_KEEP_DIST,
-            light_radius + 18.0
-        )
+        self._wander(dt, collision_map, MOSQUITO_WANDER_SPEED)
 
-        ideal = min(
-            MOSQUITO_MAX_DIST,
-            ideal
-        )
+    def _wander(self, dt, collision_map, speed, turn=True):
 
-        if dist < ideal - 12:
+        if turn:
 
-            self._walk(
-                dt,
-                -toward,
-                collision_map
-            )
+            self.turn_t -= dt
 
-        elif dist > ideal + 20:
+            if self.turn_t <= 0:
 
-            self._walk(
-                dt,
-                toward,
-                collision_map
-            )
+                self.heading = self.heading.rotate(random.uniform(-70, 70))
+                self.turn_t = random.uniform(*MOSQUITO_TURN_TIME)
 
-    def _free(
-        self,
-        rect,
-        collision_map
-    ):
+        step = speed * dt
 
-        return (
-            ROOM.contains(rect)
-            and collision_map.can_move(rect)
-        )
+        # Si choca con algo, prueba otros rumbos hasta encontrar uno libre
+        for angle in (0, 40, -40, 90, -90, 140, -140, 180):
 
-    def _walk(
-        self,
-        dt,
-        direction,
-        collision_map
-    ):
+            d = self.heading.rotate(angle)
 
-        if direction.length_squared() < 0.01:
-
-            return
-
-        direction = direction.normalize()
-
-        step = min(
-            90.0,
-            MOSQUITO_ATTACK_SPEED * 0.34
-        ) * dt
-
-        for angle in (
-            0,
-            45,
-            -45,
-            90,
-            -90
-        ):
-
-            d = direction.rotate(angle)
-
-            nx = (
-                self.pos.x +
-                d.x * step
-            )
-
-            ny = (
-                self.pos.y +
-                d.y * step
-            )
+            nx = self.pos.x + d.x * step
+            ny = self.pos.y + d.y * step
 
             test = self.rect.copy()
+            test.center = (round(nx), round(ny))
 
-            test.center = (
-                round(nx),
-                round(ny)
-            )
+            if self._free(test, collision_map):
 
-            if self._free(
-                test,
-                collision_map
-            ):
+                self.pos.update(nx, ny)
+                self.rect.center = test.center
 
-                self.pos.update(
-                    nx,
-                    ny
-                )
-
-                self.rect.center = (
-                    test.center
-                )
+                if angle:
+                    self.heading = d
+                    self.turn_t = random.uniform(*MOSQUITO_TURN_TIME)
 
                 return
 
-    def draw(
-        self,
-        screen,
-        camera,
-        art
-    ):
+    def draw(self, screen, camera, art):
 
-        sprites, warning = art.get(
-            camera.zoom
-        )
-
-        frames, warning = art.get(camera.zoom)
+        frames, _ = art.get(camera.zoom)
 
         frame = frames[int(self.anim_t / MOSQUITO_ANIM_FRAME) % len(frames)]
 
         if self.attached:
+
             frame = pygame.transform.smoothscale(
                 frame,
                 (max(1, int(frame.get_width() * 0.85)),
                  max(1, int(frame.get_height() * 0.85)))
             )
+
             center = camera.apply(self.rect).center
             screen.blit(frame, frame.get_rect(center=center))
+
             return
 
         if self.flash > 0:
@@ -1441,13 +1305,6 @@ class Mosquito(Enemy):
 
         dest = camera.apply(self.rect)
         screen.blit(frame, frame.get_rect(center=dest.center))
-
-        if self.phase == "warning" and self.warning_t > 0:
-            screen.blit(warning, warning.get_rect(midbottom=(dest.centerx, dest.top - 4)))
-            draw_text(
-                screen, str(max(1, math.ceil(self.warning_t))), 22,
-                (255, 90, 90), center=(dest.centerx, dest.top - 20)
-            )
 
 class TroncoArt:
     """Imagenes del tronco y de sus bolas (se cargan una sola vez).
@@ -2172,6 +2029,8 @@ class Arena:
         self.art = EnemyArt()
         self.tronco_art = TroncoArt()
         self.mosquito_art = MosquitoArt()
+        self.mosquito_alert = False
+        self._alert_t = 0.0
 
         self.chest = None
         self.reward = 0
@@ -2408,7 +2267,7 @@ class Arena:
             if kind == "tronco":
                 self.enemies.append(Tronco(pos[0], pos[1], tronco_hp, spawn_delay=delay))
             elif kind == "mosquito":
-                self.enemies.append(Mosquito(pos[0], pos[1], hp, spawn_delay=delay))
+                self.enemies.append(Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay))
             else:
                 self.enemies.append(Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay))
 
@@ -2544,25 +2403,13 @@ class Arena:
         self._teleport_out(game)
 
     def _player_died(self, game):
+        """Morir en la sala (con o sin escape) es perder de verdad:
+        termina la partida."""
 
-        if self.mode == "noescape":
-
-            # Sin escape: perdes de verdad
-            self._end_run(game)
-
-            game.state = "dying"
-            game.fade_alpha = 0
-
-            return
-
-        # Con escape: te sacan de la sala
         self._end_run(game)
-        self._teleport_out(game)
 
-        if game.has_match:
-            game.vida = max(game.vida, ESCAPE_REVIVE_LIFE)
-
-        game.show_message("Te sacaron de la sala. Perdiste la oleada")
+        game.state = "dying"
+        game.fade_alpha = 0
 
     # ---------- update ----------
 
@@ -2668,6 +2515,11 @@ class Arena:
                 if enemy.fixed:
                     self.shots.extend(enemy.take_shots())
 
+        self.mosquito_alert = any(
+            isinstance(e, Mosquito) and e.alert and not e.dead
+            for e in self.enemies
+        )
+
         bounce_enemies(self.enemies, game.collision_map, target)
 
         for shot in self.shots:
@@ -2707,8 +2559,10 @@ class Arena:
             self._player_died(game)
             return
 
-        active_enemies = [e for e in self.enemies if not getattr(e, "attached", False)]
-        if not active_enemies:
+        # La oleada termina solo cuando no queda NINGUN enemigo (los
+        # mosquitos pegados tambien cuentan: aunque te chupen todos, la
+        # partida sigue)
+        if not self.enemies:
             self.shots = []
             self._wave_cleared(game)
 
@@ -2875,10 +2729,36 @@ class Arena:
                 topleft=(text_rect.right + 8, premio_y)
             )
 
+        # ---------- alerta de mosquito ----------
+
+        if self.state == self.WAVE and self.mosquito_alert:
+            self._draw_mosquito_alert(screen)
+
         # ---------- oleada completada ----------
 
         if self.banner_t > 0:
             self._draw_banner(screen)
+
+    def _draw_mosquito_alert(self, screen):
+        """Imagen de advertencia en pantalla (HUD, arriba al centro),
+        parpadeando, para avisar que hay un mosquito cerca."""
+
+        self._alert_t += 1 / 60
+
+        pulse = 0.5 + 0.5 * math.sin(self._alert_t * 8)
+
+        w, h = self.size
+
+        icon = self.mosquito_art.warning.copy()
+        icon.set_alpha(int(150 + 105 * pulse))
+
+        rect = icon.get_rect(midtop=(w // 2, 14))
+        screen.blit(icon, rect)
+
+        draw_text(
+            screen, "Mosquito cerca!", 24, (255, 120, 110),
+            center=(rect.centerx, rect.bottom + 12)
+        )
 
     def _draw_banner(self, screen):
 

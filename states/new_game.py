@@ -164,7 +164,7 @@ class NewGame:
         self.vida = 1.0
 
         # Escudo: por ahora solo se muestra, arranca vacio
-        self.escudo = 0.0
+        self.escudo = max(0.0, min(1.0, float(self.save_data.get("escudo", 0.0))))
 
         # Que luz esta equipada: "fosforo" o "vela" (ver world/lights.py)
         self.light_type = self.save_data.get("light", "fosforo")
@@ -590,6 +590,16 @@ class NewGame:
 
             return
 
+        # No gastar el hongo azul si el escudo ya esta lleno
+        if (
+            any(e.get("tipo") == "escudo_sumar" for e in effects)
+            and self.escudo >= 1.0
+        ):
+
+            self.show_message("El escudo ya esta al maximo")
+
+            return
+
         # No gastar cera si ya hay una activa
         if (
             any(e.get("tipo") == "consumo_lento" for e in effects)
@@ -657,6 +667,11 @@ class NewGame:
             if kind == "vida_sumar":
 
                 self.vida = min(1.0, self.vida + effect["valor"])
+
+            elif kind == "escudo_sumar":
+
+                # El escudo NO se gasta solo con el tiempo
+                self.escudo = min(1.0, self.escudo + effect["valor"])
 
             elif kind == "vida_fijar":
 
@@ -956,7 +971,8 @@ class NewGame:
             broken_doors=sorted(self.doors.broken_ids),
             chests=self.chests.save_data(),
             item_seed=self.item_seed,
-            arena_wave=self.arena.wave
+            arena_wave=self.arena.wave,
+            escudo=self.escudo
         )
 
     # ---------- actualizaciones extra ----------
