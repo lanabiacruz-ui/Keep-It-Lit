@@ -93,7 +93,7 @@ WAVE_COMPOSITION = {
     # Oleadas 8, 9 y 10: aparecen los hongunes
     8: (10, 5, 8, 1),
     9: (4, 6, 10, 3),
-    10: (0,0,0, 8),
+    10: (5,6,7, 8),
 }
 # Ultima oleada del mapa: al pasarla el mapa queda completado, el cofre
 # tira una gema y la sala se cierra para siempre.
