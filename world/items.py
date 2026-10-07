@@ -101,6 +101,39 @@ def load_icon(item_id):
     return _icon_cache[item_id]
 
 
+def _gem_placeholder():
+    """Gema dibujada por codigo, por si falta icon_gema.png."""
+
+    surf = pygame.Surface((64, 64), pygame.SRCALPHA)
+
+    top = [(32, 6), (56, 24), (32, 58), (8, 24)]
+
+    pygame.draw.polygon(surf, (90, 200, 255), top)
+    pygame.draw.polygon(surf, (190, 240, 255), [(32, 6), (56, 24), (32, 24)])
+    pygame.draw.polygon(surf, (50, 140, 220), [(8, 24), (32, 24), (32, 58)])
+    pygame.draw.polygon(surf, (235, 250, 255), top, 3)
+
+    return surf
+
+
+_gem_cache = None
+
+
+def get_gem_icon():
+    """Icono de la gema: assets/maps/hud/icon_gema.png (64x64). Si no
+    existe, una gema dibujada por codigo."""
+
+    global _gem_cache
+
+    if _gem_cache is None:
+
+        icon = load_icon("gema")
+
+        _gem_cache = icon if icon is not None else _gem_placeholder()
+
+    return _gem_cache
+
+
 def _load_json(name):
 
     try:
@@ -151,8 +184,12 @@ class WorldItem(MatchItem):
         if icon is not None:
             self.original = icon
 
-        # Las monedas se juntan solas al pasar cerca (sin apretar E)
-        self.auto = item_id == "moneda"
+        elif item_id == "gema":
+            self.original = get_gem_icon()
+
+        # Las monedas y la gema se juntan solas al pasar cerca (sin
+        # apretar E)
+        self.auto = item_id in ("moneda", "gema")
 
         # Animacion de "salir del cofre" (None = quieto en el piso)
         self.fly = None

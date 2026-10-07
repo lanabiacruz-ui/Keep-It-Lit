@@ -12,6 +12,10 @@ Al matar al ultimo enemigo aparece un cofre que brilla y explota,
 tirando las monedas del premio. Cuando las juntas vuelve el menu para
 la siguiente oleada.
 
+Al terminar la oleada LAST_WAVE (10) el mapa queda completado: el cofre
+tambien tira una gema, aparece el cartel de 'Mapa completado', te sacan
+de la sala y la entrada se cierra para siempre (se guarda en la partida).
+
 Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/enemigo.png            56x56
   assets/maps/combate/enemigo_anim.png       224x56 (4 frames)
@@ -22,6 +26,9 @@ Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/btn_jugar_sin_escape.png 260x56 (+ _hover)
   assets/maps/combate/hud_oleada.png         180x40
   assets/maps/combate/pantalla_oleada_completa.png 420x200
+  assets/maps/combate/pantalla_mapa_completado.png 420x200 (oleada 10)
+  assets/maps/combate/sala_sellada.png       40x160 (entrada cerrada)
+  assets/maps/hud/icon_gema.png              64x64
   assets/maps/combate/hongun_anim.png        224x56 (4 frames, caminar)
   assets/maps/combate/hongun_carga.png       112x56 (2 frames, recargando)
   assets/maps/combate/hongun.png             56x56  (opcional, 1 solo cuadro)
@@ -34,7 +41,7 @@ from pathlib import Path
 
 import pygame
 
-from world.items import WorldItem
+from world.items import WorldItem, get_gem_icon
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -86,8 +93,12 @@ WAVE_COMPOSITION = {
     # Oleadas 8, 9 y 10: aparecen los hongunes
     8: (10, 5, 8, 1),
     9: (4, 6, 10, 3),
-    10: (5, 6, 7, 8),
+    10: (0,0,0, 8),
 }
+# Ultima oleada del mapa: al pasarla el mapa queda completado, el cofre
+# tira una gema y la sala se cierra para siempre.
+LAST_WAVE = 10
+
 PINOS_STEP = 1
 TRONCOS_STEP = 1
 TRONCOS_MAX = 8
@@ -222,7 +233,7 @@ MOSQUITO_SPAWN_TIME = 0.8
 # Hongun (el creeper: camina tranquilo, te persigue y explota)
 # ---------------------------------------------------------------
 
-HONGUN_HP = 3                  # golpes que aguanta (si lo matas a golpes NO explota)
+HONGUN_HP = 6                  # golpes que aguanta (si lo matas a golpes NO explota)
 HONGUN_HITBOX = (10, 12)
 HONGUN_DRAW_SIZE = 18          # tamano dibujado (unidades del mundo)
 
@@ -254,6 +265,7 @@ HONGUN_CHARGE_FRAME = 0.12
 # ---------------------------------------------------------------
 
 BANNER_TIME = 3.0          # cuanto se ve "Oleada completada"
+BANNER_TIME_FINAL = 5.0    # cuanto se ve "Mapa completado"
 COLLECT_TIMEOUT = 7.0      # maximo esperando que juntes las monedas
 MAX_COIN_ITEMS = 30        # monedas dibujadas (cada una vale mas)
 
@@ -2471,6 +2483,11 @@ class Arena:
         self.last_death = None
         self.gate_on = False
 
+        # Mapa completado: la sala queda cerrada para siempre
+        self.completed = False
+        self.final_clear = False    # True mientras se cobra la oleada final
+        self._sealed_msg_t = -10.0
+
         self.particles = []
         self.ring_t = None
         self.ring_pos = (0, 0)
@@ -2497,7 +2514,16 @@ class Arena:
             COMBAT_DIR / "pantalla_oleada_completa.png", (420, 200)
         )
 
+        self.map_banner_img = load_image(
+            COMBAT_DIR / "pantalla_mapa_completado.png", (420, 200)
+        )
+
+        self.sealed_img = load_image(
+            COMBAT_DIR / "sala_sellada.png", (40, 160)
+        )
+
         self.coin_icon = load_image(HUD_DIR / "icon_moneda.png", (22, 22))
+        self.gem_icon = get_gem_icon()
 
         self.btn_imgs = {}
 
@@ -2656,6 +2682,10 @@ class Arena:
 
     def _open_gate(self, game):
 
+        # Mapa completado: la entrada no se vuelve a abrir
+        if self.completed:
+            return
+
         if self.gate_on:
 
             obstacles = game.collision_map.obstacles
@@ -2664,6 +2694,28 @@ class Arena:
                 obstacles.remove(GATE)
 
             self.gate_on = False
+
+    def restore_completed(self, game):
+        """Al cargar una partida con el mapa completado: la sala queda
+        cerrada. Si el jugador quedo adentro (o pisando la entrada) se
+        lo saca afuera para que no quede atrapado."""
+
+        if not self.completed:
+            return
+
+        self._seal(game)
+
+    def _seal(self, game):
+        """Cierra la entrada para siempre."""
+
+        p = game.player
+
+        if ROOM.collidepoint(p.rect.center) or p.rect.colliderect(
+            GATE.inflate(24, 24)
+        ):
+            self._teleport_out(game)
+
+        self._close_gate(game)
 
     # ---------- oleadas ----------
 
@@ -2797,6 +2849,29 @@ class Arena:
         self.collect_t = 0.0
         self.banner_t = BANNER_TIME
 
+        # Oleada final: el cofre tambien tira una gema y el mapa queda
+        # completado. La gema se cuenta ya (asi no se pierde si cerras
+        # el juego mientras juntas las monedas); value = 0 evita
+        # contarla dos veces al agarrarla.
+        if self.wave == LAST_WAVE:
+
+            game.gems += 1
+
+            gem = WorldItem("gema", cx, cy)
+            gem.value = 0
+
+            gem.start_fly(
+                (cx, cy), self._coin_target(game, cx, cy),
+                delay=0.25, height=26, duration=0.6
+            )
+
+            self.reward_coins.append(gem)
+            game.world_items.append(gem)
+
+            self.final_clear = True
+            self.completed = True
+            self.banner_t = BANNER_TIME_FINAL
+
         # La siguiente oleada ya queda lista
         self.wave += 1
 
@@ -2826,7 +2901,12 @@ class Arena:
         for coin in self._coins_left(game):
 
             game.world_items.remove(coin)
-            game.coins += getattr(coin, "value", 1)
+
+            # La gema ya se conto al explotar el cofre (value = 0)
+            if coin.item_id == "gema":
+                game.gems += getattr(coin, "value", 1)
+            else:
+                game.coins += getattr(coin, "value", 1)
 
         self.reward_coins = []
 
@@ -2855,7 +2935,22 @@ class Arena:
         self.reward = 0
         self.mode = None
         self.banner_t = 0.0
+        self.final_clear = False
         self.state = self.IDLE
+
+        # Mapa completado: la entrada queda cerrada para siempre
+        if self.completed:
+            self._seal(game)
+
+    def _finish_map(self, game):
+        """Termino de cobrarse la oleada final: se saca al jugador de la
+        sala, la entrada se cierra para siempre y se guarda."""
+
+        self._end_run(game)
+        self._teleport_out(game)
+
+        game.show_message("Mapa completado! La sala se cerro para siempre")
+        game.save_progress()
 
     def _leave(self, game):
         """Boton Salir (o ESC en el menu)."""
@@ -2916,6 +3011,21 @@ class Arena:
 
         if self.state == self.IDLE:
 
+            # Mapa completado: no se abre mas el menu. Si te acercas a
+            # la entrada cerrada te avisa.
+            if self.completed:
+
+                if (
+                    p.rect.colliderect(GATE.inflate(40, 30))
+                    and self._gate_time - self._sealed_msg_t > 2.5
+                ):
+                    self._sealed_msg_t = self._gate_time
+                    game.show_message(
+                        "Mapa completado: la sala esta cerrada"
+                    )
+
+                return
+
             center = p.rect.center
 
             if self.armed and TRIGGER.collidepoint(center):
@@ -2946,7 +3056,26 @@ class Arena:
 
                 game.show_message(f"+{self.reward} monedas")
 
+                # Oleada final: tambien se lleva la gema y el mapa queda
+                # completado (si no, podria repetir la oleada 10)
+                if self.wave == LAST_WAVE:
+
+                    game.gems += 1
+
+                    self.wave += 1
+                    self.completed = True
+
+                    game.show_message(
+                        f"+{self.reward} monedas y 1 gema. "
+                        "Mapa completado!"
+                    )
+
+                    game.save_progress()
+
             self._end_run(game)
+
+            if self.completed:
+                game.save_progress()
 
             return
 
@@ -3111,12 +3240,20 @@ class Arena:
 
         left = self._coins_left(game)
 
-        if (not left and self.collect_t > 1.0) or (
-            self.collect_t > COLLECT_TIMEOUT
-        ):
+        done = not left and self.collect_t > 1.0
+
+        # Oleada final: se espera a que se vea el cartel de mapa completado
+        if self.final_clear:
+            done = done and self.banner_t <= 0
+
+        if done or self.collect_t > COLLECT_TIMEOUT:
 
             self.chest = None
-            self._open_menu(game)
+
+            if self.final_clear:
+                self._finish_map(game)
+            else:
+                self._open_menu(game)
 
     # ---------- dibujo ----------
 
@@ -3137,7 +3274,26 @@ class Arena:
         if self.chest is not None and not self.chest.done:
             self.chest.draw(screen, camera)
 
-        if self.gate_on:
+        # Mapa completado: entrada sellada (fija, no parpadea)
+        if self.gate_on and self.completed:
+
+            rect = camera.apply(GATE)
+
+            if self.sealed_img is not None:
+
+                img = self.sealed_img
+
+                if img.get_size() != rect.size:
+                    img = pygame.transform.smoothscale(img, rect.size)
+
+                screen.blit(img, rect)
+
+            else:
+
+                pygame.draw.rect(screen, (46, 46, 54), rect)
+                pygame.draw.rect(screen, (120, 120, 134), rect, 2)
+
+        elif self.gate_on:
 
             rect = camera.apply(GATE)
 
@@ -3327,9 +3483,13 @@ class Arena:
         layer = pygame.Surface(rect.size, pygame.SRCALPHA)
         local = layer.get_rect()
 
-        if self.banner_img is not None:
+        final = self.final_clear
 
-            layer.blit(self.banner_img, (0, 0))
+        img = self.map_banner_img if final else self.banner_img
+
+        if img is not None:
+
+            layer.blit(img, (0, 0))
 
         else:
 
@@ -3337,20 +3497,49 @@ class Arena:
             pygame.draw.rect(layer, (200, 200, 210), local, 3, border_radius=14)
 
             draw_text(
-                layer, "Oleada completada!", 40, (255, 240, 170),
+                layer,
+                "Mapa completado!" if final else "Oleada completada!",
+                40, (255, 240, 170),
                 center=(local.centerx, 56)
             )
 
-        draw_text(
-            layer, f"+{self.reward}", 64, (255, 225, 120),
-            center=(local.centerx + 14, local.centery + 28)
-        )
+        if final:
 
-        if self.coin_icon is not None:
+            # Monedas a la izquierda, gema a la derecha
+            y = local.centery + 28
 
-            coin = pygame.transform.smoothscale(self.coin_icon, (40, 40))
+            if self.coin_icon is not None:
 
-            layer.blit(coin, coin.get_rect(center=(local.centerx - 62, local.centery + 28)))
+                coin = pygame.transform.smoothscale(self.coin_icon, (40, 40))
+
+                layer.blit(coin, coin.get_rect(center=(local.centerx - 130, y)))
+
+            draw_text(
+                layer, f"+{self.reward}", 56, (255, 225, 120),
+                midleft=(local.centerx - 104, y)
+            )
+
+            gem = pygame.transform.smoothscale(self.gem_icon, (40, 40))
+
+            layer.blit(gem, gem.get_rect(center=(local.centerx + 50, y)))
+
+            draw_text(
+                layer, "+1", 56, (190, 235, 255),
+                midleft=(local.centerx + 76, y)
+            )
+
+        else:
+
+            draw_text(
+                layer, f"+{self.reward}", 64, (255, 225, 120),
+                center=(local.centerx + 14, local.centery + 28)
+            )
+
+            if self.coin_icon is not None:
+
+                coin = pygame.transform.smoothscale(self.coin_icon, (40, 40))
+
+                layer.blit(coin, coin.get_rect(center=(local.centerx - 62, local.centery + 28)))
 
         layer.set_alpha(alpha)
 

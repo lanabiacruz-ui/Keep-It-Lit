@@ -14,6 +14,7 @@ from world.lighting import PlayerLight
 from world.items import (
     LightItem,
     WorldItem,
+    get_gem_icon,
     load_item_defs,
     load_spawn_zones,
     make_spawn_items
@@ -169,6 +170,9 @@ class NewGame:
 
         self.coins = int(self.save_data.get("coins", 0))
 
+        # Gemas (las tira el cofre al completar el mapa)
+        self.gems = int(self.save_data.get("gems", 0))
+
         # ---------- Fosforo / vida ----------
 
         self.has_match = bool(self.save_data.get("has_match", False))
@@ -191,6 +195,13 @@ class NewGame:
 
         # El golpe se crea antes porque equip_match() le avisa que luz hay
         self.melee = Melee()
+
+        # Mapa completado: la sala de combate queda cerrada para siempre
+        # (se carga de la partida; si el jugador quedo adentro, se lo saca)
+        self.arena.completed = bool(
+            self.save_data.get("arena_completed", False)
+        )
+        self.arena.restore_completed(self)
 
         # Furia de la vela: cuenta atras hasta la proxima furia y
         # cuanto le queda a la que esta activa (ver world/lights.py)
@@ -530,6 +541,17 @@ class NewGame:
             # Las monedas del cofre de la sala de combate valen mas
             self.coins += getattr(item, "value", 1)
             self.world_items.remove(item)
+
+            return
+
+        if item.item_id == "gema":
+
+            # La gema del cofre del mapa completado ya se cuenta cuando
+            # el cofre explota (value = 0); esto es solo recogerla
+            self.gems += getattr(item, "value", 1)
+            self.world_items.remove(item)
+
+            self.show_message("Conseguiste una gema!")
 
             return
 
@@ -1046,8 +1068,45 @@ class NewGame:
             chests=self.chests.save_data(),
             item_seed=self.item_seed,
             arena_wave=self.arena.wave,
+            arena_completed=self.arena.completed,
+            gems=self.gems,
             escudo=self.escudo
         )
+
+    def _draw_gems(self):
+        """Gemas debajo de las monedas (solo aparece si tenes alguna)."""
+
+        if self.gems <= 0:
+            return
+
+        # Fuente e icono se crean una sola vez
+        if not hasattr(self, "_gem_font"):
+
+            self._gem_font = pygame.font.Font(None, 32)
+
+            self._gem_small = pygame.transform.smoothscale(
+                get_gem_icon(), (28, 28)
+            )
+
+        icon = self._gem_small
+        font = self._gem_font
+
+        label = font.render(f"x{self.gems}", True, (200, 240, 255))
+        shadow = font.render(f"x{self.gems}", True, (0, 0, 0))
+
+        coin = self.hud.coin_rect
+
+        label_rect = label.get_rect(
+            midright=(coin.right - 6, coin.bottom + 18)
+        )
+
+        icon_rect = icon.get_rect(
+            midright=(label_rect.left - 6, label_rect.centery)
+        )
+
+        self.screen.blit(icon, icon_rect)
+        self.screen.blit(shadow, label_rect.move(2, 2))
+        self.screen.blit(label, label_rect)
 
     # ---------- actualizaciones extra ----------
 
@@ -1242,12 +1301,14 @@ class NewGame:
                     if item is not None:
                         self.pick_up_item(item)
 
-                    # Si no hay nada para agarrar, hablarle al vendedor
-                    elif self.shopkeeper.can_talk(self.player):
-                        self._open_shop()
-
                     elif drop is not None:
                         self.show_message("Ya tenes una luz encendida")
+
+            # F = hablarle al vendedor (abre la tienda)
+            if event.key == pygame.K_f:
+
+                if self.shopkeeper.can_talk(self.player):
+                    self._open_shop()
 
             # 1 = seleccionar la cosa iluminadora equipada
             if event.key == pygame.K_1:
@@ -1590,11 +1651,13 @@ class NewGame:
             if near_item is not None:
                 near_item.draw_prompt(self.screen, self.camera)
 
-            elif (
-                self.shop is None
-                and self.shopkeeper.can_talk(self.player)
-            ):
-                self.shopkeeper.draw_prompt(self.screen, self.camera)
+        # Cartelito [F] del vendedor
+        if (
+            self.state == "playing"
+            and self.shop is None
+            and self.shopkeeper.can_talk(self.player)
+        ):
+            self.shopkeeper.draw_prompt(self.screen, self.camera)
 
         self.hud.draw(
             self.screen,
@@ -1604,6 +1667,8 @@ class NewGame:
             coins=self.coins,
             equipped_selected=self.selected_slot == "equipped"
         )
+
+        self._draw_gems()
 
         # Cubitos de efectos arriba al centro (se vacian hasta desaparecer)
         active = {}

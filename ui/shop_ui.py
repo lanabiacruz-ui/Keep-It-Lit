@@ -432,14 +432,15 @@ class ShopUI:
 
         if event.type == pygame.KEYDOWN:
 
-            # Con la info abierta, Esc / E solo la cierran
+            # Con la info abierta, cualquier tecla solo la cierra
             if self.info_id is not None:
 
                 self.info_id = None
 
                 return None
 
-            if event.key in (pygame.K_ESCAPE, pygame.K_e):
+            # Esc / F cierran la tienda (F es la misma tecla que la abre)
+            if event.key in (pygame.K_ESCAPE, pygame.K_f):
                 return "close"
 
             return None

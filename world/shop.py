@@ -94,14 +94,15 @@ class Shopkeeper:
     """El vendedor rojo de la sala superior central.
 
     Esta dibujado en el mapa (mapa.png); aca solo vive su zona de
-    interaccion, el cartelito de [E] y la animacion de escupir lo
-    que compraste.
+    interaccion, el cartelito de [F] y la animacion de escupir lo
+    que compraste. La tienda se abre tocando F (la E queda para
+    agarrar cosas).
     """
 
     # Boca del vendedor (coordenadas del mundo = pixeles de mapa.png)
     MOUTH = (951, 87)
 
-    # Arriba de la cabeza, para el cartel de [E]
+    # Arriba de la cabeza, para el cartel de [F]
     HEAD_TOP = 76
 
     # Desde donde se le puede hablar: alrededor de la mesa (el
@@ -139,9 +140,9 @@ class Shopkeeper:
 
     def __init__(self):
 
-        self.e_icon = pygame.image.load(
-            str(HUD_DIR / "E.png")
-        ).convert_alpha()
+        # Cartelito [F] (assets/maps/hud/F.png, 32x32, igual que E.png).
+        # Si falta el archivo se dibuja una F simple como reemplazo.
+        self.f_icon = self._load_f_icon()
 
         # Boca abierta (vendedor_boca.png); None si falta el archivo
         try:
@@ -157,6 +158,32 @@ class Shopkeeper:
         self.spit_time = 0.0
 
         self._clock = 0.0
+
+    @staticmethod
+    def _load_f_icon():
+
+        path = HUD_DIR / "F.png"
+
+        try:
+            return pygame.image.load(str(path)).convert_alpha()
+        except (pygame.error, FileNotFoundError):
+            pass
+
+        surf = pygame.Surface((32, 32), pygame.SRCALPHA)
+
+        pygame.draw.rect(
+            surf, (30, 30, 38, 235), surf.get_rect(), border_radius=6
+        )
+        pygame.draw.rect(
+            surf, (230, 230, 240), surf.get_rect(), 2, border_radius=6
+        )
+
+        font = pygame.font.Font(None, 30)
+        letter = font.render("F", True, (255, 255, 255))
+
+        surf.blit(letter, letter.get_rect(center=(16, 16)))
+
+        return surf
 
     # ---------- interaccion ----------
 
@@ -270,13 +297,13 @@ class Shopkeeper:
         )
 
     def draw_prompt(self, screen, camera):
-        """Cartelito de [E] arriba de la cabeza."""
+        """Cartelito de [F] arriba de la cabeza."""
 
         mx = self.MOUTH[0]
 
         dest = camera.apply(pygame.Rect(mx - 1, self.HEAD_TOP, 2, 2))
 
         screen.blit(
-            self.e_icon,
-            self.e_icon.get_rect(midbottom=(dest.centerx, dest.top - 6))
+            self.f_icon,
+            self.f_icon.get_rect(midbottom=(dest.centerx, dest.top - 6))
         )
