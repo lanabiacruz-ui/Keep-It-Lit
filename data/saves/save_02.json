@@ -1,0 +1,24 @@
+{
+    "player_name": "of",
+    "created_at": "2026-10-07T11:44:50",
+    "last_played": "2026-10-07T11:45:03",
+    "x": 984,
+    "y": 930,
+    "has_match": false,
+    "light": "fosforo",
+    "coins": 0,
+    "inventory": [
+        null,
+        null,
+        null,
+        null
+    ],
+    "collected": [],
+    "broken_doors": [],
+    "chests": {},
+    "item_seed": 311940920,
+    "arena_wave": 1,
+    "arena_completed": false,
+    "gems": 0,
+    "escudo": 0.0
+}
