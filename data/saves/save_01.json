@@ -1,48 +1,22 @@
 {
-    "player_name": "Tesrt",
-    "created_at": "2026-10-05T18:52:39",
-    "last_played": "2026-10-06T00:13:27",
-    "x": 943,
-    "y": 482,
+    "player_name": "o",
+    "created_at": "2026-10-06T23:27:32",
+    "last_played": "2026-10-06T23:28:23",
+    "x": 952,
+    "y": 912,
     "has_match": true,
-    "light": "vela",
-    "coins": 97921,
+    "light": "fosforo",
+    "coins": 0,
     "inventory": [
-        [
-            "polvora",
-            8
-        ],
         null,
-        [
-            "aceite",
-            5
-        ],
-        [
-            "aceite",
-            5
-        ]
+        null,
+        null,
+        null
     ],
-    "collected": [
-        "aceite_02#0",
-        "aceite_03#0",
-        "cera_02#0",
-        "madera_01#0",
-        "madera_04#0",
-        "madera_05#0",
-        "madera_08#0",
-        "madera_09#0",
-        "madera_10#0"
-    ],
-    "broken_doors": [
-        "cabana",
-        "hub_abajo",
-        "hub_arriba",
-        "hub_derecha",
-        "sala_der",
-        "sup_central_abajo"
-    ],
+    "collected": [],
+    "broken_doors": [],
     "chests": {},
-    "item_seed": 210385026,
-    "arena_wave": 8,
+    "item_seed": 900214566,
+    "arena_wave": 1,
     "escudo": 0.0
 }

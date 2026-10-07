@@ -23,12 +23,12 @@ FRAME_CROP = None   # texto.png nuevo (800x285): se usa entero
 
 
 TUTORIAL_PAGES = [
-    "Bienvenido a Keep It Lit. Tu luz es tu vida: si se apaga, perdes.",
-    "Movete con W A S D o con las flechas del teclado.",
-    "Click izquierdo: pegar con tu luz. Rompe puertas y abre cofres.",
-    "E: agarrar objetos del piso o hablar con el vendedor.",
-    "Teclas 1 a 4: elegir casillero. Click derecho: usar el objeto.",
-    "Q: soltar lo que tengas elegido. ESC: guardar y volver al menu.",
+    "Bienvenido a Keep It Lit!! Tu luz alli abajo (la barra naranja) es tu vida: si se apaga, perderas",
+    "Muevete con WASD, busca en esta cabaña objetos para alimentar a tu llama",
+    " Click izquierdo para pegar con tu luz (Cada golpe le baja a tu vida). Te da la posibilidad de romper puertas y abrir cofres",
+    "Utiliza la E para agarrar objetos del piso y la Q para soltarlos",
+    "Teclas del 1 al 5 sirven para elegir casillero. Click derecho: para consumir el objeto",
+    "ESC habre el menu y mantener click izquierdo en el slot donde estan ubicados los objetos te da informacion de su funcion",
 ]
 
 # Letras azules (oscuras para que se lean sobre el cuadro gris)

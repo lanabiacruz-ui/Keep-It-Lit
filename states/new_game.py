@@ -25,6 +25,7 @@ from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena
 from world.shop import Shopkeeper, load_catalog, price_table
 from ui.hud import Hud
+from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
@@ -156,6 +157,10 @@ class NewGame:
 
         self.hud = Hud((self.width, self.height))
 
+        # Efectos activos (y la alerta del mosquito) como cubitos arriba
+        self.effects_bar = EffectsBar((self.width, self.height))
+        self.effects_bar.set_alert_image(self.arena.mosquito_art.warning)
+
         # Tutorial: solo en partida nueva (al continuar no aparece).
         # Mientras esta abierto el juego queda en pausa.
         self.tutorial = (
@@ -266,6 +271,12 @@ class NewGame:
         self.speed_timer = 0.0
         self.burn_factor = 1.0
         self.burn_timer = 0.0
+
+        # Duracion total de cada efecto (para saber cuanto falta en %)
+        self.speed_total = 1.0
+        self.burn_total = 1.0
+        self.polvora_total = 1.0
+        self.regen_total = 1.0
 
         # Polvora: la luz hace dano mientras dura
         self.polvora_timer = 0.0
@@ -709,16 +720,19 @@ class NewGame:
 
                 self.player.movement.speed_mult = effect["multiplicador"]
                 self.speed_timer = effect["duracion"]
+                self.speed_total = max(0.01, effect["duracion"])
 
             elif kind == "consumo_lento":
 
                 self.burn_factor = effect["factor"]
                 self.burn_timer = effect["duracion"]
+                self.burn_total = max(0.01, effect["duracion"])
 
             elif kind == "luz_dano":
 
                 self.polvora_dps = effect.get("dano_por_segundo", 1)
                 self.polvora_timer = effect["duracion"]
+                self.polvora_total = max(0.01, effect["duracion"])
                 self._polvora_acc = 0.0
 
             elif kind == "vida_gradual":
@@ -727,6 +741,7 @@ class NewGame:
                 # (sin pasar del 100%)
                 self.regen_left = effect["valor"]
                 self.regen_rate = effect["valor"] / effect["duracion"]
+                self.regen_total = max(0.01, effect["duracion"])
 
             elif kind == "abrir_cofre" and chest is not None:
 
@@ -1059,6 +1074,41 @@ class NewGame:
             ):
 
                 self.pick_up_item(item)
+
+    def _active_effects(self):
+        """Efectos que estan corriendo: {clave: fraccion que queda}.
+        Los dibuja EffectsBar como cubitos que se van vaciando."""
+
+        def frac(left, total):
+            return max(0.0, min(1.0, left / max(0.01, total)))
+
+        active = {}
+
+        if self.speed_timer > 0:
+            active["aceite"] = frac(self.speed_timer, self.speed_total)
+
+        if self.burn_timer > 0:
+            active["cera"] = frac(self.burn_timer, self.burn_total)
+
+        if self.polvora_timer > 0:
+            active["polvora"] = frac(self.polvora_timer, self.polvora_total)
+
+        if self.regen_left > 0 and self.regen_rate > 0:
+            active["resina"] = frac(
+                self.regen_left / self.regen_rate, self.regen_total
+            )
+
+        if self.fury_left > 0:
+
+            length = light_stats(self.light_type).get("furia_duracion", 0)
+
+            active["furia"] = frac(self.fury_left, length)
+
+        # Alerta del mosquito: aparece en la misma fila (no se vacia)
+        if self.arena.state == self.arena.WAVE and self.arena.mosquito_alert:
+            active["mosquito"] = 1.0
+
+        return active
 
     def _update_effects(self, dt):
         """Polvora y resina. Solo corren con el fosforo prendido."""
@@ -1555,42 +1605,13 @@ class NewGame:
             equipped_selected=self.selected_slot == "equipped"
         )
 
+        # Cubitos de efectos arriba al centro (se vacian hasta desaparecer)
+        active = {}
+
         if self.state == "playing" and self.has_match:
+            active = self._active_effects()
 
-            status = []
-
-            if self.burn_timer > 0:
-                status.append(
-                    (f"Cera: {math.ceil(self.burn_timer)}s", (255, 225, 140))
-                )
-
-            if self.fury_left > 0:
-                status.append(
-                    (f"Furia: {math.ceil(self.fury_left)}s", (255, 120, 50))
-                )
-
-            if self.polvora_timer > 0:
-                status.append(
-                    (f"Polvora: {math.ceil(self.polvora_timer)}s", (255, 150, 70))
-                )
-
-            if self.regen_left > 0:
-                secs = math.ceil(self.regen_left / self.regen_rate)
-                status.append((f"Resina: {secs}s", (200, 150, 90)))
-
-            font = self.hud.msg_font
-
-            for i, (txt, color) in enumerate(status):
-
-                shadow = font.render(txt, True, (0, 0, 0))
-                label = font.render(txt, True, color)
-
-                pos = label.get_rect(
-                    midtop=(self.width // 2, 18 + i * 28)
-                )
-
-                self.screen.blit(shadow, pos.move(1, 1))
-                self.screen.blit(label, pos)
+        self.effects_bar.draw(self.screen, active)
 
         self.hud.draw_overlay(
             self.screen,

@@ -22,6 +22,10 @@ Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/btn_jugar_sin_escape.png 260x56 (+ _hover)
   assets/maps/combate/hud_oleada.png         180x40
   assets/maps/combate/pantalla_oleada_completa.png 420x200
+  assets/maps/combate/hongun_anim.png        224x56 (4 frames, caminar)
+  assets/maps/combate/hongun_carga.png       112x56 (2 frames, recargando)
+  assets/maps/combate/hongun.png             56x56  (opcional, 1 solo cuadro)
+  assets/maps/combate/hongun_golpe.png       56x56  (opcional)
 """
 
 import math
@@ -61,22 +65,28 @@ GATE = pygame.Rect(1236, 500, 10, 40)
 # Oleadas (para balancear, se cambia todo aca)
 # ---------------------------------------------------------------
 
-# Que trae cada oleada: (pinos, troncos). Los pinos rebotan y te
-# pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan.
+# Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
+# pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
+# los hongunes caminan tranquilos, te persiguen cuando te detectan y explotan.
 # Despues de la ultima definida sube PINOS_STEP pinos y TRONCOS_STEP
 # troncos por oleada, sin pasar de ENEMIES_MAX en total.
 WAVE_COMPOSITION = {
-    1: (1, 0, 0),
-    2: (4, 0, 0),
-    3: (5, 1, 0),
-    4: (5, 2, 0),
-    5: (4, 4, 0),
+    1: (1, 0, 0, 0),
+    2: (4, 0, 0, 0),
+    3: (5, 1, 0, 0),
+    4: (5, 2, 0, 0),
+    5: (4, 4, 0, 0),
 
     # Oleada 6
-    6: (4, 7, 3),
+    6: (4, 7, 3, 0),
 
     # Oleada 7
-    7: (10, 5, 6),
+    7: (10, 5, 6, 0),
+
+    # Oleadas 8, 9 y 10: aparecen los hongunes
+    8: (10, 5, 8, 1),
+    9: (4, 6, 10, 3),
+    10: (5, 6, 7, 8),
 }
 PINOS_STEP = 1
 TRONCOS_STEP = 1
@@ -84,6 +94,8 @@ TRONCOS_MAX = 8
 ENEMIES_MAX = 32
 MOSQUITOS_STEP = 1   # mosquitos que se suman por oleada despues de la ultima definida
 MOSQUITOS_MAX = 20
+HONGUNS_STEP = 0     # hongunes que se suman por oleada despues de la ultima definida (0 = se quedan igual)
+HONGUNS_MAX = 8
 
 # Oleada de PRUEBA (solo mosquitos). La usa la partida "Prueba mosquitos".
 # Para cambiar cuantos salen, cambia el 3. Se puede borrar cuando termines.
@@ -205,6 +217,38 @@ MOSQUITO_DAMAGE_INTERVAL = 1.0
 MOSQUITO_ANIM_FRAME = 0.10
 MOSQUITO_FLASH_TIME = 0.10
 MOSQUITO_SPAWN_TIME = 0.8
+
+# ---------------------------------------------------------------
+# Hongun (el creeper: camina tranquilo, te persigue y explota)
+# ---------------------------------------------------------------
+
+HONGUN_HP = 3                  # golpes que aguanta (si lo matas a golpes NO explota)
+HONGUN_HITBOX = (10, 12)
+HONGUN_DRAW_SIZE = 18          # tamano dibujado (unidades del mundo)
+
+# Movimiento (unidades del mundo por segundo; el jugador va a 95)
+HONGUN_WANDER_SPEED = 22.0     # paseando tranquilo
+HONGUN_CHASE_SPEED = 52.0      # persiguiendote (caminata normal)
+HONGUN_TURN_TIME = (1.0, 2.6)  # cada cuanto cambia de rumbo paseando
+
+# Deteccion
+HONGUN_DETECT_RADIUS = 85.0    # si entras en este radio te empieza a perseguir
+HONGUN_LOSE_RADIUS = 140.0     # si te alejas mas que esto te deja de perseguir
+
+# Recarga y explosion
+HONGUN_FUSE_DIST = 24.0        # a esta distancia empieza a recargar
+HONGUN_FUSE_CANCEL_DIST = 46.0 # si te alejas mas que esto durante la recarga, se cancela
+HONGUN_FUSE_TIME = 1.3         # segundos recargando hasta explotar
+HONGUN_BLAST_RADIUS = 40.0     # radio de la explosion (unidades del mundo)
+HONGUN_DAMAGE = 0.75           # 0.75 = 75% de la vida de la luz
+HONGUN_KNOCKBACK = 340.0       # empujon al jugador (el golpe normal de un pino es 120)
+HONGUN_LIGHT_MIN = 24          # luz que da al empezar a recargar (px de pantalla)
+HONGUN_LIGHT_MAX = 80          # luz que da justo antes de explotar
+HONGUN_BLAST_TIME = 0.5        # duracion del aro de la explosion
+
+HONGUN_ANIM_FRAME = 0.15
+HONGUN_CHARGE_FRAME = 0.12
+
 # ---------------------------------------------------------------
 # Tiempos
 # ---------------------------------------------------------------
@@ -281,21 +325,22 @@ def quantize_radius(radius):
 
 
 def wave_composition(wave):
-    """(pinos, troncos, mosquitos) de una oleada."""
+    """(pinos, troncos, mosquitos, hongunes) de una oleada."""
     if wave == MOSQUITO_TEST_WAVE:
-        return 0, 0, MOSQUITO_TEST_COUNT
+        return 0, 0, MOSQUITO_TEST_COUNT, 0
     if wave in WAVE_COMPOSITION:
         return WAVE_COMPOSITION[wave]
     last = max(WAVE_COMPOSITION)
-    pinos, troncos, mosquitos = WAVE_COMPOSITION[last]
+    pinos, troncos, mosquitos, honguns = WAVE_COMPOSITION[last]
     extra = max(0, wave - last)
     pinos += PINOS_STEP * extra
     troncos = min(TRONCOS_MAX, troncos + TRONCOS_STEP * extra)
     mosquitos = min(MOSQUITOS_MAX, mosquitos + MOSQUITOS_STEP * extra)
-    total = pinos + troncos + mosquitos
+    honguns = min(HONGUNS_MAX, honguns + HONGUNS_STEP * extra)
+    total = pinos + troncos + mosquitos + honguns
     if total > ENEMIES_MAX:
         mosquitos = max(0, mosquitos - (total - ENEMIES_MAX))
-    return pinos, troncos, mosquitos
+    return pinos, troncos, mosquitos, honguns
 
 
 def enemies_for_wave(wave):
@@ -1807,6 +1852,390 @@ class Tronco(Enemy):
 
 
 # ---------------------------------------------------------------
+# Hongun
+# ---------------------------------------------------------------
+
+class HongunArt:
+    """Imagenes del hongun (se cargan una sola vez).
+
+      assets/maps/combate/hongun_anim.png   224x56  (4 cuadros de 56x56, caminar)
+      assets/maps/combate/hongun_carga.png  112x56  (2 cuadros de 56x56, recargando)
+      assets/maps/combate/hongun.png        56x56   (opcional: un solo cuadro de caminar)
+      assets/maps/combate/hongun_golpe.png  56x56   (opcional: cuando le pegas)
+
+    Lo blanco de la recarga lo hace el codigo (parpadea hacia blanco), asi
+    que hongun_carga.png se dibuja con los colores normales (hinchado).
+    """
+
+    def __init__(self):
+
+        walk = load_strip(COMBAT_DIR / "hongun_anim.png")
+        single = load_strip(COMBAT_DIR / "hongun.png")
+        charge = load_strip(COMBAT_DIR / "hongun_carga.png")
+        hit = load_image(COMBAT_DIR / "hongun_golpe.png")
+
+        self.walk = walk or single or [self._placeholder(0), self._placeholder(1)]
+        self.charge = charge or [self.walk[0], self.walk[0]]
+
+        if hit is None:
+
+            hit = self.walk[0].copy()
+            hit.fill((170, 170, 170, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+        self.hit = hit
+
+        self._zoom = None
+        self._scaled = None
+
+    @staticmethod
+    def _placeholder(step=0):
+
+        surf = pygame.Surface((56, 56), pygame.SRCALPHA)
+
+        dark = (40, 120, 50)
+        mid = (80, 175, 80)
+        light = (120, 205, 110)
+
+        # cuerpo
+        pygame.draw.rect(surf, mid, (14, 6, 28, 30))
+        pygame.draw.rect(surf, dark, (14, 6, 28, 30), 2)
+
+        # manchas
+        for x, y in ((18, 10), (32, 12), (22, 28), (34, 26)):
+            pygame.draw.rect(surf, light, (x, y, 6, 6))
+
+        # patas (se alternan para que parezca que camina)
+        off = 2 if step % 2 == 0 else -2
+
+        pygame.draw.rect(surf, dark, (14 + off, 36, 12, 14))
+        pygame.draw.rect(surf, dark, (30 - off, 36, 12, 14))
+
+        # cara
+        pygame.draw.rect(surf, (15, 40, 20), (19, 14, 6, 6))
+        pygame.draw.rect(surf, (15, 40, 20), (31, 14, 6, 6))
+        pygame.draw.rect(surf, (15, 40, 20), (25, 20, 6, 10))
+        pygame.draw.rect(surf, (15, 40, 20), (21, 24, 4, 8))
+        pygame.draw.rect(surf, (15, 40, 20), (31, 24, 4, 8))
+
+        return surf
+
+    def get(self, zoom):
+
+        if self._zoom != zoom:
+
+            px = max(1, int(HONGUN_DRAW_SIZE * zoom))
+
+            def scale(frames):
+                return [pygame.transform.scale(f, (px, px)) for f in frames]
+
+            self._scaled = {
+                "walk": scale(self.walk),
+                "charge": scale(self.charge),
+                "hit": pygame.transform.scale(self.hit, (px, px)),
+            }
+
+            self._zoom = zoom
+
+        return self._scaled
+
+
+class Hongun(Enemy):
+    """Un creeper: pasea tranquilo -> si entras en su area te persigue
+    caminando normal -> cuando se acerca se frena y recarga (parpadea
+    en blanco, se hincha y da un poco de luz) -> explota: empuja al
+    jugador y le saca HONGUN_DAMAGE de vida. Muere al explotar.
+
+    Los golpes le sacan vida pero NO lo empujan ni lo frenan ni le
+    cortan la recarga: sigue persiguiendote para explotar. Si te
+    alejas mientras recarga, se cancela. Si lo matas a golpes antes
+    de que explote, simplemente muere (no explota)."""
+
+    fixed = False
+    contact_damage = False
+
+    WANDER = "wander"
+    CHASE = "chase"
+    FUSE = "fuse"
+
+    def __init__(self, x, y, spawn_delay=0.0):
+
+        super().__init__(x, y, HONGUN_HP, HONGUN_CHASE_SPEED, spawn_delay)
+
+        self.rect = pygame.Rect(0, 0, *HONGUN_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.phase = self.WANDER
+
+        self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+        self.turn_t = random.uniform(*HONGUN_TURN_TIME)
+
+        self.fuse_t = 0.0      # 0 .. HONGUN_FUSE_TIME
+        self.boom = False      # True = acaba de explotar (la arena hace el efecto)
+        self.boomed = False
+
+    # ---------- estado ----------
+
+    @property
+    def fuse_k(self):
+        """0 a 1: cuanto falta para que explote."""
+
+        return max(0.0, min(1.0, self.fuse_t / HONGUN_FUSE_TIME))
+
+    def light(self):
+        """(x, y, radio) de la luz que da al recargar, o None."""
+
+        if self.fuse_t <= 0.0 or self.spawning or self.dead:
+            return None
+
+        k = self.fuse_k
+
+        return (
+            self.pos.x, self.pos.y,
+            quantize_radius(
+                HONGUN_LIGHT_MIN + (HONGUN_LIGHT_MAX - HONGUN_LIGHT_MIN) * k
+            )
+        )
+
+    # ---------- golpes ----------
+
+    def take_damage(self, amount):
+        """Recibe el dano pero NO retrocede, no se atonta y no se le
+        corta la recarga: su mision es explotar mientras te persigue."""
+
+        if self.spawning or self.dead:
+            return 0
+
+        self.hp -= amount
+        self.flash = ENEMY_FLASH_TIME
+
+        # Si lo golpean paseando, ya sabe donde estas: te persigue
+        if self.phase == self.WANDER:
+            self.phase = self.CHASE
+
+        return amount
+
+    # ---------- movimiento ----------
+
+    def _walk(self, dt, direction, speed, collision_map,
+              angles=(0, 45, -45, 90, -90)):
+        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
+        Devuelve la direccion que uso o None si no pudo moverse."""
+
+        step = speed * dt
+
+        for angle in angles:
+
+            d = direction.rotate(angle)
+
+            nx = self.pos.x + d.x * step
+            ny = self.pos.y + d.y * step
+
+            test = self.rect.copy()
+            test.center = (round(nx), round(ny))
+
+            if self._free(test, collision_map):
+
+                self.pos.update(nx, ny)
+                self.rect.center = test.center
+                self.vel = d * speed
+
+                return d
+
+        return None
+
+    def update(self, dt, target, collision_map, others=None):
+
+        target = pygame.Vector2(target)
+
+        self.last_target = target.copy()
+        self.anim_t += dt
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.touch_cd > 0:
+            self.touch_cd = max(0.0, self.touch_cd - dt)
+
+        if self.spawn_t > 0:
+
+            self.spawn_t -= dt
+
+            return
+
+        self.vel = pygame.Vector2()
+
+        to_player = target - self.pos
+        dist = to_player.length()
+
+        if dist < 0.01:
+            to_player = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+            dist = 0.01
+
+        toward = to_player / dist
+
+        # ---- recargando: quieto, brillando hasta explotar ----
+        if self.phase == self.FUSE:
+
+            if dist > HONGUN_FUSE_CANCEL_DIST:
+
+                # Te alejaste: se cancela y vuelve a perseguirte
+                self.phase = self.CHASE
+
+            else:
+
+                self.fuse_t += dt
+
+                if self.fuse_t >= HONGUN_FUSE_TIME:
+
+                    self.boom = True
+                    self.hp = 0
+
+                return
+
+        # La luz de la recarga se apaga de a poco si no esta recargando
+        if self.fuse_t > 0:
+            self.fuse_t = max(0.0, self.fuse_t - dt * 2.0)
+
+        # ---- persiguiendote ----
+        if self.phase == self.CHASE:
+
+            if dist > HONGUN_LOSE_RADIUS:
+
+                self.phase = self.WANDER
+                self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+            elif dist <= HONGUN_FUSE_DIST:
+
+                self.phase = self.FUSE
+                self.fuse_t = max(self.fuse_t, 0.001)
+
+            else:
+
+                self._walk(dt, toward, HONGUN_CHASE_SPEED, collision_map)
+
+            return
+
+        # ---- paseando tranquilo ----
+        if dist <= HONGUN_DETECT_RADIUS:
+
+            self.phase = self.CHASE
+
+            return
+
+        self.turn_t -= dt
+
+        if self.turn_t <= 0:
+
+            self.heading = self.heading.rotate(random.uniform(-80, 80))
+            self.turn_t = random.uniform(*HONGUN_TURN_TIME)
+
+        d = self._walk(
+            dt, self.heading, HONGUN_WANDER_SPEED, collision_map,
+            angles=(0, 40, -40, 90, -90, 140, -140, 180)
+        )
+
+        if d is not None:
+            self.heading = d
+
+    # ---------- dibujo ----------
+
+    def draw(self, screen, camera, art):
+
+        sprites = art.get(camera.zoom)
+
+        shake = 0
+        k = self.fuse_k
+        fusing = self.phase == self.FUSE and self.fuse_t > 0
+
+        if self.flash > 0:
+
+            img = sprites["hit"]
+
+        else:
+
+            if fusing:
+
+                frames = sprites["charge"]
+                index = int(self.anim_t / HONGUN_CHARGE_FRAME) % len(frames)
+
+            else:
+
+                frames = sprites["walk"]
+                moving = self.vel.length_squared() > 1.0
+
+                index = (
+                    int(self.anim_t / HONGUN_ANIM_FRAME) % len(frames)
+                    if moving else 0
+                )
+
+            img = frames[index]
+
+            # Herido = mas oscuro (no mientras recarga, ahi se ve blanco)
+            if self.hp < self.max_hp and not fusing:
+
+                shade = int(255 * (0.55 + 0.45 * self.hp / self.max_hp))
+
+                img = img.copy()
+                img.fill(
+                    (shade, shade, shade, 255),
+                    special_flags=pygame.BLEND_RGBA_MULT
+                )
+
+            if fusing:
+
+                # Parpadea a blanco cada vez mas rapido y se hincha
+                blink_on = math.sin(self.anim_t * (14 + 36 * k)) > 0
+
+                white = 255 if blink_on else int(70 * k)
+
+                img = img.copy()
+                img.fill((white, white, white, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+                grow = 1.0 + 0.30 * k
+
+                size = (
+                    max(1, int(img.get_width() * grow)),
+                    max(1, int(img.get_height() * grow))
+                )
+
+                img = pygame.transform.scale(img, size)
+
+                shake = int(math.sin(self.anim_t * 60) * 1.5 * k * camera.zoom)
+
+        if self.spawning:
+
+            t = 1.0 - max(0.0, self.spawn_t) / ENEMY_SPAWN_TIME
+
+            img = img.copy()
+            img.set_alpha(int(50 + 150 * max(0.0, min(1.0, t))))
+
+        dest = camera.apply(self.rect)
+
+        # Sombra
+        shadow = pygame.Surface(
+            (int(dest.width * 1.4), int(dest.height * 0.6)),
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(dest.centerx, dest.bottom))
+        )
+
+        screen.blit(
+            img,
+            img.get_rect(
+                midbottom=(
+                    dest.centerx + shake,
+                    dest.bottom + int(2 * camera.zoom)
+                )
+            )
+        )
+
+
+# ---------------------------------------------------------------
 # Cofre del premio
 # ---------------------------------------------------------------
 
@@ -2029,8 +2458,9 @@ class Arena:
         self.art = EnemyArt()
         self.tronco_art = TroncoArt()
         self.mosquito_art = MosquitoArt()
+        self.hongun_art = HongunArt()
+        self.blasts = []            # explosiones de hongunes (aro + luz)
         self.mosquito_alert = False
-        self._alert_t = 0.0
 
         self.chest = None
         self.reward = 0
@@ -2129,6 +2559,25 @@ class Arena:
         if self.chest is not None and not self.chest.done:
             sources.append(self.chest.light())
 
+        # Cada hongun que recarga da un poco de luz, y su explosion tambien
+        for enemy in self.enemies:
+
+            if isinstance(enemy, Hongun):
+
+                light = enemy.light()
+
+                if light is not None:
+                    sources.append(light)
+
+        for blast in self.blasts:
+
+            k = blast["t"] / HONGUN_BLAST_TIME
+
+            sources.append((
+                blast["x"], blast["y"],
+                quantize_radius(70 + 110 * (1 - k))
+            ))
+
         if self.boom_light_t is not None:
 
             k = self.boom_light_t / 0.7
@@ -2220,9 +2669,12 @@ class Arena:
 
     def _spawn_wave(self, game):
 
-        pinos, troncos, mosquitos = wave_composition(self.wave)
+        pinos, troncos, mosquitos, honguns = wave_composition(self.wave)
 
-        kinds = (["pino"] * pinos + ["tronco"] * troncos + ["mosquito"] * mosquitos)
+        kinds = (
+            ["pino"] * pinos + ["tronco"] * troncos
+            + ["mosquito"] * mosquitos + ["hongun"] * honguns
+        )
         random.shuffle(kinds)
 
         hp = min(ENEMY_HP_MAX, ENEMY_HP_BASE + self.wave)
@@ -2240,11 +2692,18 @@ class Arena:
 
         self.enemies = []
         self.shots = []
+        self.blasts = []
 
         for i, kind in enumerate(kinds):
             pos = None
-            min_dist = 135 if kind == "mosquito" else 110
-            hitbox = MOSQUITO_HITBOX if kind == "mosquito" else ENEMY_HITBOX
+            min_dist = 135 if kind in ("mosquito", "hongun") else 110
+
+            if kind == "mosquito":
+                hitbox = MOSQUITO_HITBOX
+            elif kind == "hongun":
+                hitbox = HONGUN_HITBOX
+            else:
+                hitbox = ENEMY_HITBOX
 
             for _ in range(120):
                 x = random.randint(ROOM.left + 16, ROOM.right - 16)
@@ -2268,6 +2727,8 @@ class Arena:
                 self.enemies.append(Tronco(pos[0], pos[1], tronco_hp, spawn_delay=delay))
             elif kind == "mosquito":
                 self.enemies.append(Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay))
+            elif kind == "hongun":
+                self.enemies.append(Hongun(pos[0], pos[1], spawn_delay=delay))
             else:
                 self.enemies.append(Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay))
 
@@ -2439,6 +2900,11 @@ class Arena:
             if self.boom_light_t > 0.7:
                 self.boom_light_t = None
 
+        for blast in self.blasts:
+            blast["t"] += dt
+
+        self.blasts = [b for b in self.blasts if b["t"] < HONGUN_BLAST_TIME]
+
         self._gate_time += dt
 
     def update(self, game, dt):
@@ -2548,10 +3014,18 @@ class Arena:
 
         self.shots = [s for s in self.shots if not s.dead]
 
+        # Hongunes que terminaron de recargar: explotan
+        for enemy in self.enemies:
+            if isinstance(enemy, Hongun) and enemy.boom and not enemy.boomed:
+                enemy.boomed = True
+                self._hongun_explode(game, enemy)
+
         for enemy in self.enemies:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
-                self._death_puff(enemy.pos)
+                # El hongun que explota ya tiene su propio efecto
+                if not getattr(enemy, "boom", False):
+                    self._death_puff(enemy.pos)
 
         self.enemies = [e for e in self.enemies if not e.dead]
 
@@ -2565,6 +3039,52 @@ class Arena:
         if not self.enemies:
             self.shots = []
             self._wave_cleared(game)
+
+    def _hongun_explode(self, game, enemy):
+        """Explota el hongun: efecto, dano y empujon al jugador."""
+
+        p = game.player
+        pos = pygame.Vector2(enemy.pos)
+
+        self.blasts.append({"x": pos.x, "y": pos.y, "t": 0.0})
+
+        for _ in range(40):
+
+            angle = random.uniform(0, math.tau)
+            speed = random.uniform(30, 120)
+            life = random.uniform(0.3, 0.7)
+
+            self.particles.append({
+                "x": pos.x,
+                "y": pos.y - 3,
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "life": life,
+                "max": life,
+                "color": random.choice([
+                    (255, 255, 255), (235, 255, 220),
+                    (120, 205, 110), (80, 175, 80), (255, 235, 140)
+                ]),
+            })
+
+        body = pygame.Vector2(p.rect.center)
+
+        if body.distance_to(pos) > HONGUN_BLAST_RADIUS:
+            return
+
+        # La explosion pega siempre, aunque el jugador estuviera en su
+        # ratito de invulnerabilidad
+        p.invuln_timer = 0.0
+        p.hurt(pos)
+
+        game.take_damage(HONGUN_DAMAGE)
+
+        away = body - pos
+
+        if away.length_squared() < 0.01:
+            away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        p.kb_vel = away.normalize() * HONGUN_KNOCKBACK
 
     def _death_puff(self, pos):
 
@@ -2606,6 +3126,8 @@ class Arena:
         for enemy in self.enemies:
             if isinstance(enemy, Mosquito):
                 enemy.draw(screen, camera, self.mosquito_art)
+            elif isinstance(enemy, Hongun):
+                enemy.draw(screen, camera, self.hongun_art)
             else:
                 enemy.draw(
                     screen, camera,
@@ -2635,6 +3157,37 @@ class Arena:
         # Las bolas se ven siempre, aunque no las alumbres
         for shot in self.shots:
             shot.draw(screen, camera, self.tronco_art)
+
+        # Brillo blanco de los hongunes que estan recargando
+        for enemy in self.enemies:
+
+            if isinstance(enemy, Hongun) and enemy.fuse_t > 0 and not enemy.dead:
+                self._draw_hongun_glow(screen, camera, enemy)
+
+        # Aro blanco de las explosiones de hongun
+        for blast in self.blasts:
+
+            k = blast["t"] / HONGUN_BLAST_TIME
+
+            radius = int((4 + HONGUN_BLAST_RADIUS * k) * camera.zoom)
+
+            cx = int(blast["x"] * camera.zoom - camera.x)
+            cy = int(blast["y"] * camera.zoom - camera.y)
+
+            ring = pygame.Surface((radius * 2 + 8, radius * 2 + 8), pygame.SRCALPHA)
+
+            pygame.draw.circle(
+                ring, (255, 255, 255, int(70 * (1 - k))),
+                (radius + 4, radius + 4), radius
+            )
+
+            pygame.draw.circle(
+                ring, (255, 255, 235, int(230 * (1 - k))),
+                (radius + 4, radius + 4), radius,
+                max(2, int(7 * (1 - k)))
+            )
+
+            screen.blit(ring, ring.get_rect(center=(cx, cy)))
 
         if self.ring_t is not None:
 
@@ -2667,6 +3220,31 @@ class Arena:
             size = max(2, int(3 * camera.zoom * alpha))
 
             pygame.draw.circle(screen, part["color"], (sx, sy), size)
+
+    def _draw_hongun_glow(self, screen, camera, enemy):
+        """Resplandor blanco alrededor del hongun mientras recarga."""
+
+        k = enemy.fuse_k
+
+        blink = 0.5 + 0.5 * math.sin(enemy.anim_t * (14 + 36 * k))
+
+        radius = max(4, int((10 + 16 * k) * camera.zoom))
+
+        cx = int(enemy.pos.x * camera.zoom - camera.x)
+        cy = int(enemy.pos.y * camera.zoom - camera.y)
+
+        glow = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+
+        for i in range(4, 0, -1):
+
+            alpha = int((25 + 55 * k) * (0.5 + 0.5 * blink) * (5 - i) / 4)
+
+            pygame.draw.circle(
+                glow, (255, 255, 255, alpha),
+                (radius, radius), int(radius * i / 4)
+            )
+
+        screen.blit(glow, glow.get_rect(center=(cx, cy)))
 
     def draw_hud(self, screen):
         """Cartel de oleada arriba a la izquierda + aviso de victoria."""
@@ -2729,36 +3307,13 @@ class Arena:
                 topleft=(text_rect.right + 8, premio_y)
             )
 
-        # ---------- alerta de mosquito ----------
-
-        if self.state == self.WAVE and self.mosquito_alert:
-            self._draw_mosquito_alert(screen)
+        # (la alerta del mosquito ahora la dibuja EffectsBar, arriba junto
+        # a los cubitos de efectos: ui/effects_bar.py)
 
         # ---------- oleada completada ----------
 
         if self.banner_t > 0:
             self._draw_banner(screen)
-
-    def _draw_mosquito_alert(self, screen):
-        """Imagen de advertencia en pantalla (HUD, arriba al centro),
-        parpadeando, para avisar que hay un mosquito cerca."""
-
-        self._alert_t += 1 / 60
-
-        pulse = 0.5 + 0.5 * math.sin(self._alert_t * 8)
-
-        w, h = self.size
-
-        icon = self.mosquito_art.warning.copy()
-        icon.set_alpha(int(150 + 105 * pulse))
-
-        rect = icon.get_rect(midtop=(w // 2, 14))
-        screen.blit(icon, rect)
-
-        draw_text(
-            screen, "Mosquito cerca!", 24, (255, 120, 110),
-            center=(rect.centerx, rect.bottom + 12)
-        )
 
     def _draw_banner(self, screen):
 
