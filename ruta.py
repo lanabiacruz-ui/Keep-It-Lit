@@ -1,5 +1,5 @@
 import os
-
+import pygame , sys
 def conseguir_ruta_raiz():
     raiz = os.path.dirname(__file__)
     return raiz
@@ -9,5 +9,4 @@ def conseguir_ruta_assets(carpeta, archivo):
     return os.path.join(raiz, "assets")
 
 def conseguir_archivo_sprites(carpeta, archivo):
-    return  os.path.join(conseguir_ruta_raiz(), "sprits", carpeta, archivo)
-
+    return  os.path.join(conseguir_ruta_raiz(), "sprites", carpeta, archivo)

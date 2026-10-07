@@ -1,8 +1,11 @@
-import pygame,sys
+import pygame,sys,os
+from load_spri import *
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ruta import *
 from config import *
 
-# Inicializar Pygame
+###tamanio original=32*32###
+
 pygame.init()
 
 pantalla = pygame.display.set_mode((ANCHO, ALTO))
@@ -12,37 +15,20 @@ reloj = pygame.time.Clock()
 jugador_x, jugador_y = 400, 300
 jugador_velocidad = velocidad_jugador
 
-# 1. Diccionario para organizar TODOS tus sprites por acción/dirección
-# Reemplaza los nombres de archivo por tus imágenes reales
+caminar()
 sprites = {
-    "quieto": [pygame.image.load("quieto.png").convert_alpha()],
-    "derecha": [
-        pygame.image.load(en).convert_alpha(),
-        pygame.image.load("der_2.png").convert_alpha(),
-        pygame.image.load("der_3.png").convert_alpha(),
-        pygame.image.load("der_4.png").convert_alpha()
-    ],
-    "izquierda": [
-        pygame.image.load("izq_1.png").convert_alpha(),
-        pygame.image.load("izq_2.png").convert_alpha(),
-        pygame.image.load("izq_3.png").convert_alpha(),
-        pygame.image.load("izq_4.png").convert_alpha()
-    ],
-    "arriba": [
-        pygame.image.load("arr_1.png").convert_alpha(),
-        pygame.image.load("arr_2.png").convert_alpha()
-    ],
-    "abajo": [
-        pygame.image.load("aba_1.png").convert_alpha(),
-        pygame.image.load("aba_2.png").convert_alpha()
-    ]
+    "quieto": [pygame.image.load(conseguir_archivo_sprites("Caminar",f"quieto.png")).convert_alpha()],
+    "derecha": der,
+    "izquierda": izq,
+    "arriba": arr,
+    "abajo": ap
 }
 
 # Variables de control de animación
 accion_actual = "quieto"
 indice_sprite = 0
 tiempo_animacion = 0
-velocidad_animacion = 0.2  # Controla qué tan rápido cambian los sprites (menor = más lento)
+velocidad_animacion = v_cambio_sprit # Controla qué tan rápido cambian los sprites (menor = más lento)
 # -----------------------------------------------------------
 
 ejecutando = True
@@ -94,11 +80,12 @@ while ejecutando:
     pantalla.fill((30, 30, 30))  # Dibuja tu mapa aquí debajo
     
     # Seleccionamos el sprite exacto usando la acción y el índice actual
-    sprite_a_dibujar = sprites[accion_actual][indice_sprite]
+    sprite_a_dibujar = pygame.transform.scale(sprites[accion_actual][indice_sprite],(alto_juga,bajo_juga))
+    
     pantalla.blit(sprite_a_dibujar, (jugador_x, jugador_y))
 
     pygame.display.flip()
     reloj.tick(60)
 
 pygame.quit()
-sys.exit()
+sys.exit()  
