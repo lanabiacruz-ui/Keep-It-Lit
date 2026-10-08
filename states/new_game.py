@@ -73,6 +73,10 @@ FLICKER_THRESHOLD = 0.25
 # 255 = negro total, 200 = se ve algo, 0 = sin oscuridad.
 DARKNESS_ALPHA = 248
 
+# Luz de la puerta de la cabana (radio en unidades del mundo).
+# Mas chico = ilumina menos. 0 = sin luz.
+DOOR_GLOW_RADIUS = 55
+
 # A que distancia (unidades del mundo) del cofre sirve la ganzua.
 GANZUA_DISTANCE = 48
 
@@ -762,29 +766,149 @@ class NewGame:
             self.hud.counts[slot] = 0
 
     def use_item(self, slot):
-        """Usa una unidad del casillero."""
+        """Usa una unidad del casillero (efectos de data/items.json)."""
 
         item_id = self.hud.items[slot]
 
         if item_id is None:
             return
 
-        effect = (
-            self.item_defs.get(item_id, {}).get("efecto")
-            or ITEM_EFFECTS.get(item_id)
-        )
+        item = self.item_defs.get(item_id, {})
 
-        if not effect:
-            self.show_message("Eso no se puede usar")
+        # Las luces (fosforo, vela) se equipan solas al agarrarlas
+        if item.get("tipo") == "luz":
+
+            self.show_message(
+                "Las luces se equipan solas al agarrarlas"
+            )
             return
 
-        self._apply_effect(effect)
+        efectos = item.get("efectos")
+
+        if efectos:
+
+            if item.get("requiere_fosforo") and not self.has_match:
+
+                self.show_message(
+                    "Necesitas una luz encendida"
+                )
+                return
+
+            used = False
+
+            for efecto in efectos:
+
+                if self._apply_item_effect(efecto):
+                    used = True
+
+            # Si no se pudo usar (ej: ganzua sin cofre) no se gasta
+            if not used:
+                return
+
+        else:
+
+            # Compatibilidad: formato viejo con un solo "efecto"
+            legacy = (
+                item.get("efecto")
+                or ITEM_EFFECTS.get(item_id)
+            )
+
+            if not legacy:
+
+                self.show_message("Eso no se puede usar")
+                return
+
+            self._apply_effect(legacy)
 
         self._take_one(slot)
 
         self.show_message(
             f"Usaste {self._item_name(item_id)}"
         )
+
+    def _apply_item_effect(self, e):
+        """
+        Aplica UN efecto de la lista "efectos" de items.json.
+        Devuelve True si se aplico (False = no se gasta el objeto).
+        """
+
+        tipo = e.get("tipo")
+
+        if tipo == "vida_sumar":
+
+            self.vida = min(
+                1.0,
+                self.vida + float(e.get("valor", 0.0))
+            )
+
+        elif tipo == "vida_fijar":
+
+            self.vida = max(
+                0.0,
+                min(1.0, float(e.get("valor", self.vida)))
+            )
+
+        elif tipo == "vida_gradual":
+
+            seconds = max(0.1, float(e.get("duracion", 10.0)))
+
+            self.regen_left += float(e.get("valor", 0.0))
+            self.regen_total = max(self.regen_left, 0.001)
+            self.regen_rate = self.regen_left / seconds
+
+        elif tipo == "velocidad":
+
+            self.player.movement.speed_mult = float(
+                e.get("multiplicador", 1.0)
+            )
+            self.speed_total = float(e.get("duracion", 10.0))
+            self.speed_timer = self.speed_total
+
+        elif tipo == "consumo_lento":
+
+            self.burn_factor = float(e.get("factor", 1.0))
+            self.burn_total = float(e.get("duracion", 10.0))
+            self.burn_timer = self.burn_total
+
+        elif tipo == "luz_dano":
+
+            self.polvora_dps = float(e.get("dano_por_segundo", 1.0))
+            self.polvora_total = float(e.get("duracion", 8.0))
+            self.polvora_timer = self.polvora_total
+            self._polvora_acc = 0.0
+
+        elif tipo == "escudo_sumar":
+
+            self.escudo = min(
+                1.0,
+                self.escudo + float(e.get("valor", 0.0))
+            )
+
+        elif tipo == "abrir_cofre":
+
+            chest = self.chests.nearest_ready(
+                self.player.rect.center,
+                GANZUA_DISTANCE
+            )
+
+            if chest is None:
+
+                self.show_message(
+                    "No hay un cofre listo cerca"
+                )
+                return False
+
+            # Abre sin minijuego: gasta una apertura y suelta los
+            # objetos (no se saltea la espera entre aperturas)
+            self.minigame_chest = chest
+
+            self._finish_chest(True)
+
+        else:
+
+            return False
+
+        return True
 
     def _apply_effect(self, e):
 
@@ -1379,6 +1503,62 @@ class NewGame:
             return None
 
         # ---------------------------------------------------------
+        # CLICK DERECHO: CONSUMIR EL OBJETO SELECCIONADO
+        # (si el mouse esta sobre un slot, usa ese)
+        # ---------------------------------------------------------
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 3
+            and self.state == "playing"
+        ):
+
+            slot = self.hud.slot_at(event.pos)
+
+            if slot is not None:
+                self.selected_slot = slot
+
+            if self.selected_slot != "equipped":
+
+                self.use_item(
+                    self.selected_slot
+                )
+
+            return None
+
+        # ---------------------------------------------------------
+        # CLICK EN LA HOTBAR: SELECCIONAR SLOT
+        # ---------------------------------------------------------
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+        ):
+
+            slot = self.hud.slot_at(event.pos)
+
+            if slot is not None:
+
+                self.selected_slot = slot
+
+                return None
+
+            equipped_rect = getattr(
+                self.hud,
+                "equipped_rect",
+                None
+            )
+
+            if (
+                equipped_rect is not None
+                and equipped_rect.collidepoint(event.pos)
+            ):
+
+                self.selected_slot = "equipped"
+
+                return None
+
+        # ---------------------------------------------------------
         # TECLAS DEL JUEGO
         # ---------------------------------------------------------
 
@@ -1893,35 +2073,6 @@ class NewGame:
                 )
             )
 
-        # La puerta de la cabana queda iluminada despues del tutorial.
-        # Se centra en la puerta real (id "cabana"); si ya se rompio,
-        # deja de iluminar.
-        if self.tutorial is None:
-
-            for door in self.doors.doors:
-
-                if door.id != "cabana":
-                    continue
-
-                glow = pygame.Rect(
-                    0,
-                    0,
-                    70,
-                    75
-                )
-
-                glow.center = door.rect.center
-
-                rects.append(
-                    (
-                        glow,
-                        1.0,
-                        18
-                    )
-                )
-
-                break
-
         return rects
 
     # ---------- dibujo ----------
@@ -2068,6 +2219,23 @@ class NewGame:
                     radius
                 ))
 
+        # La puerta de la cabana queda iluminada despues del tutorial
+        # (luz redonda y suave). Si ya se rompio, deja de iluminar.
+        if self.tutorial is None and DOOR_GLOW_RADIUS > 0:
+
+            for door in self.doors.doors:
+
+                if door.id != "cabana":
+                    continue
+
+                sources.append((
+                    door.rect.centerx,
+                    door.rect.centery,
+                    int(DOOR_GLOW_RADIUS * self.camera.zoom)
+                ))
+
+                break
+
         self.light.draw(
             self.screen,
             self.camera,
@@ -2134,6 +2302,13 @@ class NewGame:
             and self.shopkeeper.can_talk(self.player)
         ):
             self.shopkeeper.draw_prompt(self.screen, self.camera)
+
+        # El HUD dibuja el marco de seleccion con hud.selected
+        self.hud.selected = (
+            self.selected_slot
+            if isinstance(self.selected_slot, int)
+            else None
+        )
 
         self.hud.draw(
             self.screen,

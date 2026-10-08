@@ -189,7 +189,9 @@ class WorldItem(MatchItem):
 
         # Las monedas y la gema se juntan solas al pasar cerca (sin
         # apretar E)
-        self.auto = item_id in ("moneda", "gema")
+        self.auto = item_id in (
+            "moneda", "moneda_5", "moneda_10", "gema"
+        )
 
         # Animacion de "salir del cofre" (None = quieto en el piso)
         self.fly = None

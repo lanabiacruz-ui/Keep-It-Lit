@@ -11,6 +11,8 @@
   },
   "pesos": {
     "moneda": 70,
+    "moneda_5": 10,
+    "moneda_10": 5,
     "madera": 12,
     "cera": 5,
     "aceite": 5,

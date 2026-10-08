@@ -206,8 +206,33 @@ class Hud:
 
         self.coin_icon = scaled(load("hud_monedas.png"), bar_scale)
 
-        self.coin_rect = self.coin_icon.get_rect(
+        # Boton Menu: arriba a la derecha de todo, y las monedas quedan
+        # a su izquierda. Al tocarlo se abre el menu de pausa.
+        menu_img = load("menu.png")
+
+        menu_size = self.coin_icon.get_height()
+
+        self.menu_icon = pygame.transform.smoothscale(
+            menu_img,
+            (menu_size, menu_size)
+        )
+
+        # Version mas clara para cuando el mouse esta encima
+        self.menu_icon_hover = self.menu_icon.copy()
+        self.menu_icon_hover.fill(
+            (45, 45, 45, 0),
+            special_flags=pygame.BLEND_RGB_ADD
+        )
+
+        self.menu_rect = self.menu_icon.get_rect(
             topright=(w - margin, margin)
+        )
+
+        # new_game.py lee este nombre para detectar el click
+        self.menu_button_rect = self.menu_rect
+
+        self.coin_rect = self.coin_icon.get_rect(
+            topright=(self.menu_rect.left - 6, margin)
         )
 
         self.coin_font = pygame.font.Font(None, 32)
@@ -397,7 +422,15 @@ class Hud:
             self.escudo_bbox
         )
 
-        # Monedas, arriba a la derecha
+        # Boton Menu (esquina de arriba a la derecha)
+        hover = self.menu_rect.collidepoint(pygame.mouse.get_pos())
+
+        screen.blit(
+            self.menu_icon_hover if hover else self.menu_icon,
+            self.menu_rect
+        )
+
+        # Monedas, a la izquierda del boton Menu
         screen.blit(self.coin_icon, self.coin_rect)
 
         coin_text = self.coin_font.render(

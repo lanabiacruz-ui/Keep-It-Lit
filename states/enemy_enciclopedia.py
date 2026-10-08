@@ -104,14 +104,17 @@ class EnemyEncyclopedia:
     ROW_GAP = 8
 
     # Ficha del enemigo (derecha)
-    CARD_BOX = (736, 260, 480, 390)
+    CARD_BOX = (740, 252, 480, 403)
 
     # Boton REGRESAR (abajo a la izquierda)
-    BACK_BOX = (456, 590, 170, 46)
+    BACK_BOX = (456, 609, 170, 46)
 
     TEXT_COLOR = (235, 245, 250)
     TEXT_DARK = (10, 22, 28)
     TITLE_COLOR = (110, 220, 235)
+    MUTED_COLOR = (195, 205, 218)
+    LINE_COLOR = (96, 102, 120)
+    SHADOW_COLOR = (14, 16, 22)
 
     def __init__(self, screen):
 
@@ -123,9 +126,10 @@ class EnemyEncyclopedia:
 
         self.images = {}
 
-        self.resize()
-
+        # Primero las imagenes, porque resize() arma los iconos
         self._load_all_images()
+
+        self.resize()
 
     # ---------------------------------------------------------
     # Cargar informacion de los enemigos
@@ -283,6 +287,13 @@ class EnemyEncyclopedia:
             max(14, round(24 * self.sy))
         )
 
+        self.back_font = pygame.font.Font(
+            None,
+            max(20, round(46 * self.sy * 0.62))
+        )
+
+        self._font_cache = {}
+
         self.screen_rect = self._box(self.SCREEN_BOX)
         self.card_rect = self._box(self.CARD_BOX)
         self.back_rect = self._box(self.BACK_BOX)
@@ -338,6 +349,60 @@ class EnemyEncyclopedia:
         )
 
         self.dim.fill((8, 14, 22, 245))
+
+        # Panel semitransparente de la ficha y pedestal del dibujo
+        self.card_panel = pygame.Surface(
+            self.card_rect.size,
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.rect(
+            self.card_panel,
+            (28, 30, 38, 150),
+            self.card_panel.get_rect(),
+            border_radius=16,
+        )
+
+        pygame.draw.rect(
+            self.card_panel,
+            (104, 110, 130, 255),
+            self.card_panel.get_rect(),
+            width=2,
+            border_radius=16,
+        )
+
+        self.pedestal_rect = pygame.Rect(
+            self.card_rect.left + round(24 * self.sx),
+            self.card_rect.top + round(58 * self.sy),
+            self.card_rect.width - round(48 * self.sx),
+            round(120 * self.sy),
+        )
+
+        # Iconos chicos para la lista
+        self.icons = {}
+
+        icon_size = max(
+            8,
+            self._enemy_rect(0).height - round(12 * self.sy)
+        )
+
+        for key, image in self.images.items():
+
+            if image is None:
+                continue
+
+            scale = min(
+                icon_size / image.get_width(),
+                icon_size / image.get_height()
+            )
+
+            self.icons[key] = pygame.transform.scale(
+                image,
+                (
+                    max(1, round(image.get_width() * scale)),
+                    max(1, round(image.get_height() * scale)),
+                )
+            )
 
     # ---------------------------------------------------------
     # Rectangulo de cada enemigo
@@ -396,61 +461,156 @@ class EnemyEncyclopedia:
         return lines
 
     # ---------------------------------------------------------
+    # Helpers de texto
+    # ---------------------------------------------------------
+
+    def _font(self, size):
+        """Fuente por tamano (cache para no recrearla en cada frame)."""
+
+        font = self._font_cache.get(size)
+
+        if font is None:
+
+            font = pygame.font.Font(None, size)
+
+            self._font_cache[size] = font
+
+        return font
+
+    def _blit_text(self, font, text, color, shadow=True, **anchor):
+        """Dibuja texto con una sombrita para que se lea mejor."""
+
+        surf = font.render(text, True, color)
+
+        rect = surf.get_rect(**anchor)
+
+        if shadow:
+
+            offset = max(1, round(2 * self.sy))
+
+            back = font.render(text, True, self.SHADOW_COLOR)
+
+            self.screen.blit(
+                back,
+                rect.move(offset, offset)
+            )
+
+        self.screen.blit(surf, rect)
+
+        return rect
+
+    def _fit_description(self, text, width, height):
+        """Busca el tamano de letra mas grande donde entra todo el texto."""
+
+        biggest = max(16, round(32 * self.sy))
+
+        for size in range(biggest, 13, -1):
+
+            font = self._font(size)
+
+            lines = self._wrap(font, text, width)
+
+            total = len(lines) * (font.get_linesize() + 2)
+
+            if total <= height:
+
+                return font, lines
+
+        font = self._font(14)
+
+        return font, self._wrap(font, text, width)
+
+    # ---------------------------------------------------------
+    # Seleccion
+    # ---------------------------------------------------------
+
+    def _select(self, index):
+
+        self.selected = index % len(self.ORDER)
+
+    def _row_at(self, pos):
+        """Indice del enemigo bajo el mouse (o None)."""
+
+        for index in range(len(self.ORDER)):
+
+            if self._enemy_rect(index).collidepoint(pos):
+
+                return index
+
+        return None
+
+    # ---------------------------------------------------------
     # Eventos
     # ---------------------------------------------------------
 
     def handle_event(self, event):
 
-        # ESC vuelve al menu de pausa
         if event.type == pygame.KEYDOWN:
 
+            # ESC vuelve al menu de pausa
             if event.key == pygame.K_ESCAPE:
                 return "back"
 
             # Subir
             if event.key in (
                 pygame.K_UP,
-                pygame.K_w
+                pygame.K_w,
+                pygame.K_LEFT,
+                pygame.K_a,
             ):
 
-                self.selected = (
-                    self.selected - 1
-                ) % len(self.ORDER)
+                self._select(self.selected - 1)
 
             # Bajar
             elif event.key in (
                 pygame.K_DOWN,
-                pygame.K_s
+                pygame.K_s,
+                pygame.K_RIGHT,
+                pygame.K_d,
             ):
 
-                self.selected = (
-                    self.selected + 1
-                ) % len(self.ORDER)
+                self._select(self.selected + 1)
 
-        # Mouse
-        if event.type == pygame.MOUSEBUTTONDOWN:
+        # El mouse al pasar por encima tambien selecciona
+        elif event.type == pygame.MOUSEMOTION:
 
+            index = self._row_at(event.pos)
+
+            if index is not None:
+
+                self.selected = index
+
+        # Rueda del mouse
+        elif event.type == pygame.MOUSEWHEEL:
+
+            self._select(self.selected - event.y)
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+
+            # Boton regresar
+            if (
+                event.button == 1
+                and self.back_rect.collidepoint(event.pos)
+            ):
+                return "back"
+
+            # Click en un enemigo
             if event.button == 1:
 
-                # Boton regresar
-                if self.back_rect.collidepoint(
-                    event.pos
-                ):
-                    return "back"
+                index = self._row_at(event.pos)
 
-                # Seleccionar enemigo
-                for index in range(
-                    len(self.ORDER)
-                ):
+                if index is not None:
 
-                    if self._enemy_rect(
-                        index
-                    ).collidepoint(
-                        event.pos
-                    ):
+                    self.selected = index
 
-                        self.selected = index
-                        break
+            # Ruedita en versiones viejas de pygame
+            elif event.button == 4:
+
+                self._select(self.selected - 1)
+
+            elif event.button == 5:
+
+                self._select(self.selected + 1)
 
         return None
 
@@ -489,243 +649,249 @@ class EnemyEncyclopedia:
             border_radius=18,
         )
 
-        title = self.title_font.render(
-            "ENEMIGOS",
-            True,
-            (240, 250, 255),
+        pygame.draw.rect(
+            self.screen,
+            (20, 36, 52),
+            self.list_rect,
+            border_radius=12,
         )
 
-        self.screen.blit(
-            title,
-            title.get_rect(
-                midtop=(
-                    self.screen_rect.centerx,
-                    self.screen_rect.top + round(12 * self.sy)
-                )
+        pygame.draw.rect(
+            self.screen,
+            (82, 125, 150),
+            self.list_rect,
+            width=2,
+            border_radius=12,
+        )
+
+    def _draw_header(self):
+
+        self._blit_text(
+            self.title_font,
+            "ENEMIGOS",
+            self.TEXT_COLOR,
+            midtop=(
+                self.screen_rect.centerx,
+                round(180 * self.sy),
             ),
         )
 
-        for rect in (self.list_rect, self.card_rect):
+        y = round(238 * self.sy)
 
-            pygame.draw.rect(
-                self.screen,
-                (20, 36, 52),
-                rect,
-                border_radius=12,
-            )
+        left = self._enemy_rect(0).left
+        right = self.card_rect.right
 
-            pygame.draw.rect(
-                self.screen,
-                (82, 125, 150),
-                rect,
-                width=2,
-                border_radius=12,
-            )
+        pygame.draw.line(
+            self.screen,
+            self.LINE_COLOR,
+            (left, y),
+            (right, y),
+            max(2, round(3 * self.sy)),
+        )
 
-    def draw(self):
+        # Detalle de color en el centro de la linea
+        half = round(60 * self.sx)
 
-        # ---------- fondo ----------
+        pygame.draw.line(
+            self.screen,
+            self.TITLE_COLOR,
+            (self.screen_rect.centerx - half, y),
+            (self.screen_rect.centerx + half, y),
+            max(2, round(3 * self.sy)),
+        )
 
-        if self.bg_img is not None:
+    def _draw_list(self):
 
-            self.screen.blit(
-                self.bg_img,
-                (0, 0)
-            )
+        for index, key in enumerate(self.ORDER):
 
-        else:
+            rect = self._enemy_rect(index)
 
-            self._draw_fallback_frames()
+            selected = index == self.selected
 
-        # ---------- lista ----------
-
-        for index, key in enumerate(
-            self.ORDER
-        ):
-
-            rect = self._enemy_rect(
-                index
-            )
-
-            selected = (
-                index == self.selected
-            )
-
-            row = (
-                self.row_sel_img
-                if selected
-                else self.row_img
-            )
+            row = self.row_sel_img if selected else self.row_img
 
             if row is not None:
 
-                self.screen.blit(
-                    row,
-                    rect
-                )
+                self.screen.blit(row, rect)
 
             else:
 
                 pygame.draw.rect(
                     self.screen,
-                    (77, 170, 191)
-                    if selected
-                    else (49, 91, 112),
+                    (77, 170, 191) if selected else (49, 91, 112),
                     rect,
                     border_radius=9,
                 )
 
+            # Icono del enemigo
+            icon = self.icons.get(key)
+
+            text_left = rect.left + round(18 * self.sx)
+
+            if icon is not None:
+
+                self.screen.blit(
+                    icon,
+                    icon.get_rect(
+                        midleft=(
+                            rect.left + round(16 * self.sx),
+                            rect.centery
+                        )
+                    )
+                )
+
+                text_left = rect.left + round(16 * self.sx) \
+                    + self.icons[key].get_width() \
+                    + round(10 * self.sx)
+
             # Sin imagen de fila, el seleccionado es claro: texto oscuro
             dark = selected and self.row_sel_img is None
 
-            text = self.name_font.render(
+            self._blit_text(
+                self.name_font,
                 self.data[key]["nombre"],
-                True,
                 self.TEXT_DARK if dark else self.TEXT_COLOR,
+                shadow=not dark,
+                midleft=(text_left, rect.centery),
             )
 
-            self.screen.blit(
-                text,
-                text.get_rect(
-                    midleft=(
-                        rect.left + round(16 * self.sx),
-                        rect.centery
-                    )
-                ),
-            )
+            # Flechita de seleccion
+            if selected:
 
-        # ---------- ficha del enemigo ----------
+                size = max(6, round(9 * self.sy))
 
-        key = self.ORDER[
-            self.selected
-        ]
+                cx = rect.right - round(24 * self.sx)
+
+                cy = rect.centery
+
+                pygame.draw.polygon(
+                    self.screen,
+                    self.TITLE_COLOR,
+                    [
+                        (cx - size, cy - size),
+                        (cx + size, cy),
+                        (cx - size, cy + size),
+                    ],
+                )
+
+    def _draw_card(self):
+
+        key = self.ORDER[self.selected]
 
         enemy = self.data[key]
 
         card = self.card_rect
 
-        pad = round(20 * self.sx)
+        pad = round(24 * self.sx)
+
+        # Panel de fondo
+        self.screen.blit(self.card_panel, card)
 
         # Nombre
-        name = self.name_font.render(
+        self._blit_text(
+            self.name_font,
             enemy["nombre"],
-            True,
-            self.TEXT_COLOR
+            self.TEXT_COLOR,
+            midtop=(
+                card.centerx,
+                card.top + round(12 * self.sy)
+            ),
         )
 
-        self.screen.blit(
-            name,
-            name.get_rect(
-                centerx=card.centerx,
-                top=card.top + round(10 * self.sy)
-            )
+        # Pedestal del dibujo
+        pedestal = pygame.Surface(
+            self.pedestal_rect.size,
+            pygame.SRCALPHA
         )
+
+        pygame.draw.rect(
+            pedestal,
+            (16, 18, 24, 150),
+            pedestal.get_rect(),
+            border_radius=14,
+        )
+
+        pygame.draw.rect(
+            pedestal,
+            (70, 76, 92, 255),
+            pedestal.get_rect(),
+            width=2,
+            border_radius=14,
+        )
+
+        self.screen.blit(pedestal, self.pedestal_rect)
 
         # Dibujo del enemigo
-        image = self.images.get(
-            key
-        )
-
-        image_area = pygame.Rect(
-            card.left + pad,
-            card.top + round(58 * self.sy),
-            card.width - pad * 2,
-            round(150 * self.sy),
-        )
+        image = self.images.get(key)
 
         if image is not None:
 
-            scale = min(
-                image_area.width
-                / image.get_width(),
-                image_area.height
-                / image.get_height(),
-                2.8,
+            area = self.pedestal_rect.inflate(
+                -round(20 * self.sx),
+                -round(20 * self.sy)
             )
 
-            size = (
-                max(
-                    1,
-                    round(
-                        image.get_width()
-                        * scale
-                    )
-                ),
-                max(
-                    1,
-                    round(
-                        image.get_height()
-                        * scale
-                    )
-                ),
+            scale = min(
+                area.width / image.get_width(),
+                area.height / image.get_height(),
+                2.8,
             )
 
             sprite = pygame.transform.scale(
                 image,
-                size
+                (
+                    max(1, round(image.get_width() * scale)),
+                    max(1, round(image.get_height() * scale)),
+                )
             )
 
             self.screen.blit(
                 sprite,
                 sprite.get_rect(
-                    center=image_area.center
+                    center=self.pedestal_rect.center
                 )
             )
 
         # Titulo de descripcion
-        desc_title = self.body_font.render(
-            "Descripcion",
-            True,
-            self.TITLE_COLOR,
-        )
+        desc_y = self.pedestal_rect.bottom + round(16 * self.sy)
 
-        self.screen.blit(
-            desc_title,
-            (
-                card.left + pad,
-                card.top + round(222 * self.sy)
-            )
-        )
-
-        # Descripcion SOLO LECTURA
-        lines = self._wrap(
+        title_rect = self._blit_text(
             self.body_font,
-            str(
-                enemy.get(
-                    "descripcion",
-                    ""
-                )
-            ),
-            card.width - pad * 2,
+            "Descripción",
+            self.TITLE_COLOR,
+            topleft=(card.left + pad, desc_y),
         )
 
-        y = card.top + round(256 * self.sy)
+        pygame.draw.line(
+            self.screen,
+            self.LINE_COLOR,
+            (card.left + pad, title_rect.bottom + round(4 * self.sy)),
+            (card.right - pad, title_rect.bottom + round(4 * self.sy)),
+            2,
+        )
+
+        # Descripcion SOLO LECTURA (se achica la letra para que entre)
+        text_top = title_rect.bottom + round(12 * self.sy)
+
+        available_h = card.bottom - round(16 * self.sy) - text_top
+
+        font, lines = self._fit_description(
+            str(enemy.get("descripcion", "")),
+            card.width - pad * 2,
+            available_h,
+        )
+
+        y = text_top
 
         for line in lines:
 
-            if y > card.bottom - round(20 * self.sy):
-                break
+            surf = font.render(line, True, self.TEXT_COLOR)
 
-            text = self.body_font.render(
-                line,
-                True,
-                self.TEXT_COLOR
-            )
+            self.screen.blit(surf, (card.left + pad, y))
 
-            self.screen.blit(
-                text,
-                (
-                    card.left + pad,
-                    y
-                )
-            )
+            y += font.get_linesize() + 2
 
-            y += (
-                text.get_height()
-                + 4
-            )
-
-        # ---------- controles ----------
+    def _draw_hint(self):
 
         hint_x = self._enemy_rect(0).left
 
@@ -736,24 +902,21 @@ class EnemyEncyclopedia:
 
         for line in self._wrap(
             self.small_font,
-            "Flechas / W-S: elegir   ESC: volver",
+            "Flechas / W-S / mouse: elegir   ESC: volver",
             self._enemy_rect(0).width,
         ):
 
             hint = self.small_font.render(
                 line,
                 True,
-                (195, 215, 225),
+                self.MUTED_COLOR,
             )
 
-            self.screen.blit(
-                hint,
-                (hint_x, hint_y)
-            )
+            self.screen.blit(hint, (hint_x, hint_y))
 
             hint_y += hint.get_height() + 2
 
-        # ---------- boton regresar ----------
+    def _draw_back_button(self):
 
         hover = self.back_rect.collidepoint(
             pygame.mouse.get_pos()
@@ -767,10 +930,7 @@ class EnemyEncyclopedia:
 
         if button is not None:
 
-            self.screen.blit(
-                button,
-                self.back_rect
-            )
+            self.screen.blit(button, self.back_rect)
 
         else:
 
@@ -781,15 +941,32 @@ class EnemyEncyclopedia:
                 border_radius=9,
             )
 
-            back_text = self.body_font.render(
-                "REGRESAR",
-                True,
-                (240, 250, 255)
-            )
+        # Las imagenes del boton vienen sin texto: se escribe aca
+        self._blit_text(
+            self.back_font,
+            "REGRESAR",
+            (255, 255, 255) if hover else self.TEXT_COLOR,
+            center=self.back_rect.center,
+        )
 
-            self.screen.blit(
-                back_text,
-                back_text.get_rect(
-                    center=self.back_rect.center
-                )
-            )
+    def draw(self):
+
+        # ---------- fondo ----------
+
+        if self.bg_img is not None:
+
+            self.screen.blit(self.bg_img, (0, 0))
+
+        else:
+
+            self._draw_fallback_frames()
+
+        self._draw_header()
+
+        self._draw_list()
+
+        self._draw_card()
+
+        self._draw_hint()
+
+        self._draw_back_button()
