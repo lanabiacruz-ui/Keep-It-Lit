@@ -27,7 +27,7 @@ TUTORIAL_PAGES = [
     "Muevete con WASD, busca en esta cabaña objetos para alimentar a tu llama",
     " Click izquierdo para pegar con tu luz (Cada golpe le baja a tu vida). Te da la posibilidad de romper puertas y abrir cofres",
     "Utiliza la E para agarrar objetos del piso y la Q para soltarlos",
-    "Teclas del 1 al 5 sirven para elegir casillero. Click derecho: para consumir el objeto",
+    "Teclas del 1 al 4 sirven para elegir casillero. Click derecho: para consumir el objeto",
     "ESC habre el menu y mantener click izquierdo en el slot donde estan ubicados los objetos te da informacion de su funcion",
 ]
 

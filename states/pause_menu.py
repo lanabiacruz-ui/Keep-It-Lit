@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pygame
 
 
@@ -14,12 +16,12 @@ class PauseMenu:
         "back": (569, 627, 1063, 705),
     }
 
-    def _init_(self, screen):
+    def __init__(self, screen):
         self.screen = screen
         self.width, self.height = screen.get_size()
 
         image_path = (
-            Path(_file_).resolve().parent.parent
+            Path(__file__).resolve().parent.parent
             / "assets"
             / "maps"
             / "hud"

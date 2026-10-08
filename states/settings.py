@@ -77,7 +77,7 @@ class Settings:
         ("Pantalla completa", "fullscreen", "toggle"),
     ]
 
-    def __init__(self, screen):
+    def __init__(self, screen, background="mapaajustes.png"):
 
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -92,8 +92,15 @@ class Settings:
             / "ui"
         )
 
+        # Fondo de la pantalla (otro archivo = otra pantalla). Si el
+        # archivo todavia no existe se usa el de siempre.
+        background_path = ui_dir / background
+
+        if not background_path.exists():
+            background_path = ui_dir / "mapaajustes.png"
+
         background = pygame.image.load(
-            ui_dir / "mapaajustes.png"
+            background_path
         ).convert()
 
         self.background = pygame.transform.smoothscale(

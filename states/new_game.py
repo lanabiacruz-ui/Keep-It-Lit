@@ -902,7 +902,7 @@ class NewGame:
                 int(y)
             )
 
-            if not self.collision_map.collides(rect):
+            if self.collision_map.can_move(rect):
                 self.dummies.append(
                     TrainingDummy(
                         int(x),
@@ -916,9 +916,7 @@ class NewGame:
         for dummy in self.dummies:
 
             dummy.update(
-                dt,
-                self.player,
-                self.collision_map
+                dt
             )
 
     def _attack(self):
@@ -933,27 +931,79 @@ class NewGame:
         if not self.melee.can_attack():
             return
 
-        target = self._mouse_world()
+        if not self.melee.start():
+            return
 
-        origin = self._attack_pivot()
+        # Cada golpe gasta un poco de la vida de la luz (en furia no)
+        if not self.melee.fury:
 
-        self.melee.attack(
-            origin,
-            target
-        )
+            self.vida -= light_stats(
+                self.light_type
+            )["golpe_costo"]
+
+    def _melee_hits(self, pivot):
+        """Reparte lo que toco el golpe: enemigos, puertas, cofres y
+        munecos."""
+
+        if not self.melee.swinging:
+            return
+
+        targets = list(self.arena.targets())
+        targets += list(self.doors.doors)
+        targets += list(self.chests.chests)
+        targets += [d for d in self.dummies if not d.dead]
+
+        light = light_stats(self.light_type)
+
+        for target in self.melee.new_hits(targets, pivot):
+
+            if isinstance(target, Door):
+
+                if target.kind not in light["rompe"]:
+
+                    target.resist()
+
+                    self.show_message(
+                        "Tu luz no puede romper esta puerta"
+                    )
+
+                else:
+
+                    cost = target.take_damage(self.melee.damage)
+
+                    if not self.melee.fury:
+                        self.vida -= cost
+
+            elif isinstance(target, Chest):
+
+                target.take_damage(self.melee.damage)
+
+                if target.ready:
+
+                    self._open_chest(target)
+
+                else:
+
+                    self.show_message(
+                        f"Faltan {format_time(target.cooldown)}"
+                    )
+
+            else:
+
+                target.take_damage(self.melee.damage)
 
     # ---------- cofres ----------
 
     def _open_chest(self, chest):
 
-        if chest.opened:
-            return
-
         if not chest.ready:
+
             self.show_message(
-                f"Faltan {format_time(chest.remaining)}"
+                f"Faltan {format_time(chest.cooldown)}"
             )
             return
+
+        chest.busy = True
 
         self.minigame_chest = chest
 
@@ -963,56 +1013,27 @@ class NewGame:
 
     def _finish_chest(self, success):
 
-        if self.minigame_chest is None:
-            return
-
         chest = self.minigame_chest
 
-        if success:
+        if chest is not None:
 
-            chest.opened = True
+            chest.busy = False
 
-            reward = chest.reward
+            if success:
 
-            if reward:
+                # Gasta una apertura (al agotarse queda en espera) y
+                # sueltan los objetos del cofre
+                self.chests.consume_use(chest)
 
-                if reward == "moneda":
-
-                    amount = chest.reward_amount or 1
-
-                    self.coins += amount
-
-                    self.show_message(
-                        f"Conseguiste {amount} monedas!"
+                self.world_items.extend(
+                    self.chests.spawn_drops(
+                        chest,
+                        self.collision_map,
+                        self.item_defs
                     )
+                )
 
-                elif reward == "gema":
-
-                    amount = chest.reward_amount or 1
-
-                    self.gems += amount
-
-                    self.show_message(
-                        f"Conseguiste {amount} gemas!"
-                    )
-
-                else:
-
-                    for _ in range(
-                        chest.reward_amount or 1
-                    ):
-
-                        x, y = chest.rect.center
-
-                        self.world_items.append(
-                            WorldItem(
-                                reward,
-                                x + random.randint(-20, 20),
-                                y + random.randint(-20, 20)
-                            )
-                        )
-
-            self.chests.save_state()
+                chest.show_open()
 
         self.minigame = None
         self.minigame_chest = None
@@ -1025,9 +1046,11 @@ class NewGame:
             return
 
         self.shop = ShopUI(
-            self.screen,
+            self.screen.get_size(),
             self.catalog,
-            self.shop_prices
+            self.item_defs,
+            self.coins,
+            MATCH_DURATION
         )
 
     def _close_shop(self):
@@ -1053,6 +1076,10 @@ class NewGame:
             return
 
         self.coins -= total
+
+        # La tienda muestra las monedas que le pasaron al abrirse
+        if self.shop is not None:
+            self.shop.coins = int(self.coins)
 
         # El vendedor escupe todo lo comprado
         rect = getattr(self.shopkeeper, "rect", None)
@@ -1129,15 +1156,20 @@ class NewGame:
             "arena_wave": self.arena.wave,
             "arena_completed": self.arena.completed,
 
-            "broken_doors": self.doors.broken,
+            "broken_doors": sorted(self.doors.broken_ids),
 
             "chests": self.chests.save_data(),
         }
 
         save_progress(
             self.save_path,
-            data
+            **data
         )
+
+    def save_progress(self):
+        """Guarda la partida (lo usa main.py al cerrar la ventana)."""
+
+        self._save()
 
     # ---------- eventos ----------
 
@@ -1153,7 +1185,7 @@ class NewGame:
                 event
             )
 
-            if result == "close":
+            if result == "close" or not self.tutorial.active:
 
                 self.tutorial = None
 
@@ -1169,13 +1201,8 @@ class NewGame:
                 event
             )
 
-            if result == "success":
-
-                self._finish_chest(
-                    True
-                )
-
-            elif result == "fail":
+            # Esc = salir del minijuego
+            if result == "cancel":
 
                 self._finish_chest(
                     False
@@ -1200,7 +1227,8 @@ class NewGame:
             elif result == "settings":
 
                 self.pause_settings = Settings(
-                    self.screen
+                    self.screen,
+                    background="tablet_ajustes.png"
                 )
 
                 self.pause_view = "settings"
@@ -1492,6 +1520,12 @@ class NewGame:
                 dt
             )
 
+            # Cuando el tutorial termina (se desliza afuera) se libera
+            # el juego; antes quedaba congelado para siempre.
+            if not self.tutorial.active:
+
+                self.tutorial = None
+
             return None
 
         # ---------------------------------------------------------
@@ -1580,8 +1614,19 @@ class NewGame:
                 None
             )
 
-            if update is not None:
-                update(dt)
+            result = update(dt) if update is not None else None
+
+            if result == "win":
+
+                self._finish_chest(
+                    True
+                )
+
+            elif result == "fail":
+
+                self._finish_chest(
+                    False
+                )
 
             return None
 
@@ -1694,11 +1739,8 @@ class NewGame:
         # JUGADOR
         # ---------------------------------------------------------
 
-        keys = pygame.key.get_pressed()
-
         self.player.update(
             dt,
-            keys,
             self.collision_map
         )
 
@@ -1714,9 +1756,15 @@ class NewGame:
         # ATAQUE
         # ---------------------------------------------------------
 
+        pivot = self._attack_pivot()
+
         self.melee.update(
-            dt
+            dt,
+            pivot,
+            self._mouse_world()
         )
+
+        self._melee_hits(pivot)
 
         # ---------------------------------------------------------
         # MUNECOS
@@ -1747,10 +1795,8 @@ class NewGame:
         # ---------------------------------------------------------
 
         self.arena.update(
-            dt,
-            self.player,
-            self.collision_map,
-            self
+            self,
+            dt
         )
 
         # Si los golpes de los enemigos te dejaron sin vida
@@ -1767,6 +1813,11 @@ class NewGame:
         for item in list(
             self.world_items
         ):
+
+            # Los que salen disparados de un cofre vuelan un ratito
+            if getattr(item, "fly", None) is not None:
+                item.update_fly(dt)
+                continue
 
             if item.item_id != "moneda":
                 continue
@@ -1843,20 +1894,33 @@ class NewGame:
             )
 
         # La puerta de la cabana queda iluminada despues del tutorial.
+        # Se centra en la puerta real (id "cabana"); si ya se rompio,
+        # deja de iluminar.
         if self.tutorial is None:
 
-            rects.append(
-                (
-                    pygame.Rect(
-                        785,
-                        946,
-                        70,
-                        75
-                    ),
-                    1.0,
-                    18
+            for door in self.doors.doors:
+
+                if door.id != "cabana":
+                    continue
+
+                glow = pygame.Rect(
+                    0,
+                    0,
+                    70,
+                    75
                 )
-            )
+
+                glow.center = door.rect.center
+
+                rects.append(
+                    (
+                        glow,
+                        1.0,
+                        18
+                    )
+                )
+
+                break
 
         return rects
 
