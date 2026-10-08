@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pygame
 
-from world.items import load_icon
+from world.items import load_icon, HUD_DIR
 from world.lights import LIGHTS
 
 
@@ -69,6 +69,7 @@ C_BADGE = (251, 146, 60)
 TILE_COLORS = {
     "fosforo": (66, 36, 10),
     "vela": (16, 40, 86),
+    "antorcha": (86, 30, 12),
     "madera": (60, 36, 12),
     "cera": (44, 44, 48),
     "aceite": (16, 50, 18),
@@ -104,7 +105,8 @@ class ShopUI:
     FOOT_H = 118
 
     def __init__(
-        self, screen_size, catalog, item_defs, coins, match_duration=30.0
+        self, screen_size, catalog, item_defs, coins, match_duration=30.0,
+        cart=None
     ):
 
         self.sw, self.sh = screen_size
@@ -122,8 +124,14 @@ class ShopUI:
             for it in sec["items"]
         }
 
-        # {id: cantidad}, en el orden en que se fueron agregando
-        self.cart = {}
+        # {id: cantidad}, en el orden en que se fueron agregando.
+        # Si se cerro la tienda sin comprar, vuelve con lo que habias
+        # puesto (new_game se lo pasa en `cart`).
+        self.cart = {
+            item_id: min(MAX_PER_ITEM, int(qty))
+            for item_id, qty in (cart or {}).items()
+            if item_id in self.prices and int(qty) > 0
+        }
 
         self.message = ""
         self.message_timer = 0.0
@@ -248,6 +256,9 @@ class ShopUI:
         lines.append(radio)
         lines.append(f"Duración: {duracion:g} segundos")
 
+        if stats.get("dano", 1) > 1:
+            lines.append(f"Fuerza: {stats['dano']:g} de daño por golpe")
+
         if stats.get("furia_cada", 0) > 0:
             lines.append(
                 f"Furia: cada {stats['furia_cada']:g} s entra en furia "
@@ -269,7 +280,21 @@ class ShopUI:
 
         if key not in self._icons:
 
-            icon = load_icon(item_id)
+            # El fosforo usa el dibujo del fosforo (item_fosforo.png) y
+            # no icon_fosforo.png, que es el casillero del HUD
+            if item_id == "fosforo":
+
+                path = HUD_DIR / "item_fosforo.png"
+
+                icon = (
+                    pygame.image.load(str(path)).convert_alpha()
+                    if path.exists()
+                    else load_icon(item_id)
+                )
+
+            else:
+
+                icon = load_icon(item_id)
 
             if icon is not None:
                 icon = pygame.transform.smoothscale(icon, (size, size))

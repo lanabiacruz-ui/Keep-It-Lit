@@ -15,6 +15,7 @@ balancear, se cambian aca:
   furia_cada      segundos de espera hasta la proxima furia (0 = nunca)
   furia_duracion  cuanto dura la furia, en segundos
   furia_velocidad cuantas veces mas rapido pega durante la furia
+  dano            cuanto saca cada golpe (si falta, 1)
 """
 
 DEFAULT_LIGHT = "fosforo"
@@ -31,6 +32,7 @@ LIGHTS = {
         "furia_cada": 0,
         "furia_duracion": 0,
         "furia_velocidad": 1.0,
+        "dano": 1,
     },
     # Ilumina el doble y dura el doble (60 s). Pega lento, pero cada
     # 20 s entra en furia 15 s y pega rapidisimo. Es la unica que rompe
@@ -46,6 +48,24 @@ LIGHTS = {
         "furia_cada": 20.0,       # espera 20 s entre furias
         "furia_duracion": 15.0,   # y cada furia dura 15 s
         "furia_velocidad": 4.0,   # pega 4 veces mas rapido
+        "dano": 1,
+    },
+    # El doble que la vela en todo: ilumina el doble (400), dura el
+    # doble (120 s), pega el doble de rapido y el doble de fuerte, y la
+    # furia llega el doble de seguido (cada 10 s), dura el doble (30 s)
+    # y pega el doble de rapido (x8).
+    "antorcha": {
+        "nombre": "Antorcha",
+        "radio": 400,
+        "radio_suelo": 60,
+        "consumo": 0.25,
+        "cooldown": 0.20,
+        "golpe_costo": 0.003,
+        "rompe": ("comun", "verde", "gris"),
+        "furia_cada": 10.0,
+        "furia_duracion": 30.0,
+        "furia_velocidad": 8.0,
+        "dano": 2,
     },
 }
 

@@ -48,6 +48,18 @@ class Player:
          (850, 785, 163, 202), (1102, 785, 168, 202)],
     ]
 
+    # Hoja del personaje con la antorcha (assets/maps/player/player_antorcha.png)
+    SHEET_RECTS_ANTORCHA = [
+        [(343, 49, 166, 204), (596, 49, 167, 204),
+         (848, 49, 168, 204), (1101, 49, 168, 204)],
+        [(313, 297, 178, 205), (568, 297, 176, 205),
+         (824, 297, 175, 206), (1076, 297, 179, 206)],
+        [(310, 544, 175, 202), (568, 545, 172, 202),
+         (825, 545, 172, 203), (1079, 545, 172, 202)],
+        [(335, 785, 172, 202), (589, 785, 173, 201),
+         (845, 785, 172, 202), (1102, 785, 172, 202)],
+    ]
+
     # Golpe recibido: se pone rojo un ratito y queda invulnerable
     HURT_TIME = 0.30
     INVULN_TIME = 0.90
@@ -101,6 +113,7 @@ class Player:
         sheet_path = player_dir / "player.png"
         torch_path = player_dir / "player_phosphor.png"
         vela_path = player_dir / "player_vela.png"
+        antorcha_path = player_dir / "player_antorcha.png"
 
         self.frame_scale = None
 
@@ -146,15 +159,29 @@ class Player:
                 self.SHEET_RECTS_VELA
             )
 
+        self.frames_antorcha = None
+
+        if antorcha_path.exists():
+
+            antorcha_sheet = pygame.image.load(
+                str(antorcha_path)
+            ).convert()
+
+            self.frames_antorcha = self.load_frames_from_sheet(
+                antorcha_sheet,
+                self.SHEET_RECTS_ANTORCHA
+            )
+
     def set_torch(self, value, kind="fosforo"):
         """Con luz en la mano el personaje cambia de dibujo: el del
-        fosforo o el de la vela."""
+        fosforo, el de la vela o el de la antorcha."""
 
         self.torch_kind = kind
 
         self.has_torch = bool(value) and (
             self.frames_torch is not None
             or self.frames_vela is not None
+            or self.frames_antorcha is not None
         )
 
     # ---------- golpes recibidos ----------
@@ -374,6 +401,12 @@ class Player:
     def draw(self, screen, camera):
 
         if (
+            self.has_torch
+            and self.torch_kind == "antorcha"
+            and self.frames_antorcha is not None
+        ):
+            frames = self.frames_antorcha
+        elif (
             self.has_torch
             and self.torch_kind == "vela"
             and self.frames_vela is not None

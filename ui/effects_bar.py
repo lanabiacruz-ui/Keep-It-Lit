@@ -1,6 +1,6 @@
 """Efectos activos como cubitos arriba al centro de la pantalla.
 
-Cada efecto (aceite, cera, polvora, resina, furia de la vela) aparece
+Cada efecto (aceite, cera, polvora, resina, furia de la vela y la antorcha) aparece
 como un cubito. El contenido del cubito se va vaciando de arriba hacia
 abajo mientras pasa el tiempo; cuando se acaba, el cubito se desvanece.
 Los ultimos segundos parpadea para avisar.

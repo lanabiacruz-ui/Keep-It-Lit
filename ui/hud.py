@@ -87,7 +87,11 @@ class Hud:
 
         self.equipped_icons = {
             "fosforo": scaled(load("icon_fosforo.png"), equipped_scale),
-            "vela": scaled(load("icon_vela_equipado.png"), equipped_scale)
+            "vela": scaled(load("icon_vela_equipado.png"), equipped_scale),
+            "antorcha": scaled(
+                load("icon_antorcha_equipado.png"),
+                equipped_scale
+            )
         }
 
         # Versiones "seleccionado" (reemplazan al contorno dibujado)
@@ -103,6 +107,10 @@ class Hud:
             ),
             "vela": scaled(
                 load("icon_vela_equipado_select.png"),
+                equipped_scale
+            ),
+            "antorcha": scaled(
+                load("icon_antorcha_equipado_select.png"),
                 equipped_scale
             )
         }

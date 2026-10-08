@@ -271,7 +271,10 @@ HONGUN_CHARGE_FRAME = 0.12
 
 BANNER_TIME = 3.0          # cuanto se ve "Oleada completada"
 BANNER_TIME_FINAL = 5.0    # cuanto se ve "Mapa completado"
-COLLECT_TIMEOUT = 7.0      # maximo esperando que juntes las monedas
+# El menu de la siguiente oleada NO sale hasta que juntes todas las
+# recompensas. Este tiempo es solo un seguro por si una quedo
+# inalcanzable (si no, el jugador se quedaria trabado).
+COLLECT_TIMEOUT = 60.0
 MAX_COIN_ITEMS = 30        # monedas dibujadas (cada una vale mas)
 
 

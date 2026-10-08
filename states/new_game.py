@@ -202,6 +202,10 @@ class NewGame:
         self.shop_prices = price_table(self.catalog)
         self.shop = None
 
+        # Lo que pusiste en el carrito: se guarda al cerrar la tienda
+        # sin comprar y vuelve cuando la abris de nuevo
+        self.shop_cart = {}
+
         spawn_x, spawn_y = get_spawn_point(
             self.collision_map,
             "cabana"
@@ -406,6 +410,10 @@ class NewGame:
         # Iman: atrae los objetos del piso mientras dura
         self.magnet_timer = 0.0
         self.magnet_total = 1.0
+
+        # Modo iman: se prende y se apaga con la tecla O
+        self.magnet_mode = False
+        self._magnet_mode_img = None
 
         # Esfera de vidrio: mas radio de luz mientras dura
         self.sphere_timer = 0.0
@@ -1113,9 +1121,14 @@ class NewGame:
 
         rect = self.player.image_rect
 
+        # El personaje se dibuja de rect.height px de alto en PANTALLA
+        # (no en unidades del mundo, que tienen zoom): el torso esta a
+        # esa altura sobre los pies, pasada a unidades del mundo.
+        zoom = max(1, self.camera.zoom)
+
         return (
             rect.centerx,
-            rect.bottom - rect.height * TORSO_HEIGHT
+            rect.bottom - rect.height * TORSO_HEIGHT / zoom
         )
 
     def _spawn_dummy(self):
@@ -1185,7 +1198,7 @@ class NewGame:
         """Reparte lo que toco el golpe: enemigos, puertas, cofres y
         munecos."""
 
-        if not self.melee.swinging:
+        if not self.melee.swinging and not self.melee.final_pass:
             return
 
         targets = list(self.arena.targets())
@@ -1299,10 +1312,15 @@ class NewGame:
             self.catalog,
             self.item_defs,
             self.coins,
-            MATCH_DURATION
+            MATCH_DURATION,
+            cart=self.shop_cart
         )
 
     def _close_shop(self):
+
+        # Guarda el carrito para la proxima vez que se abra
+        if self.shop is not None:
+            self.shop_cart = dict(self.shop.cart)
 
         self.shop = None
 
@@ -1338,19 +1356,28 @@ class NewGame:
         else:
             x, y = self.player.rect.center
 
+        # El vendedor los escupe por la boca, uno atras del otro
+        item_ids = []
+
         for item_id, qty in cart.items():
+            item_ids.extend([item_id] * qty)
 
-            for _ in range(qty):
+        for item in self.shopkeeper.spit(item_ids, self.collision_map):
 
-                px = x + random.randint(-24, 24)
-                py = y + random.randint(10, 40)
-
-                if item_id in LIGHTS:
-                    self.light_drops.append(LightItem(item_id, px, py))
-                else:
-                    self.world_items.append(WorldItem(item_id, px, py))
+            if isinstance(item, LightItem):
+                self.light_drops.append(item)
+            else:
+                self.world_items.append(item)
 
         self.show_message("Compra hecha")
+
+        # Compraste: el carrito queda vacio y se cierra la tienda
+        if self.shop is not None:
+            self.shop.clear()
+
+        self.shop_cart = {}
+
+        self._close_shop()
 
     # ---------- guardado ----------
 
@@ -1572,25 +1599,13 @@ class NewGame:
 
         if self.arena.menu_open:
 
-            handler = getattr(
-                self.arena,
-                "handle_menu_event",
-                None
+            # Botones del menu (Jugar con escape / sin escape / Salir)
+            # y ESC para irse. Antes se buscaba "handle_menu_event", que
+            # no existe: el menu abria pero no respondia a nada.
+            self.arena.handle_event(
+                self,
+                event
             )
-
-            if handler is not None:
-
-                handler(
-                    event,
-                    self
-                )
-
-            elif (
-                event.type == pygame.KEYDOWN
-                and event.key == pygame.K_ESCAPE
-            ):
-
-                self.arena.menu_open = False
 
             return None
 
@@ -1769,6 +1784,17 @@ class NewGame:
                         self.selected_slot
                     )
 
+            elif event.key == pygame.K_o:
+
+                # Modo iman: O lo prende y O lo apaga
+                self.magnet_mode = not self.magnet_mode
+
+                self.show_message(
+                    "Modo imán activado"
+                    if self.magnet_mode
+                    else "Modo imán desactivado"
+                )
+
             elif event.key == pygame.K_f:
 
                 # Hablar con el vendedor (abre la tienda)
@@ -1895,6 +1921,19 @@ class NewGame:
             if self.message_timer <= 0:
 
                 self.message = ""
+
+        # ---------------------------------------------------------
+        # MENU DE COMBATE: el juego queda en pausa (el personaje no se
+        # mueve, nada avanza ni se gasta la luz) hasta elegir
+        # ---------------------------------------------------------
+
+        if self.arena.menu_open:
+
+            self.arena.update_menu(
+                dt
+            )
+
+            return None
 
         # ---------------------------------------------------------
         # MINIJUEGO DEL COFRE (el mundo queda congelado)
@@ -2124,9 +2163,18 @@ class NewGame:
         # MONEDAS CERCANAS
         # ---------------------------------------------------------
 
+        # El vendedor (boca abierta mientras escupe) y las luces que
+        # salen volando de su boca
+        self.shopkeeper.update(dt)
+
+        for drop in self.light_drops:
+
+            if getattr(drop, "fly", None) is not None:
+                drop.update_fly(dt)
+
         px, py = self.player.rect.center
 
-        magnet_on = self.magnet_timer > 0
+        magnet_on = self.magnet_timer > 0 or self.magnet_mode
 
         for item in list(
             self.world_items
@@ -2194,7 +2242,17 @@ class NewGame:
         # SI SE QUEDA SIN LUZ
         # ---------------------------------------------------------
 
-        if not self.has_match:
+        # En la tienda esta todo iluminado: sin luz en la mano no corre
+        # la cuenta regresiva (se reinicia al salir)
+        in_shop_now = self.shopkeeper.zone_inset(
+            self.player
+        ) > 0
+
+        if not self.has_match and in_shop_now:
+
+            self.no_light_timer = None
+
+        elif not self.has_match:
 
             if self.no_light_timer is None:
 
@@ -2311,6 +2369,51 @@ class NewGame:
 
     # ---------- dibujo ----------
 
+    def _draw_magnet_mode(self):
+        """Icono del modo iman (assets/maps/hud/modo_iman.png) a la
+        izquierda de las monedas, mientras esta prendido."""
+
+        if not self.magnet_mode or self.state != "playing":
+            return
+
+        if self._magnet_mode_img is None:
+
+            path = (
+                Path(__file__).resolve().parent.parent
+                / "assets" / "maps" / "hud" / "modo_iman.png"
+            )
+
+            try:
+                img = pygame.image.load(str(path)).convert_alpha()
+            except (pygame.error, FileNotFoundError):
+
+                # Si falta el PNG: un iman simple dibujado por codigo
+                img = pygame.Surface((64, 64), pygame.SRCALPHA)
+
+                pygame.draw.rect(
+                    img, (86, 92, 104), (2, 2, 60, 60), border_radius=12
+                )
+                pygame.draw.arc(
+                    img, (214, 52, 60), (16, 12, 32, 32), 3.14, 6.28, 8
+                )
+                pygame.draw.rect(img, (214, 52, 60), (16, 28, 8, 16))
+                pygame.draw.rect(img, (214, 52, 60), (40, 28, 8, 16))
+
+            size = max(1, self.hud.coin_icon.get_height())
+
+            self._magnet_mode_img = pygame.transform.smoothscale(
+                img, (size, size)
+            )
+
+        rect = self._magnet_mode_img.get_rect(
+            topright=(
+                self.hud.coin_rect.left - 8,
+                self.hud.coin_rect.top
+            )
+        )
+
+        self.screen.blit(self._magnet_mode_img, rect.topleft)
+
     def _draw_gems(self):
         """RECONSTRUIDO: contador de gemas arriba a la derecha."""
 
@@ -2415,6 +2518,12 @@ class NewGame:
         sources.extend(self.arena.light_sources())
 
         for drop in self.light_drops:
+
+            # Todavia "dentro" de la boca del vendedor: no ilumina
+            fly = getattr(drop, "fly", None)
+
+            if fly is not None and fly["delay"] > 0:
+                continue
 
             sources.append((
                 drop.rect.centerx,
@@ -2587,6 +2696,8 @@ class NewGame:
         )
 
         self._draw_gems()
+
+        self._draw_magnet_mode()
 
         # Cubitos de efectos arriba al centro (se vacian hasta desaparecer)
         active = {}

@@ -10,6 +10,10 @@
         {
           "id": "vela",
           "precio": 55
+        },
+        {
+          "id": "antorcha",
+          "precio": 110
         }
       ]
     },

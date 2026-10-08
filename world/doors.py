@@ -13,12 +13,12 @@ DOORS_DIR = BASE_DIR / "assets" / "maps" / "puertas"
 #   cost:  cuanta vida de la luz (0.0 a 1.0) gasta CADA golpe.
 #          El fosforo dura 30 s, asi que 0.05 = 1.5 s de luz.
 #   Que luz puede romper cada tipo se define en world/lights.py
-#   ("rompe"): la gris solo la rompe la vela.
+#   ("rompe"): la gris solo la rompen la vela y la antorcha.
 # ---------------------------------------------------------------
 DOOR_TYPES = {
     "comun": {"hits": 2, "cost": 0.05},
     "verde": {"hits": 6, "cost": 0.05},
-    # Solo se rompe con la vela
+    # Solo se rompe con la vela o la antorcha
     "gris": {"hits": 4, "cost": 0.05},
     # Se abre con otro objeto (todavia no existe)
     "azul": {"hits": None, "cost": 0.0},

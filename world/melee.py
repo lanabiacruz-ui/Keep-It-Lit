@@ -59,6 +59,13 @@ VELA_HEAD_ANGLE = -90
 VELA_SPRITE_PX = 60
 VELA_LENGTH = 15
 
+# La antorcha (icon_antorcha.png, 96x96): la llama apunta arriba a la
+# derecha (unos -50 grados en pantalla) y la antorcha mide unos 74 px
+# en diagonal. Se dibuja de ANTORCHA_LENGTH unidades del mundo.
+ANTORCHA_HEAD_ANGLE = -50
+ANTORCHA_SPRITE_PX = 74
+ANTORCHA_LENGTH = 21
+
 
 def arc_points(cx, cy, radius, a0, a1, steps=14):
     """Puntos de un arco de circulo de a0 a a1 (radianes)."""
@@ -108,6 +115,10 @@ class Melee:
 
         self._hit_ids = set()
 
+        # El golpe termino en este frame, pero todavia hay que revisar
+        # lo que barrio hasta el final (ver new_hits)
+        self.final_pass = False
+
         self._sprite_zoom = None
         self._sprite = None
 
@@ -139,7 +150,7 @@ class Melee:
     @property
     def damage(self):
 
-        return DAMAGE
+        return light_stats(self.kind).get("dano", DAMAGE)
 
     def set_light(self, kind):
         """Cambia la luz con la que se pega (fosforo, vela...): cambia
@@ -165,7 +176,13 @@ class Melee:
     def _head_angle(self):
         """Hacia donde mira la punta (la llama) en el PNG."""
 
-        return VELA_HEAD_ANGLE if self.kind == "vela" else SPRITE_HEAD_ANGLE
+        if self.kind == "vela":
+            return VELA_HEAD_ANGLE
+
+        if self.kind == "antorcha":
+            return ANTORCHA_HEAD_ANGLE
+
+        return SPRITE_HEAD_ANGLE
 
     def can_attack(self):
 
@@ -178,6 +195,7 @@ class Melee:
             return False
 
         self.swinging = True
+        self.final_pass = False
         self.t = 0.0
         self.glow = 0.0
         self._hit_ids = set()
@@ -188,10 +206,13 @@ class Melee:
         """Corta el golpe (por ejemplo si se apaga el fosforo)."""
 
         self.swinging = False
+        self.final_pass = False
         self.glow = 0.0
 
     def update(self, dt, pivot, mouse_world):
         """pivot y mouse_world en coordenadas del mundo."""
+
+        self.final_pass = False
 
         if self.cooldown > 0:
             self.cooldown = max(0.0, self.cooldown - dt)
@@ -215,6 +236,13 @@ class Melee:
 
             self.t = 1.0
             self.swinging = False
+
+            # Con furia el golpe dura unos 25 ms: si el frame tarda mas,
+            # el golpe entero termina adentro de este update. Sin esto
+            # new_hits ya no corria y la luz no pegaba a nada (ni a las
+            # puertas) mientras duraba la furia.
+            self.final_pass = True
+
             self.cooldown = self.cooldown_time / self.fury_speed
             self.glow = GLOW_TIME
             self.glow_angle = self.end_angle
@@ -255,7 +283,7 @@ class Melee:
         fosforo acaba de tocar. Cada uno se golpea una sola vez por
         golpe: cuenta lo que ya barrio el fosforo, no todo el area."""
 
-        if not self.swinging:
+        if not self.swinging and not self.final_pass:
             return []
 
         swept = self.current_angle - self.start_angle
@@ -318,6 +346,14 @@ class Melee:
                 ).convert_alpha()
 
                 scale = VELA_LENGTH / VELA_SPRITE_PX
+
+            elif self.kind == "antorcha":
+
+                original = pygame.image.load(
+                    str(HUD_DIR / "icon_antorcha.png")
+                ).convert_alpha()
+
+                scale = ANTORCHA_LENGTH / ANTORCHA_SPRITE_PX
 
             else:
 

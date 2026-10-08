@@ -271,19 +271,26 @@ class WorldItem(MatchItem):
 
 
 class LightItem(MatchItem):
-    """Luz tirada en el piso (fosforo o vela). Ilumina un poco y se
+    """Luz tirada en el piso (fosforo, vela o antorcha). Ilumina un poco y se
     recuerda cuanta vida le quedaba, asi al agarrarla sigue igual."""
 
     def __init__(self, kind, x, y, life=1.0):
 
-        # La vela es un poco mas grande que el fosforo
+        # La vela es un poco mas grande que el fosforo, y la antorcha
+        # un poco mas que la vela
         if kind == "vela":
             self.WORLD_SIZE = 16
+        elif kind == "antorcha":
+            self.WORLD_SIZE = 20
 
         super().__init__(x, y)
 
         self.kind = kind
         self.life = float(life)
+
+        # Animacion de "salir disparada" (None = quieta en el piso)
+        self.fly = None
+        self._lift = 0.0
 
         # El fosforo usa el sprite de MatchItem; las demas luces usan su
         # icono (assets/maps/hud/icon_<luz>.png)
@@ -293,6 +300,20 @@ class LightItem(MatchItem):
 
             if icon is not None:
                 self.original = icon
+
+    # Misma animacion que los objetos: sale de la boca del vendedor y
+    # cae en el piso
+    start_fly = WorldItem.start_fly
+    update_fly = WorldItem.update_fly
+    draw = WorldItem.draw
+
+    def is_near(self, player):
+
+        # En el aire no se puede agarrar
+        if self.fly is not None:
+            return False
+
+        return super().is_near(player)
 
     @property
     def light_radius(self):
