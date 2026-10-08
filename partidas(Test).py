@@ -4,7 +4,7 @@
     "last_played": "2026-10-07T01:39:10",
     "x": 944,
     "y": 510,
-    "has_match": true,
+    "has_match": True,
     "light": "vela",
     "coins": 0,
     "inventory": [
