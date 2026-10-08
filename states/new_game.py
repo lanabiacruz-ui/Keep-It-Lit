@@ -1199,7 +1199,16 @@ class NewGame:
 
             if isinstance(target, Door):
 
-                if target.kind not in light["rompe"]:
+                if not target.breakable:
+
+                    # Ninguna luz la rompe (ej: la puerta azul)
+                    target.resist()
+
+                    self.show_message(
+                        "Esta puerta no es posible de romper"
+                    )
+
+                elif target.kind not in light["rompe"]:
 
                     target.resist()
 
@@ -1744,19 +1753,8 @@ class NewGame:
 
                     return None
 
-                # Abrir cofre
-                chest = self.chests.nearest_ready(
-                    self.player.rect.center,
-                    GANZUA_DISTANCE
-                )
-
-                if chest is not None:
-
-                    self._open_chest(
-                        chest
-                    )
-
-                    return None
+                # Los cofres ya NO se abren con E: solo pegandoles con
+                # la luz (o usando la ganzua).
 
             elif event.key == pygame.K_q:
 

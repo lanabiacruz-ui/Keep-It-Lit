@@ -1,6 +1,10 @@
 import random
+from pathlib import Path
 
 import pygame
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DOORS_DIR = BASE_DIR / "assets" / "maps" / "puertas"
 
 
 # ---------------------------------------------------------------
@@ -276,16 +280,62 @@ def _build_vertical(kind, length, cracks):
     return surf
 
 
+def _load_texture(kind, orient, length):
+    """Textura real de assets/maps/puertas (puerta_<tipo>_<v|h>.png),
+    estirada al largo del hueco. Si falta el archivo, devuelve None."""
+
+    def _file(o):
+        path = DOORS_DIR / f"puerta_{kind}_{o}.png"
+        if path.exists():
+            return pygame.image.load(str(path)).convert_alpha()
+        return None
+
+    img = _file(orient)
+
+    if img is None:
+        # Si no hay version horizontal, se gira la vertical (y al reves)
+        other = "v" if orient == "h" else "h"
+        img = _file(other)
+
+        if img is not None:
+            img = pygame.transform.rotate(img, 90)
+
+    if img is None:
+        return None
+
+    size = (THICKNESS, length) if orient == "v" else (length, THICKNESS)
+
+    # scale (no smoothscale) para que el pixel art no se borre
+    return pygame.transform.scale(img, size)
+
+
 def _get_door_image(kind, orient, length, cracks):
 
     key = (kind, orient, length, cracks)
 
     if key not in _image_cache:
 
-        image = _build_vertical(kind, length, cracks)
+        image = _load_texture(kind, orient, length)
 
-        if orient == "h":
-            image = pygame.transform.rotate(image, 90)
+        if image is None:
+
+            # Respaldo: dibujo por codigo si falta el PNG
+            image = _build_vertical(kind, length, 0)
+
+            if orient == "h":
+                image = pygame.transform.rotate(image, 90)
+
+        if cracks > 0:
+
+            image = image.copy()
+
+            # las grietas se dibujan en vertical y se giran si hace falta
+            if orient == "h":
+                image = pygame.transform.rotate(image, -90)
+                _draw_cracks(image, cracks, f"{kind}-{length}-crack")
+                image = pygame.transform.rotate(image, 90)
+            else:
+                _draw_cracks(image, cracks, f"{kind}-{length}-crack")
 
         _image_cache[key] = image
 
