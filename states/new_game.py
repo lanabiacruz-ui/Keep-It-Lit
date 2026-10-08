@@ -30,6 +30,9 @@ from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
+from states.pause_menu import PauseMenu
+from states.enemy_enciclopedia import EnemyEncyclopedia
+from states.settings import Settings
 
 
 # Radio de luz, consumo y espera entre golpes de cada luz (fosforo,
@@ -88,6 +91,39 @@ FADE_DURATION = 1.2
 # Cuanto se queda la pantalla de "Perdiste" antes de volver al menu.
 LOST_SCREEN_TIME = 3.0
 
+# Al perder, borrar la partida guardada (True) o dejarla como esta (False).
+# Esta en False para que no pierdas tus saves de prueba mientras probas.
+DELETE_SAVE_ON_LOSS = False
+
+# Donde se dibuja el contador de gemas (desde la esquina de arriba a la
+# derecha). Si se pisa con el HUD, cambialo.
+GEMS_MARGIN = (110, 70)
+
+# RECONSTRUIDO: que hace cada objeto al usarlo (tecla F). Si un objeto
+# en data/items.json tiene un campo "efecto", se usa ese en vez de esto.
+# Claves posibles:
+#   vida          -> suma vida de golpe (0.0 a 1.0)
+#   regen         -> suma vida de a poco; "regen_tiempo" = segundos
+#   velocidad     -> multiplica la velocidad; "duracion" = segundos
+#   consumo       -> multiplica lo rapido que se gasta la luz; "duracion"
+#   polvora_dps   -> dano por segundo de la luz; "duracion"
+#   escudo        -> suma escudo (0.0 a 1.0)
+ITEM_EFFECTS = {
+    "madera": {"vida": 0.20},
+    "cera": {"consumo": 0.5, "duracion": 20.0},
+    "aceite": {"velocidad": 1.5, "duracion": 12.0},
+    "resina": {"regen": 0.5, "regen_tiempo": 10.0},
+    "polvora": {"polvora_dps": 10.0, "duracion": 8.0},
+    "hongo_azul": {"escudo": 0.25},
+}
+
+SLOT_KEYS = {
+    pygame.K_1: 0,
+    pygame.K_2: 1,
+    pygame.K_3: 2,
+    pygame.K_4: 3,
+}
+
 
 class NewGame:
     def __init__(
@@ -106,7 +142,6 @@ class NewGame:
 
         self.world_map = WorldMap()
         self.collision_map = CollisionMap()
-
 
         # Puertas: las rotas (guardadas) no vuelven a aparecer
         self.doors = DoorManager(self.save_data.get("broken_doors", []))
@@ -158,6 +193,12 @@ class NewGame:
 
         self.hud = Hud((self.width, self.height))
 
+        # Menu de pausa y pantallas accesibles desde el menu de pausa.
+        self.pause_menu = PauseMenu(self.screen)
+        self.pause_settings = None
+        self.enemy_encyclopedia = None
+        self.pause_view = None
+
         # Efectos activos (y la alerta del mosquito) como cubitos arriba
         self.effects_bar = EffectsBar((self.width, self.height))
         self.effects_bar.set_alert_image(self.arena.mosquito_art.warning)
@@ -178,43 +219,49 @@ class NewGame:
         self.has_match = bool(self.save_data.get("has_match", False))
 
         # Vida del fosforo actual, de 0.0 a 1.0
-        self.vida = 1.0
+        self.vida = max(
+            0.0,
+            min(1.0, float(self.save_data.get("vida", 1.0)))
+        )
 
         # Escudo: por ahora solo se muestra, arranca vacio
-        self.escudo = max(0.0, min(1.0, float(self.save_data.get("escudo", 0.0))))
+        self.escudo = max(
+            0.0,
+            min(1.0, float(self.save_data.get("escudo", 0.0)))
+        )
 
-        # Que luz esta equipada: "fosforo" o "vela" (ver world/lights.py)
+        # Que luz esta equipada: "fosforo" o "vela"
         self.light_type = self.save_data.get("light", "fosforo")
 
         if self.light_type not in LIGHTS:
             self.light_type = "fosforo"
 
-        # Que tan rapido se consume la luz de base (1.0 = fosforo,
-        # 0.5 = vela: dura el doble). Lo fija equip_match().
+        # Que tan rapido se consume la luz de base
         self.base_burn = 1.0
 
         # El golpe se crea antes porque equip_match() le avisa que luz hay
         self.melee = Melee()
 
         # Mapa completado: la sala de combate queda cerrada para siempre
-        # (se carga de la partida; si el jugador quedo adentro, se lo saca)
         self.arena.completed = bool(
             self.save_data.get("arena_completed", False)
         )
+
         self.arena.restore_completed(self)
 
-        # Furia de la vela: cuenta atras hasta la proxima furia y
-        # cuanto le queda a la que esta activa (ver world/lights.py)
+        # Furia de la vela
         self.fury_timer = 0.0
         self.fury_left = 0.0
 
-        # Luces tiradas en el piso (cada una recuerda su vida)
+        # Luces tiradas en el piso
         self.light_drops = []
 
         if self.has_match:
             self.equip_match(self.light_type)
         else:
-            self.light_drops.append(LightItem("fosforo", *MATCH_POS))
+            self.light_drops.append(
+                LightItem("fosforo", *MATCH_POS)
+            )
 
         # ---------- Objetos (madera, aceite, cera) ----------
 
@@ -229,14 +276,17 @@ class NewGame:
 
             entry = saved_inv[i]
 
-            # Formato nuevo: [id, cantidad]. Formato viejo: solo el id.
+            if entry is None:
+                continue
+
+            # Formato nuevo: [id, cantidad].
+            # Formato viejo: solo el id.
             if isinstance(entry, (list, tuple)) and len(entry) == 2:
                 item_id, count = entry[0], int(entry[1])
             else:
                 item_id, count = entry, 1
 
-            # Las luces (fosforo, vela) nunca van al inventario: si una
-            # partida vieja las tenia ahi, quedan tiradas en el piso
+            # Las luces nunca van al inventario
             if item_id in LIGHTS and count > 0:
 
                 for _ in range(count):
@@ -244,7 +294,11 @@ class NewGame:
                     px, py = self.player.rect.center
 
                     self.light_drops.append(
-                        LightItem(item_id, px + random.randint(-12, 12), py)
+                        LightItem(
+                            item_id,
+                            px + random.randint(-12, 12),
+                            py
+                        )
                     )
 
                 continue
@@ -252,9 +306,14 @@ class NewGame:
             if item_id in self.item_defs and count > 0:
 
                 self.hud.items[i] = item_id
-                self.hud.counts[i] = min(count, self._max_stack(item_id))
+                self.hud.counts[i] = min(
+                    count,
+                    self._max_stack(item_id)
+                )
 
-        self.collected = set(self.save_data.get("collected", []))
+        self.collected = set(
+            self.save_data.get("collected", [])
+        )
 
         self.item_seed = self.save_data.get(
             "item_seed",
@@ -274,16 +333,16 @@ class NewGame:
             f"{len(self.world_items)} objetos en el mapa"
         )
 
-        # F3 = ver donde estan los objetos (para probar)
+        # F3 = ver donde estan los objetos
         self.debug_items = False
-        self.debug_font = pygame.font.Font(None, 22)
+        self._font_cache = {}
 
         # Efectos temporales
         self.speed_timer = 0.0
         self.burn_factor = 1.0
         self.burn_timer = 0.0
 
-        # Duracion total de cada efecto (para saber cuanto falta en %)
+        # Duracion total de cada efecto
         self.speed_total = 1.0
         self.burn_total = 1.0
         self.polvora_total = 1.0
@@ -294,40 +353,43 @@ class NewGame:
         self.polvora_dps = 0.0
         self._polvora_acc = 0.0
 
-        # Resina: cura de a poco. regen_left = cuanta vida falta sumar
+        # Resina: cura de a poco
         self.regen_left = 0.0
         self.regen_rate = 0.0
 
-        # Radio de la luz en pantalla (px), lo calcula draw()
+        # Radio de la luz en pantalla
         self._light_radius_px = self._light_radius()
 
         # ---------- Combate ----------
-        # (self.melee ya se creo arriba, junto con la luz)
+
         self.melee.set_light(self.light_type)
 
-        # Munecos de practica (F5). Mas adelante aca van los enemigos.
+        # Munecos de practica
         self.dummies = []
 
-        # F4 = ver el area de ataque (para probar)
+        # F4 = ver el area de ataque
         self.debug_combat = False
 
         # Aviso en pantalla
         self.message = ""
         self.message_timer = 0.0
 
-        # Cuenta regresiva cuando no hay luz. None = no esta corriendo.
+        # Cuenta regresiva cuando no hay luz
         self.no_light_timer = None
 
-        # Que casillero esta seleccionado: "equipped" (el fosforo
-        # equipado) o un numero 0-3 (un slot del inventario).
+        # Casillero seleccionado
         self.selected_slot = "equipped"
 
-        # Estados: "playing" -> "dying" (se pone todo negro) -> "lost"
+        # Estados:
+        # "playing" -> "dying" -> "lost"
         self.state = "playing"
+
         self.fade_alpha = 0
         self.lost_timer = 0
 
         self._flicker_time = 0.0
+
+        self._gem_icon = None
 
         pantalla_perdiste_path = (
             Path(__file__).resolve().parent.parent
@@ -338,7 +400,9 @@ class NewGame:
         )
 
         self.pantalla_perdiste = pygame.transform.smoothscale(
-            pygame.image.load(str(pantalla_perdiste_path)).convert(),
+            pygame.image.load(
+                str(pantalla_perdiste_path)
+            ).convert(),
             (self.width, self.height)
         )
 
@@ -348,20 +412,33 @@ class NewGame:
 
         self.fade_overlay.fill((0, 0, 0))
 
+    # ---------- utilidades ----------
+
+    def _font(self, size):
+
+        font = self._font_cache.get(size)
+
+        if font is None:
+            font = pygame.font.Font(None, size)
+            self._font_cache[size] = font
+
+        return font
+
     # ---------- dano ----------
 
     def take_damage(self, amount):
-        """El jugador recibe dano (enemigos, disparos, mosquitos).
+        """El jugador recibe dano.
 
-        Funciona como el escudo de Fortnite: el escudo es la primera
-        vida y se gasta primero. Cuando se acaba, lo que sobra del
-        golpe le pega a la vida naranja (la de la luz). El escudo
-        existe aunque no tengas la antorcha equipada."""
+        El escudo es la primera vida y se gasta primero.
+        Cuando se acaba, lo que sobra del golpe le pega
+        a la vida de la luz.
+        """
 
         if amount <= 0:
             return
 
         absorbed = min(self.escudo, amount)
+
         self.escudo -= absorbed
         self.vida -= amount - absorbed
 
@@ -373,37 +450,56 @@ class NewGame:
     def equip_match(self, kind=None, life=None):
         """Equipa una luz (fosforo o vela).
 
-        kind -> cual (None = la que ya estaba)
-        life -> con cuanta vida (None = no se toca self.vida)"""
+        kind -> cual
+        life -> con cuanta vida
+        """
 
-        # OJO: la vida solo cambia si se pasa `life`. Si la luz ya se
-        # habia usado un poco y la soltaste, al agarrarla de nuevo tiene
-        # que seguir con la vida que le quedaba, no volver a llenarse.
         if kind in LIGHTS:
             self.light_type = kind
 
         if life is not None:
-            self.vida = max(0.0, min(1.0, float(life)))
+            self.vida = max(
+                0.0,
+                min(1.0, float(life))
+            )
 
-        self.base_burn = light_stats(self.light_type)["consumo"]
+        self.base_burn = light_stats(
+            self.light_type
+        )["consumo"]
 
         self.has_match = True
-        self.hud.equip(self.light_type)
-        self.player.set_torch(True, self.light_type)
-        self.melee.set_light(self.light_type)
+
+        self.hud.equip(
+            self.light_type
+        )
+
+        self.player.set_torch(
+            True,
+            self.light_type
+        )
+
+        self.melee.set_light(
+            self.light_type
+        )
+
         self._reset_fury()
 
     def _reset_fury(self):
-        """Apaga la furia y reinicia la espera para la proxima."""
+        """Apaga la furia y reinicia la espera."""
 
         self.fury_left = 0.0
-        self.fury_timer = light_stats(self.light_type).get("furia_cada", 0)
+
+        self.fury_timer = light_stats(
+            self.light_type
+        ).get(
+            "furia_cada",
+            0
+        )
+
         self.melee.set_fury(1.0)
 
     def _update_fury(self, dt):
-        """Cada `furia_cada` segundos la luz entra en furia durante
-        `furia_duracion` segundos: pega `furia_velocidad` veces mas
-        rapido. Solo corre con la luz prendida."""
+        """Actualiza la furia de la luz."""
 
         if not self.has_match:
 
@@ -412,9 +508,19 @@ class NewGame:
 
             return
 
-        stats = light_stats(self.light_type)
-        every = stats.get("furia_cada", 0)
-        length = stats.get("furia_duracion", 0)
+        stats = light_stats(
+            self.light_type
+        )
+
+        every = stats.get(
+            "furia_cada",
+            0
+        )
+
+        length = stats.get(
+            "furia_duracion",
+            0
+        )
 
         if every <= 0 or length <= 0:
             return
@@ -427,7 +533,10 @@ class NewGame:
 
                 self.fury_left = 0.0
                 self.fury_timer = every
-                self.melee.set_fury(1.0)
+
+                self.melee.set_fury(
+                    1.0
+                )
 
         else:
 
@@ -436,17 +545,29 @@ class NewGame:
             if self.fury_timer <= 0:
 
                 self.fury_left = length
-                self.melee.set_fury(stats.get("furia_velocidad", 1.0))
+
+                self.melee.set_fury(
+                    stats.get(
+                        "furia_velocidad",
+                        1.0
+                    )
+                )
 
     def _light_radius(self):
-        """Radio de la luz equipada, en pixeles de pantalla."""
+        """Radio de la luz equipada."""
 
-        return light_stats(self.light_type)["radio"]
+        return light_stats(
+            self.light_type
+        )["radio"]
 
     def _nearest_light_drop(self):
-        """La luz del piso mas cercana a la que se llega (o None)."""
+        """La luz del piso mas cercana."""
 
-        near = [d for d in self.light_drops if d.is_near(self.player)]
+        near = [
+            d
+            for d in self.light_drops
+            if d.is_near(self.player)
+        ]
 
         if not near:
             return None
@@ -455,9 +576,12 @@ class NewGame:
 
         return min(
             near,
-            key=lambda d: pygame.Vector2(d.rect.center).distance_to(
-                (px, py)
-            )
+            key=lambda d:
+                pygame.Vector2(
+                    d.rect.center
+                ).distance_to(
+                    (px, py)
+                )
         )
 
     def _drop_match(self):
@@ -466,36 +590,68 @@ class NewGame:
 
         # Queda en el piso con la vida que le quedaba
         self.light_drops.append(
-            LightItem(self.light_type, x, y, life=self.vida)
+            LightItem(
+                self.light_type,
+                x,
+                y,
+                life=self.vida
+            )
         )
 
         self.has_match = False
+
         self.hud.equip(None)
+
         self.player.set_torch(False)
 
     def _burn_out(self):
 
-        # Se le acabo la vida al fosforo: se consume, no queda tirado
+        # Se le acabo la vida al fosforo
         self.vida = 0.0
+
         self.base_burn = 1.0
+
         self.regen_left = 0.0
+
         self.has_match = False
+
         self.hud.equip(None)
+
         self.player.set_torch(False)
+
         self._reset_fury()
 
     # ---------- objetos ----------
+    # RECONSTRUIDO: estos metodos no estaban en el archivo que pegaste.
 
     def show_message(self, text):
 
         self.message = text
         self.message_timer = MESSAGE_TIME
 
+    def _max_stack(self, item_id):
+
+        return int(
+            self.item_defs.get(item_id, {}).get(
+                "max_pila",
+                MAX_STACK
+            )
+        )
+
+    def _item_name(self, item_id):
+
+        return self.item_defs.get(item_id, {}).get(
+            "nombre",
+            str(item_id).replace("_", " ")
+        )
+
     def _nearest_item(self):
+        """El objeto del piso mas cercano que se puede agarrar."""
 
         near = [
-            it for it in self.world_items
-            if not it.auto and it.is_near(self.player)
+            it
+            for it in self.world_items
+            if it.is_near(self.player)
         ]
 
         if not near:
@@ -505,111 +661,79 @@ class NewGame:
 
         return min(
             near,
-            key=lambda it: pygame.Vector2(it.rect.center).distance_to(
-                (px, py)
+            key=lambda it:
+                pygame.Vector2(
+                    it.rect.center
+                ).distance_to(
+                    (px, py)
+                )
+        )
+
+    def pick_up_item(self, item):
+        """Agarra un objeto del piso (moneda o item de inventario)."""
+
+        item_id = item.item_id
+
+        if item_id == "moneda":
+
+            self.coins += int(getattr(item, "amount", 1))
+
+        else:
+
+            slot = self._free_slot_for(item_id)
+
+            if slot is None:
+                self.show_message("Inventario lleno")
+                return
+
+            if self.hud.items[slot] is None:
+
+                self.hud.items[slot] = item_id
+                self.hud.counts[slot] = 1
+
+            else:
+
+                self.hud.counts[slot] += 1
+
+            self.show_message(
+                f"Agarraste {self._item_name(item_id)}"
             )
-        )
 
-    def _max_stack(self, item_id):
+        # Que no vuelva a aparecer cuando se carga la partida
+        for attr in ("key", "uid", "spawn_id", "id"):
 
-        return int(
-            self.item_defs.get(item_id, {}).get("max_pila", MAX_STACK)
-        )
+            value = getattr(item, attr, None)
 
-    def _slot_for(self, item_id):
-        """Slot donde entra 1 unidad: primero una pila que no este
-        llena, despues un slot vacio. None si no hay lugar."""
+            if value is not None:
+
+                self.collected.add(value)
+                break
+
+        if item in self.world_items:
+            self.world_items.remove(item)
+
+    def _free_slot_for(self, item_id):
+        """Casillero donde entra el objeto (None si no hay lugar)."""
 
         limit = self._max_stack(item_id)
 
-        for i, stored in enumerate(self.hud.items):
+        for i in range(self.hud.SLOTS):
 
-            if stored == item_id and self.hud.counts[i] < limit:
+            if (
+                self.hud.items[i] == item_id
+                and self.hud.counts[i] < limit
+            ):
                 return i
 
-        for i, stored in enumerate(self.hud.items):
+        for i in range(self.hud.SLOTS):
 
-            if stored is None:
+            if self.hud.items[i] is None:
                 return i
 
         return None
 
-    def pick_up_item(self, item):
-
-        if item.item_id == "moneda":
-
-            # Las monedas del cofre de la sala de combate valen mas
-            self.coins += getattr(item, "value", 1)
-            self.world_items.remove(item)
-
-            return
-
-        if item.item_id == "gema":
-
-            # La gema del cofre del mapa completado ya se cuenta cuando
-            # el cofre explota (value = 0); esto es solo recogerla
-            self.gems += getattr(item, "value", 1)
-            self.world_items.remove(item)
-
-            self.show_message("Conseguiste una gema!")
-
-            return
-
-        # Fosforo / vela: NUNCA al inventario. Se equipan directo en el
-        # casillero aislado (y solo si no hay otra luz encendida).
-        if item.item_id in LIGHTS:
-
-            if self.has_match:
-
-                self.show_message("Ya tenes una luz encendida")
-
-                return
-
-            self.world_items.remove(item)
-
-            if item.spawn_id is not None:
-                self.collected.add(item.spawn_id)
-
-            self.equip_match(item.item_id, 1.0)
-
-            name = self.item_defs.get(item.item_id, {}).get(
-                "nombre", item.item_id
-            )
-
-            self.show_message(f"Equipaste {name}")
-
-            return
-
-        slot = self._slot_for(item.item_id)
-
-        if slot is None:
-
-            self.show_message("Inventario lleno")
-
-            return
-
-        self.hud.items[slot] = item.item_id
-        self.hud.counts[slot] += 1
-
-        self.world_items.remove(item)
-
-        if item.spawn_id is not None:
-            self.collected.add(item.spawn_id)
-
-        name = self.item_defs[item.item_id].get("nombre", item.item_id)
-
-        self.show_message(f"Agarraste {name}")
-
-    def _remove_one(self, slot):
-
-        self.hud.counts[slot] -= 1
-
-        if self.hud.counts[slot] <= 0:
-
-            self.hud.counts[slot] = 0
-            self.hud.items[slot] = None
-
     def drop_item(self, slot):
+        """Tira una unidad del casillero al piso."""
 
         item_id = self.hud.items[slot]
 
@@ -618,715 +742,698 @@ class NewGame:
 
         x, y = self.player.rect.center
 
-        self.world_items.append(WorldItem(item_id, x, y))
+        self.world_items.append(
+            WorldItem(
+                item_id,
+                x + random.randint(-12, 12),
+                y + random.randint(-12, 12)
+            )
+        )
 
-        # Suelta de a una unidad
-        self._remove_one(slot)
+        self._take_one(slot)
+
+    def _take_one(self, slot):
+
+        self.hud.counts[slot] -= 1
+
+        if self.hud.counts[slot] <= 0:
+
+            self.hud.items[slot] = None
+            self.hud.counts[slot] = 0
 
     def use_item(self, slot):
+        """Usa una unidad del casillero."""
 
         item_id = self.hud.items[slot]
 
         if item_id is None:
             return
 
-        data = self.item_defs.get(item_id, {})
-
-        if data.get("requiere_fosforo") and not self.has_match:
-
-            self.show_message("Necesitas el fosforo encendido")
-
-            return
-
-        effects = data.get("efectos", [])
-
-        # No gastar madera si la llama ya esta al maximo
-        if (
-            any(e.get("tipo") == "vida_sumar" for e in effects)
-            and not any(e.get("tipo") == "vida_fijar" for e in effects)
-            and self.vida >= 1.0
-        ):
-
-            self.show_message("La llama ya esta al maximo")
-
-            return
-
-        # No gastar el hongo azul si el escudo ya esta lleno
-        if (
-            any(e.get("tipo") == "escudo_sumar" for e in effects)
-            and self.escudo >= 1.0
-        ):
-
-            self.show_message("El escudo ya esta al maximo")
-
-            return
-
-        # No gastar cera si ya hay una activa
-        if (
-            any(e.get("tipo") == "consumo_lento" for e in effects)
-            and self.burn_timer > 0
-        ):
-
-            self.show_message("La cera ya esta haciendo efecto")
-
-            return
-
-        # No gastar polvora si ya hay una activa
-        if (
-            any(e.get("tipo") == "luz_dano" for e in effects)
-            and self.polvora_timer > 0
-        ):
-
-            self.show_message("La polvora ya esta haciendo efecto")
-
-            return
-
-        # No gastar resina si la llama ya esta al maximo o ya hay una activa
-        if any(e.get("tipo") == "vida_gradual" for e in effects):
-
-            if self.vida >= 1.0:
-
-                self.show_message("La llama ya esta al maximo")
-
-                return
-
-            if self.regen_left > 0:
-
-                self.show_message("La resina ya esta haciendo efecto")
-
-                return
-
-        # Fosforo / vela: solo sirven si no hay ninguna luz encendida
-        if (
-            any(e.get("tipo") == "encender" for e in effects)
-            and self.has_match
-        ):
-
-            self.show_message("Ya tenes una luz encendida")
-
-            return
-
-        # Ganzua: necesita un cofre listo cerca
-        chest = None
-
-        if any(e.get("tipo") == "abrir_cofre" for e in effects):
-
-            chest = self.chests.nearest_ready(
-                self.player.rect.center, GANZUA_DISTANCE
-            )
-
-            if chest is None:
-
-                self.show_message("No hay un cofre listo cerca")
-
-                return
-
-        for effect in effects:
-
-            kind = effect.get("tipo")
-
-            if kind == "vida_sumar":
-
-                self.vida = min(1.0, self.vida + effect["valor"])
-
-            elif kind == "escudo_sumar":
-
-                # El escudo NO se gasta solo con el tiempo
-                self.escudo = min(1.0, self.escudo + effect["valor"])
-
-            elif kind == "vida_fijar":
-
-                self.vida = effect["valor"]
-
-            elif kind == "velocidad":
-
-                self.player.movement.speed_mult = effect["multiplicador"]
-                self.speed_timer = effect["duracion"]
-                self.speed_total = max(0.01, effect["duracion"])
-
-            elif kind == "consumo_lento":
-
-                self.burn_factor = effect["factor"]
-                self.burn_timer = effect["duracion"]
-                self.burn_total = max(0.01, effect["duracion"])
-
-            elif kind == "luz_dano":
-
-                self.polvora_dps = effect.get("dano_por_segundo", 1)
-                self.polvora_timer = effect["duracion"]
-                self.polvora_total = max(0.01, effect["duracion"])
-                self._polvora_acc = 0.0
-
-            elif kind == "vida_gradual":
-
-                # Suma `valor` de vida repartido en `duracion` segundos
-                # (sin pasar del 100%)
-                self.regen_left = effect["valor"]
-                self.regen_rate = effect["valor"] / effect["duracion"]
-                self.regen_total = max(0.01, effect["duracion"])
-
-            elif kind == "abrir_cofre" and chest is not None:
-
-                self._open_chest(chest)
-
-            elif kind == "encender":
-
-                self.equip_match(
-                    effect.get("luz", "fosforo"),
-                    effect.get("vida", 1.0)
-                )
-
-        self._remove_one(slot)
-
-        self.show_message(f"Usaste {data.get('nombre', item_id)}")
-
-    def _draw_debug_items(self):
-
-        for item in self.world_items:
-
-            center = self.camera.apply(item.rect).center
-
-            pygame.draw.circle(
-                self.screen, (255, 230, 80), center, 22, width=3
-            )
-
-            label = self.debug_font.render(
-                item.item_id, True, (255, 230, 80)
-            )
-
-            self.screen.blit(
-                label,
-                label.get_rect(midtop=(center[0], center[1] + 26))
-            )
-
-        px, py = self.player.rect.center
-
-        info = self.debug_font.render(
-            f"F3  jugador=({px}, {py})  objetos={len(self.world_items)}",
-            True,
-            (255, 230, 80)
+        effect = (
+            self.item_defs.get(item_id, {}).get("efecto")
+            or ITEM_EFFECTS.get(item_id)
         )
 
-        self.screen.blit(info, (12, self.height - 30))
+        if not effect:
+            self.show_message("Eso no se puede usar")
+            return
+
+        self._apply_effect(effect)
+
+        self._take_one(slot)
+
+        self.show_message(
+            f"Usaste {self._item_name(item_id)}"
+        )
+
+    def _apply_effect(self, e):
+
+        if "vida" in e:
+
+            self.vida = min(1.0, self.vida + e["vida"])
+
+        if "regen" in e:
+
+            seconds = max(0.1, e.get("regen_tiempo", 10.0))
+
+            self.regen_left += e["regen"]
+            self.regen_total = max(self.regen_left, 0.001)
+            self.regen_rate = self.regen_left / seconds
+
+        if "velocidad" in e:
+
+            self.player.movement.speed_mult = e["velocidad"]
+            self.speed_total = e.get("duracion", 10.0)
+            self.speed_timer = self.speed_total
+
+        if "consumo" in e:
+
+            self.burn_factor = e["consumo"]
+            self.burn_total = e.get("duracion", 10.0)
+            self.burn_timer = self.burn_total
+
+        if "polvora_dps" in e:
+
+            self.polvora_dps = e["polvora_dps"]
+            self.polvora_total = e.get("duracion", 8.0)
+            self.polvora_timer = self.polvora_total
+            self._polvora_acc = 0.0
+
+        if "escudo" in e:
+
+            self.escudo = min(1.0, self.escudo + e["escudo"])
+
+    def _active_effects(self):
+        """Efectos activos para la barra de arriba (fraccion 0 a 1)."""
+
+        active = {}
+
+        if self.speed_timer > 0:
+            active["speed"] = self.speed_timer / self.speed_total
+
+        if self.burn_timer > 0:
+            active["burn"] = self.burn_timer / self.burn_total
+
+        if self.polvora_timer > 0:
+            active["polvora"] = self.polvora_timer / self.polvora_total
+
+        if self.regen_left > 0:
+            active["regen"] = min(1.0, self.regen_left / self.regen_total)
+
+        return active
+
+    def _polvora_hit(self, damage):
+        """La polvora lastima a lo que esta dentro de la luz."""
+
+        hurt = getattr(self.arena, "hurt_in_radius", None)
+
+        if hurt is None:
+            return
+
+        hurt(
+            self.player.rect.center,
+            self._light_radius_px,
+            damage
+        )
 
     # ---------- combate ----------
 
-    def _attack_pivot(self):
-        """Desde donde sale el area de ataque: el torso del jugador."""
-
-        # El sprite se dibuja a tamano real (sin zoom) apoyado en los
-        # pies, asi que el torso queda unos pixeles de pantalla arriba
-        # de los pies; hay que pasarlos a unidades del mundo.
-        rect = self.player.image_rect
-
-        lift = rect.height * TORSO_HEIGHT / self.camera.zoom
-
-        return (rect.centerx, rect.bottom - lift)
-
     def _mouse_world(self):
-        """Posicion del mouse en coordenadas del mundo."""
 
         mx, my = pygame.mouse.get_pos()
 
+        # Misma cuenta que usa el dibujo (ver el aro de polvora)
         return (
-            (mx + self.camera.x) / self.camera.zoom,
-            (my + self.camera.y) / self.camera.zoom
+            (self.camera.x + mx) / self.camera.zoom,
+            (self.camera.y + my) / self.camera.zoom
         )
 
-    def combat_targets(self):
-        """Todo lo que el fosforo puede golpear (cada uno con .rect y
-        .take_damage(n))."""
+    def _attack_pivot(self):
+        """Centro del cuerpo del jugador (de ahi sale el golpe)."""
+
+        rect = self.player.image_rect
 
         return (
-            self.dummies
-            + self.doors.doors
-            + self.chests.chests
-            + self.arena.targets()
+            rect.centerx,
+            rect.bottom - rect.height * TORSO_HEIGHT
         )
 
-    def start_attack(self):
+    def _spawn_dummy(self):
 
-        if not self.has_match:
-            return
+        px, py = self.player.rect.center
 
-        if not self.melee.start():
-            return
+        for _ in range(20):
 
-        # Cada golpe gasta un poco de luz (aunque no le pegues a nada).
-        # En furia no gasta. El fosforo gasta bastante mas que la vela.
-        if not self.melee.fury and not self._in_shop_zone():
-            self.vida -= light_stats(self.light_type).get("golpe_costo", 0.0)
+            angle = random.random() * math.tau
+            distance = random.randint(100, 180)
 
-        # El personaje mira hacia donde pega
-        dx = math.cos(self.melee.aim)
-        dy = math.sin(self.melee.aim)
+            x = px + math.cos(angle) * distance
+            y = py + math.sin(angle) * distance
 
-        if abs(dx) > abs(dy):
-            self.player.direction = "right" if dx > 0 else "left"
-        else:
-            self.player.direction = "down" if dy > 0 else "up"
+            rect = pygame.Rect(
+                0,
+                0,
+                40,
+                40
+            )
 
-    def _update_combat(self, dt):
+            rect.center = (
+                int(x),
+                int(y)
+            )
 
-        if not self.has_match:
-            self.melee.cancel()
+            if not self.collision_map.collides(rect):
+                self.dummies.append(
+                    TrainingDummy(
+                        int(x),
+                        int(y)
+                    )
+                )
+                return
 
-        self._update_fury(dt)
-
-        pivot = self._attack_pivot()
-
-        self.melee.update(dt, pivot, self._mouse_world())
-
-        for target in self.melee.new_hits(self.combat_targets(), pivot):
-
-            result = target.take_damage(self.melee.damage)
-
-            # Cada golpe a una puerta le saca vida al fosforo
-            if isinstance(target, Door):
-                self.vida -= result
-
-            # Pegarle a un cofre abre el minijuego
-            elif isinstance(target, Chest):
-                self._on_chest_hit(target)
-
-        self.doors.update(dt)
+    def _update_dummies(self, dt):
 
         for dummy in self.dummies:
-            dummy.update(dt)
 
-        self.dummies = [d for d in self.dummies if not d.dead]
+            dummy.update(
+                dt,
+                self.player,
+                self.collision_map
+            )
+
+    def _attack(self):
+
+        if self.state != "playing":
+            return
+
+        if not self.has_match:
+            self.show_message("Necesitas una luz")
+            return
+
+        if not self.melee.can_attack():
+            return
+
+        target = self._mouse_world()
+
+        origin = self._attack_pivot()
+
+        self.melee.attack(
+            origin,
+            target
+        )
 
     # ---------- cofres ----------
 
-    def _on_chest_hit(self, chest):
+    def _open_chest(self, chest):
 
-        if chest.busy:
+        if chest.opened:
             return
 
-        if chest.cooldown > 0:
-
+        if not chest.ready:
             self.show_message(
-                f"Cofre vacio. Volve en {format_time(chest.cooldown)}"
+                f"Faltan {format_time(chest.remaining)}"
             )
-
             return
-
-        chest.busy = True
 
         self.minigame_chest = chest
-        self.minigame = ChestMinigame((self.width, self.height))
 
-        # Se corta el golpe en curso
-        self.melee.cancel()
-
-    def _open_chest(self, chest):
-        """El cofre suelta sus items al piso. Cada cofre se puede abrir
-        10 a 15 veces (se sortea la primera vez); cuando se le acaban,
-        queda en espera."""
-
-        # Gasta una apertura. True = era la ultima y ya quedo en espera.
-        exhausted = self.chests.consume_use(chest)
-
-        drops = self.chests.spawn_drops(
-            chest, self.collision_map, self.item_defs
+        self.minigame = ChestMinigame(
+            self.screen.get_size()
         )
 
-        self.world_items.extend(drops)
+    def _finish_chest(self, success):
 
-        # Se ve abierto un ratito (si quedo en espera, ya se ve abierto)
-        chest.show_open()
-
-        if exhausted:
-
-            self.show_message(
-                f"Cofre abierto: salieron {len(drops)} cosas. "
-                "Se quedo vacio"
-            )
-
-        else:
-
-            self.show_message(
-                f"Cofre abierto: salieron {len(drops)} cosas"
-            )
-
-    def _close_minigame(self, result):
+        if self.minigame_chest is None:
+            return
 
         chest = self.minigame_chest
+
+        if success:
+
+            chest.opened = True
+
+            reward = chest.reward
+
+            if reward:
+
+                if reward == "moneda":
+
+                    amount = chest.reward_amount or 1
+
+                    self.coins += amount
+
+                    self.show_message(
+                        f"Conseguiste {amount} monedas!"
+                    )
+
+                elif reward == "gema":
+
+                    amount = chest.reward_amount or 1
+
+                    self.gems += amount
+
+                    self.show_message(
+                        f"Conseguiste {amount} gemas!"
+                    )
+
+                else:
+
+                    for _ in range(
+                        chest.reward_amount or 1
+                    ):
+
+                        x, y = chest.rect.center
+
+                        self.world_items.append(
+                            WorldItem(
+                                reward,
+                                x + random.randint(-20, 20),
+                                y + random.randint(-20, 20)
+                            )
+                        )
+
+            self.chests.save_state()
 
         self.minigame = None
         self.minigame_chest = None
 
-        if chest is None:
-            return
-
-        chest.busy = False
-
-        if result == "win":
-
-            self._open_chest(chest)
-
-        elif result == "fail":
-
-            self.show_message("El cofre se cerro. Pegale de nuevo")
-
     # ---------- tienda ----------
-
-    def _in_shop_zone(self):
-        """El jugador esta adentro del cuadrado de la tienda."""
-
-        return self.shopkeeper.in_zone(self.player)
-
-    def _lit_rects(self):
-        """Zonas del mapa que se ven iluminadas aunque no haya luz:
-        el cuadrado de la tienda y, despues del tutorial, la puerta de
-        la cabana (solo la puerta)."""
-
-        rects = [
-            (
-                self.shopkeeper.ZONE,
-                1.0,
-                self.shopkeeper.ZONE_FEATHER
-            )
-        ]
-
-        if self.tutorial is None:
-
-            for door in self.doors.doors:
-
-                if door.id == "cabana" and not door.broken:
-
-                    pulse = 0.8 + 0.2 * math.sin(pygame.time.get_ticks() / 100.0)
-
-                    rects.append((door.rect.inflate(2, 2), pulse, 4))
-
-        return rects
 
     def _open_shop(self):
 
+        if self.shop is not None:
+            return
+
         self.shop = ShopUI(
-            (self.width, self.height),
+            self.screen,
             self.catalog,
-            self.item_defs,
-            self.coins,
-            match_duration=MATCH_DURATION
+            self.shop_prices
         )
 
-        # Se corta el golpe en curso
-        self.melee.cancel()
+    def _close_shop(self):
+
+        self.shop = None
 
     def _buy(self, cart):
-        """Cobra el carrito y el vendedor escupe todo lo comprado."""
+        """RECONSTRUIDO: compra lo que hay en el carrito.
+
+        cart = {id_del_item: cantidad}
+        """
 
         total = sum(
             self.shop_prices.get(item_id, 0) * qty
             for item_id, qty in cart.items()
         )
 
-        if total <= 0 or total > self.coins:
+        if total <= 0:
+            return
+
+        if total > self.coins:
+            self.show_message("No te alcanzan las monedas")
             return
 
         self.coins -= total
 
-        ids = []
+        # El vendedor escupe todo lo comprado
+        rect = getattr(self.shopkeeper, "rect", None)
+
+        if rect is not None:
+            x, y = rect.center
+        else:
+            x, y = self.player.rect.center
 
         for item_id, qty in cart.items():
 
-            if item_id in self.shop_prices:
-                ids.extend([item_id] * qty)
+            for _ in range(qty):
 
-        drops = self.shopkeeper.spit(ids, self.collision_map)
+                px = x + random.randint(-24, 24)
+                py = y + random.randint(10, 40)
 
-        self.world_items.extend(drops)
+                if item_id in LIGHTS:
+                    self.light_drops.append(LightItem(item_id, px, py))
+                else:
+                    self.world_items.append(WorldItem(item_id, px, py))
 
-        self.shop = None
-
-        self.show_message(f"Compraste {len(ids)} cosas")
+        self.show_message("Compra hecha")
 
     # ---------- guardado ----------
 
-    def save_progress(self):
+    def _save(self):
 
-        if self.save_path is None:
-            return False
-
-        x, y = self.player.image_rect.center
-
-        return save_progress(
-            self.save_path,
-            player_name=self.player_name,
-            x=x,
-            y=y,
-            has_match=self.has_match,
-            light=self.light_type,
-            coins=self.coins,
-            inventory=[
-                [item_id, self.hud.counts[i]] if item_id else None
-                for i, item_id in enumerate(self.hud.items)
-            ],
-            collected=sorted(self.collected),
-            broken_doors=sorted(self.doors.broken_ids),
-            chests=self.chests.save_data(),
-            item_seed=self.item_seed,
-            arena_wave=self.arena.wave,
-            arena_completed=self.arena.completed,
-            gems=self.gems,
-            escudo=self.escudo
-        )
-
-    def _draw_gems(self):
-        """Gemas debajo de las monedas (solo aparece si tenes alguna)."""
-
-        if self.gems <= 0:
+        if not self.save_path:
             return
 
-        # Fuente e icono se crean una sola vez
-        if not hasattr(self, "_gem_font"):
+        inventory = []
 
-            self._gem_font = pygame.font.Font(None, 32)
+        for i in range(
+            self.hud.SLOTS
+        ):
 
-            self._gem_small = pygame.transform.smoothscale(
-                get_gem_icon(), (28, 28)
-            )
+            item_id = self.hud.items[i]
+            count = self.hud.counts[i]
 
-        icon = self._gem_small
-        font = self._gem_font
+            if item_id is None or count <= 0:
 
-        label = font.render(f"x{self.gems}", True, (200, 240, 255))
-        shadow = font.render(f"x{self.gems}", True, (0, 0, 0))
+                inventory.append(None)
 
-        coin = self.hud.coin_rect
+            else:
 
-        label_rect = label.get_rect(
-            midright=(coin.right - 6, coin.bottom + 18)
+                inventory.append(
+                    [
+                        item_id,
+                        count
+                    ]
+                )
+
+        data = {
+            "x": self.player.rect.centerx,
+            "y": self.player.rect.centery,
+
+            "coins": self.coins,
+            "gems": self.gems,
+
+            "has_match": self.has_match,
+            "light": self.light_type,
+            "vida": self.vida,
+
+            "escudo": self.escudo,
+
+            "inventory": inventory,
+
+            "collected": list(
+                self.collected
+            ),
+
+            "item_seed": self.item_seed,
+
+            "arena_wave": self.arena.wave,
+            "arena_completed": self.arena.completed,
+
+            "broken_doors": self.doors.broken,
+
+            "chests": self.chests.save_data(),
+        }
+
+        save_progress(
+            self.save_path,
+            data
         )
-
-        icon_rect = icon.get_rect(
-            midright=(label_rect.left - 6, label_rect.centery)
-        )
-
-        self.screen.blit(icon, icon_rect)
-        self.screen.blit(shadow, label_rect.move(2, 2))
-        self.screen.blit(label, label_rect)
-
-    # ---------- actualizaciones extra ----------
-
-    def _update_world_extras(self, dt):
-        """Cofres, items que salen volando y monedas."""
-
-        self.chests.update(dt)
-
-        self.shopkeeper.update(dt)
-
-        for item in self.world_items:
-            item.update_fly(dt)
-
-        # Las monedas se juntan solas al pasar cerca
-        px, py = self.player.rect.center
-
-        for item in list(self.world_items):
-
-            if (
-                item.auto
-                and item.fly is None
-                and pygame.Vector2(item.rect.center).distance_to((px, py))
-                <= COIN_PICKUP_DISTANCE
-            ):
-
-                self.pick_up_item(item)
-
-    def _active_effects(self):
-        """Efectos que estan corriendo: {clave: fraccion que queda}.
-        Los dibuja EffectsBar como cubitos que se van vaciando."""
-
-        def frac(left, total):
-            return max(0.0, min(1.0, left / max(0.01, total)))
-
-        active = {}
-
-        if self.speed_timer > 0:
-            active["aceite"] = frac(self.speed_timer, self.speed_total)
-
-        if self.burn_timer > 0:
-            active["cera"] = frac(self.burn_timer, self.burn_total)
-
-        if self.polvora_timer > 0:
-            active["polvora"] = frac(self.polvora_timer, self.polvora_total)
-
-        if self.regen_left > 0 and self.regen_rate > 0:
-            active["resina"] = frac(
-                self.regen_left / self.regen_rate, self.regen_total
-            )
-
-        if self.fury_left > 0:
-
-            length = light_stats(self.light_type).get("furia_duracion", 0)
-
-            active["furia"] = frac(self.fury_left, length)
-
-        # Alerta del mosquito: aparece en la misma fila (no se vacia)
-        if self.arena.state == self.arena.WAVE and self.arena.mosquito_alert:
-            active["mosquito"] = 1.0
-
-        return active
-
-    def _update_effects(self, dt):
-        """Polvora y resina. Solo corren con el fosforo prendido."""
-
-        # Resina: sube la vida de a poco
-        if self.regen_left > 0:
-
-            add = min(self.regen_rate * dt, self.regen_left)
-
-            self.vida = min(1.0, self.vida + add)
-            self.regen_left -= add
-
-            if self.vida >= 1.0:
-                self.regen_left = 0.0
-
-        # Polvora: la luz quema lo que alumbra
-        if self.polvora_timer > 0:
-
-            self.polvora_timer = max(0.0, self.polvora_timer - dt)
-            self._polvora_acc += dt
-
-            while self._polvora_acc >= POLVORA_TICK:
-
-                self._polvora_acc -= POLVORA_TICK
-
-                self._burn_with_light(self.polvora_dps * POLVORA_TICK)
-
-    def _burn_with_light(self, amount):
-
-        radius = self._light_radius() / self.camera.zoom
-
-        px, py = self.player.rect.center
-
-        for target in self.dummies + self.arena.targets():
-
-            size = max(target.rect.width, target.rect.height) / 2
-
-            dist = pygame.Vector2(target.rect.center).distance_to((px, py))
-
-            if dist <= radius + size:
-                target.take_damage(amount)
 
     # ---------- eventos ----------
 
     def handle_event(self, event):
 
-        if self.state != "playing":
-            return None
+        # ---------------------------------------------------------
+        # TUTORIAL
+        # ---------------------------------------------------------
 
-        # Con el tutorial abierto solo el tutorial recibe los eventos
-        # (ESC sigue guardando y volviendo al menu)
-        if self.tutorial is not None and not (
-            event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
-        ):
+        if self.tutorial is not None:
 
-            self.tutorial.handle_event(event)
-
-            return None
-
-        # Con el minijuego abierto, solo el minijuego recibe los eventos
-        if self.minigame is not None:
-
-            if self.minigame.handle_event(event) == "cancel":
-                self._close_minigame("cancel")
-
-            return None
-
-        # Con el menu de la sala de combate abierto, solo el menu
-        if self.arena.menu_open:
-
-            self.arena.handle_event(self, event)
-
-            return None
-
-        # Con la tienda abierta, solo la tienda recibe los eventos
-        if self.shop is not None:
-
-            result = self.shop.handle_event(event)
+            result = self.tutorial.handle_event(
+                event
+            )
 
             if result == "close":
-                self.shop = None
 
-            elif isinstance(result, tuple) and result[0] == "buy":
+                self.tutorial = None
+
+            return None
+
+        # ---------------------------------------------------------
+        # MINIJUEGO DEL COFRE
+        # ---------------------------------------------------------
+
+        if self.minigame is not None:
+
+            result = self.minigame.handle_event(
+                event
+            )
+
+            if result == "success":
+
+                self._finish_chest(
+                    True
+                )
+
+            elif result == "fail":
+
+                self._finish_chest(
+                    False
+                )
+
+            return None
+
+        # ---------------------------------------------------------
+        # MENU DE PAUSA
+        # ---------------------------------------------------------
+
+        if self.pause_view == "pause":
+
+            result = self.pause_menu.handle_event(
+                event
+            )
+
+            if result == "resume":
+
+                self.pause_view = None
+
+            elif result == "settings":
+
+                self.pause_settings = Settings(
+                    self.screen
+                )
+
+                self.pause_view = "settings"
+
+            elif result == "enemies":
+
+                self.enemy_encyclopedia = EnemyEncyclopedia(
+                    self.screen
+                )
+
+                self.pause_view = "enemies"
+
+            elif result == "back":
+
+                self._save()
+
+                return "menu"
+
+            return None
+
+        # ---------------------------------------------------------
+        # AJUSTES DESDE PAUSA
+        # ---------------------------------------------------------
+
+        if self.pause_view == "settings":
+
+            result = self.pause_settings.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                self.pause_view = "pause"
+                self.pause_settings = None
+
+            return None
+
+        # ---------------------------------------------------------
+        # ENCICLOPEDIA DE ENEMIGOS
+        # ---------------------------------------------------------
+
+        if self.pause_view == "enemies":
+
+            result = self.enemy_encyclopedia.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                self.pause_view = "pause"
+                self.enemy_encyclopedia = None
+
+            return None
+
+        # ---------------------------------------------------------
+        # TIENDA
+        # ---------------------------------------------------------
+
+        if self.shop is not None:
+
+            result = self.shop.handle_event(
+                event
+            )
+
+            if (
+                result == "close"
+                or (
+                    event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_ESCAPE
+                )
+            ):
+
+                self._close_shop()
+
+            elif isinstance(result, dict):
+
+                self._buy(result)
+
+            elif (
+                isinstance(result, tuple)
+                and len(result) == 2
+                and result[0] == "buy"
+            ):
+
                 self._buy(result[1])
 
             return None
+
+        # ---------------------------------------------------------
+        # MENU DE LA ARENA (oleadas)
+        # ---------------------------------------------------------
+
+        if self.arena.menu_open:
+
+            handler = getattr(
+                self.arena,
+                "handle_menu_event",
+                None
+            )
+
+            if handler is not None:
+
+                handler(
+                    event,
+                    self
+                )
+
+            elif (
+                event.type == pygame.KEYDOWN
+                and event.key == pygame.K_ESCAPE
+            ):
+
+                self.arena.menu_open = False
+
+            return None
+
+        # ---------------------------------------------------------
+        # ESC DURANTE EL JUEGO
+        # ---------------------------------------------------------
 
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_ESCAPE:
 
-                self.save_progress()
+                self.pause_view = "pause"
 
-                return "menu"
+                return None
+
+        # ---------------------------------------------------------
+        # CLICK EN EL BOTON MENU DEL HUD
+        # ---------------------------------------------------------
+
+        menu_button = getattr(
+            self.hud,
+            "menu_button_rect",
+            None
+        )
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and menu_button is not None
+            and menu_button.collidepoint(event.pos)
+        ):
+
+            self.pause_view = "pause"
+
+            return None
+
+        # ---------------------------------------------------------
+        # TECLAS DEL JUEGO
+        # ---------------------------------------------------------
+
+        if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_F3:
 
                 self.debug_items = not self.debug_items
 
-            if event.key == pygame.K_F4:
+            elif event.key == pygame.K_F4:
 
                 self.debug_combat = not self.debug_combat
 
-            if event.key == pygame.K_F5:
+            elif event.key == pygame.K_F5:
 
-                wx, wy = self._mouse_world()
+                self._spawn_dummy()
 
-                self.dummies.append(TrainingDummy(wx, wy))
-
-            # F8 = +100000 monedas (para probar)
-            if event.key == pygame.K_F8:
+            elif event.key == pygame.K_F8:
 
                 self.coins += DEBUG_COINS
 
-                self.show_message(f"+{DEBUG_COINS} monedas")
+            elif event.key in SLOT_KEYS:
 
-            if event.key == pygame.K_e:
+                slot = SLOT_KEYS[event.key]
 
-                drop = self._nearest_light_drop()
+                if slot < self.hud.SLOTS:
+                    self.selected_slot = slot
 
-                # Luz del piso: se equipa si no tenes otra encendida
-                if drop is not None and not self.has_match:
-
-                    self.light_drops.remove(drop)
-                    self.equip_match(drop.kind, drop.life)
-
-                else:
-
-                    item = self._nearest_item()
-
-                    if item is not None:
-                        self.pick_up_item(item)
-
-                    elif drop is not None:
-                        self.show_message("Ya tenes una luz encendida")
-
-            # F = hablarle al vendedor (abre la tienda)
-            if event.key == pygame.K_f:
-
-                if self.shopkeeper.can_talk(self.player):
-                    self._open_shop()
-
-            # 1 = seleccionar la cosa iluminadora equipada
-            if event.key == pygame.K_1:
+            elif event.key == pygame.K_5:
 
                 self.selected_slot = "equipped"
-                self.hud.selected = None
 
-            # 2, 3, 4, 5 = seleccionar cada slot del inventario (0 a 3)
-            elif event.key in (
-                pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5
-            ):
+            elif event.key == pygame.K_e:
 
-                index = event.key - pygame.K_2
+                # Agarrar luz
+                light = self._nearest_light_drop()
 
-                self.selected_slot = index
-                self.hud.selected = index
+                if light is not None:
 
-            # Q = soltar lo que este seleccionado en este momento
+                    if not self.has_match:
+
+                        self.light_drops.remove(
+                            light
+                        )
+
+                        self.equip_match(
+                            light.kind,
+                            light.life
+                        )
+
+                    else:
+
+                        self.show_message(
+                            "Ya tenes una luz encendida"
+                        )
+
+                    return None
+
+                # Agarrar objeto
+                item = self._nearest_item()
+
+                if item is not None:
+
+                    self.pick_up_item(
+                        item
+                    )
+
+                    return None
+
+                # Abrir cofre
+                chest = self.chests.nearest_ready(
+                    self.player.rect.center,
+                    GANZUA_DISTANCE
+                )
+
+                if chest is not None:
+
+                    self._open_chest(
+                        chest
+                    )
+
+                    return None
+
             elif event.key == pygame.K_q:
 
                 if self.selected_slot == "equipped":
@@ -1336,36 +1443,38 @@ class NewGame:
 
                 else:
 
-                    self.drop_item(self.selected_slot)
+                    self.drop_item(
+                        self.selected_slot
+                    )
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.key == pygame.K_f:
 
-            slot = self.hud.slot_at(event.pos)
+                # Hablar con el vendedor (abre la tienda)
+                if self.shopkeeper.can_talk(
+                    self.player
+                ):
 
-            # Click izquierdo: seleccionar el slot
-            if event.button == 1 and slot is not None:
+                    self._open_shop()
 
-                self.selected_slot = slot
-                self.hud.selected = slot
+                    return None
 
-            # Click izquierdo fuera del inventario: pegar con el fosforo
-            elif (
-                event.button == 1
-                and not self.hud.bar_rect.collidepoint(event.pos)
-                and not self.hud.equipped_rect.collidepoint(event.pos)
-            ):
+                if self.selected_slot != "equipped":
 
-                self.start_attack()
+                    self.use_item(
+                        self.selected_slot
+                    )
 
-            # Click derecho: usar el item (el del slot bajo el mouse,
-            # o si no hay, el del slot seleccionado)
-            elif event.button == 3:
+            elif event.key == pygame.K_SPACE:
 
-                if slot is None and isinstance(self.selected_slot, int):
-                    slot = self.selected_slot
+                self._attack()
 
-                if slot is not None:
-                    self.use_item(slot)
+        # Click izquierdo para atacar
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+        ):
+
+            self._attack()
 
         return None
 
@@ -1373,151 +1482,454 @@ class NewGame:
 
     def update(self, dt):
 
-        if self.state == "playing":
+        # ---------------------------------------------------------
+        # TUTORIAL
+        # ---------------------------------------------------------
 
-            # Con el tutorial abierto el tiempo se detiene (si no, la
-            # cuenta regresiva de 10s correria mientras lees)
-            if self.tutorial is not None:
+        if self.tutorial is not None:
 
-                self.tutorial.update(dt)
-
-                if not self.tutorial.active:
-                    self.tutorial = None
-
-                return None
-
-            # Con la tienda abierta el tiempo se detiene (ni se gasta
-            # el fosforo ni corre la cuenta regresiva)
-            if self.shop is not None:
-
-                self.shop.update(dt)
-
-                return None
-
-            # Con el menu de la sala de combate abierto tambien se
-            # detiene el tiempo
-            if self.arena.menu_open:
-
-                self.arena.update_menu(dt)
-
-                return None
-
-            # Con el minijuego abierto el jugador no se mueve
-            if self.minigame is None:
-                self.player.update(dt, self.collision_map)
-
-            self.camera.update(self.player, dt)
-
-            if self.speed_timer > 0:
-
-                self.speed_timer -= dt
-
-                if self.speed_timer <= 0:
-                    self.player.movement.speed_mult = 1.0
-
-            if self.message_timer > 0:
-                self.message_timer -= dt
-
-            if self.minigame is None:
-
-                self._update_combat(dt)
-
-                self.arena.update(self, dt)
-
-            else:
-
-                result = self.minigame.update(dt)
-
-                if result is not None:
-                    self._close_minigame(result)
-
-            self._update_world_extras(dt)
-
-            if self.has_match:
-
-                # La cera ralentiza el consumo por tiempo limitado.
-                # Su tiempo solo corre mientras el fosforo esta prendido.
-                if self.burn_timer > 0:
-
-                    self.burn_timer -= dt
-
-                    if self.burn_timer <= 0:
-                        self.burn_timer = 0.0
-                        self.burn_factor = 1.0
-
-                self._update_effects(dt)
-
-                # En el cuadrado de la tienda la luz no se gasta: se
-                # recarga
-                if self._in_shop_zone():
-
-                    self.vida = min(
-                        1.0, self.vida + dt / SHOP_RECHARGE_TIME
-                    )
-
-                else:
-
-                    self.vida -= (
-                        dt * self.burn_factor * self.base_burn
-                        / MATCH_DURATION
-                    )
-
-                if self.vida <= 0:
-
-                    self._burn_out()
-
-            if not self.has_match:
-
-                if self.no_light_timer is None:
-
-                    self.no_light_timer = NO_LIGHT_COUNTDOWN
-
-                elif not self._in_shop_zone():
-
-                    # (en la tienda esta todo iluminado: no corre)
-                    self.no_light_timer -= dt
-
-                    if self.no_light_timer <= 0:
-
-                        self.no_light_timer = 0
-
-                        self.state = "dying"
-                        self.fade_alpha = 0
-
-            else:
-
-                self.no_light_timer = None
+            self.tutorial.update(
+                dt
+            )
 
             return None
 
-        elif self.state == "dying":
+        # ---------------------------------------------------------
+        # PAUSA / AJUSTES / ENCICLOPEDIA
+        # ---------------------------------------------------------
 
-            self.fade_alpha += dt * (255 / FADE_DURATION)
+        if self.pause_view is not None:
+
+            if self.pause_view == "pause":
+
+                self.pause_menu.update(
+                    dt
+                )
+
+            elif self.pause_view == "settings":
+
+                self.pause_settings.update(
+                    dt
+                )
+
+            elif self.pause_view == "enemies":
+
+                self.enemy_encyclopedia.update(
+                    dt
+                )
+
+            # MUY IMPORTANTE:
+            # no se actualiza el jugador,
+            # enemigos, luz, cofres, etc.
+            return None
+
+        # ---------------------------------------------------------
+        # PANTALLA DE DERROTA
+        # ---------------------------------------------------------
+
+        if self.state == "dying":
+
+            self.fade_alpha += (
+                255 / FADE_DURATION
+            ) * dt
 
             if self.fade_alpha >= 255:
 
                 self.fade_alpha = 255
                 self.state = "lost"
-                self.lost_timer = 0
-
-                if self.save_path:
-                    delete_save(self.save_path)
+                self.lost_timer = LOST_SCREEN_TIME
 
             return None
 
-        elif self.state == "lost":
+        if self.state == "lost":
 
-            self.lost_timer += dt
+            self.lost_timer -= dt
 
-            if self.lost_timer >= LOST_SCREEN_TIME:
+            if self.lost_timer <= 0:
+
+                if DELETE_SAVE_ON_LOSS and self.save_path:
+                    delete_save(self.save_path)
+                else:
+                    self._save()
 
                 return "menu"
 
             return None
 
+        # ---------------------------------------------------------
+        # MENSAJES
+        # ---------------------------------------------------------
+
+        if self.message_timer > 0:
+
+            self.message_timer -= dt
+
+            if self.message_timer <= 0:
+
+                self.message = ""
+
+        # ---------------------------------------------------------
+        # MINIJUEGO DEL COFRE (el mundo queda congelado)
+        # ---------------------------------------------------------
+
+        if self.minigame is not None:
+
+            update = getattr(
+                self.minigame,
+                "update",
+                None
+            )
+
+            if update is not None:
+                update(dt)
+
+            return None
+
+        # ---------------------------------------------------------
+        # TIEMPO DE LUZ
+        # ---------------------------------------------------------
+
+        in_shop = self.shopkeeper.zone_inset(
+            self.player
+        ) > 0
+
+        if self.has_match:
+
+            if in_shop:
+
+                # En la tienda la luz se recarga
+                self.vida = min(
+                    1.0,
+                    self.vida + dt / SHOP_RECHARGE_TIME
+                )
+
+            else:
+
+                burn = (
+                    self.base_burn
+                    * self.burn_factor
+                )
+
+                self.vida -= (
+                    burn
+                    * dt
+                    / MATCH_DURATION
+                )
+
+                if self.vida <= 0:
+
+                    self._burn_out()
+
+        # ---------------------------------------------------------
+        # FURIA
+        # ---------------------------------------------------------
+
+        self._update_fury(
+            dt
+        )
+
+        # ---------------------------------------------------------
+        # EFECTOS
+        # ---------------------------------------------------------
+
+        if self.speed_timer > 0:
+
+            self.speed_timer -= dt
+
+            if self.speed_timer <= 0:
+
+                self.speed_timer = 0
+                self.player.movement.speed_mult = 1.0
+
+        if self.burn_timer > 0:
+
+            self.burn_timer -= dt
+
+            if self.burn_timer <= 0:
+
+                self.burn_timer = 0
+                self.burn_factor = 1.0
+
+        if self.polvora_timer > 0:
+
+            self.polvora_timer -= dt
+            self._polvora_acc += dt
+
+            while self._polvora_acc >= POLVORA_TICK:
+
+                self._polvora_acc -= POLVORA_TICK
+
+                if self.has_match:
+
+                    self._polvora_hit(
+                        self.polvora_dps * POLVORA_TICK
+                    )
+
+            if self.polvora_timer <= 0:
+
+                self.polvora_timer = 0
+                self.polvora_dps = 0.0
+                self._polvora_acc = 0.0
+
+        if self.regen_left > 0:
+
+            amount = min(
+                self.regen_left,
+                self.regen_rate * dt
+            )
+
+            self.vida = min(
+                1.0,
+                self.vida + amount
+            )
+
+            self.regen_left -= amount
+
+            if self.regen_left <= 0:
+
+                self.regen_left = 0.0
+                self.regen_rate = 0.0
+
+        # ---------------------------------------------------------
+        # JUGADOR
+        # ---------------------------------------------------------
+
+        keys = pygame.key.get_pressed()
+
+        self.player.update(
+            dt,
+            keys,
+            self.collision_map
+        )
+
+        # ---------------------------------------------------------
+        # CAMARA
+        # ---------------------------------------------------------
+
+        self.camera.update(
+            self.player
+        )
+
+        # ---------------------------------------------------------
+        # ATAQUE
+        # ---------------------------------------------------------
+
+        self.melee.update(
+            dt
+        )
+
+        # ---------------------------------------------------------
+        # MUNECOS
+        # ---------------------------------------------------------
+
+        self._update_dummies(
+            dt
+        )
+
+        # ---------------------------------------------------------
+        # COFRES
+        # ---------------------------------------------------------
+
+        self.chests.update(
+            dt
+        )
+
+        # ---------------------------------------------------------
+        # PUERTAS
+        # ---------------------------------------------------------
+
+        self.doors.update(
+            dt
+        )
+
+        # ---------------------------------------------------------
+        # ARENA / ENEMIGOS
+        # ---------------------------------------------------------
+
+        self.arena.update(
+            dt,
+            self.player,
+            self.collision_map,
+            self
+        )
+
+        # Si los golpes de los enemigos te dejaron sin vida
+        if self.has_match and self.vida <= 0:
+
+            self._burn_out()
+
+        # ---------------------------------------------------------
+        # MONEDAS CERCANAS
+        # ---------------------------------------------------------
+
+        px, py = self.player.rect.center
+
+        for item in list(
+            self.world_items
+        ):
+
+            if item.item_id != "moneda":
+                continue
+
+            ix, iy = item.rect.center
+
+            if math.hypot(
+                ix - px,
+                iy - py
+            ) <= COIN_PICKUP_DISTANCE:
+
+                self.pick_up_item(
+                    item
+                )
+
+        # ---------------------------------------------------------
+        # TIENDA
+        # ---------------------------------------------------------
+
+        if self.shop is not None:
+
+            self.shop.update(
+                dt
+            )
+
+        # ---------------------------------------------------------
+        # SI SE QUEDA SIN LUZ
+        # ---------------------------------------------------------
+
+        if not self.has_match:
+
+            if self.no_light_timer is None:
+
+                self.no_light_timer = NO_LIGHT_COUNTDOWN
+
+            else:
+
+                self.no_light_timer -= dt
+
+                if self.no_light_timer <= 0:
+
+                    self.no_light_timer = 0.0
+                    self.state = "dying"
+                    self.fade_alpha = 0
+
+        else:
+
+            self.no_light_timer = None
+
         return None
 
+    # ---------- luz ----------
+
+    def _lit_rects(self):
+        """Zonas que siempre estan iluminadas: (rect, fuerza, borde)."""
+
+        rects = []
+
+        # RECONSTRUIDO: la zona de la tienda (si el vendedor la expone)
+        zone = getattr(
+            self.shopkeeper,
+            "zone",
+            None
+        )
+
+        if isinstance(zone, pygame.Rect):
+
+            rects.append(
+                (
+                    zone,
+                    1.0,
+                    18
+                )
+            )
+
+        # La puerta de la cabana queda iluminada despues del tutorial.
+        if self.tutorial is None:
+
+            rects.append(
+                (
+                    pygame.Rect(
+                        785,
+                        946,
+                        70,
+                        75
+                    ),
+                    1.0,
+                    18
+                )
+            )
+
+        return rects
+
     # ---------- dibujo ----------
+
+    def _draw_gems(self):
+        """RECONSTRUIDO: contador de gemas arriba a la derecha."""
+
+        if self.gems <= 0:
+            return
+
+        if self._gem_icon is None:
+
+            try:
+                self._gem_icon = get_gem_icon(24)
+            except TypeError:
+                self._gem_icon = get_gem_icon()
+
+        x = self.width - GEMS_MARGIN[0]
+        y = GEMS_MARGIN[1]
+
+        if self._gem_icon is not None:
+
+            self.screen.blit(
+                self._gem_icon,
+                (x, y)
+            )
+
+            x += self._gem_icon.get_width() + 6
+
+        text = self._font(28).render(
+            str(self.gems),
+            True,
+            (255, 255, 255)
+        )
+
+        self.screen.blit(
+            text,
+            (x, y)
+        )
+
+    def _draw_debug_items(self):
+        """F3: marca donde estan los objetos y las luces."""
+
+        for item in self.world_items:
+
+            pygame.draw.rect(
+                self.screen,
+                (0, 255, 0),
+                self.camera.apply(item.rect),
+                1
+            )
+
+        for drop in self.light_drops:
+
+            pygame.draw.rect(
+                self.screen,
+                (255, 200, 0),
+                self.camera.apply(drop.rect),
+                1
+            )
+
+        text = self._font(22).render(
+            f"objetos: {len(self.world_items)}  "
+            f"luces: {len(self.light_drops)}",
+            True,
+            (0, 255, 0)
+        )
+
+        self.screen.blit(
+            text,
+            (10, self.height - 30)
+        )
 
     def draw(self):
 
@@ -1692,20 +2104,28 @@ class NewGame:
 
             self._draw_debug_items()
 
-        if self.arena.menu_open:
+        if self.pause_view == "pause":
+            self.pause_menu.draw()
+
+        elif self.pause_view == "settings":
+            self.pause_settings.draw()
+
+        elif self.pause_view == "enemies":
+            self.enemy_encyclopedia.draw()
+
+        if self.arena.menu_open and self.pause_view is None:
             self.arena.draw_menu(self.screen, self)
 
-        if self.minigame is not None:
+        if self.pause_view is None:
 
-            self.minigame.draw(self.screen)
+            if self.minigame is not None:
+                self.minigame.draw(self.screen)
 
-        if self.shop is not None:
+            if self.shop is not None:
+                self.shop.draw(self.screen)
 
-            self.shop.draw(self.screen)
-
-        if self.tutorial is not None:
-
-            self.tutorial.draw(self.screen)
+            if self.tutorial is not None:
+                self.tutorial.draw(self.screen)
 
         if self.state in ("dying", "lost"):
 

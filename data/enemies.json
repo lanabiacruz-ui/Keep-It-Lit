@@ -1,0 +1,22 @@
+{
+    "pino": {
+        "nombre": "Piña",
+        "imagen": "enemigo.png",
+        "descripcion": "Enemigo de contacto que se mueve por la sala y rebota contra los obstaculos. Hace daño cuando choca con el jugador."
+    },
+    "tronco": {
+        "nombre": "Tronco",
+        "imagen": "tronco.png",
+        "descripcion": "Mantiene distancia del jugador y dispara tres proyectiles que rebotan por la sala 2 veces"
+    },
+    "mosquito": {
+        "nombre": "Mosquito",
+        "imagen": "mosquito.png",
+        "descripcion": "Tranquilo pero si recibe luz ataca al jugador pegandose  a su cuerpo por 1 min para despues soltarse e irse. Su aviso indica cuando esta por realizar una accion peligrosa."
+    },
+    "hongun": {
+        "nombre": "Hongun",
+        "imagen": "hongun.png",
+        "descripcion": "Camina por la sala y persigue al jugador cuando lo detecta a vista. Al acercarse al jugador recarga y libera una explosion masiva, muriendo pero realizando un daño desafiante."
+    }
+}
