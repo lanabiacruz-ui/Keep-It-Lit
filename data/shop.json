@@ -43,6 +43,18 @@
         {
           "id": "hongo_azul",
           "precio": 11
+        },
+        {
+          "id": "repelente",
+          "precio": 14
+        },
+        {
+          "id": "iman",
+          "precio": 16
+        },
+        {
+          "id": "esfera",
+          "precio": 13
         }
       ]
     }

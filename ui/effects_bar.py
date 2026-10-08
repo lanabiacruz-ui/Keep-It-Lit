@@ -14,6 +14,9 @@ TODAS comparten el mismo lienzo de 96x96 px:
   assets/maps/hud/efecto_relleno_polvora.png   96x96
   assets/maps/hud/efecto_relleno_resina.png    96x96
   assets/maps/hud/efecto_relleno_furia.png     96x96
+  assets/maps/hud/efecto_relleno_repelente.png 96x96
+  assets/maps/hud/efecto_relleno_iman.png      96x96
+  assets/maps/hud/efecto_relleno_esfera.png    96x96
 
 El relleno se dibuja DEBAJO del marco y se recorta desde arriba, asi
 que tiene que llenar todo el interior del marco (el codigo muestra
@@ -47,6 +50,9 @@ EFFECTS = {
     "polvora": {"label": "Polvora", "color": (255, 130, 60)},
     "resina":  {"label": "Resina",  "color": (200, 140, 80)},
     "furia":   {"label": "Furia",   "color": (255, 80, 50)},
+    "repelente": {"label": "Repelente", "color": (80, 190, 96)},
+    "iman":      {"label": "Iman",      "color": (226, 76, 88)},
+    "esfera":    {"label": "Esfera",    "color": (96, 190, 240)},
     # Alerta (no es un efecto con tiempo: parpadea mientras dure el peligro)
     "mosquito": {"label": "Mosquito cerca!", "color": (255, 120, 110),
                  "alert": True},

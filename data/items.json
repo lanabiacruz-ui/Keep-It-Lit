@@ -106,5 +106,39 @@
                 "valor": 0.25
             }
         ]
+    },
+    "repelente": {
+        "nombre": "Repelente de mosquitos",
+        "descripcion": "Durante 1:45 min el área de tu luz espanta a los mosquitos (no los mata): no se te acercan ni se pegan. Los que ya tenés pegados se sueltan.",
+        "requiere_fosforo": true,
+        "efectos": [
+            {
+                "tipo": "repelente",
+                "duracion": 105
+            }
+        ]
+    },
+    "iman": {
+        "nombre": "Imán",
+        "descripcion": "Durante 7 minutos tu personaje atrae solo todos los objetos cercanos: monedas, gemas e items sueltos, sin tener que agarrarlos.",
+        "requiere_fosforo": false,
+        "efectos": [
+            {
+                "tipo": "iman",
+                "duracion": 420
+            }
+        ]
+    },
+    "esfera": {
+        "nombre": "Esfera de vidrio",
+        "descripcion": "Durante 2 minutos tu luz tiene 25% más de radio: iluminás más.",
+        "requiere_fosforo": true,
+        "efectos": [
+            {
+                "tipo": "luz_radio",
+                "multiplicador": 1.25,
+                "duracion": 120
+            }
+        ]
     }
 }

@@ -237,6 +237,9 @@ class Hud:
 
         self.coin_font = pygame.font.Font(None, 32)
 
+        # Fuente del "+N" de debajo del contador (se crea al usarla)
+        self.gain_font = None
+
         # Centro del numero dentro de hud_monedas.png (110x60):
         # a la derecha de la moneda dibujada.
         self.coin_text_offset = (
@@ -400,7 +403,9 @@ class Hud:
         escudo=0.0,
         countdown=None,
         coins=0,
-        equipped_selected=False
+        equipped_selected=False,
+        coin_gain=0,
+        coin_gain_alpha=1.0
     ):
 
         # Vida y escudo, arriba a la izquierda
@@ -462,6 +467,33 @@ class Hud:
         )
 
         screen.blit(coin_text, coin_text_rect)
+
+        # "+N": las monedas que conseguiste "en el momento", justo
+        # debajo del contador (se desvanece solo)
+        if coin_gain > 0 and coin_gain_alpha > 0:
+
+            gain_text = f"+{format_coins(coin_gain)}"
+
+            if self.gain_font is None:
+                self.gain_font = pygame.font.Font(None, 30)
+
+            alpha = int(255 * max(0.0, min(1.0, coin_gain_alpha)))
+
+            shadow = self.gain_font.render(gain_text, True, (0, 0, 0))
+            label = self.gain_font.render(gain_text, True, (255, 226, 92))
+
+            shadow.set_alpha(alpha)
+            label.set_alpha(alpha)
+
+            pos = label.get_rect(
+                midtop=(
+                    self.coin_rect.left + self.coin_text_offset[0],
+                    self.coin_rect.bottom + 2
+                )
+            )
+
+            screen.blit(shadow, pos.move(2, 2))
+            screen.blit(label, pos)
 
         # Contador de "sin luz" (10 -> 0), centrado arriba
         if countdown is not None:

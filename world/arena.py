@@ -219,6 +219,11 @@ MOSQUITO_REST_TIME = 60.0        # despues de soltarte, a este tiempo vuelve a a
 MOSQUITO_FLEE_TIME = 8.0         # apenas te suelta, intenta irse (se aleja rapido)
 MOSQUITO_FLEE_SPEED = 85.0
 
+# Repelente: despues de espantarlo, el mosquito no vuelve a intentar
+# atacar antes de este tiempo (s) y huye al menos este tiempo (s)
+MOSQUITO_REPEL_REST = 4.0
+MOSQUITO_REPEL_FLEE = 0.8
+
 # Daño
 # 0.02 = 2% de la vida de la luz
 MOSQUITO_DAMAGE = 0.02
@@ -1150,6 +1155,43 @@ class Mosquito(Enemy):
 
         return amount
 
+    def _repelled(self, target, light_radius, dt, collision_map):
+        """Con repelente, los mosquitos dentro del area de la luz se
+        alejan: si estaban pegados se sueltan, y si venian a atacar se
+        dan vuelta. Devuelve True si este cuadro ya se movio asi."""
+
+        if self.attached:
+
+            # Pegado = esta encima tuyo, o sea adentro de la luz
+            self._detach(target)
+
+            self.rest_t = max(self.rest_t, MOSQUITO_REPEL_REST)
+
+            return True
+
+        away = self.pos - target
+        dist = away.length()
+
+        if dist > light_radius:
+            return False
+
+        if dist < 0.01:
+            away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+        else:
+            away = away / dist
+
+        self.alert = False
+        self.returning = False
+        self.phase = "leave"
+        self.rest_t = max(self.rest_t, MOSQUITO_REPEL_REST)
+        self.flee_t = max(self.flee_t, MOSQUITO_REPEL_FLEE)
+
+        self.heading = away
+
+        self._wander(dt, collision_map, MOSQUITO_FLEE_SPEED, turn=False)
+
+        return True
+
     def _start_attack(self):
 
         self.phase = "attack"
@@ -1177,7 +1219,8 @@ class Mosquito(Enemy):
         self.heading = away.normalize()
         self.turn_t = random.uniform(*MOSQUITO_TURN_TIME)
 
-    def update(self, dt, target, collision_map, light_on, light_radius):
+    def update(self, dt, target, collision_map, light_on, light_radius,
+               repel=False):
 
         target = pygame.Vector2(target)
         self.last_target = target.copy()
@@ -1189,6 +1232,13 @@ class Mosquito(Enemy):
 
         if self.spawning:
             self.spawn_t -= dt
+            return
+
+        # -------------------------------------------------------
+        # REPELENTE: el area de la luz los espanta (no los mata)
+        # -------------------------------------------------------
+
+        if repel and self._repelled(target, light_radius, dt, collision_map):
             return
 
         # -------------------------------------------------------
@@ -2906,7 +2956,7 @@ class Arena:
             if coin.item_id == "gema":
                 game.gems += getattr(coin, "value", 1)
             else:
-                game.coins += getattr(coin, "value", 1)
+                game.add_coins(getattr(coin, "value", 1))
 
         self.reward_coins = []
 
@@ -3052,7 +3102,7 @@ class Arena:
             elif self.state == self.CLEAR:
 
                 # Se va antes de la explosion: el premio se cobra igual
-                game.coins += self.reward
+                game.add_coins(self.reward)
 
                 game.show_message(f"+{self.reward} monedas")
 
@@ -3096,10 +3146,12 @@ class Arena:
         target = p.rect.center
         light_on = bool(game.has_match)
         light_world = game._light_radius() / game.camera.zoom if light_on else 0.0
+        # Repelente: la luz espanta a los mosquitos mientras dura
+        repel = light_on and game.repel_timer > 0
 
         for enemy in self.enemies:
             if isinstance(enemy, Mosquito):
-                enemy.update(dt, target, game.collision_map, light_on, light_world)
+                enemy.update(dt, target, game.collision_map, light_on, light_world, repel)
                 if enemy.attached and enemy.damage_t <= 0.0:
                     game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL

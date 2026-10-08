@@ -89,6 +89,37 @@ POLVORA_TICK = 0.5
 # F8 = trampa de prueba: suma esta cantidad de monedas.
 DEBUG_COINS = 100000
 
+# Cuanto vale cada moneda del piso (la amarilla, la azul y la roja).
+# Si el objeto trae su propio "value" (monedas del cofre de la arena),
+# se usa ese.
+COIN_VALUES = {
+    "moneda": 1,
+    "moneda_5": 5,
+    "moneda_10": 10,
+}
+
+# "+N" que aparece debajo del contador de monedas: cuanto se queda
+# en pantalla (segundos) despues de la ultima moneda que agarraste,
+# y cuanto dura el desvanecido del final.
+COIN_GAIN_TIME = 2.0
+COIN_GAIN_FADE = 0.5
+
+# ---------- Items nuevos ----------
+# (la duracion de cada uno esta en data/items.json: "repelente",
+# "iman" y "esfera")
+
+# Iman: hasta donde atrae los objetos (unidades del mundo) y que tan
+# rapido vuelan hacia vos (velocidad lejos -> velocidad cerca).
+MAGNET_RADIUS = 130
+MAGNET_SPEED_FAR = 120.0
+MAGNET_SPEED_NEAR = 360.0
+
+# Iman: a que distancia del jugador se agarra solo el objeto.
+MAGNET_PICKUP_DISTANCE = 10
+
+# Repelente: color del aro que marca el area que espanta mosquitos.
+REPEL_RING_COLOR = (120, 235, 130)
+
 # Cuanto tarda la pantalla en ponerse del todo negra al perder.
 FADE_DURATION = 1.2
 
@@ -101,7 +132,7 @@ DELETE_SAVE_ON_LOSS = False
 
 # Donde se dibuja el contador de gemas (desde la esquina de arriba a la
 # derecha). Si se pisa con el HUD, cambialo.
-GEMS_MARGIN = (110, 70)
+GEMS_MARGIN = (110, 100)
 
 # RECONSTRUIDO: que hace cada objeto al usarlo (tecla F). Si un objeto
 # en data/items.json tiene un campo "efecto", se usa ese en vez de esto.
@@ -290,6 +321,13 @@ class NewGame:
             else:
                 item_id, count = entry, 1
 
+            # Las monedas nunca van al inventario: si una partida vieja
+            # las guardo ahi (bug anterior), se pasan al contador.
+            if item_id in COIN_VALUES and count > 0:
+
+                self.coins += COIN_VALUES[item_id] * count
+                continue
+
             # Las luces nunca van al inventario
             if item_id in LIGHTS and count > 0:
 
@@ -360,6 +398,24 @@ class NewGame:
         # Resina: cura de a poco
         self.regen_left = 0.0
         self.regen_rate = 0.0
+
+        # Repelente de mosquitos: tu luz los espanta mientras dura
+        self.repel_timer = 0.0
+        self.repel_total = 1.0
+
+        # Iman: atrae los objetos del piso mientras dura
+        self.magnet_timer = 0.0
+        self.magnet_total = 1.0
+
+        # Esfera de vidrio: mas radio de luz mientras dura
+        self.sphere_timer = 0.0
+        self.sphere_total = 1.0
+        self.sphere_mult = 1.0
+
+        # "+N" debajo del contador de monedas (lo conseguido "en el
+        # momento": se suma mientras sigas agarrando y se desvanece)
+        self.coin_gain = 0
+        self.coin_gain_timer = 0.0
 
         # Radio de la luz en pantalla
         self._light_radius_px = self._light_radius()
@@ -560,9 +616,15 @@ class NewGame:
     def _light_radius(self):
         """Radio de la luz equipada."""
 
-        return light_stats(
+        radius = light_stats(
             self.light_type
         )["radio"]
+
+        # Esfera de vidrio: mas radio mientras dura
+        if self.sphere_timer > 0:
+            radius *= self.sphere_mult
+
+        return radius
 
     def _nearest_light_drop(self):
         """La luz del piso mas cercana."""
@@ -678,9 +740,21 @@ class NewGame:
 
         item_id = item.item_id
 
-        if item_id == "moneda":
+        if item_id in COIN_VALUES:
 
-            self.coins += int(getattr(item, "amount", 1))
+            # Amarilla = 1, azul = 5, roja = 10 (o el "value" propio)
+            value = getattr(item, "value", None)
+
+            if value is None:
+                value = COIN_VALUES[item_id]
+
+            self.add_coins(int(value))
+
+        elif item_id == "gema":
+
+            # Las gemas no van al inventario. Las del cofre de la arena
+            # ya se contaron al explotar (value = 0).
+            self.gems += int(getattr(item, "value", 1))
 
         else:
 
@@ -715,6 +789,23 @@ class NewGame:
 
         if item in self.world_items:
             self.world_items.remove(item)
+
+    def add_coins(self, amount):
+        """Suma monedas al contador y al "+N" de debajo del HUD."""
+
+        amount = int(amount)
+
+        if amount <= 0:
+            return
+
+        self.coins += amount
+
+        # Si todavia se ve el "+N" anterior, se acumula
+        if self.coin_gain_timer <= 0:
+            self.coin_gain = 0
+
+        self.coin_gain += amount
+        self.coin_gain_timer = COIN_GAIN_TIME
 
     def _free_slot_for(self, item_id):
         """Casillero donde entra el objeto (None si no hay lugar)."""
@@ -877,6 +968,22 @@ class NewGame:
             self.polvora_timer = self.polvora_total
             self._polvora_acc = 0.0
 
+        elif tipo == "repelente":
+
+            self.repel_total = float(e.get("duracion", 105.0))
+            self.repel_timer = self.repel_total
+
+        elif tipo == "iman":
+
+            self.magnet_total = float(e.get("duracion", 420.0))
+            self.magnet_timer = self.magnet_total
+
+        elif tipo == "luz_radio":
+
+            self.sphere_mult = float(e.get("multiplicador", 1.25))
+            self.sphere_total = float(e.get("duracion", 120.0))
+            self.sphere_timer = self.sphere_total
+
         elif tipo == "escudo_sumar":
 
             self.escudo = min(
@@ -963,6 +1070,15 @@ class NewGame:
 
         if self.regen_left > 0:
             active["regen"] = min(1.0, self.regen_left / self.regen_total)
+
+        if self.repel_timer > 0:
+            active["repelente"] = self.repel_timer / self.repel_total
+
+        if self.magnet_timer > 0:
+            active["iman"] = self.magnet_timer / self.magnet_total
+
+        if self.sphere_timer > 0:
+            active["esfera"] = self.sphere_timer / self.sphere_total
 
         return active
 
@@ -1896,6 +2012,28 @@ class NewGame:
                 self.polvora_dps = 0.0
                 self._polvora_acc = 0.0
 
+        if self.repel_timer > 0:
+
+            self.repel_timer = max(0.0, self.repel_timer - dt)
+
+        if self.magnet_timer > 0:
+
+            self.magnet_timer = max(0.0, self.magnet_timer - dt)
+
+        if self.sphere_timer > 0:
+
+            self.sphere_timer = max(0.0, self.sphere_timer - dt)
+
+            if self.sphere_timer <= 0:
+                self.sphere_mult = 1.0
+
+        if self.coin_gain_timer > 0:
+
+            self.coin_gain_timer = max(0.0, self.coin_gain_timer - dt)
+
+            if self.coin_gain_timer <= 0:
+                self.coin_gain = 0
+
         if self.regen_left > 0:
 
             amount = min(
@@ -1990,6 +2128,8 @@ class NewGame:
 
         px, py = self.player.rect.center
 
+        magnet_on = self.magnet_timer > 0
+
         for item in list(
             self.world_items
         ):
@@ -1999,15 +2139,44 @@ class NewGame:
                 item.update_fly(dt)
                 continue
 
-            if item.item_id != "moneda":
-                continue
-
             ix, iy = item.rect.center
 
-            if math.hypot(
+            dist = math.hypot(
                 ix - px,
                 iy - py
-            ) <= COIN_PICKUP_DISTANCE:
+            )
+
+            # IMAN: todos los objetos cercanos vuelan hacia vos y se
+            # agarran solos (si el inventario esta lleno, los items
+            # se quedan donde estan).
+            if magnet_on and self._magnet_can_take(item):
+
+                if dist <= MAGNET_PICKUP_DISTANCE:
+
+                    self.pick_up_item(
+                        item
+                    )
+
+                    continue
+
+                if dist <= MAGNET_RADIUS:
+
+                    self._magnet_pull(
+                        item,
+                        px,
+                        py,
+                        dist,
+                        dt
+                    )
+
+                    continue
+
+            # Las monedas (amarilla, azul y roja) se juntan solas al
+            # pasar cerca, sin apretar E
+            if item.item_id not in COIN_VALUES:
+                continue
+
+            if dist <= COIN_PICKUP_DISTANCE:
 
                 self.pick_up_item(
                     item
@@ -2049,6 +2218,68 @@ class NewGame:
 
         return None
 
+    # ---------- iman ----------
+
+    def _magnet_can_take(self, item):
+        """El iman solo atrae lo que se puede agarrar de verdad."""
+
+        item_id = item.item_id
+
+        if item_id in COIN_VALUES or item_id == "gema":
+            return True
+
+        # Items de inventario: solo si hay lugar
+        return self._free_slot_for(item_id) is not None
+
+    def _magnet_pull(self, item, px, py, dist, dt):
+        """Mueve el objeto hacia el jugador (sin atravesar paredes)."""
+
+        k = 1.0 - min(1.0, dist / MAGNET_RADIUS)
+
+        speed = (
+            MAGNET_SPEED_FAR
+            + (MAGNET_SPEED_NEAR - MAGNET_SPEED_FAR) * k
+        )
+
+        step = min(speed * dt, dist)
+
+        # Posicion con decimales (el rect solo guarda enteros y a
+        # poca velocidad no se movia nada)
+        fx = getattr(item, "_mag_x", None)
+        fy = getattr(item, "_mag_y", None)
+
+        if fx is None or (
+            abs(fx - item.rect.centerx) > 1.5
+            or abs(fy - item.rect.centery) > 1.5
+        ):
+
+            fx, fy = item.rect.center
+
+        dx = (px - fx) / max(0.01, dist)
+        dy = (py - fy) / max(0.01, dist)
+
+        nx = fx + dx * step
+        ny = fy + dy * step
+
+        walk = self.collision_map.point_is_walkable
+
+        if walk(nx, ny):
+
+            fx, fy = nx, ny
+
+        elif walk(nx, fy):
+
+            fx = nx
+
+        elif walk(fx, ny):
+
+            fy = ny
+
+        item._mag_x = fx
+        item._mag_y = fy
+
+        item.rect.center = (round(fx), round(fy))
+
     # ---------- luz ----------
 
     def _lit_rects(self):
@@ -2056,10 +2287,11 @@ class NewGame:
 
         rects = []
 
-        # RECONSTRUIDO: la zona de la tienda (si el vendedor la expone)
+        # La zona de la tienda siempre esta iluminada (el vendedor la
+        # define como ZONE; el borde se difumina con ZONE_FEATHER)
         zone = getattr(
             self.shopkeeper,
-            "zone",
+            "ZONE",
             None
         )
 
@@ -2069,7 +2301,11 @@ class NewGame:
                 (
                     zone,
                     1.0,
-                    18
+                    getattr(
+                        self.shopkeeper,
+                        "ZONE_FEATHER",
+                        22
+                    )
                 )
             )
 
@@ -2263,6 +2499,34 @@ class NewGame:
                 pulse
             )
 
+        # Repelente: aro verde en el borde de la luz (area que espanta
+        # a los mosquitos)
+        if (
+            self.has_match
+            and self.repel_timer > 0
+            and self._light_radius_px >= 2
+        ):
+
+            cx = int(self.player.rect.centerx * self.camera.zoom - self.camera.x)
+            cy = int(self.player.rect.centery * self.camera.zoom - self.camera.y)
+
+            pulse = 0.5 + 0.5 * math.sin(self._flicker_time * 5 + self.repel_timer * 3)
+
+            ring = pygame.Surface(
+                (self.width, self.height),
+                pygame.SRCALPHA
+            )
+
+            pygame.draw.circle(
+                ring,
+                (*REPEL_RING_COLOR, int(70 + 70 * pulse)),
+                (cx, cy),
+                int(self._light_radius_px),
+                3
+            )
+
+            self.screen.blit(ring, (0, 0))
+
         # Brillo del cofre, explosion y chispas (encima de la oscuridad)
         self.arena.draw_fx(self.screen, self.camera)
 
@@ -2316,7 +2580,12 @@ class NewGame:
             escudo=self.escudo,
             countdown=self.no_light_timer,
             coins=self.coins,
-            equipped_selected=self.selected_slot == "equipped"
+            equipped_selected=self.selected_slot == "equipped",
+            coin_gain=self.coin_gain if self.coin_gain_timer > 0 else 0,
+            coin_gain_alpha=min(
+                1.0,
+                self.coin_gain_timer / COIN_GAIN_FADE
+            )
         )
 
         self._draw_gems()
