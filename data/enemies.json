@@ -18,5 +18,10 @@
         "nombre": "Hongun",
         "imagen": "hongun.png",
         "descripcion": "Camina por la sala y persigue al jugador cuando lo detecta a vista. Al acercarse al jugador recarga y libera una explosion masiva, muriendo pero realizando un daño desafiante."
+    },
+    "klon": {
+        "nombre": "Klon",
+        "imagen": "klon_icon.png",
+        "descripcion": "Del tamaño del jugador. Pasea tranquilo por la sala, pero si tu luz lo toca (o lo golpeas) va directo hacia vos sin parar hasta morir. Pega con el mismo golpe en arco que el jugador: levanta el arma y se ve la zona roja antes de pegar. Tiene mucha vida."
     }
 }

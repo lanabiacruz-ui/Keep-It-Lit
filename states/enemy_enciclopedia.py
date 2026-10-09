@@ -61,6 +61,16 @@ DEFAULT_DATA = {
             "Puede cargar y liberar una explosion."
         ),
     },
+
+    "guardian": {
+        "nombre": "Guardián",
+        "imagen": "guardian_icono.png",
+        "descripcion": (
+            "Es del tamaño del jugador. Actua de manera tranquila, pero si tu luz lo "
+            "toca empieza a perseguirte hasta derrotarte. Ataca"
+            "igual que el jugador y es bastante resistente"
+        ),
+    },
 }
 
 
@@ -86,6 +96,7 @@ class EnemyEncyclopedia:
         "tronco",
         "mosquito",
         "hongun",
+        "guardian",
     )
 
     # ---------- distribucion (en coordenadas de la imagen 1672x941) ----

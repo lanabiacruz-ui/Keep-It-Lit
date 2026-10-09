@@ -33,6 +33,14 @@ Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/hongun_carga.png       112x56 (2 frames, recargando)
   assets/maps/combate/hongun.png             56x56  (opcional, 1 solo cuadro)
   assets/maps/combate/hongun_golpe.png       56x56  (opcional)
+
+La sala grande de la IZQUIERDA tambien es una sala de oleadas (ver
+LEFT_ARENA): 2 oleadas. La 1 trae los mobs de siempre y la 2 trae al
+Guardian. Imagenes del Guardian (opcionales, ver GuardianArt):
+  assets/maps/combate/guardian.png           256x320 (4x4: caminar)
+  assets/maps/combate/guardian_ataque.png    128x320 (2x4: aviso y golpe)
+  assets/maps/combate/guardian_arma.png      el arma, apuntando hacia arriba
+  assets/maps/combate/guardian_icono.png     56x56 (enciclopedia)
 """
 
 import math
@@ -42,6 +50,10 @@ from pathlib import Path
 import pygame
 
 from world.items import WorldItem, get_gem_icon
+from world.melee import (
+    ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
+    ease_out, sector_outline,
+)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -68,10 +80,21 @@ EXIT_POS = (1190, 520)
 GATE = pygame.Rect(1236, 500, 10, 40)
 
 
+# La sala grande de la IZQUIERDA (igual que en world/collision.py).
+# Se entra por el pasillo de la derecha (el que sale del hub).
+ROOM_LEFT = pygame.Rect(148, 336, 500, 408)
+TRIGGER_LEFT = pygame.Rect(166, 348, 464, 384)
+EXIT_POS_LEFT = (664, 518)
+GATE_LEFT = pygame.Rect(650, 502, 10, 32)
+
+
 # ---------------------------------------------------------------
 # Oleadas (para balancear, se cambia todo aca)
 # ---------------------------------------------------------------
-
+LEFT_WAVE_COMPOSITION = {
+    1: (0,0 ,0,0,4),
+    2: (0, 0, 0, 0, 2),
+}
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
 # pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
 # los hongunes caminan tranquilos, te persiguen cuando te detectan y explotan.
@@ -344,14 +367,20 @@ def quantize_radius(radius):
     return max(8, int(round(radius / 8.0)) * 8)
 
 
-def wave_composition(wave):
-    """(pinos, troncos, mosquitos, hongunes) de una oleada."""
-    if wave == MOSQUITO_TEST_WAVE:
-        return 0, 0, MOSQUITO_TEST_COUNT, 0
-    if wave in WAVE_COMPOSITION:
-        return WAVE_COMPOSITION[wave]
-    last = max(WAVE_COMPOSITION)
-    pinos, troncos, mosquitos, honguns = WAVE_COMPOSITION[last]
+def wave_composition(wave, table=None):
+    """(pinos, troncos, mosquitos, hongunes, guardianes) de una oleada.
+
+    `table` es la tabla de la sala (por defecto la de la sala derecha).
+    Las tablas pueden tener 4 numeros (sin guardianes) o 5."""
+    if table is None:
+        table = WAVE_COMPOSITION
+        if wave == MOSQUITO_TEST_WAVE:
+            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0
+    if wave in table:
+        return tuple(table[wave]) + (0,) * (5 - len(table[wave]))
+    last = max(table)
+    pinos, troncos, mosquitos, honguns = table[last][:4]
+    guardians = table[last][4] if len(table[last]) > 4 else 0
     extra = max(0, wave - last)
     pinos += PINOS_STEP * extra
     troncos = min(TRONCOS_MAX, troncos + TRONCOS_STEP * extra)
@@ -360,23 +389,26 @@ def wave_composition(wave):
     total = pinos + troncos + mosquitos + honguns
     if total > ENEMIES_MAX:
         mosquitos = max(0, mosquitos - (total - ENEMIES_MAX))
-    return pinos, troncos, mosquitos, honguns
+    return pinos, troncos, mosquitos, honguns, guardians
 
 
-def enemies_for_wave(wave):
+def enemies_for_wave(wave, table=None):
     """Cuantos enemigos trae la oleada en total."""
 
-    return sum(wave_composition(wave))
+    return sum(wave_composition(wave, table))
 
 
-def base_reward(wave):
+def base_reward(wave, table=None):
 
-    if wave in WAVE_REWARDS:
-        return WAVE_REWARDS[wave]
+    if table is None:
+        table = WAVE_REWARDS
 
-    last = max(WAVE_REWARDS)
+    if wave in table:
+        return table[wave]
 
-    return WAVE_REWARDS[last] + REWARD_STEP * (wave - last)
+    last = max(table)
+
+    return table[last] + REWARD_STEP * (wave - last)
 
 # ---------------------------------------------------------------
 # Mosquito - sprites
@@ -645,6 +677,9 @@ class Enemy:
     fixed = False
     contact_damage = True
 
+    # La sala donde vive (la arena se la cambia segun la sala)
+    room = ROOM
+
     def __init__(self, x, y, hp, max_speed, spawn_delay=0.0):
 
         self.rect = pygame.Rect(0, 0, *ENEMY_HITBOX)
@@ -836,7 +871,7 @@ class Enemy:
         """True si el enemigo puede estar en `rect`: dentro de la sala
         (no se escapa por el pasillo) y sin tocar paredes ni bloques."""
 
-        return ROOM.contains(rect) and collision_map.can_move(rect)
+        return self.room.contains(rect) and collision_map.can_move(rect)
 
     def _move(self, dt, collision_map):
         """Mueve al enemigo y rebota contra paredes y bloques del mapa.
@@ -1524,6 +1559,8 @@ class Shot:
     bloques del mapa; al siguiente choque desaparece. Si te toca, te
     saca vida y desaparece."""
 
+    room = ROOM
+
     def __init__(self, pos, angle):
 
         self.pos = pygame.Vector2(pos)
@@ -1539,7 +1576,7 @@ class Shot:
 
     def _free(self, rect, collision_map):
 
-        return ROOM.contains(rect) and collision_map.can_move(rect)
+        return self.room.contains(rect) and collision_map.can_move(rect)
 
     def update(self, dt, collision_map):
 
@@ -1680,8 +1717,8 @@ class Tronco(Enemy):
         # moves en TRONCO_LEAD segundos (sin salirse de la sala)
         aim = pygame.Vector2(target) + self.target_vel * TRONCO_LEAD
 
-        aim.x = max(ROOM.left + 4, min(ROOM.right - 4, aim.x))
-        aim.y = max(ROOM.top + 4, min(ROOM.bottom - 4, aim.y))
+        aim.x = max(self.room.left + 4, min(self.room.right - 4, aim.x))
+        aim.y = max(self.room.top + 4, min(self.room.bottom - 4, aim.y))
 
         direction = aim - self.pos
 
@@ -1694,7 +1731,9 @@ class Tronco(Enemy):
 
             offset = (k - (TRONCO_SHOTS - 1) / 2.0) * TRONCO_SPREAD
 
-            self._shots.append(Shot(self.pos, base + offset))
+            shot = Shot(self.pos, base + offset)
+            shot.room = self.room
+            self._shots.append(shot)
 
     # ---------- movimiento / estado ----------
 
@@ -2301,6 +2340,598 @@ class Hongun(Enemy):
 
 
 # ---------------------------------------------------------------
+# Guardian (del tamano del jugador, pega con un golpe en arco igual
+# que el jugador, tiene mucha vida)
+# ---------------------------------------------------------------
+
+GUARDIAN_HP = 48                  # golpes que aguanta
+GUARDIAN_HITBOX = (10, 16)        # lo que choca y lo que golpea el jugador
+# Tamano dibujado en unidades del mundo: el mismo que el personaje
+# (54x74 px en pantalla con el zoom x4)
+GUARDIAN_DRAW_SIZE = (14.5, 18.5)
+
+# Movimiento (unidades del mundo por segundo; el jugador va a 95)
+GUARDIAN_WANDER_SPEED = 35.0      # paseando tranquilo
+GUARDIAN_CHASE_SPEED = 70.0       # yendo directo hacia el jugador
+GUARDIAN_TURN_TIME = (1.2, 3.0)   # cada cuanto cambia de rumbo paseando
+
+# Su golpe es EL MISMO que el del jugador (world/melee.py): mismo arco,
+# mismo alcance y misma duracion. Si cambias esos numeros alla, cambian aca.
+GUARDIAN_INNER = INNER_RADIUS
+GUARDIAN_OUTER = OUTER_RADIUS
+GUARDIAN_ARC = ARC_DEGREES
+GUARDIAN_SWING_TIME = SWING_TIME
+
+GUARDIAN_ATTACK_DIST = 22.0       # a esta distancia del jugador empieza a pegar
+GUARDIAN_WINDUP = 0.15            # aviso cortito: levanta el arma y se ve la zona roja
+GUARDIAN_COOLDOWN = COOLDOWN      # espera despues del golpe: la misma que el jugador
+GUARDIAN_DAMAGE = 0.45            # 0.10 = 10% de la vida de la luz
+GUARDIAN_KNOCKBACK = 150.0        # empujon al jugador (el de un pino es 120)
+GUARDIAN_HIT_PUSH = 28.0          # cuanto lo mueve un golpe tuyo (casi nada: es pesado)
+GUARDIAN_WEAPON_LENGTH = 21.0     # largo del arma dibujada (unidades del mundo)
+
+GUARDIAN_ANIM_FRAME = 0.14
+GUARDIAN_FLASH_TIME = 0.10
+GUARDIAN_SPAWN_TIME = 1.0
+
+
+class GuardianArt:
+    """Imagenes del guardian (todas opcionales: si falta alguna se
+    dibuja un reemplazo).
+
+      guardian.png         hoja de caminar: 4 columnas x 4 filas
+                           (filas: arriba, abajo, izquierda, derecha,
+                           igual que el personaje)
+      guardian_ataque.png  hoja de golpe: 2 columnas x 4 filas (mismas
+                           filas). Columna 1 = arma levantada (aviso),
+                           columna 2 = golpe
+      guardian_arma.png    el arma sola, apuntando hacia ARRIBA, con el
+                           mango abajo (se la hace girar en el golpe)
+      guardian_icono.png   dibujo para la enciclopedia (56x56)
+    """
+
+    DIRS = ("up", "down", "left", "right")
+    CELL = (64, 80)
+
+    def __init__(self):
+
+        walk = load_image(COMBAT_DIR / "guardian.png")
+        attack = load_image(COMBAT_DIR / "guardian_ataque.png")
+
+        self.walk = self._cut(walk, 4) or self._placeholder_walk()
+        self.attack = self._cut(attack, 2) or self._placeholder_attack()
+        self.weapon = load_image(COMBAT_DIR / "guardian_arma.png")
+
+        self._zoom = None
+        self._scaled = None
+        self._weapon_zoom = None
+        self._weapon_scaled = None
+
+    # ---------- carga ----------
+
+    @classmethod
+    def _cut(cls, sheet, cols):
+        """Corta una hoja de `cols` columnas x 4 filas. None si no hay."""
+
+        if sheet is None:
+            return None
+
+        cw = sheet.get_width() // cols
+        ch = sheet.get_height() // 4
+
+        if cw <= 0 or ch <= 0:
+            return None
+
+        return {
+            d: [
+                sheet.subsurface((c * cw, r * ch, cw, ch)).copy()
+                for c in range(cols)
+            ]
+            for r, d in enumerate(cls.DIRS)
+        }
+
+    # ---------- reemplazos dibujados con codigo ----------
+
+    @classmethod
+    def _body(cls, direction, step, raised):
+        """Un muneco simple (mientras no haya imagenes)."""
+
+        w, h = cls.CELL
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        cloth = (88, 58, 120)
+        dark = (46, 30, 68)
+        skin = (200, 175, 150)
+        eye = (255, 215, 90)
+
+        off = (0, 3, 0, -3)[step % 4]
+
+        # piernas
+        pygame.draw.rect(surf, dark, (w // 2 - 12, 52 + off, 10, 22))
+        pygame.draw.rect(surf, dark, (w // 2 + 2, 52 - off, 10, 22))
+
+        # cuerpo
+        pygame.draw.rect(surf, cloth, (w // 2 - 15, 24, 30, 32), border_radius=4)
+        pygame.draw.rect(surf, dark, (w // 2 - 15, 24, 30, 32), 2, border_radius=4)
+
+        # brazos
+        arm_y = 14 if raised else 28
+        if direction in ("down", "up"):
+            pygame.draw.rect(surf, cloth, (w // 2 - 22, arm_y, 8, 22))
+            pygame.draw.rect(surf, cloth, (w // 2 + 14, arm_y, 8, 22))
+        elif direction == "left":
+            pygame.draw.rect(surf, cloth, (w // 2 - 20, arm_y, 8, 22))
+        else:
+            pygame.draw.rect(surf, cloth, (w // 2 + 12, arm_y, 8, 22))
+
+        # cabeza
+        pygame.draw.circle(surf, skin, (w // 2, 14), 12)
+        pygame.draw.circle(surf, dark, (w // 2, 14), 12, 2)
+
+        # ojos (de espaldas no se ven)
+        if direction == "down":
+            pygame.draw.rect(surf, eye, (w // 2 - 7, 11, 4, 4))
+            pygame.draw.rect(surf, eye, (w // 2 + 3, 11, 4, 4))
+        elif direction == "left":
+            pygame.draw.rect(surf, eye, (w // 2 - 9, 11, 4, 4))
+        elif direction == "right":
+            pygame.draw.rect(surf, eye, (w // 2 + 5, 11, 4, 4))
+        else:
+            pygame.draw.rect(surf, dark, (w // 2 - 8, 4, 16, 6))
+
+        return surf
+
+    @classmethod
+    def _placeholder_walk(cls):
+
+        return {
+            d: [cls._body(d, i, False) for i in range(4)]
+            for d in cls.DIRS
+        }
+
+    @classmethod
+    def _placeholder_attack(cls):
+
+        return {
+            d: [cls._body(d, 0, True), cls._body(d, 2, False)]
+            for d in cls.DIRS
+        }
+
+    # ---------- escalado ----------
+
+    def get(self, zoom):
+        """Hojas ya escaladas al tamano del personaje en pantalla."""
+
+        if self._zoom != zoom:
+
+            size = (
+                max(1, int(GUARDIAN_DRAW_SIZE[0] * zoom)),
+                max(1, int(GUARDIAN_DRAW_SIZE[1] * zoom)),
+            )
+
+            def scale(table):
+                return {
+                    d: [pygame.transform.smoothscale(f, size) for f in frames]
+                    for d, frames in table.items()
+                }
+
+            self._scaled = (scale(self.walk), scale(self.attack))
+            self._zoom = zoom
+
+        return self._scaled
+
+    def get_weapon(self, zoom):
+        """El arma escalada (None si no hay imagen: se dibuja con codigo)."""
+
+        if self.weapon is None:
+            return None
+
+        if self._weapon_zoom != zoom:
+
+            h = max(1, int(GUARDIAN_WEAPON_LENGTH * zoom))
+            w = max(1, int(self.weapon.get_width() * h / self.weapon.get_height()))
+
+            self._weapon_scaled = pygame.transform.smoothscale(self.weapon, (w, h))
+            self._weapon_zoom = zoom
+
+        return self._weapon_scaled
+
+
+class Guardian(Enemy):
+    """Del tamano del jugador. Pasea tranquilo por la sala; cuando tu luz
+    lo toca (o le pegas) se despierta y va DIRECTO hacia vos, sin parar
+    hasta que muere. Cuando llega a tu alcance levanta el arma (aviso) y
+    pega con el mismo golpe en arco que el jugador. Tiene mucha vida y
+    casi no retrocede cuando lo golpeas."""
+
+    fixed = False
+    contact_damage = False
+
+    WANDER = "wander"
+    CHASE = "chase"
+    WINDUP = "windup"
+    SWING = "swing"
+
+    def __init__(self, x, y, spawn_delay=0.0):
+
+        super().__init__(x, y, GUARDIAN_HP, GUARDIAN_CHASE_SPEED, spawn_delay)
+
+        self.spawn_t = GUARDIAN_SPAWN_TIME + spawn_delay
+
+        self.rect = pygame.Rect(0, 0, *GUARDIAN_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.phase = self.WANDER
+
+        self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+        self.turn_t = random.uniform(*GUARDIAN_TURN_TIME)
+
+        self.facing = "down"
+        self.moving = False
+
+        self.phase_t = 0.0       # tiempo dentro de WINDUP / SWING
+        self.cooldown = 0.0
+        self.aim = 0.0           # angulo (radianes) hacia donde pega
+        self.hit_done = False    # ya le pego al jugador en este golpe
+
+    # ---------- estado ----------
+
+    @property
+    def awake(self):
+
+        return self.phase != self.WANDER
+
+    @property
+    def attacking(self):
+
+        return self.phase in (self.WINDUP, self.SWING)
+
+    @property
+    def swing_k(self):
+        """0 a 1: cuanto avanzo el golpe (solo en SWING)."""
+
+        return max(0.0, min(1.0, self.phase_t / GUARDIAN_SWING_TIME))
+
+    def weapon_angle(self):
+        """Angulo (radianes) del arma ahora mismo."""
+
+        half = math.radians(GUARDIAN_ARC) / 2
+
+        if self.phase == self.WINDUP:
+            return self.aim - half
+
+        if self.phase == self.SWING:
+            return self.aim - half + 2 * half * ease_out(self.swing_k)
+
+        return self.aim
+
+    # ---------- golpes que recibe ----------
+
+    def take_damage(self, amount):
+        """Pierde vida, parpadea y se despierta. Casi no retrocede y no
+        se le corta el golpe: es pesado."""
+
+        if self.spawning or self.dead:
+            return 0
+
+        self.hp -= amount
+        self.flash = GUARDIAN_FLASH_TIME
+
+        away = self.pos - self.last_target
+
+        if away.length_squared() > 0.01 and not self.attacking:
+            self.pos += away.normalize() * GUARDIAN_HIT_PUSH * 0.05
+            self.rect.center = (round(self.pos.x), round(self.pos.y))
+
+        if self.phase == self.WANDER:
+            self.phase = self.CHASE
+
+        return amount
+
+    # ---------- movimiento ----------
+
+    def _walk(self, dt, direction, speed, collision_map,
+              angles=(0, 45, -45, 90, -90)):
+        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
+        Devuelve la direccion que uso o None si no pudo moverse."""
+
+        step = speed * dt
+
+        for angle in angles:
+
+            d = direction.rotate(angle)
+
+            nx = self.pos.x + d.x * step
+            ny = self.pos.y + d.y * step
+
+            test = self.rect.copy()
+            test.center = (round(nx), round(ny))
+
+            if self._free(test, collision_map):
+
+                self.pos.update(nx, ny)
+                self.rect.center = test.center
+                self.vel = d * speed
+
+                return d
+
+        return None
+
+    def _face(self, direction):
+        """Hacia donde mira (el eje que mas pesa)."""
+
+        if abs(direction.x) > abs(direction.y):
+            self.facing = "right" if direction.x > 0 else "left"
+        elif abs(direction.y) > 0.001:
+            self.facing = "down" if direction.y > 0 else "up"
+
+    def swing_hits(self, point):
+        """True UNA vez por golpe si el arma toca `point` (centro del
+        cuerpo del jugador). Mismo arco y alcance que el golpe del
+        jugador: un sector entre INNER y OUTER, barrido hasta ahora."""
+
+        if self.phase != self.SWING or self.hit_done:
+            return False
+
+        offset = pygame.Vector2(point) - self.pos
+        dist = offset.length()
+
+        # El jugador tiene cuerpo: se le perdona un poco de alcance
+        if dist < GUARDIAN_INNER - 8 or dist > GUARDIAN_OUTER + 5:
+            return False
+
+        half = math.radians(GUARDIAN_ARC) / 2
+        angle = math.atan2(offset.y, offset.x)
+
+        # Barrido: desde donde empezo el golpe hasta donde esta ahora
+        start = self.aim - half
+        now = self.weapon_angle()
+
+        delta = (angle - start + math.pi) % math.tau - math.pi
+        reach = now - start
+
+        # un poco de margen para el ancho del cuerpo
+        if -0.15 <= delta <= reach + 0.15:
+
+            self.hit_done = True
+
+            return True
+
+        return False
+
+    def update(self, dt, target, collision_map, light_on, light_radius):
+
+        target = pygame.Vector2(target)
+        self.last_target = target.copy()
+
+        self.anim_t += dt
+        self.moving = False
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.spawning:
+            self.spawn_t -= dt
+            return
+
+        if self.cooldown > 0:
+            self.cooldown = max(0.0, self.cooldown - dt)
+
+        to_player = target - self.pos
+        dist = to_player.length()
+        toward = to_player / dist if dist > 0.01 else pygame.Vector2(1, 0)
+
+        # ---- paseando tranquilo: la luz lo despierta ----
+        if self.phase == self.WANDER:
+
+            if light_on and dist <= light_radius:
+
+                self.phase = self.CHASE
+
+            else:
+
+                self.turn_t -= dt
+
+                if self.turn_t <= 0:
+
+                    self.heading = self.heading.rotate(random.uniform(-80, 80))
+                    self.turn_t = random.uniform(*GUARDIAN_TURN_TIME)
+
+                d = self._walk(
+                    dt, self.heading, GUARDIAN_WANDER_SPEED, collision_map,
+                    angles=(0, 40, -40, 90, -90, 140, -140, 180)
+                )
+
+                if d is not None:
+                    self.heading = d
+                    self.moving = True
+                    self._face(d)
+
+                return
+
+        # ---- levanta el arma: aviso, quieto, apuntandote ----
+        if self.phase == self.WINDUP:
+
+            self.phase_t += dt
+
+            # Sigue apuntando mientras carga (con un poco de demora)
+            want = math.atan2(toward.y, toward.x)
+            diff = (want - self.aim + math.pi) % math.tau - math.pi
+            self.aim += diff * min(1.0, 6.0 * dt)
+
+            self._face(pygame.Vector2(math.cos(self.aim), math.sin(self.aim)))
+
+            if self.phase_t >= GUARDIAN_WINDUP:
+
+                self.phase = self.SWING
+                self.phase_t = 0.0
+                self.hit_done = False
+
+            return
+
+        # ---- el golpe ----
+        if self.phase == self.SWING:
+
+            self.phase_t += dt
+
+            if self.phase_t >= GUARDIAN_SWING_TIME:
+
+                self.phase = self.CHASE
+                self.cooldown = GUARDIAN_COOLDOWN
+
+            return
+
+        # ---- persiguiendo, directo al jugador, hasta morir ----
+        if dist <= GUARDIAN_ATTACK_DIST and self.cooldown <= 0:
+
+            self.phase = self.WINDUP
+            self.phase_t = 0.0
+            self.aim = math.atan2(toward.y, toward.x)
+
+            return
+
+        # Si esta en su alcance (esperando el cooldown) se queda pegado
+        # a vos sin empujarte
+        if dist > GUARDIAN_ATTACK_DIST * 0.7:
+
+            d = self._walk(dt, toward, GUARDIAN_CHASE_SPEED, collision_map)
+
+            if d is not None:
+                self.moving = True
+                self._face(d)
+
+        else:
+
+            self._face(toward)
+
+    # ---------- dibujo ----------
+
+    def draw(self, screen, camera, art):
+
+        walk, attack = art.get(camera.zoom)
+
+        if self.attacking:
+
+            frames = attack[self.facing]
+            img = frames[0] if self.phase == self.WINDUP else frames[min(1, len(frames) - 1)]
+
+        else:
+
+            frames = walk[self.facing]
+
+            index = (
+                int(self.anim_t / GUARDIAN_ANIM_FRAME) % len(frames)
+                if self.moving else 0
+            )
+
+            img = frames[index]
+
+        if self.flash > 0:
+
+            img = img.copy()
+            img.fill((200, 200, 200, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+        if self.spawning:
+
+            k = 1.0 - max(0.0, self.spawn_t) / GUARDIAN_SPAWN_TIME
+
+            img = img.copy()
+            img.set_alpha(int(40 + 160 * max(0.0, min(1.0, k))))
+
+        dest = camera.apply(self.rect)
+
+        # Sombra
+        shadow = pygame.Surface(
+            (int(dest.width * 1.5), int(dest.height * 0.35)),
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(dest.centerx, dest.bottom))
+        )
+
+        sprite_rect = img.get_rect(
+            midbottom=(dest.centerx, dest.bottom + int(2 * camera.zoom))
+        )
+
+        screen.blit(img, sprite_rect)
+
+        if self.spawning or self.dead:
+            return
+
+        if self.attacking:
+            self._draw_attack(screen, camera, dest, art)
+
+    def _draw_attack(self, screen, camera, dest, art):
+        """Zona de peligro (aviso) y arma girando, igual que el golpe del
+        jugador pero en rojo."""
+
+        zoom = camera.zoom
+        cx, cy = dest.center
+
+        half = math.radians(GUARDIAN_ARC) / 2
+
+        r_in = GUARDIAN_INNER * zoom
+        r_out = GUARDIAN_OUTER * zoom
+
+        size = int(r_out * 2 + 8)
+        layer = pygame.Surface((size, size), pygame.SRCALPHA)
+        mid = size // 2
+
+        # Zona completa del golpe (aviso: se va llenando mientras carga)
+        if self.phase == self.WINDUP:
+
+            k = min(1.0, self.phase_t / GUARDIAN_WINDUP)
+            a0, a1 = self.aim - half, self.aim + half
+            alpha = int(30 + 70 * k)
+            edge = (255, 70, 60, int(120 + 120 * k))
+
+        else:
+
+            a0 = self.aim - half
+            a1 = self.weapon_angle()
+            alpha = 120
+            edge = (255, 235, 200, 220)
+
+        points = sector_outline(mid, mid, r_in, r_out, a0, a1)
+
+        if len(points) >= 3:
+
+            pygame.draw.polygon(layer, (255, 60, 50, alpha), points)
+            pygame.draw.polygon(layer, edge, points, max(1, int(zoom * 0.4)))
+
+        screen.blit(layer, layer.get_rect(center=(cx, cy)))
+
+        # Arma
+        angle = self.weapon_angle()
+        direction = pygame.Vector2(math.cos(angle), math.sin(angle))
+        length = GUARDIAN_WEAPON_LENGTH * zoom
+
+        weapon = art.get_weapon(zoom)
+
+        start = pygame.Vector2(cx, cy) + direction * r_in * 0.6
+
+        if weapon is not None:
+
+            # La imagen mira hacia arriba: se gira hasta apuntar al angulo
+            img = pygame.transform.rotate(weapon, -(math.degrees(angle) + 90))
+            center = start + direction * (weapon.get_height() / 2)
+
+            screen.blit(img, img.get_rect(center=(round(center.x), round(center.y))))
+
+            return
+
+        end = start + direction * length
+
+        pygame.draw.line(screen, (60, 40, 25), start, end, max(3, int(zoom * 1.1)))
+        pygame.draw.line(screen, (150, 105, 60), start, end, max(2, int(zoom * 0.6)))
+        pygame.draw.circle(screen, (255, 160, 60), (int(end.x), int(end.y)), max(2, int(zoom * 0.9)))
+
+
+# ---------------------------------------------------------------
 # Cofre del premio
 # ---------------------------------------------------------------
 
@@ -2480,6 +3111,66 @@ class RewardChest:
 # La sala
 # ---------------------------------------------------------------
 
+# ---------------------------------------------------------------
+# Las salas de combate (una config por sala)
+# ---------------------------------------------------------------
+
+class ArenaConfig:
+    """Todo lo que cambia de una sala de oleadas a otra."""
+
+    def __init__(self, key, title, room, trigger, exit_pos, gate,
+                 table, rewards, last_wave, save_wave, save_done,
+                 show_total=False,
+                 sealed_text="Mapa completado: la sala esta cerrada",
+                 done_text="Mapa completado! La sala se cerro para siempre"):
+
+        self.key = key
+        self.title = title
+        self.room = room
+        self.trigger = trigger
+        self.exit_pos = exit_pos
+        self.gate = gate
+        self.table = table
+        self.rewards = rewards
+        self.last_wave = last_wave
+        self.save_wave = save_wave        # clave en la partida: oleada que sigue
+        self.save_done = save_done        # clave en la partida: sala completada
+        self.show_total = show_total      # "Oleada 1/2" en el cartel
+        self.sealed_text = sealed_text
+        self.done_text = done_text
+
+
+# Sala grande de la DERECHA: 10 oleadas
+RIGHT_ARENA = ArenaConfig(
+    "right", "Sala de combate",
+    ROOM, TRIGGER, EXIT_POS, GATE,
+    WAVE_COMPOSITION, WAVE_REWARDS, LAST_WAVE,
+    "arena_wave", "arena_completed",
+)
+
+# ---------------------------------------------------------------
+# Sala grande de la IZQUIERDA: solo 2 oleadas.
+#   Oleada 1: mobs de siempre.
+#   Oleada 2: el Guardian (mismo tamano que el personaje).
+# Cada numero: (pinos, troncos, mosquitos, hongunes, guardianes)
+# ---------------------------------------------------------------
+
+
+
+LEFT_WAVE_REWARDS = {1: 40, 2: 90}
+
+LEFT_LAST_WAVE = 2
+
+LEFT_ARENA = ArenaConfig(
+    "left", "Sala del Guardian",
+    ROOM_LEFT, TRIGGER_LEFT, EXIT_POS_LEFT, GATE_LEFT,
+    LEFT_WAVE_COMPOSITION, LEFT_WAVE_REWARDS, LEFT_LAST_WAVE,
+    "arena_left_wave", "arena_left_completed",
+    sealed_text="Sala completada: esta cerrada",
+    done_text="Sala completada! Se cerro para siempre",
+)
+
+
 class Arena:
 
     IDLE = "idle"
@@ -2505,7 +3196,10 @@ class Arena:
         "noescape": "Jugar sin escape  X2 premio",
     }
 
-    def __init__(self, screen_size):
+    def __init__(self, screen_size, cfg=None):
+
+        # Que sala es (la derecha por defecto, o la de la izquierda)
+        self.cfg = cfg or RIGHT_ARENA
 
         self.size = screen_size
 
@@ -2524,6 +3218,7 @@ class Arena:
         self.tronco_art = TroncoArt()
         self.mosquito_art = MosquitoArt()
         self.hongun_art = HongunArt()
+        self.guardian_art = GuardianArt()
         self.blasts = []            # explosiones de hongunes (aro + luz)
         self.mosquito_alert = False
 
@@ -2623,7 +3318,7 @@ class Arena:
 
         mult = NO_ESCAPE_MULT if self.mode == "noescape" else 1
 
-        return base_reward(self.wave) * mult
+        return base_reward(self.wave, self.cfg.rewards) * mult
 
     def targets(self):
         """Lo que el fosforo puede golpear."""
@@ -2754,7 +3449,7 @@ class Arena:
 
         if not self.gate_on:
 
-            game.collision_map.obstacles.append(GATE.copy())
+            game.collision_map.obstacles.append(self.cfg.gate.copy())
             self.gate_on = True
 
     def _open_gate(self, game):
@@ -2767,8 +3462,8 @@ class Arena:
 
             obstacles = game.collision_map.obstacles
 
-            if GATE in obstacles:
-                obstacles.remove(GATE)
+            if self.cfg.gate in obstacles:
+                obstacles.remove(self.cfg.gate)
 
             self.gate_on = False
 
@@ -2787,8 +3482,8 @@ class Arena:
 
         p = game.player
 
-        if ROOM.collidepoint(p.rect.center) or p.rect.colliderect(
-            GATE.inflate(24, 24)
+        if self.cfg.room.collidepoint(p.rect.center) or p.rect.colliderect(
+            self.cfg.gate.inflate(24, 24)
         ):
             self._teleport_out(game)
 
@@ -2798,11 +3493,14 @@ class Arena:
 
     def _spawn_wave(self, game):
 
-        pinos, troncos, mosquitos, honguns = wave_composition(self.wave)
+        pinos, troncos, mosquitos, honguns, guardians = wave_composition(
+            self.wave, self.cfg.table
+        )
 
         kinds = (
             ["pino"] * pinos + ["tronco"] * troncos
             + ["mosquito"] * mosquitos + ["hongun"] * honguns
+            + ["guardian"] * guardians
         )
         random.shuffle(kinds)
 
@@ -2813,10 +3511,10 @@ class Arena:
         cmap = game.collision_map
         player_pos = pygame.Vector2(game.player.rect.center)
         corners = [
-            (ROOM.left + 40, ROOM.top + 30),
-            (ROOM.right - 40, ROOM.top + 30),
-            (ROOM.left + 40, ROOM.bottom - 30),
-            (ROOM.right - 40, ROOM.bottom - 30),
+            (self.cfg.room.left + 40, self.cfg.room.top + 30),
+            (self.cfg.room.right - 40, self.cfg.room.top + 30),
+            (self.cfg.room.left + 40, self.cfg.room.bottom - 30),
+            (self.cfg.room.right - 40, self.cfg.room.bottom - 30),
         ]
 
         self.enemies = []
@@ -2825,23 +3523,25 @@ class Arena:
 
         for i, kind in enumerate(kinds):
             pos = None
-            min_dist = 135 if kind in ("mosquito", "hongun") else 110
+            min_dist = 135 if kind in ("mosquito", "hongun", "guardian") else 110
 
             if kind == "mosquito":
                 hitbox = MOSQUITO_HITBOX
             elif kind == "hongun":
                 hitbox = HONGUN_HITBOX
+            elif kind == "guardian":
+                hitbox = GUARDIAN_HITBOX
             else:
                 hitbox = ENEMY_HITBOX
 
             for _ in range(120):
-                x = random.randint(ROOM.left + 16, ROOM.right - 16)
-                y = random.randint(ROOM.top + 16, ROOM.bottom - 16)
+                x = random.randint(self.cfg.room.left + 16, self.cfg.room.right - 16)
+                y = random.randint(self.cfg.room.top + 16, self.cfg.room.bottom - 16)
                 probe = pygame.Rect(0, 0, *hitbox)
                 probe.center = (x, y)
                 if pygame.Vector2(x, y).distance_to(player_pos) < min_dist:
                     continue
-                if not (ROOM.contains(probe) and cmap.can_move(probe)):
+                if not (self.cfg.room.contains(probe) and cmap.can_move(probe)):
                     continue
                 if any(pygame.Vector2(x, y).distance_to(e.pos) < 18 for e in self.enemies):
                     continue
@@ -2853,17 +3553,24 @@ class Arena:
 
             delay = i * 0.15
             if kind == "tronco":
-                self.enemies.append(Tronco(pos[0], pos[1], tronco_hp, spawn_delay=delay))
+                enemy = Tronco(pos[0], pos[1], tronco_hp, spawn_delay=delay)
             elif kind == "mosquito":
-                self.enemies.append(Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay))
+                enemy = Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay)
             elif kind == "hongun":
-                self.enemies.append(Hongun(pos[0], pos[1], spawn_delay=delay))
+                enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "guardian":
+                enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
             else:
-                self.enemies.append(Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay))
+                enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
+
+            # Se mueve solo dentro de ESTA sala
+            enemy.room = self.cfg.room
+
+            self.enemies.append(enemy)
 
     def _wave_cleared(self, game):
 
-        pos = self.last_death or ROOM.center
+        pos = self.last_death or self.cfg.room.center
 
         self.reward = self.current_reward
         self.chest = RewardChest(pos[0], pos[1])
@@ -2930,7 +3637,7 @@ class Arena:
         # completado. La gema se cuenta ya (asi no se pierde si cerras
         # el juego mientras juntas las monedas); value = 0 evita
         # contarla dos veces al agarrarla.
-        if self.wave == LAST_WAVE:
+        if self.wave == self.cfg.last_wave:
 
             game.gems += 1
 
@@ -2952,8 +3659,7 @@ class Arena:
         # La siguiente oleada ya queda lista
         self.wave += 1
 
-    @staticmethod
-    def _coin_target(game, cx, cy):
+    def _coin_target(self, game, cx, cy):
 
         for _ in range(30):
 
@@ -2963,7 +3669,7 @@ class Arena:
             x = cx + math.cos(angle) * dist
             y = cy + math.sin(angle) * dist
 
-            if ROOM.collidepoint(x, y) and game.collision_map.point_is_walkable(x, y):
+            if self.cfg.room.collidepoint(x, y) and game.collision_map.point_is_walkable(x, y):
                 return (x, y)
 
         return (cx, cy + 14)
@@ -2993,7 +3699,7 @@ class Arena:
 
         p = game.player
 
-        p.rect.center = EXIT_POS
+        p.rect.center = self.cfg.exit_pos
         p.image_rect.midbottom = (p.rect.centerx, p.rect.bottom + 3)
 
         p.kb_vel = pygame.Vector2()
@@ -3026,7 +3732,7 @@ class Arena:
         self._end_run(game)
         self._teleport_out(game)
 
-        game.show_message("Mapa completado! La sala se cerro para siempre")
+        game.show_message(self.cfg.done_text)
         game.save_progress()
 
     def _leave(self, game):
@@ -3097,22 +3803,22 @@ class Arena:
             if self.completed:
 
                 if (
-                    p.rect.colliderect(GATE.inflate(40, 30))
+                    p.rect.colliderect(self.cfg.gate.inflate(40, 30))
                     and self._gate_time - self._sealed_msg_t > 2.5
                 ):
                     self._sealed_msg_t = self._gate_time
                     game.show_message(
-                        "Mapa completado: la sala esta cerrada"
+                        self.cfg.sealed_text
                     )
 
                 return
 
             center = p.rect.center
 
-            if self.armed and TRIGGER.collidepoint(center):
+            if self.armed and self.cfg.trigger.collidepoint(center):
                 self._open_menu(game)
 
-            elif not self.armed and not ROOM.collidepoint(center):
+            elif not self.armed and not self.cfg.room.collidepoint(center):
                 self.armed = True
 
             return
@@ -3124,7 +3830,7 @@ class Arena:
             self.banner_t = max(0.0, self.banner_t - dt)
 
         # Con escape podes irte caminando
-        if not ROOM.collidepoint(p.rect.center):
+        if not self.cfg.room.collidepoint(p.rect.center):
 
             if self.state == self.WAVE:
 
@@ -3139,7 +3845,7 @@ class Arena:
 
                 # Oleada final: tambien se lleva la gema y el mapa queda
                 # completado (si no, podria repetir la oleada 10)
-                if self.wave == LAST_WAVE:
+                if self.wave == self.cfg.last_wave:
 
                     game.gems += 1
 
@@ -3175,6 +3881,8 @@ class Arena:
 
         p = game.player
         target = p.rect.center
+        body = pygame.Rect(0, 0, 10, 16)
+        body.midbottom = (p.rect.centerx, p.rect.bottom)
         light_on = bool(game.has_match)
         light_world = game._light_radius() / game.camera.zoom if light_on else 0.0
         # Repelente: la luz espanta a los mosquitos mientras dura
@@ -3186,6 +3894,15 @@ class Arena:
                 if enemy.attached and enemy.damage_t <= 0.0:
                     game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
+            elif isinstance(enemy, Guardian):
+                enemy.update(dt, target, game.collision_map, light_on, light_world)
+                if enemy.swing_hits(body.center):
+                    # Su golpe es como el tuyo: si te toca, te saca vida
+                    if p.hurt(enemy.pos):
+                        game.take_damage(GUARDIAN_DAMAGE)
+                        away = pygame.Vector2(body.center) - enemy.pos
+                        if away.length_squared() > 0.01:
+                            p.kb_vel = away.normalize() * GUARDIAN_KNOCKBACK
             else:
                 if enemy.fixed:
                     enemy.light_radius = light_world
@@ -3203,8 +3920,6 @@ class Arena:
         for shot in self.shots:
             shot.update(dt, game.collision_map)
 
-        body = pygame.Rect(0, 0, 10, 16)
-        body.midbottom = (p.rect.centerx, p.rect.bottom)
         damage = min(ENEMY_DAMAGE_MAX, ENEMY_DAMAGE + ENEMY_DAMAGE_STEP * (self.wave - 1))
 
         for enemy in self.enemies:
@@ -3348,6 +4063,8 @@ class Arena:
                 enemy.draw(screen, camera, self.mosquito_art)
             elif isinstance(enemy, Hongun):
                 enemy.draw(screen, camera, self.hongun_art)
+            elif isinstance(enemy, Guardian):
+                enemy.draw(screen, camera, self.guardian_art)
             else:
                 enemy.draw(
                     screen, camera,
@@ -3360,7 +4077,7 @@ class Arena:
         # Mapa completado: entrada sellada (fija, no parpadea)
         if self.gate_on and self.completed:
 
-            rect = camera.apply(GATE)
+            rect = camera.apply(self.cfg.gate)
 
             if self.sealed_img is not None:
 
@@ -3378,7 +4095,7 @@ class Arena:
 
         elif self.gate_on:
 
-            rect = camera.apply(GATE)
+            rect = camera.apply(self.cfg.gate)
 
             pulse = 0.5 + 0.5 * math.sin(self._gate_time * 6)
 
@@ -3507,8 +4224,13 @@ class Arena:
         # En CLEAR todavia no se sumo la oleada; en COLLECT ya si
         number = self.wave - 1 if self.state == self.COLLECT else self.wave
 
+        label = f"Oleada {number}"
+
+        if self.cfg.show_total:
+            label += f"/{self.cfg.last_wave}"
+
         draw_text(
-            screen, f"Oleada {number}", 28, (255, 255, 255),
+            screen, label, 28, (255, 255, 255),
             center=rect.center
         )
 
@@ -3648,11 +4370,11 @@ class Arena:
             )
 
         draw_text(
-            screen, "Sala de combate", 36, (255, 240, 200),
+            screen, self.cfg.title, 36, (255, 240, 200),
             center=(self.panel_rect.centerx, self.panel_rect.top + 26)
         )
 
-        reward = base_reward(self.wave)
+        reward = base_reward(self.wave, self.cfg.rewards)
 
         draw_text(
             screen,

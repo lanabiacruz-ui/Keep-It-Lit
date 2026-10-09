@@ -24,7 +24,7 @@ from world.fireball import Fireball, FireBurst
 from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
-from world.arena import Arena
+from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
 from world.shop import Shopkeeper, load_catalog, price_table
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
@@ -199,11 +199,17 @@ class NewGame:
         self.chests = ChestManager(self.save_data.get("chests", {}))
         self.collision_map.obstacles.extend(self.chests.blocking_rects)
 
-        # Sala de combate (la sala grande de la derecha)
-        self.arena = Arena((self.width, self.height))
+        # Salas de combate: la sala grande de la derecha (10 oleadas) y la
+        # sala grande de la izquierda (2 oleadas, la 2da con el Guardian)
+        self.arena = Arena((self.width, self.height), RIGHT_ARENA)
+        self.arena_left = Arena((self.width, self.height), LEFT_ARENA)
+        self.arenas = [self.arena, self.arena_left]
 
         # La oleada que sigue (las que ya pasaste no se repiten)
-        self.arena.wave = max(1, int(self.save_data.get("arena_wave", 1)))
+        for arena in self.arenas:
+            arena.wave = max(
+                1, int(self.save_data.get(arena.cfg.save_wave, 1))
+            )
 
         # Minijuego del cofre (None = cerrado)
         self.minigame = None
@@ -303,11 +309,13 @@ class NewGame:
         self._fire_hold = False
 
         # Mapa completado: la sala de combate queda cerrada para siempre
-        self.arena.completed = bool(
-            self.save_data.get("arena_completed", False)
-        )
+        for arena in self.arenas:
 
-        self.arena.restore_completed(self)
+            arena.completed = bool(
+                self.save_data.get(arena.cfg.save_done, False)
+            )
+
+            arena.restore_completed(self)
 
         # Furia de la vela
         self.fury_timer = 0.0
@@ -1143,26 +1151,35 @@ class NewGame:
 
         # Alerta "Mosquito cerca!" (la calcula la arena; no tiene tiempo,
         # parpadea mientras dure el peligro)
-        if self.has_match and getattr(self.arena, "mosquito_alert", False):
+        if self.has_match and any(
+            getattr(a, "mosquito_alert", False) for a in self.arenas
+        ):
             active["mosquito"] = 1.0
 
         return active
 
+    def _menu_arena(self):
+        """La sala de combate que tiene el menu abierto (o None)."""
+
+        for arena in self.arenas:
+
+            if arena.menu_open:
+                return arena
+
+        return None
+
     def _polvora_hit(self, damage):
         """La polvora lastima a lo que esta dentro de la luz."""
 
-        hurt = getattr(self.arena, "hurt_in_radius", None)
-
-        if hurt is None:
-            return
-
         # El radio de la luz esta en pixeles de pantalla: se pasa a
         # unidades del mundo (como la posicion de los enemigos)
-        hurt(
-            self.player.rect.center,
-            self._light_radius_px / max(1, self.camera.zoom),
-            damage
-        )
+        for arena in self.arenas:
+
+            arena.hurt_in_radius(
+                self.player.rect.center,
+                self._light_radius_px / max(1, self.camera.zoom),
+                damage
+            )
 
     # ---------- combate ----------
 
@@ -1266,7 +1283,7 @@ class NewGame:
         if not self.melee.swinging and not self.melee.final_pass:
             return
 
-        targets = list(self.arena.targets())
+        targets = [t for a in self.arenas for t in a.targets()]
         targets += list(self.doors.doors)
         targets += list(self.chests.chests)
         targets += [d for d in self.dummies if not d.dead]
@@ -1433,7 +1450,7 @@ class NewGame:
         if not self.fireballs:
             return
 
-        targets = list(self.arena.targets())
+        targets = [t for a in self.arenas for t in a.targets()]
         targets += list(self.doors.doors)
         targets += list(self.chests.chests)
         targets += [d for d in self.dummies if not d.dead]
@@ -1635,6 +1652,8 @@ class NewGame:
 
             "arena_wave": self.arena.wave,
             "arena_completed": self.arena.completed,
+            "arena_left_wave": self.arena_left.wave,
+            "arena_left_completed": self.arena_left.completed,
 
             "broken_doors": sorted(self.doors.broken_ids),
 
@@ -1801,12 +1820,14 @@ class NewGame:
         # MENU DE LA ARENA (oleadas)
         # ---------------------------------------------------------
 
-        if self.arena.menu_open:
+        menu_arena = self._menu_arena()
+
+        if menu_arena is not None:
 
             # Botones del menu (Jugar con escape / sin escape / Salir)
             # y ESC para irse. Antes se buscaba "handle_menu_event", que
             # no existe: el menu abria pero no respondia a nada.
-            self.arena.handle_event(
+            menu_arena.handle_event(
                 self,
                 event
             )
@@ -2161,9 +2182,11 @@ class NewGame:
         # mueve, nada avanza ni se gasta la luz) hasta elegir
         # ---------------------------------------------------------
 
-        if self.arena.menu_open:
+        menu_arena = self._menu_arena()
 
-            self.arena.update_menu(
+        if menu_arena is not None:
+
+            menu_arena.update_menu(
                 dt
             )
 
@@ -2385,10 +2408,12 @@ class NewGame:
         # ARENA / ENEMIGOS
         # ---------------------------------------------------------
 
-        self.arena.update(
-            self,
-            dt
-        )
+        for arena in self.arenas:
+
+            arena.update(
+                self,
+                dt
+            )
 
         # Si los golpes de los enemigos te dejaron sin vida
         if self.has_match and self.vida <= 0:
@@ -2814,7 +2839,8 @@ class NewGame:
         for dummy in self.dummies:
             dummy.draw(self.screen, self.camera)
 
-        self.arena.draw_world(self.screen, self.camera)
+        for arena in self.arenas:
+            arena.draw_world(self.screen, self.camera)
 
         self.player.draw(
             self.screen,
@@ -2824,7 +2850,8 @@ class NewGame:
         sources = []
 
         # El cofre del premio y la explosion tambien iluminan
-        sources.extend(self.arena.light_sources())
+        for arena in self.arenas:
+            sources.extend(arena.light_sources())
 
         for drop in self.light_drops:
 
@@ -2948,7 +2975,8 @@ class NewGame:
             self.screen.blit(ring, (0, 0))
 
         # Brillo del cofre, explosion y chispas (encima de la oscuridad)
-        self.arena.draw_fx(self.screen, self.camera)
+        for arena in self.arenas:
+            arena.draw_fx(self.screen, self.camera)
 
         # El golpe va encima de la oscuridad, para que brille
         self.melee.draw(
@@ -3035,7 +3063,8 @@ class NewGame:
             self.message if self.message_timer > 0 else ""
         )
 
-        self.arena.draw_hud(self.screen)
+        for arena in self.arenas:
+            arena.draw_hud(self.screen)
 
         if self.debug_items:
 
@@ -3050,8 +3079,10 @@ class NewGame:
         elif self.pause_view == "enemies":
             self.enemy_encyclopedia.draw()
 
-        if self.arena.menu_open and self.pause_view is None:
-            self.arena.draw_menu(self.screen, self)
+        menu_arena = self._menu_arena()
+
+        if menu_arena is not None and self.pause_view is None:
+            menu_arena.draw_menu(self.screen, self)
 
         if self.pause_view is None:
 

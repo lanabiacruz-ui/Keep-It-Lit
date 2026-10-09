@@ -1,44 +1,5 @@
 {
-    "player_name": "Full",
-    "created_at": "2026-10-09T02:20:59",
-    "last_played": "2026-10-08T23:24:42",
-    "x": 1190,
-    "y": 520,
-    "coins": 999999,
-    "gems": 99,
-    "has_match": true,
-    "light": "antorcha",
-    "vida": 0.6018733333333273,
-    "escudo": 1.0,
-    "inventory": [
-        [
-            "hongo_azul",
-            15
-        ],
-        [
-            "polvora",
-            15
-        ],
-        [
-            "repelente",
-            15
-        ],
-        [
-            "aceite",
-            15
-        ]
-    ],
-    "collected": [],
-    "item_seed": 195641997,
-    "arena_wave": 9,
-    "arena_completed": false,
-    "broken_doors": [
-        "cabana",
-        "hub_abajo",
-        "hub_arriba",
-        "hub_derecha",
-        "sala_der",
-        "sup_central_abajo"
-    ],
-    "chests": {}
+    "player_name": "o",
+    "created_at": "2026-10-09T01:21:35",
+    "last_played": "2026-10-09T01:21:35"
 }
