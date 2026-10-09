@@ -56,10 +56,10 @@ LIGHTS = {
     # y pega el doble de rapido (x8).
     "antorcha": {
         "nombre": "Antorcha",
-        "radio": 400,
+        "radio": 250,
         "radio_suelo": 60,
-        "consumo": 0.25,
-        "cooldown": 0.20,
+        "consumo": 0.38,
+        "cooldown": 0.35,
         "golpe_costo": 0.003,
         "rompe": ("comun", "verde", "gris"),
         "furia_cada": 10.0,

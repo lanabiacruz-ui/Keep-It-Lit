@@ -153,6 +153,17 @@ class Hud:
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
         )
 
+        # Panel "CAMBIAR GOLPE [G]" (solo con la antorcha): a la derecha
+        # de la hotbar. Una imagen por modo.
+        self.attack_panels = {
+            "golpe": scaled(load("hud_antorcha_golpe.png"), 0.75),
+            "fuego": scaled(load("hud_antorcha_fuego.png"), 0.75),
+        }
+
+        self.attack_panel_rect = self.attack_panels["golpe"].get_rect(
+            bottomleft=(self.bar_rect.right + 12, self.bar_rect.bottom)
+        )
+
         # ---------- Vida y escudo ----------
 
         self.vida_frame = scaled(load("hud_barra2.png"), bars_scale)
@@ -413,7 +424,8 @@ class Hud:
         coins=0,
         equipped_selected=False,
         coin_gain=0,
-        coin_gain_alpha=1.0
+        coin_gain_alpha=1.0,
+        attack_mode=None
     ):
 
         # Vida y escudo, arriba a la izquierda
@@ -521,6 +533,14 @@ class Hud:
             )
 
             screen.blit(number, number_rect)
+
+        # Panel del golpe de la antorcha (G): "golpe" o "fuego"
+        if attack_mode in self.attack_panels:
+
+            screen.blit(
+                self.attack_panels[attack_mode],
+                self.attack_panel_rect
+            )
 
         # Hotbar
         screen.blit(self.bar, self.bar_rect)

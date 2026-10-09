@@ -117,6 +117,10 @@ MAGNET_SPEED_NEAR = 360.0
 # Iman: a que distancia del jugador se agarra solo el objeto.
 MAGNET_PICKUP_DISTANCE = 10
 
+# Iman: True = hace falta haber usado el item "Iman" (tienda) para poder
+# prenderlo con la O. False = la O siempre lo prende y apaga (para probar).
+MAGNET_NEEDS_ITEM = True
+
 # Repelente: color del aro que marca el area que espanta mosquitos.
 REPEL_RING_COLOR = (120, 235, 130)
 
@@ -127,8 +131,8 @@ FADE_DURATION = 1.2
 LOST_SCREEN_TIME = 3.0
 
 # Al perder, borrar la partida guardada (True) o dejarla como esta (False).
-# Esta en False para que no pierdas tus saves de prueba mientras probas.
-DELETE_SAVE_ON_LOSS = False
+# Si queres probar sin perder tus saves, ponelo en False.
+DELETE_SAVE_ON_LOSS = True
 
 # Donde se dibuja el contador de gemas (desde la esquina de arriba a la
 # derecha). Si se pisa con el HUD, cambialo.
@@ -411,9 +415,11 @@ class NewGame:
         self.magnet_timer = 0.0
         self.magnet_total = 1.0
 
-        # Modo iman: se prende y se apaga con la tecla O
+        # Interruptor del iman: se prende y se apaga con la tecla O.
+        # Apagado es como no tener el iman (se pueden soltar items y el
+        # tiempo del item no corre).
         self.magnet_mode = False
-        self._magnet_mode_img = None
+        self._magnet_imgs = None
 
         # Esfera de vidrio: mas radio de luz mientras dura
         self.sphere_timer = 0.0
@@ -855,6 +861,13 @@ class NewGame:
 
         self._take_one(slot)
 
+        # Con el iman prendido lo vuelve a agarrar enseguida
+        if self._magnet_active():
+
+            self.show_message(
+                "Apagá el imán (O) para soltar items"
+            )
+
     def _take_one(self, slot):
 
         self.hud.counts[slot] -= 1
@@ -921,9 +934,17 @@ class NewGame:
 
         self._take_one(slot)
 
-        self.show_message(
-            f"Usaste {self._item_name(item_id)}"
-        )
+        if item_id == "iman":
+
+            self.show_message(
+                "Usaste Imán: apretá O para activarlo o desactivarlo"
+            )
+
+        else:
+
+            self.show_message(
+                f"Usaste {self._item_name(item_id)}"
+            )
 
     def _apply_item_effect(self, e):
         """
@@ -985,6 +1006,7 @@ class NewGame:
 
             self.magnet_total = float(e.get("duracion", 420.0))
             self.magnet_timer = self.magnet_total
+            self.magnet_mode = True
 
         elif tipo == "luz_radio":
 
@@ -1067,17 +1089,29 @@ class NewGame:
 
         active = {}
 
+        # Las claves tienen que ser las de ui/effects_bar.py (EFFECTS):
+        # aceite = velocidad, cera = consumo lento, resina = vida gradual
         if self.speed_timer > 0:
-            active["speed"] = self.speed_timer / self.speed_total
+            active["aceite"] = self.speed_timer / self.speed_total
 
         if self.burn_timer > 0:
-            active["burn"] = self.burn_timer / self.burn_total
+            active["cera"] = self.burn_timer / self.burn_total
 
         if self.polvora_timer > 0:
             active["polvora"] = self.polvora_timer / self.polvora_total
 
         if self.regen_left > 0:
-            active["regen"] = min(1.0, self.regen_left / self.regen_total)
+            active["resina"] = min(1.0, self.regen_left / self.regen_total)
+
+        # Furia de la vela / antorcha
+        if self.fury_left > 0:
+
+            fury_len = light_stats(
+                self.light_type
+            ).get("furia_duracion", 0)
+
+            if fury_len > 0:
+                active["furia"] = min(1.0, self.fury_left / fury_len)
 
         if self.repel_timer > 0:
             active["repelente"] = self.repel_timer / self.repel_total
@@ -1786,14 +1820,22 @@ class NewGame:
 
             elif event.key == pygame.K_o:
 
-                # Modo iman: O lo prende y O lo apaga
-                self.magnet_mode = not self.magnet_mode
+                # Iman: O lo prende y O lo apaga
+                if not self._magnet_available():
 
-                self.show_message(
-                    "Modo imán activado"
-                    if self.magnet_mode
-                    else "Modo imán desactivado"
-                )
+                    self.show_message(
+                        "No tenés el imán: usalo desde el inventario"
+                    )
+
+                else:
+
+                    self.magnet_mode = not self.magnet_mode
+
+                    self.show_message(
+                        "Imán activado (O para desactivarlo)"
+                        if self.magnet_mode
+                        else "Imán desactivado (O para activarlo)"
+                    )
 
             elif event.key == pygame.K_f:
 
@@ -2053,7 +2095,7 @@ class NewGame:
 
             self.repel_timer = max(0.0, self.repel_timer - dt)
 
-        if self.magnet_timer > 0:
+        if self.magnet_timer > 0 and self.magnet_mode:
 
             self.magnet_timer = max(0.0, self.magnet_timer - dt)
 
@@ -2174,7 +2216,7 @@ class NewGame:
 
         px, py = self.player.rect.center
 
-        magnet_on = self.magnet_timer > 0 or self.magnet_mode
+        magnet_on = self._magnet_active()
 
         for item in list(
             self.world_items
@@ -2276,6 +2318,16 @@ class NewGame:
 
     # ---------- iman ----------
 
+    def _magnet_available(self):
+        """Hay iman para prender (item usado y con tiempo, o modo prueba)."""
+
+        return self.magnet_timer > 0 or not MAGNET_NEEDS_ITEM
+
+    def _magnet_active(self):
+        """El iman esta atrayendo objetos ahora mismo."""
+
+        return self.magnet_mode and self._magnet_available()
+
     def _magnet_can_take(self, item):
         """El iman solo atrae lo que se puede agarrar de verdad."""
 
@@ -2369,50 +2421,113 @@ class NewGame:
 
     # ---------- dibujo ----------
 
-    def _draw_magnet_mode(self):
-        """Icono del modo iman (assets/maps/hud/modo_iman.png) a la
-        izquierda de las monedas, mientras esta prendido."""
+    def _load_magnet_imgs(self):
+        """Carga (una vez) los iconos del iman: prendido, apagado y la
+        tecla O. Si falta algun PNG se dibuja un reemplazo."""
 
-        if not self.magnet_mode or self.state != "playing":
-            return
+        hud_dir = (
+            Path(__file__).resolve().parent.parent
+            / "assets" / "maps" / "hud"
+        )
 
-        if self._magnet_mode_img is None:
-
-            path = (
-                Path(__file__).resolve().parent.parent
-                / "assets" / "maps" / "hud" / "modo_iman.png"
-            )
+        def load(name):
 
             try:
-                img = pygame.image.load(str(path)).convert_alpha()
+                return pygame.image.load(
+                    str(hud_dir / name)
+                ).convert_alpha()
             except (pygame.error, FileNotFoundError):
+                return None
 
-                # Si falta el PNG: un iman simple dibujado por codigo
-                img = pygame.Surface((64, 64), pygame.SRCALPHA)
+        on = load("modo_iman.png")
 
-                pygame.draw.rect(
-                    img, (86, 92, 104), (2, 2, 60, 60), border_radius=12
-                )
-                pygame.draw.arc(
-                    img, (214, 52, 60), (16, 12, 32, 32), 3.14, 6.28, 8
-                )
-                pygame.draw.rect(img, (214, 52, 60), (16, 28, 8, 16))
-                pygame.draw.rect(img, (214, 52, 60), (40, 28, 8, 16))
+        if on is None:
 
-            size = max(1, self.hud.coin_icon.get_height())
+            on = pygame.Surface((64, 64), pygame.SRCALPHA)
 
-            self._magnet_mode_img = pygame.transform.smoothscale(
-                img, (size, size)
+            pygame.draw.rect(
+                on, (86, 92, 104), (2, 2, 60, 60), border_radius=12
+            )
+            pygame.draw.arc(
+                on, (214, 52, 60), (16, 12, 32, 32), 3.14, 6.28, 8
+            )
+            pygame.draw.rect(on, (214, 52, 60), (16, 28, 8, 16))
+            pygame.draw.rect(on, (214, 52, 60), (40, 28, 8, 16))
+
+        off = load("modo_iman_off.png")
+
+        if off is None:
+
+            # Sin PNG: el mismo icono apagado + un tajo rojo
+            off = on.copy()
+            shade = pygame.Surface(off.get_size(), pygame.SRCALPHA)
+            shade.fill((40, 40, 40, 150))
+            off.blit(shade, (0, 0))
+            w, h = off.get_size()
+            pygame.draw.line(
+                off, (204, 66, 70), (w // 5, h // 5),
+                (w * 4 // 5, h * 4 // 5), max(2, w // 12)
             )
 
-        rect = self._magnet_mode_img.get_rect(
+        key = load("O.png")
+
+        if key is None:
+
+            key = pygame.Surface((32, 32), pygame.SRCALPHA)
+
+            pygame.draw.rect(
+                key, (111, 121, 130), (2, 2, 28, 28), border_radius=7
+            )
+            pygame.draw.rect(
+                key, (70, 82, 92), (2, 2, 28, 28), 2, border_radius=7
+            )
+            font = pygame.font.Font(None, 26)
+            txt = font.render("O", True, (40, 48, 56))
+            key.blit(txt, txt.get_rect(center=(16, 16)))
+
+        size = max(1, self.hud.coin_icon.get_height())
+        key_size = max(8, int(size * 0.5))
+
+        self._magnet_imgs = {
+            "on": pygame.transform.smoothscale(on, (size, size)),
+            "off": pygame.transform.smoothscale(off, (size, size)),
+            "key": pygame.transform.smoothscale(
+                key, (key_size, key_size)
+            ),
+        }
+
+    def _draw_magnet_mode(self):
+        """Icono del iman a la izquierda de las monedas (prendido o
+        apagado) con la tecla O para prenderlo y apagarlo."""
+
+        if self.state != "playing" or not self._magnet_available():
+            return
+
+        if self._magnet_imgs is None:
+            self._load_magnet_imgs()
+
+        img = self._magnet_imgs[
+            "on" if self.magnet_mode else "off"
+        ]
+
+        rect = img.get_rect(
             topright=(
                 self.hud.coin_rect.left - 8,
                 self.hud.coin_rect.top
             )
         )
 
-        self.screen.blit(self._magnet_mode_img, rect.topleft)
+        self.screen.blit(img, rect.topleft)
+
+        # Tecla O abajo a la derecha del icono: avisa como se maneja
+        key = self._magnet_imgs["key"]
+
+        self.screen.blit(
+            key,
+            key.get_rect(
+                bottomright=(rect.right + 4, rect.bottom + 4)
+            ).topleft
+        )
 
     def _draw_gems(self):
         """RECONSTRUIDO: contador de gemas arriba a la derecha."""
@@ -2702,7 +2817,7 @@ class NewGame:
         # Cubitos de efectos arriba al centro (se vacian hasta desaparecer)
         active = {}
 
-        if self.state == "playing" and self.has_match:
+        if self.state == "playing":
             active = self._active_effects()
 
         self.effects_bar.draw(self.screen, active)

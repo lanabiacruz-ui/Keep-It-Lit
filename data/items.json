@@ -132,7 +132,7 @@
     },
     "iman": {
         "nombre": "Imán",
-        "descripcion": "Durante 7 minutos tu personaje atrae solo todos los objetos cercanos: monedas, gemas e items sueltos, sin tener que agarrarlos.",
+        "descripcion": "Durante 7 minutos tu personaje atrae solo todos los objetos cercanos: monedas, gemas e items sueltos, sin tener que agarrarlos. Se prende y se apaga con la tecla O (apagado no gasta tiempo y te deja soltar items).",
         "requiere_fosforo": false,
         "efectos": [
             {
