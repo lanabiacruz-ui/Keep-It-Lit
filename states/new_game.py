@@ -20,6 +20,7 @@ from world.items import (
     make_spawn_items
 )
 from world.melee import Melee, TrainingDummy
+from world.fireball import Fireball, FireBurst
 from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
@@ -68,6 +69,14 @@ NO_LIGHT_COUNTDOWN = 10.0
 
 # Debajo de este % de vida, la luz empieza a parpadear.
 FLICKER_THRESHOLD = 0.25
+
+# ---------- Bola de fuego de la antorcha (tecla G) ----------
+# El vuelo (velocidad, alcance, tamano) se cambia en world/fireball.py
+FIRE_DAMAGE = 2          # cuanto saca cada bola (igual que el golpe de la antorcha)
+FIRE_COST = 0.02         # vida de la luz que gasta cada bola (1.0 = toda)
+FIRE_COOLDOWN = 0.45     # espera entre bola y bola, en segundos
+FIRE_FURY_SPEED = 2.0    # en furia dispara tantas veces mas rapido (y no gasta luz)
+FIRE_MUZZLE = 8.0        # a que distancia del cuerpo nace la bola (mundo)
 
 # Que tan oscuro es todo lo que queda fuera de la luz (0 a 255).
 # 255 = negro total, 200 = se ve algo, 0 = sin oscuridad.
@@ -284,6 +293,14 @@ class NewGame:
 
         # El golpe se crea antes porque equip_match() le avisa que luz hay
         self.melee = Melee()
+
+        # Golpe de la antorcha: "golpe" (normal) o "fuego" (bolas).
+        # Se cambia con la tecla G o tocando el panel al lado de la hotbar.
+        self.attack_mode = "golpe"
+        self.fireballs = []
+        self.fire_bursts = []
+        self.fire_cooldown = 0.0
+        self._fire_hold = False
 
         # Mapa completado: la sala de combate queda cerrada para siempre
         self.arena.completed = bool(
@@ -555,6 +572,8 @@ class NewGame:
         self.melee.set_light(
             self.light_type
         )
+
+        self.attack_mode = "golpe"
 
         self._reset_fury()
 
@@ -1122,6 +1141,11 @@ class NewGame:
         if self.sphere_timer > 0:
             active["esfera"] = self.sphere_timer / self.sphere_total
 
+        # Alerta "Mosquito cerca!" (la calcula la arena; no tiene tiempo,
+        # parpadea mientras dure el peligro)
+        if self.has_match and getattr(self.arena, "mosquito_alert", False):
+            active["mosquito"] = 1.0
+
         return active
 
     def _polvora_hit(self, damage):
@@ -1132,9 +1156,11 @@ class NewGame:
         if hurt is None:
             return
 
+        # El radio de la luz esta en pixeles de pantalla: se pasa a
+        # unidades del mundo (como la posicion de los enemigos)
         hurt(
             self.player.rect.center,
-            self._light_radius_px,
+            self._light_radius_px / max(1, self.camera.zoom),
             damage
         )
 
@@ -1215,6 +1241,11 @@ class NewGame:
             self.show_message("Necesitas una luz")
             return
 
+        # Modo bola de fuego (solo antorcha): no hay swing, sale una bola
+        if self._fire_available() and self.attack_mode == "fuego":
+            self._shoot_fireball()
+            return
+
         if not self.melee.can_attack():
             return
 
@@ -1240,53 +1271,192 @@ class NewGame:
         targets += list(self.chests.chests)
         targets += [d for d in self.dummies if not d.dead]
 
-        light = light_stats(self.light_type)
-
         for target in self.melee.new_hits(targets, pivot):
 
-            if isinstance(target, Door):
+            self._hit_target(
+                target,
+                self.melee.damage,
+                free=self.melee.fury
+            )
 
-                if not target.breakable:
+    def _hit_target(self, target, damage, free=False):
+        """Aplica un golpe (o una bola) a lo que toco.
 
-                    # Ninguna luz la rompe (ej: la puerta azul)
-                    target.resist()
+        free -> True si no gasta vida de la luz (furia, o la bola que
+        ya cobro su costo al salir).
+        """
 
-                    self.show_message(
-                        "Esta puerta no es posible de romper"
-                    )
+        light = light_stats(self.light_type)
 
-                elif target.kind not in light["rompe"]:
+        if isinstance(target, Door):
 
-                    target.resist()
+            if not target.breakable:
 
-                    self.show_message(
-                        "Tu luz no puede romper esta puerta"
-                    )
+                # Ninguna luz la rompe (ej: la puerta azul)
+                target.resist()
 
-                else:
+                self.show_message(
+                    "Esta puerta no es posible de romper"
+                )
 
-                    cost = target.take_damage(self.melee.damage)
+            elif target.kind not in light["rompe"]:
 
-                    if not self.melee.fury:
-                        self.vida -= cost
+                target.resist()
 
-            elif isinstance(target, Chest):
-
-                target.take_damage(self.melee.damage)
-
-                if target.ready:
-
-                    self._open_chest(target)
-
-                else:
-
-                    self.show_message(
-                        f"Faltan {format_time(target.cooldown)}"
-                    )
+                self.show_message(
+                    "Tu luz no puede romper esta puerta"
+                )
 
             else:
 
-                target.take_damage(self.melee.damage)
+                cost = target.take_damage(damage)
+
+                if not free:
+                    self.vida -= cost
+
+        elif isinstance(target, Chest):
+
+            target.take_damage(damage)
+
+            if target.ready:
+
+                self._open_chest(target)
+
+            else:
+
+                self.show_message(
+                    f"Faltan {format_time(target.cooldown)}"
+                )
+
+        else:
+
+            target.take_damage(damage)
+
+    # ---------- bola de fuego (antorcha) ----------
+
+    def _fire_available(self):
+        """La bola de fuego solo existe con la antorcha encendida."""
+
+        return self.has_match and self.light_type == "antorcha"
+
+    def _hud_attack_mode(self):
+        """Que muestra el panel de al lado de la hotbar (None = oculto)."""
+
+        return self.attack_mode if self._fire_available() else None
+
+    def _toggle_attack_mode(self):
+        """G (o tocar el panel): golpe comun <-> bola de fuego."""
+
+        if self.state != "playing":
+            return
+
+        if not self._fire_available():
+
+            self.show_message(
+                "Solo la antorcha lanza bolas de fuego"
+            )
+
+            return
+
+        if self.attack_mode == "golpe":
+
+            self.attack_mode = "fuego"
+
+            self.show_message("Bola de fuego")
+
+        else:
+
+            self.attack_mode = "golpe"
+
+            self.show_message("Golpe comun")
+
+    def _shoot_fireball(self):
+        """Tira una bola hacia el mouse. False si todavia no se puede."""
+
+        if self.fire_cooldown > 0:
+            return False
+
+        px, py = self._attack_pivot()
+        mx, my = self._mouse_world()
+
+        angle = math.atan2(my - py, mx - px)
+
+        x = px + math.cos(angle) * FIRE_MUZZLE
+        y = py + math.sin(angle) * FIRE_MUZZLE
+
+        # Pegado a una pared: sale desde el cuerpo
+        if not self.collision_map.point_is_walkable(x, y):
+            x, y = px, py
+
+        self.fireballs.append(
+            Fireball(x, y, angle, FIRE_DAMAGE)
+        )
+
+        fury = self.melee.fury
+
+        self.fire_cooldown = FIRE_COOLDOWN / (
+            FIRE_FURY_SPEED if fury else 1.0
+        )
+
+        # En furia la luz no se gasta
+        if not fury:
+            self.vida -= FIRE_COST
+
+        return True
+
+    def _update_fireballs(self, dt):
+
+        self.fire_cooldown = max(0.0, self.fire_cooldown - dt)
+
+        # Manteniendo el click sigue tirando bolas
+        if self._fire_hold:
+
+            if not pygame.mouse.get_pressed()[0]:
+
+                self._fire_hold = False
+
+            elif (
+                self.state == "playing"
+                and self._fire_available()
+                and self.attack_mode == "fuego"
+            ):
+
+                self._shoot_fireball()
+
+        for burst in self.fire_bursts:
+            burst.update(dt)
+
+        self.fire_bursts = [
+            b for b in self.fire_bursts if not b.done
+        ]
+
+        if not self.fireballs:
+            return
+
+        targets = list(self.arena.targets())
+        targets += list(self.doors.doors)
+        targets += list(self.chests.chests)
+        targets += [d for d in self.dummies if not d.dead]
+
+        walkable = self.collision_map.point_is_walkable
+
+        for ball in self.fireballs:
+
+            hit = ball.update(dt, targets, walkable)
+
+            if hit is not None:
+
+                self._hit_target(hit, ball.damage, free=True)
+
+            if ball.dead:
+
+                self.fire_bursts.append(
+                    FireBurst(ball.x, ball.y)
+                )
+
+        self.fireballs = [
+            b for b in self.fireballs if not b.dead
+        ]
 
     # ---------- cofres ----------
 
@@ -1701,6 +1871,22 @@ class NewGame:
             return None
 
         # ---------------------------------------------------------
+        # CLICK EN EL PANEL DE LA ANTORCHA: golpe comun <-> bola de fuego
+        # ---------------------------------------------------------
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and self.state == "playing"
+            and self._hud_attack_mode() is not None
+            and self.hud.attack_panel_rect.collidepoint(event.pos)
+        ):
+
+            self._toggle_attack_mode()
+
+            return None
+
+        # ---------------------------------------------------------
         # CLICK EN LA HOTBAR: SELECCIONAR SLOT
         # ---------------------------------------------------------
 
@@ -1854,6 +2040,10 @@ class NewGame:
                         self.selected_slot
                     )
 
+            elif event.key == pygame.K_g:
+
+                self._toggle_attack_mode()
+
             elif event.key == pygame.K_SPACE:
 
                 self._attack()
@@ -1863,6 +2053,8 @@ class NewGame:
             event.type == pygame.MOUSEBUTTONDOWN
             and event.button == 1
         ):
+
+            self._fire_hold = True
 
             self._attack()
 
@@ -2162,6 +2354,8 @@ class NewGame:
         )
 
         self._melee_hits(pivot)
+
+        self._update_fireballs(dt)
 
         # ---------------------------------------------------------
         # MUNECOS
@@ -2677,6 +2871,10 @@ class NewGame:
                     radius
                 ))
 
+        # Las bolas de fuego iluminan por donde pasan
+        for ball in self.fireballs:
+            sources.append(ball.light_source())
+
         # La puerta de la cabana queda iluminada despues del tutorial
         # (luz redonda y suave). Si ya se rompio, deja de iluminar.
         if self.tutorial is None and DOOR_GLOW_RADIUS > 0:
@@ -2759,6 +2957,12 @@ class NewGame:
             self._attack_pivot()
         )
 
+        for ball in self.fireballs:
+            ball.draw(self.screen, self.camera)
+
+        for burst in self.fire_bursts:
+            burst.draw(self.screen, self.camera)
+
         if self.debug_combat:
 
             self.melee.draw_debug(
@@ -2807,7 +3011,8 @@ class NewGame:
             coin_gain_alpha=min(
                 1.0,
                 self.coin_gain_timer / COIN_GAIN_FADE
-            )
+            ),
+            attack_mode=self._hud_attack_mode()
         )
 
         self._draw_gems()

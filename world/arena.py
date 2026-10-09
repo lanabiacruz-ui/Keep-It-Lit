@@ -2630,6 +2630,30 @@ class Arena:
 
         return [e for e in self.enemies if not e.spawning and not e.dead and not getattr(e, "attached", False)]
 
+    def hurt_in_radius(self, center, radius, damage):
+        """Quema a los enemigos que estan dentro de la luz (polvora).
+
+        center, radius -> en unidades del mundo.
+        Resta vida directo (sin empujon ni atontamiento: es un dano
+        que se repite varias veces por segundo) y los hace parpadear.
+        """
+
+        cx, cy = center
+
+        for enemy in self.targets():
+
+            size = max(enemy.rect.width, enemy.rect.height) / 2
+
+            dist = math.hypot(
+                enemy.rect.centerx - cx,
+                enemy.rect.centery - cy
+            )
+
+            if dist <= radius + size:
+
+                enemy.hp -= damage
+                enemy.flash = max(enemy.flash, ENEMY_FLASH_TIME)
+
     def light_sources(self):
         """Luces extra (el cofre ilumina y la explosion tambien)."""
 
@@ -3059,6 +3083,10 @@ class Arena:
         """Se llama una vez por frame con el juego en marcha."""
 
         self._update_fx(dt)
+
+        # La alerta del mosquito solo vale durante la oleada
+        if self.state != self.WAVE:
+            self.mosquito_alert = False
 
         p = game.player
 
