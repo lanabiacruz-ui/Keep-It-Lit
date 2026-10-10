@@ -11,6 +11,19 @@ El codigo escribe SOLO el texto del objetivo, dentro de la zona de texto
 (se achica solo si es largo). Zona de texto, en pixeles de la imagen:
   izquierda 26, arriba 62, derecha 26, abajo 24  (-> 308 x 74)
 Dejala libre de dibujos. Si queres moverla: TEXT_MARGINS.
+
+Cuando el cartel esta MINIMIZADO tambien podes dibujar las partes
+(opcionales, PNG transparente, en assets/maps/ui/). Si falta alguna
+se dibuja el rectangulo de siempre:
+
+  objetivo_min_btn.png     24x24    boton "-" del cartel abierto
+                                    (esquina sup. derecha, a 8 px del borde)
+  objetivo_pill.png        128x32   pestanita minimizada ("OBJETIVO" + "+")
+  objetivo_pill_nuevo.png  128x32   pestanita con objetivo nuevo ("NUEVO")
+  objetivo_pill_hecho.png  128x32   pestanita con objetivo cumplido ("LISTO")
+
+El hover (mouse encima) se hace solo aclarando la imagen.
+Si falta objetivo_pill_nuevo / objetivo_pill_hecho, usa objetivo_pill.
 """
 
 import math
@@ -23,6 +36,13 @@ UI_DIR = Path(__file__).resolve().parent.parent / "assets" / "maps" / "ui"
 
 OBJECTIVE_IMAGE = "objetivo.png"
 DONE_IMAGE = "objetivo_hecho.png"
+
+# Partes del cartel minimizado (opcionales)
+BUTTON_IMAGE = "objetivo_min_btn.png"      # BUTTON_SIZE
+PILL_IMAGE = "objetivo_pill.png"           # PILL_SIZE
+PILL_NEW_IMAGE = "objetivo_pill_nuevo.png"
+PILL_DONE_IMAGE = "objetivo_pill_hecho.png"
+HOVER_BRIGHTEN = 40
 
 # Zona de texto dentro de la imagen: (izquierda, arriba, derecha, abajo)
 TEXT_MARGINS = (26, 62, 26, 24)
@@ -68,6 +88,12 @@ class Objectives:
         # Carteles dibujados por vos (None = se dibuja el rectangulo)
         self.frame_normal = self._load_frame(OBJECTIVE_IMAGE)
         self.frame_done = self._load_frame(DONE_IMAGE)
+
+        # Boton "-" y pestanitas dibujadas por vos (None = rectangulo)
+        self.img_button = self._load_frame(BUTTON_IMAGE)
+        self.img_pill = self._load_frame(PILL_IMAGE)
+        self.img_pill_new = self._load_frame(PILL_NEW_IMAGE) or self.img_pill
+        self.img_pill_done = self._load_frame(PILL_DONE_IMAGE) or self.img_pill
 
         self.use_images = (
             self.frame_normal is not None and self.frame_done is not None
@@ -397,6 +423,21 @@ class Objectives:
 
         hover = rect.collidepoint(pygame.mouse.get_pos())
 
+        if self.img_button is not None:
+
+            img = self.img_button.copy()
+
+            if hover:
+                img.fill(
+                    (HOVER_BRIGHTEN,) * 3 + (0,),
+                    special_flags=pygame.BLEND_RGBA_ADD
+                )
+
+            screen.blit(img, rect)
+            self._button_rect = rect
+
+            return
+
         pygame.draw.rect(
             screen,
             (255, 200, 110) if hover else (30, 32, 40),
@@ -436,6 +477,32 @@ class Objectives:
             pulse = 0.5 + 0.5 * math.sin(self.alert_t * 10)
 
         hover = rect.collidepoint(pygame.mouse.get_pos())
+
+        # Pestanita dibujada por vos
+        if self.img_pill is not None:
+
+            if done:
+                base = self.img_pill_done
+            elif self.alert_t > 0:
+                base = self.img_pill_new
+            else:
+                base = self.img_pill
+
+            img = base.copy()
+
+            if hover:
+                img.fill(
+                    (HOVER_BRIGHTEN,) * 3 + (0,),
+                    special_flags=pygame.BLEND_RGBA_ADD
+                )
+
+            if self.alert_t > 0 and not done:
+                img.set_alpha(int(170 + 85 * pulse))
+
+            screen.blit(img, rect)
+            self._pill_rect = rect
+
+            return
 
         pill = pygame.Surface((w, h), pygame.SRCALPHA)
 
