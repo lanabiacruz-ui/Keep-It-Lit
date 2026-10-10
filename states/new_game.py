@@ -27,6 +27,7 @@ from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
+from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker
 from world.shop import Shopkeeper, load_catalog, price_table
 from ui.hud import Hud
@@ -213,6 +214,11 @@ class NewGame:
 
         # Cofres: la espera de cada uno se guarda en la partida
         self.chests = ChestManager(self.save_data.get("chests", {}))
+
+        # Enciclopedia: enemigos que ya te encontraste en ESTA partida
+        self.discovered_enemies = set(
+            self.save_data.get("enemies_seen", [])
+        )
         self.collision_map.obstacles.extend(self.chests.blocking_rects)
 
         # Salas de combate: la sala grande de la derecha (10 oleadas) y la
@@ -220,6 +226,9 @@ class NewGame:
         self.arena = Arena((self.width, self.height), RIGHT_ARENA)
         self.arena_left = Arena((self.width, self.height), LEFT_ARENA)
         self.arenas = [self.arena, self.arena_left]
+
+        # Bloques que abren y cierran los huecos de la cruz (sala izquierda)
+        self.crushers = CrusherBlocks(self.collision_map)
 
         # La oleada que sigue (las que ya pasaste no se repiten)
         for arena in self.arenas:
@@ -290,29 +299,55 @@ class NewGame:
         # Cuantos objetos de inventario (no luces ni monedas) agarraste
         self.items_picked = 0
 
-        # Objetivos (arriba a la derecha): solo en partida nueva, y
-        # arrancan cuando termina el tutorial. Van de a uno.
-        self.objectives = None if self.save_data else Objectives(
-            (self.width, self.height),
-            [
-                {
-                    "text": (
-                        f"Encuentra algo que ilumine o en "
-                        f"{int(NO_LIGHT_COUNTDOWN)} segundos pierdes. "
-                        f"¡Agárralo con E!"
-                    ),
-                    "done": lambda g: g.has_match,
-                },
-                {
-                    "text": (
-                        "Encuentra objetos para mantener la luz "
-                        "del fósforo prendida."
-                    ),
-                    "done": lambda g: g.items_picked > 0,
-                    "max_time": 30.0,
-                },
-            ]
-        )
+        # Contadores que usan los objetivos (se guardan en la partida)
+        saved_stats = self.save_data.get("stats", {})
+
+        self.stats = {
+            "items_used": 0,
+            "chests_opened": 0,
+            "purchases": 0,
+            "fireballs": 0,
+            "kills": 0,
+        }
+
+        if isinstance(saved_stats, dict):
+
+            for key in self.stats:
+                self.stats[key] = int(saved_stats.get(key, 0))
+
+        # Zonas a las que ya entraste (para los objetivos de explorar)
+        self.zones_seen = set(self.save_data.get("zones_seen", []))
+
+        # Objetivos (arriba a la derecha). Van de a uno y los que ya
+        # estan cumplidos se saltean. Arrancan cuando termina el
+        # tutorial. En partida nueva empiezan desde el primero; al
+        # continuar, desde donde te quedaste (las partidas viejas, sin
+        # objetivos guardados, no los tienen).
+        objective_list = self._build_objectives()
+
+        self._objective_saved = self.save_data.get("objective_index")
+
+        if not self.save_data:
+            start = 0
+        elif self._objective_saved is not None:
+            start = int(self._objective_saved)
+        else:
+            start = None
+
+        if start is not None and start < len(objective_list):
+
+            self.objectives = Objectives(
+                (self.width, self.height),
+                objective_list,
+                start,
+                minimized=bool(
+                    self.save_data.get("objectives_minimized", False)
+                ),
+            )
+
+        else:
+
+            self.objectives = None
 
         self.coins = int(self.save_data.get("coins", 0))
 
@@ -778,6 +813,159 @@ class NewGame:
     # ---------- objetos ----------
     # RECONSTRUIDO: estos metodos no estaban en el archivo que pegaste.
 
+    def count_stat(self, name, amount=1):
+        """Suma a un contador de los objetivos (kills, cofres, etc.)."""
+
+        self.stats[name] = self.stats.get(name, 0) + amount
+
+    def _build_objectives(self):
+        """Todos los objetivos del juego, en orden. Cada uno tiene el
+        texto y una funcion `done(juego)`; con `max_time` el cartel se
+        va solo despues de esos segundos aunque no lo cumplas."""
+
+        def in_combat(g):
+
+            return any(
+                a.state in (a.WAVE, a.CLEAR, a.COLLECT)
+                or a.wave >= 2
+                or a.completed
+                for a in g.arenas
+            )
+
+        return [
+
+            # ---------- primeros pasos ----------
+            {
+                "text": (
+                    f"Encuentra algo que ilumine o en "
+                    f"{int(NO_LIGHT_COUNTDOWN)} segundos pierdes. "
+                    f"¡Agárralo con E!"
+                ),
+                "done": lambda g: g.has_match,
+            },
+            {
+                "text": (
+                    "Encuentra objetos para mantener la luz "
+                    "del fósforo prendida."
+                ),
+                "done": lambda g: g.items_picked > 0,
+                "max_time": 30.0,
+            },
+            {
+                "text": (
+                    "Usá un objeto del inventario: elegilo con 1-4 y "
+                    "apretá F o click derecho."
+                ),
+                "done": lambda g: g.stats["items_used"] >= 1,
+                "max_time": 45.0,
+            },
+            {
+                "text": (
+                    "Salí de la cabaña: pegale a la puerta con tu luz "
+                    "hasta romperla."
+                ),
+                "done": lambda g: "cabana" in g.doors.broken_ids,
+            },
+
+            # ---------- explorar ----------
+            {
+                "text": "Seguí por el camino hasta la sala central.",
+                "done": lambda g: "central" in g.zones_seen,
+            },
+            {
+                "text": (
+                    "Juntá 10 monedas. Las hay tiradas por el mapa y "
+                    "en los cofres."
+                ),
+                "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
+            },
+            {
+                "text": (
+                    "Andá a la tienda (arriba, al norte de la sala "
+                    "central) y hablale al vendedor con F."
+                ),
+                "done": lambda g: "tienda" in g.zones_seen,
+            },
+            {
+                "text": "Comprale algo al vendedor con tus monedas.",
+                "done": lambda g: g.stats["purchases"] >= 1,
+            },
+            {
+                "text": (
+                    "Abrí un cofre en la sala de cofres (arriba a la "
+                    "izquierda): pegale con la luz y ganá el minijuego."
+                ),
+                "done": lambda g: g.stats["chests_opened"] >= 1,
+            },
+
+            # ---------- mejorar la luz ----------
+            {
+                "text": (
+                    "Conseguí una vela: se compra en la tienda o puede "
+                    "salir de un cofre."
+                ),
+                "done": lambda g: (
+                    g.has_match and g.light_type in ("vela", "antorcha")
+                ),
+            },
+            {
+                "text": (
+                    "Con la vela rompé una puerta gris: las que llevan "
+                    "a las salas de combate."
+                ),
+                "done": lambda g: (
+                    "sala_izq" in g.doors.broken_ids
+                    or "sala_der" in g.doors.broken_ids
+                ),
+            },
+
+            # ---------- combate ----------
+            {
+                "text": (
+                    "Entrá a una sala de combate y elegí cómo jugar: "
+                    "con escape o sin escape."
+                ),
+                "done": in_combat,
+            },
+            {
+                "text": (
+                    "Derrotá a todos los enemigos de la oleada y "
+                    "juntá las monedas del premio."
+                ),
+                "done": lambda g: any(
+                    a.wave >= 2 or a.completed for a in g.arenas
+                ),
+            },
+            {
+                "text": (
+                    "Conseguí la antorcha y lanzá una bola de fuego: "
+                    "apretá G para cambiar de ataque."
+                ),
+                "done": lambda g: g.stats["fireballs"] >= 1,
+            },
+            {
+                "text": (
+                    "Completá la sala del Guardián (la de la "
+                    "izquierda): 2 oleadas."
+                ),
+                "done": lambda g: g.arena_left.completed,
+            },
+            {
+                "text": (
+                    "Completá la sala de combate de la derecha: "
+                    "10 oleadas. ¡Te espera una gema!"
+                ),
+                "done": lambda g: g.arena.completed,
+            },
+            {
+                "text": (
+                    "Completá la enciclopedia: descubrí a los 6 "
+                    "enemigos (se ve desde el menú de pausa)."
+                ),
+                "done": lambda g: len(g.discovered_enemies) >= 6,
+            },
+        ]
+
     def show_message(self, text):
 
         self.message = text
@@ -1041,6 +1229,8 @@ class NewGame:
             self._apply_effect(legacy)
 
         self._take_one(slot)
+
+        self.count_stat("items_used")
 
         if item_id == "iman":
 
@@ -1496,6 +1686,8 @@ class NewGame:
             FIRE_FURY_SPEED if fury else 1.0
         )
 
+        self.count_stat("fireballs")
+
         # En furia la luz no se gasta
         if not fury:
             self.vida -= FIRE_COST
@@ -1589,6 +1781,8 @@ class NewGame:
                 # sueltan los objetos del cofre
                 self.chests.consume_use(chest)
 
+                self.count_stat("chests_opened")
+
                 self.world_items.extend(
                     self.chests.spawn_drops(
                         chest,
@@ -1673,6 +1867,8 @@ class NewGame:
 
         self.show_message("Compra hecha")
 
+        self.count_stat("purchases")
+
         # Compraste: el carrito queda vacio y se cierra la tienda
         if self.shop is not None:
             self.shop.clear()
@@ -1741,12 +1937,35 @@ class NewGame:
             "broken_doors": sorted(self.doors.broken_ids),
 
             "chests": self.chests.save_data(),
+
+            "enemies_seen": sorted(self.discovered_enemies),
+
+            "stats": dict(self.stats),
+            "zones_seen": sorted(self.zones_seen),
         }
+
+        # En que objetivo vas (para seguir desde ahi al continuar)
+        if self.objectives is not None:
+            data["objective_index"] = self.objectives.index
+            data["objectives_minimized"] = self.objectives.minimized
+
+        elif self._objective_saved is not None:
+            data["objective_index"] = int(self._objective_saved)
 
         save_progress(
             self.save_path,
             **data
         )
+
+    def discover_enemy(self, key):
+        """Marca un enemigo como descubierto (lo llama la arena)."""
+
+        if key in self.discovered_enemies:
+            return
+
+        # Se guarda junto con el resto de la partida (al salir, pausar
+        # o terminar la oleada)
+        self.discovered_enemies.add(key)
 
     def save_progress(self):
         """Guarda la partida (lo usa main.py al cerrar la ventana)."""
@@ -1859,7 +2078,8 @@ class NewGame:
             elif result == "enemies":
 
                 self.enemy_encyclopedia = EnemyEncyclopedia(
-                    self.screen
+                    self.screen,
+                    self.discovered_enemies
                 )
 
                 self.pause_view = "enemies"
@@ -2064,6 +2284,18 @@ class NewGame:
                 return None
 
         # ---------------------------------------------------------
+        # OBJETIVOS: minimizar (TAB o el boton "-" del cartel)
+        # ---------------------------------------------------------
+
+        if (
+            self.objectives is not None
+            and self.state == "playing"
+            and self.objectives.handle_event(event)
+        ):
+
+            return None
+
+        # ---------------------------------------------------------
         # TECLAS DEL JUEGO
         # ---------------------------------------------------------
 
@@ -2076,6 +2308,17 @@ class NewGame:
             elif event.key == pygame.K_F4:
 
                 self.debug_combat = not self.debug_combat
+
+            elif event.key == pygame.K_F1:
+
+                # Ayuda: vuelve a mostrar todas las instrucciones
+                if self.state == "playing":
+
+                    self.tutorial = Tutorial(
+                        (self.width, self.height)
+                    )
+
+                    return None
 
             elif event.key == pygame.K_F5:
 
@@ -2352,6 +2595,9 @@ class NewGame:
                 zone.name
             )
 
+        if zone is not None:
+            self.zones_seen.add(zone.id)
+
         self.zone_banner.update(
             dt
         )
@@ -2364,6 +2610,9 @@ class NewGame:
             )
 
             if self.objectives.finished:
+
+                # Se acuerda que ya los terminaste (para el guardado)
+                self._objective_saved = 10 ** 6
 
                 self.objectives = None
 
@@ -2561,6 +2810,9 @@ class NewGame:
                 self,
                 dt
             )
+
+        # Bloques aplastadores de la sala izquierda
+        self.crushers.update(self, dt)
 
         # Si los golpes de los enemigos te dejaron sin vida
         if self.has_match and self.vida <= 0:
@@ -2985,6 +3237,8 @@ class NewGame:
 
         for dummy in self.dummies:
             dummy.draw(self.screen, self.camera)
+
+        self.crushers.draw(self.screen, self.camera)
 
         for arena in self.arenas:
             arena.draw_world(self.screen, self.camera)

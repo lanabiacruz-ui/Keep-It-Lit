@@ -96,6 +96,43 @@ class CollisionMap:
 
             # Bloque de la derecha
             pygame.Rect(1594, 501, 36, 42),
+
+            # ---- Sala grande izquierda (la del Guardian) ----
+
+            # Cruz de piedra del medio. La barra vertical va en tres
+            # tramos porque esta un poco inclinada en el dibujo. Los
+            # huecos de arriba y abajo (entre la punta y la pared) los
+            # abre y cierra world/crusher.py
+            pygame.Rect(374, 369, 52, 111),
+            pygame.Rect(375, 480, 55, 120),
+            pygame.Rect(376, 600, 58, 110),
+
+            # Barra horizontal de la cruz
+            pygame.Rect(191, 514, 383, 55),
+
+            # Bloques sueltos
+            pygame.Rect(190, 374, 70, 69),     # arriba a la izquierda
+            pygame.Rect(496, 365, 36, 30),     # arriba a la derecha
+            pygame.Rect(524, 430, 38, 64),     # derecha (alto)
+            pygame.Rect(458, 431, 34, 38),     # centro arriba
+            pygame.Rect(284, 447, 33, 34),     # chiquito izquierda
+            pygame.Rect(462, 588, 30, 36),     # centro abajo
+            pygame.Rect(263, 595, 82, 36),     # barra abajo izquierda
+            pygame.Rect(187, 676, 94, 36),     # barra abajo del todo
+
+            # Bloque inclinado (abajo a la derecha): como la colision
+            # es de rectangulos, se arma en escalones siguiendo la
+            # diagonal
+            pygame.Rect(557, 597, 30, 12),
+            pygame.Rect(549, 609, 56, 12),
+            pygame.Rect(541, 621, 66, 12),
+            pygame.Rect(533, 633, 62, 12),
+            pygame.Rect(525, 645, 61, 12),
+            pygame.Rect(516, 657, 61, 12),
+            pygame.Rect(507, 669, 61, 12),
+            pygame.Rect(501, 681, 59, 12),
+            pygame.Rect(509, 693, 44, 12),
+            pygame.Rect(525, 705, 21, 12),
         ]
 
     
@@ -109,7 +146,7 @@ class CollisionMap:
             "habitacion_superior_izquierda": (452, 132),
             "habitacion_superior_centro": (950, 160),
             "habitacion_superior_derecha": (1388, 138),
-            "habitacion_izquierda": (398, 540),
+            "habitacion_izquierda": (610, 540),
             "habitacion_derecha": (1462, 530),
         }
 

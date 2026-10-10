@@ -13,6 +13,7 @@ El codigo escribe SOLO el texto del objetivo, dentro de la zona de texto
 Dejala libre de dibujos. Si queres moverla: TEXT_MARGINS.
 """
 
+import math
 from pathlib import Path
 
 import pygame
@@ -34,6 +35,13 @@ FONT_MIN = 16
 PANEL_WIDTH = 300
 MARGIN = 18
 
+# Minimizar: la tecla y el tamano del boton "-" y de la pestanita
+MINIMIZE_KEY = pygame.K_TAB
+BUTTON_SIZE = 24
+PILL_SIZE = (128, 32)
+MINIMIZE_TIME = 0.25     # lo que tarda en guardarse / abrirse
+ALERT_TIME = 2.5         # la pestanita llama la atencion con un objetivo nuevo
+
 
 TOP = 118
 
@@ -49,7 +57,7 @@ TEXT_COLOR = (245, 245, 245)
 
 class Objectives:
 
-    def __init__(self, screen_size, objectives):
+    def __init__(self, screen_size, objectives, start=0, minimized=False):
 
         self.width, self.height = screen_size
         self.objectives = list(objectives)
@@ -79,13 +87,25 @@ class Objectives:
             for obj in self.objectives
         ]
 
-        self.index = 0
+        # start: en que objetivo arranca (al continuar una partida)
+        self.index = max(0, int(start))
         self.phase = "in"
         self.phase_time = 0.0
         self.was_done = False
 
         self.started = False
-        self.finished = not self.objectives
+        self.finished = (
+            not self.objectives or self.index >= len(self.objectives)
+        )
+
+        # Minimizar: el cartel se guarda y queda una pestanita chica.
+        # min_t: 0.0 = cartel abierto ... 1.0 = solo la pestanita
+        self.minimized = bool(minimized)
+        self.min_t = 1.0 if self.minimized else 0.0
+        self.alert_t = 0.0
+
+        self._button_rect = None    # boton "-" del cartel (None = oculto)
+        self._pill_rect = None      # la pestanita (None = oculta)
 
     @staticmethod
     def _load_frame(name):
@@ -226,13 +246,46 @@ class Objectives:
         self.phase = "in"
         self.phase_time = 0.0
 
+        # Minimizado: la pestanita avisa que hay un objetivo nuevo
+        if self.minimized:
+            self.alert_t = ALERT_TIME
+
     def update(self, dt, game):
 
         if self.finished:
             return
 
+        # Al continuar una partida: los objetivos que ya cumpliste
+        # no se vuelven a mostrar
+        if not self.started:
+
+            while (
+                self.index < len(self.objectives)
+                and self.objectives[self.index]["done"](game)
+            ):
+                self.index += 1
+
+            if self.index >= len(self.objectives):
+
+                self.finished = True
+
+                return
+
         self.started = True
         self.phase_time += dt
+
+        # Animacion de minimizar / abrir
+        target = 1.0 if self.minimized else 0.0
+
+        step = dt / MINIMIZE_TIME
+
+        if self.min_t < target:
+            self.min_t = min(target, self.min_t + step)
+        elif self.min_t > target:
+            self.min_t = max(target, self.min_t - step)
+
+        if self.alert_t > 0:
+            self.alert_t = max(0.0, self.alert_t - dt)
 
         obj = self.objectives[self.index]
 
@@ -288,15 +341,174 @@ class Objectives:
 
         return 0
 
+    # ---------- minimizar ----------
+
+    def toggle(self):
+        """Minimiza o abre el cartel."""
+
+        self.minimized = not self.minimized
+        self.alert_t = 0.0
+
+    def handle_event(self, event):
+        """Devuelve True si el evento era para el cartel (asi el click
+        no cuenta como un golpe)."""
+
+        if self.finished or not self.started:
+            return False
+
+        if event.type == pygame.KEYDOWN and event.key == MINIMIZE_KEY:
+
+            self.toggle()
+
+            return True
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+        ):
+
+            if (
+                self._pill_rect is not None
+                and self.minimized
+                and self._pill_rect.collidepoint(event.pos)
+            ):
+
+                self.toggle()
+
+                return True
+
+            if (
+                self._button_rect is not None
+                and not self.minimized
+                and self._button_rect.collidepoint(event.pos)
+            ):
+
+                self.toggle()
+
+                return True
+
+        return False
+
+    def _draw_button(self, screen, panel_rect):
+        """Boton "-" en la esquina de arriba a la derecha del cartel."""
+
+        rect = pygame.Rect(0, 0, BUTTON_SIZE, BUTTON_SIZE)
+        rect.topright = (panel_rect.right - 8, panel_rect.top + 8)
+
+        hover = rect.collidepoint(pygame.mouse.get_pos())
+
+        pygame.draw.rect(
+            screen,
+            (255, 200, 110) if hover else (30, 32, 40),
+            rect,
+            border_radius=6,
+        )
+        pygame.draw.rect(
+            screen, BORDER_COLOR, rect, width=2, border_radius=6
+        )
+
+        pygame.draw.line(
+            screen,
+            (20, 20, 24) if hover else (255, 255, 255),
+            (rect.left + 6, rect.centery),
+            (rect.right - 7, rect.centery),
+            3,
+        )
+
+        self._button_rect = rect
+
+    def _draw_pill(self, screen, offset):
+        """La pestanita que queda cuando minimizas el cartel."""
+
+        w, h = PILL_SIZE
+
+        rect = pygame.Rect(0, 0, w, h)
+        rect.topright = (self.width - MARGIN + offset, TOP)
+
+        done = self.was_done and self.phase in ("done", "out")
+
+        color = DONE_COLOR if done else BORDER_COLOR
+
+        # Con un objetivo nuevo late un ratito para que lo notes
+        pulse = 0.0
+
+        if self.alert_t > 0:
+            pulse = 0.5 + 0.5 * math.sin(self.alert_t * 10)
+
+        hover = rect.collidepoint(pygame.mouse.get_pos())
+
+        pill = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        pygame.draw.rect(
+            pill,
+            (40, 42, 52, 235) if hover else BG_COLOR,
+            pill.get_rect(),
+            border_radius=10,
+        )
+        pygame.draw.rect(
+            pill,
+            (*color, int(150 + 105 * pulse) if self.alert_t > 0 else 255),
+            pill.get_rect(),
+            width=2 + (1 if self.alert_t > 0 else 0),
+            border_radius=10,
+        )
+
+        if done:
+            label = "¡LISTO!"
+        elif self.alert_t > 0:
+            label = "¡NUEVO!"
+        else:
+            label = "OBJETIVO"
+
+        text = self.title_font.render(label, True, color)
+
+        pill.blit(text, (12, (h - text.get_height()) // 2))
+
+        # "+" para abrirlo
+        cx = w - 16
+        cy = h // 2
+
+        pygame.draw.line(pill, (255, 255, 255), (cx - 5, cy), (cx + 5, cy), 2)
+        pygame.draw.line(pill, (255, 255, 255), (cx, cy - 5), (cx, cy + 5), 2)
+
+        screen.blit(pill, rect)
+
+        self._pill_rect = rect
+
     def draw(self, screen):
+
+        self._button_rect = None
+        self._pill_rect = None
 
         if self.finished or not self.started:
             return
 
+        # Easing de minimizar (0 = abierto, 1 = guardado)
+        t = self.min_t
+        ease = 1 - (1 - t) ** 3
+
         panel = self.panels[self.index][1 if self.was_done else 0]
 
-        rect = panel.get_rect(
-            topright=(self.width - MARGIN + self._offset(), TOP)
-        )
+        # El cartel se desliza hacia afuera al minimizar
+        panel_extra = int((self.slide_w + MARGIN + 12) * ease)
 
-        screen.blit(panel, rect)
+        if ease < 1.0:
+
+            rect = panel.get_rect(
+                topright=(
+                    self.width - MARGIN + self._offset() + panel_extra,
+                    TOP
+                )
+            )
+
+            screen.blit(panel, rect)
+
+            if ease == 0.0 and self.phase in ("show", "done"):
+                self._draw_button(screen, rect)
+
+        # La pestanita entra desde afuera mientras el cartel sale
+        if ease > 0.0:
+
+            pill_extra = int((PILL_SIZE[0] + MARGIN + 12) * (1.0 - ease))
+
+            self._draw_pill(screen, pill_extra)

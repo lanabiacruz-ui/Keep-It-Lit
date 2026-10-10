@@ -4054,6 +4054,11 @@ class Arena:
             else:
                 enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
 
+            # Clave de la enciclopedia (para marcarlo como descubierto)
+            enemy.codex_key = (
+                "guardian_tirador" if kind == "tirador" else kind
+            )
+
             # Se mueve solo dentro de ESTA sala
             enemy.room = self.cfg.room
 
@@ -4370,6 +4375,15 @@ class Arena:
 
     def _update_wave(self, game, dt):
 
+        # Enciclopedia: cada enemigo que ya aparecio en la sala queda
+        # descubierto en esta partida
+        for e in self.enemies:
+
+            key = getattr(e, "codex_key", None)
+
+            if key and not e.spawning:
+                game.discover_enemy(key)
+
         p = game.player
         target = p.rect.center
         body = pygame.Rect(0, 0, 10, 16)
@@ -4454,6 +4468,7 @@ class Arena:
         for enemy in self.enemies:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
+                game.count_stat("kills")
                 # El hongun que explota ya tiene su propio efecto
                 if not getattr(enemy, "boom", False):
                     self._death_puff(enemy.pos)

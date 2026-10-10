@@ -1,50 +1,75 @@
 {
-    "player_name": "jaja",
+    "player_name": "op",
     "mode": "normal",
-    "created_at": "2026-10-10T00:46:27",
-    "last_played": "2026-10-10T00:47:28",
-    "password_salt": "b4c44e91d7e9b1a56aa2057d2609db9d",
-    "password_hash": "b9162949f658f1c1cdcd1d89666d550f2d78ddd58dd70eaedd4060996fe89701",
-    "x": 935,
-    "y": 370,
-    "coins": 5,
-    "gems": 0,
-    "has_match": false,
-    "light": "fosforo",
-    "vida": 0.0,
+    "created_at": "2026-10-10T01:06:05",
+    "last_played": "2026-10-10T01:18:59",
+    "password_salt": "f01f88fbef8858810c310b9660ff68a8",
+    "password_hash": "74e3b13e3684ed1e54c016b1eaa4e6e08362e14f4ad230a782628af502e315ae",
+    "x": 945,
+    "y": 143,
+    "coins": 98977,
+    "gems": 1,
+    "has_match": true,
+    "light": "antorcha",
+    "vida": 0.8858333333333321,
     "escudo": 0.0,
     "inventory": [
+        [
+            "aceite",
+            4
+        ],
+        [
+            "polvora",
+            11
+        ],
         [
             "cera",
             1
         ],
-        null,
-        null,
-        null
+        [
+            "madera",
+            4
+        ]
     ],
     "collected": [
-        "madera_12#0",
-        "madera_05#0",
-        "madera_10#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#1",
+        "aceite_03#0",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_cofres#0",
+        "madera_04#0",
         "madera_08#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#0",
-        "moneda_sala_central#1",
+        "cera_03#0",
+        "madera_07#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_cabana#0",
         "madera_11#0",
-        "cera_02#0"
+        "madera_09#0",
+        "moneda5_pasillo_cofres#0",
+        "madera_10#0",
+        "moneda_pasillo_tienda#0",
+        "madera_05#0",
+        "madera_01#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_sala_central#1",
+        "madera_06#0",
+        "cera_02#0",
+        "moneda_pasillo_tienda#1"
     ],
-    "item_seed": 421875188,
+    "item_seed": 406280299,
     "arena_wave": 1,
     "arena_completed": false,
-    "arena_left_wave": 1,
-    "arena_left_completed": false,
+    "arena_left_wave": 3,
+    "arena_left_completed": true,
     "broken_doors": [
         "cabana",
         "hub_abajo",
         "hub_arriba",
+        "hub_izquierda",
+        "sala_izq",
         "sup_central_abajo"
     ],
-    "chests": {}
+    "chests": {},
+    "enemies_seen": [
+        "guardian",
+        "guardian_tirador"
+    ]
 }

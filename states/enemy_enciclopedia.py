@@ -139,9 +139,13 @@ class EnemyEncyclopedia:
     LINE_COLOR = (96, 102, 120)
     SHADOW_COLOR = (14, 16, 22)
 
-    def __init__(self, screen):
+    def __init__(self, screen, discovered=None):
 
         self.screen = screen
+
+        # Enemigos que el jugador ya se encontro en esta partida. Los
+        # demas aparecen como "???" (como una coleccion por completar).
+        self.discovered = set(discovered or ())
 
         self.data = self._load_data()
 
@@ -426,6 +430,33 @@ class EnemyEncyclopedia:
                     max(1, round(image.get_height() * scale)),
                 )
             )
+
+        # Siluetas oscuras para los enemigos todavia no descubiertos
+        self.icons_locked = {
+            key: self._silhouette(icon)
+            for key, icon in self.icons.items()
+        }
+
+        self.images_locked = {
+            key: self._silhouette(image)
+            for key, image in self.images.items()
+            if image is not None
+        }
+
+    @staticmethod
+    def _silhouette(image):
+        """Misma forma que la imagen pero toda de un color oscuro."""
+
+        mask = pygame.mask.from_surface(image)
+
+        return mask.to_surface(
+            setcolor=(14, 18, 24, 255),
+            unsetcolor=(0, 0, 0, 0),
+        )
+
+    def is_discovered(self, key):
+
+        return key in self.discovered
 
     # ---------------------------------------------------------
     # Rectangulo de cada enemigo
@@ -746,8 +777,13 @@ class EnemyEncyclopedia:
                     border_radius=9,
                 )
 
-            # Icono del enemigo
-            icon = self.icons.get(key)
+            found = self.is_discovered(key)
+
+            # Icono del enemigo (silueta si todavia no lo descubriste)
+            icon = (
+                self.icons.get(key) if found
+                else self.icons_locked.get(key)
+            )
 
             text_left = rect.left + round(18 * self.sx)
 
@@ -764,15 +800,34 @@ class EnemyEncyclopedia:
                 )
 
                 text_left = rect.left + round(16 * self.sx) \
-                    + self.icons[key].get_width() \
+                    + icon.get_width() \
                     + round(10 * self.sx)
 
             # Sin imagen de fila, el seleccionado es claro: texto oscuro
             dark = selected and self.row_sel_img is None
 
+            # Si el nombre no entra en la fila (ej. "Guardián Tirador"),
+            # se achica la letra hasta que entre, asi no se sale.
+            name = self.data[key]["nombre"] if found else "???"
+
+            max_w = rect.right - text_left - round(34 * self.sx)
+
+            name_font = self.name_font
+
+            size = max(24, round(48 * self.sy))
+
+            while (
+                name_font.size(name)[0] > max_w
+                and size > 12
+            ):
+
+                size -= 1
+
+                name_font = self._font(size)
+
             self._blit_text(
-                self.name_font,
-                self.data[key]["nombre"],
+                name_font,
+                name,
                 self.TEXT_DARK if dark else self.TEXT_COLOR,
                 shadow=not dark,
                 midleft=(text_left, rect.centery),
@@ -803,6 +858,8 @@ class EnemyEncyclopedia:
 
         enemy = self.data[key]
 
+        found = self.is_discovered(key)
+
         card = self.card_rect
 
         pad = round(24 * self.sx)
@@ -813,7 +870,7 @@ class EnemyEncyclopedia:
         # Nombre
         self._blit_text(
             self.name_font,
-            enemy["nombre"],
+            enemy["nombre"] if found else "???",
             self.TEXT_COLOR,
             midtop=(
                 card.centerx,
@@ -845,7 +902,10 @@ class EnemyEncyclopedia:
         self.screen.blit(pedestal, self.pedestal_rect)
 
         # Dibujo del enemigo
-        image = self.images.get(key)
+        image = (
+            self.images.get(key) if found
+            else self.images_locked.get(key)
+        )
 
         if image is not None:
 
@@ -899,7 +959,12 @@ class EnemyEncyclopedia:
         available_h = card.bottom - round(16 * self.sy) - text_top
 
         font, lines = self._fit_description(
-            str(enemy.get("descripcion", "")),
+            (
+                str(enemy.get("descripcion", ""))
+                if found
+                else "Todavía no te encontraste con este enemigo. "
+                     "Enfrentalo en las oleadas para descubrirlo."
+            ),
             card.width - pad * 2,
             available_h,
         )
@@ -923,8 +988,13 @@ class EnemyEncyclopedia:
             + round(14 * self.sy)
         )
 
+        total = len(self.ORDER)
+
+        count = sum(1 for k in self.ORDER if self.is_discovered(k))
+
         for line in self._wrap(
             self.small_font,
+            f"Descubiertos: {count}/{total}   "
             "Flechas / W-S / mouse: elegir   ESC: volver",
             self._enemy_rect(0).width,
         ):

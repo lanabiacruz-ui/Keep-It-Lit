@@ -1,74 +1,62 @@
 {
     "player_name": "ooo",
     "mode": "normal",
-    "created_at": "2026-10-10T00:22:28",
-    "last_played": "2026-10-10T00:46:09",
-    "password_salt": "58138316a8176479695d84cac50a88bf",
-    "password_hash": "85bf48467d0520e80e8dadd0506a3090f5cdea814a7a83b5331bfb0a00d8e917",
-    "x": 937,
-    "y": 176,
-    "coins": 99347,
-    "gems": 1,
+    "created_at": "2026-10-10T01:40:16",
+    "last_played": "2026-10-10T01:41:18",
+    "password_salt": "9a84fbb60ebcd4fc689e5ba54f538b02",
+    "password_hash": "9dd3b181b69692433bd427181d33b9f3f67981956eae7f7b172de149f3f04a1b",
+    "x": 954,
+    "y": 481,
+    "coins": 3,
+    "gems": 0,
     "has_match": true,
-    "light": "antorcha",
-    "vida": 0.7833466666666645,
-    "escudo": 0.1,
+    "light": "fosforo",
+    "vida": 0.7959333333333162,
+    "escudo": 0.0,
     "inventory": [
         [
-            "repelente",
-            6
+            "madera",
+            2
         ],
+        null,
         [
-            "polvora",
-            4
+            "cera",
+            1
         ],
-        [
-            "aceite",
-            7
-        ],
-        [
-            "hongo_azul",
-            4
-        ]
+        null
     ],
     "collected": [
-        "moneda_pasillo_der#0",
-        "madera_04#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#0",
-        "madera_01#0",
-        "madera_12#0",
-        "aceite_01#0",
-        "moneda_pasillo_tienda#1",
-        "madera_08#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_sala_central#0",
         "aceite_03#0",
-        "moneda_sala_central#1",
-        "madera_11#0",
-        "cera_02#0",
-        "madera_05#0",
-        "moneda5_pasillo_cofres#0",
-        "madera_09#0",
-        "madera_10#0",
         "moneda_pasillo_cabana#0",
-        "cera_03#0",
-        "moneda_pasillo_izq#0",
-        "aceite_02#0"
+        "madera_10#0",
+        "moneda_sala_central#0",
+        "madera_09#0",
+        "madera_08#0",
+        "cera_02#0",
+        "moneda_pasillo_cabana#1"
     ],
-    "item_seed": 376102616,
+    "item_seed": 935475698,
     "arena_wave": 1,
     "arena_completed": false,
-    "arena_left_wave": 3,
-    "arena_left_completed": true,
+    "arena_left_wave": 1,
+    "arena_left_completed": false,
     "broken_doors": [
         "cabana",
-        "hub_abajo",
-        "hub_arriba",
-        "hub_derecha",
-        "hub_izquierda",
-        "sala_izq",
-        "sup_central_abajo"
+        "hub_abajo"
     ],
-    "chests": {}
+    "chests": {},
+    "enemies_seen": [],
+    "stats": {
+        "items_used": 2,
+        "chests_opened": 0,
+        "purchases": 0,
+        "fireballs": 0,
+        "kills": 0
+    },
+    "zones_seen": [
+        "central",
+        "inicio"
+    ],
+    "objective_index": 5,
+    "objectives_minimized": true
 }
