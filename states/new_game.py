@@ -27,12 +27,15 @@ from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
+from world.zones import ZoneTracker
 from world.shop import Shopkeeper, load_catalog, price_table
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
+from ui.zone_banner import ZoneBanner
+from ui.objectives import Objectives
 from states.pause_menu import PauseMenu
 from states.enemy_enciclopedia import EnemyEncyclopedia
 from states.settings import Settings
@@ -278,6 +281,37 @@ class NewGame:
         # Mientras esta abierto el juego queda en pausa.
         self.tutorial = (
             None if self.save_data else Tutorial((self.width, self.height))
+        )
+
+        # Nombre de la sala: aparece al entrar a cada zona y se desvanece
+        self.zone_tracker = ZoneTracker()
+        self.zone_banner = ZoneBanner((self.width, self.height))
+
+        # Cuantos objetos de inventario (no luces ni monedas) agarraste
+        self.items_picked = 0
+
+        # Objetivos (arriba a la derecha): solo en partida nueva, y
+        # arrancan cuando termina el tutorial. Van de a uno.
+        self.objectives = None if self.save_data else Objectives(
+            (self.width, self.height),
+            [
+                {
+                    "text": (
+                        f"Encuentra algo que ilumine o en "
+                        f"{int(NO_LIGHT_COUNTDOWN)} segundos pierdes. "
+                        f"¡Agárralo con E!"
+                    ),
+                    "done": lambda g: g.has_match,
+                },
+                {
+                    "text": (
+                        "Encuentra objetos para mantener la luz "
+                        "del fósforo prendida."
+                    ),
+                    "done": lambda g: g.items_picked > 0,
+                    "max_time": 30.0,
+                },
+            ]
         )
 
         self.coins = int(self.save_data.get("coins", 0))
@@ -826,6 +860,8 @@ class NewGame:
             else:
 
                 self.hud.counts[slot] += 1
+
+            self.items_picked += 1
 
             self.show_message(
                 f"Agarraste {self._item_name(item_id)}"
@@ -2280,6 +2316,35 @@ class NewGame:
             return None
 
         # ---------------------------------------------------------
+        # GUIA: nombre de la sala y objetivos
+        # ---------------------------------------------------------
+
+        zone = self.zone_tracker.update(
+            self.player.rect.center
+        )
+
+        if zone is not None:
+
+            self.zone_banner.show(
+                zone.name
+            )
+
+        self.zone_banner.update(
+            dt
+        )
+
+        if self.objectives is not None:
+
+            self.objectives.update(
+                dt,
+                self
+            )
+
+            if self.objectives.finished:
+
+                self.objectives = None
+
+        # ---------------------------------------------------------
         # TIEMPO DE LUZ
         # ---------------------------------------------------------
 
@@ -3113,6 +3178,14 @@ class NewGame:
             active = self._active_effects()
 
         self.effects_bar.draw(self.screen, active)
+
+        # Objetivos (arriba a la derecha) y nombre de la sala
+        if self.state == "playing":
+
+            if self.objectives is not None:
+                self.objectives.draw(self.screen)
+
+            self.zone_banner.draw(self.screen)
 
         self.hud.draw_overlay(
             self.screen,
