@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pygame
 
-from core.Save_manager import save_progress, delete_save
+from core.Save_manager import (
+    save_progress, delete_save, normalize_mode, MODE_HARDCORE
+)
 from world.map_loader import WorldMap
 from world.collision import CollisionMap
 from world.camera import Camera
@@ -139,9 +141,14 @@ FADE_DURATION = 1.2
 # Cuanto se queda la pantalla de "Perdiste" antes de volver al menu.
 LOST_SCREEN_TIME = 3.0
 
-# Al perder, borrar la partida guardada (True) o dejarla como esta (False).
-# Si queres probar sin perder tus saves, ponelo en False.
+# Al perder en modo HARDCORE, borrar la partida guardada (True) o dejarla
+# como esta (False). Si queres probar sin perder tus saves, ponelo en False.
 DELETE_SAVE_ON_LOSS = True
+
+# Al perder en modo NORMAL se pierden todos los items (inventario y luces)
+# y queda solo el fosforo; las oleadas, puertas y cofres siguen igual.
+# Las monedas y las gemas: True = te las quedas, False = tambien se pierden.
+NORMAL_KEEP_COINS = True
 
 # Donde se dibuja el contador de gemas (desde la esquina de arriba a la
 # derecha). Si se pisa con el HUD, cambialo.
@@ -179,13 +186,19 @@ class NewGame:
         screen,
         player_name="Jugador",
         save_path=None,
-        save_data=None
+        save_data=None,
+        mode=None
     ):
 
         self.screen = screen
         self.player_name = player_name
         self.save_path = save_path
         self.save_data = save_data or {}
+
+        # Modo de la partida: "normal" o "hardcore". Una partida guardada
+        # lo trae adentro; una vieja sin modo cuenta como normal.
+        self.mode = normalize_mode(self.save_data.get("mode", mode))
+        self._loss_applied = False
         self.width, self.height = screen.get_size()
 
         self.world_map = WorldMap()
@@ -1642,6 +1655,8 @@ class NewGame:
 
             "escudo": self.escudo,
 
+            "mode": self.mode,
+
             "inventory": inventory,
 
             "collected": list(
@@ -1667,6 +1682,47 @@ class NewGame:
 
     def save_progress(self):
         """Guarda la partida (lo usa main.py al cerrar la ventana)."""
+
+        self._save()
+
+    def apply_loss(self):
+        """Consecuencias de perder (una sola vez).
+
+        HARDCORE: se borra toda la partida.
+        NORMAL: se pierden todos los items (inventario, luces) y queda
+        solo el fosforo, en la cabana. Las oleadas, las puertas rotas y
+        los cofres quedan igual que antes.
+        """
+
+        if self._loss_applied or not self.save_path:
+            return
+
+        self._loss_applied = True
+
+        if self.mode == MODE_HARDCORE:
+
+            if DELETE_SAVE_ON_LOSS:
+                delete_save(self.save_path)
+            else:
+                self._save()
+
+            return
+
+        for i in range(self.hud.SLOTS):
+            self.hud.items[i] = None
+            self.hud.counts[i] = 0
+
+        self.has_match = True
+        self.light_type = "fosforo"
+        self.vida = 1.0
+        self.escudo = 0.0
+
+        if not NORMAL_KEEP_COINS:
+            self.coins = 0
+            self.gems = 0
+
+        spawn_x, spawn_y = get_spawn_point(self.collision_map, "cabana")
+        self.player.rect.center = (spawn_x, spawn_y)
 
         self._save()
 
@@ -2156,12 +2212,15 @@ class NewGame:
 
             if self.lost_timer <= 0:
 
-                if DELETE_SAVE_ON_LOSS and self.save_path:
-                    delete_save(self.save_path)
-                else:
-                    self._save()
+                self.apply_loss()
 
-                return "menu"
+                # Hardcore: la partida ya no existe, vuelve al menu.
+                # Normal: vuelve directo a jugar (main.py recarga la
+                # partida ya sin los items).
+                if self.mode == MODE_HARDCORE and DELETE_SAVE_ON_LOSS:
+                    return "menu"
+
+                return "respawn"
 
             return None
 

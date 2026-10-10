@@ -1,7 +1,10 @@
 import pygame
 from pathlib import Path
 
-from core.Save_manager import list_slots, delete_save
+from core.Save_manager import (
+    list_slots, delete_save, check_password, MODE_HARDCORE
+)
+from states.password_menu import PasswordMenu
 
 
 class ContinueGame:
@@ -19,6 +22,9 @@ class ContinueGame:
 
     SLOT_IMG_W = 220
     SLOT_IMG_H = 200
+
+    # Cartelito del modo (Normal / Hardcore), arriba del nombre
+    MODE_LOCAL = (51, 31, 172, 48)
 
     NAME_LOCAL = (51, 50, 172, 73)
     DATE_LOCAL = (75, 80, 138, 96)
@@ -91,6 +97,7 @@ class ContinueGame:
 
         self.name_font = pygame.font.Font(None, 24)
         self.date_font = pygame.font.Font(None, 18)
+        self.mode_font = pygame.font.Font(None, 20)
         self.small_font = pygame.font.Font(None, 24)
 
         confirm_w = round(self.width * 0.32)
@@ -129,6 +136,11 @@ class ContinueGame:
         self.overlay.fill((0, 0, 0, 140))
 
         self.pending_delete = None
+
+        # Contraseña: se pide antes de jugar o borrar una partida.
+        # pending_action = ("start" | "delete", numero de slot)
+        self.password_menu = None
+        self.pending_action = None
 
         self.refresh()
 
@@ -179,7 +191,71 @@ class ContinueGame:
 
         self.slots = list_slots()
 
+    def _run_action(self, action, index):
+        """Hace lo que se pidio (ya con la contraseña aceptada)."""
+
+        slot = self.slots[index]
+
+        if action == "start":
+
+            return ("start", slot["path"], slot["data"])
+
+        self.pending_delete = index
+
+        return None
+
+    def _request(self, action, index):
+        """Si la partida tiene contraseña la pide; si no, sigue directo."""
+
+        slot = self.slots[index]
+
+        if not slot.get("has_password"):
+
+            return self._run_action(action, index)
+
+        self.password_menu = PasswordMenu(self.screen, mode="ask")
+        self.pending_action = (action, index)
+
+        return None
+
+    def _handle_password_event(self, event):
+
+        result = self.password_menu.handle_event(event)
+
+        if result == "back":
+
+            self.password_menu = None
+            self.pending_action = None
+
+            return None
+
+        if result is None:
+
+            return None
+
+        action, index = self.pending_action
+
+        slot = self.slots[index]
+
+        if check_password(slot["data"], result[1]):
+
+            self.password_menu.finish()
+
+            self.password_menu = None
+            self.pending_action = None
+
+            return self._run_action(action, index)
+
+        self.password_menu.clear()
+        self.password_menu.message = "Contraseña incorrecta"
+
+        return None
+
     def handle_event(self, event):
+
+        if self.password_menu is not None:
+
+            return self._handle_password_event(event)
 
         if self.pending_delete is not None:
 
@@ -210,13 +286,11 @@ class ContinueGame:
 
                 if play_rect.collidepoint(event.pos):
 
-                    return ("start", slot["path"], slot["data"])
+                    return self._request("start", i)
 
                 if delete_rect.collidepoint(event.pos):
 
-                    self.pending_delete = i
-
-                    return None
+                    return self._request("delete", i)
 
         return None
 
@@ -250,6 +324,12 @@ class ContinueGame:
         return None
 
     def draw(self):
+
+        if self.password_menu is not None:
+
+            self.password_menu.draw()
+
+            return
 
         self.screen.blit(self.background, (0, 0))
 
@@ -286,6 +366,22 @@ class ContinueGame:
                 self.screen.blit(label, label_rect)
 
                 continue
+
+            # Modo de la partida
+            hardcore = slot.get("mode") == MODE_HARDCORE
+
+            mode_rect = self._button_rect(i, self.MODE_LOCAL)
+
+            mode_surface = self.mode_font.render(
+                "HARDCORE" if hardcore else "NORMAL",
+                True,
+                (170, 25, 25) if hardcore else (25, 35, 55)
+            )
+
+            self.screen.blit(
+                mode_surface,
+                mode_surface.get_rect(center=mode_rect.center)
+            )
 
             name_rect = self._button_rect(i, self.NAME_LOCAL)
 

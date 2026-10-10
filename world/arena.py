@@ -2866,44 +2866,12 @@ class Guardian(Enemy):
             self._draw_attack(screen, camera, dest, art)
 
     def _draw_attack(self, screen, camera, dest, art):
-        """Zona de peligro (aviso) y arma girando, igual que el golpe del
-        jugador pero en rojo."""
+        """Solo se dibuja el arma girando (sin zona roja de aviso)."""
 
         zoom = camera.zoom
         cx, cy = dest.center
 
-        half = math.radians(GUARDIAN_ARC) / 2
-
         r_in = GUARDIAN_INNER * zoom
-        r_out = GUARDIAN_OUTER * zoom
-
-        size = int(r_out * 2 + 8)
-        layer = pygame.Surface((size, size), pygame.SRCALPHA)
-        mid = size // 2
-
-        # Zona completa del golpe (aviso: se va llenando mientras carga)
-        if self.phase == self.WINDUP:
-
-            k = min(1.0, self.phase_t / GUARDIAN_WINDUP)
-            a0, a1 = self.aim - half, self.aim + half
-            alpha = int(30 + 70 * k)
-            edge = (255, 70, 60, int(120 + 120 * k))
-
-        else:
-
-            a0 = self.aim - half
-            a1 = self.weapon_angle()
-            alpha = 120
-            edge = (255, 235, 200, 220)
-
-        points = sector_outline(mid, mid, r_in, r_out, a0, a1)
-
-        if len(points) >= 3:
-
-            pygame.draw.polygon(layer, (255, 60, 50, alpha), points)
-            pygame.draw.polygon(layer, edge, points, max(1, int(zoom * 0.4)))
-
-        screen.blit(layer, layer.get_rect(center=(cx, cy)))
 
         # Arma
         angle = self.weapon_angle()

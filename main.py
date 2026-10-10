@@ -2,6 +2,8 @@ import pygame
 
 from states.main_menu import MainMenu
 from states.menu_carga import MenuCarga
+from states.mode_select import ModeSelect
+from states.password_menu import PasswordMenu
 from states.continue_game import ContinueGame
 from states.loading import Loading
 from states.comic import Comic
@@ -9,7 +11,7 @@ from states.new_game import NewGame
 from states.startup import Startup
 from states.settings import Settings
 
-from core.Save_manager import create_new_save
+from core.Save_manager import create_new_save, load_save
 
 pygame.init()
 
@@ -29,12 +31,16 @@ startup = Startup(screen)
 menu = MainMenu(screen)
 settings_menu = None
 name_menu = None
+password_menu = None
+mode_menu = None
 continue_menu = None
 loading = None
 comic = None
 game = None
 
 player_name = ""
+current_mode = "normal"
+current_password = ""
 
 current_save_path = None
 pending_save_data = None
@@ -61,6 +67,15 @@ while running:
             ):
 
                 game.save_progress()
+
+            elif (
+                current_state == "gameplay"
+                and game is not None
+                and game.state in ("dying", "lost")
+            ):
+
+                # Cerrar la ventana al perder no evita la derrota
+                game.apply_loss()
 
             running = False
         
@@ -124,20 +139,73 @@ while running:
 
             elif result is not None:
 
-             
                 player_name = result[1]
 
+                # Despues del nombre: contraseña, y luego el modo.
+                # La partida se crea al final.
+                password_menu = PasswordMenu(screen, mode="set")
+
+                current_state = "password_set"
+
+        elif current_state == "password_set":
+
+            result = password_menu.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                # Vuelve al nombre (se sigue escribiendo)
+                pygame.key.start_text_input()
+
+                current_state = "name_input"
+
+            elif result is not None:
+
+                current_password = result[1]
+
+                password_menu.finish()
+
+                mode_menu = ModeSelect(screen)
+
+                current_state = "mode_select"
+
+        elif current_state == "mode_select":
+
+            result = mode_menu.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                # Vuelve a la contraseña (se sigue escribiendo)
+                pygame.key.start_text_input()
+
+                current_state = "password_set"
+
+            elif result is not None:
+
+                current_mode = result[1]
+
                 save_path = create_new_save(
-                    player_name
+                    player_name,
+                    current_mode,
+                    current_password
                 )
+
+                current_password = ""
 
                 if save_path is None:
 
                     # Los 3 slots estan ocupados: no se pisa ninguna
-                    # partida, se avisa y se queda en la pantalla.
+                    # partida, se avisa y se vuelve al nombre.
                     name_menu.message = (
                         "No hay espacio. Borrá una partida primero."
                     )
+
+                    pygame.key.start_text_input()
+
+                    current_state = "name_input"
 
                 else:
 
@@ -184,7 +252,8 @@ while running:
                 game = NewGame(
                     screen,
                     player_name,
-                    save_path=current_save_path
+                    save_path=current_save_path,
+                    mode=current_mode
                 )
 
                 current_state = "gameplay"
@@ -230,9 +299,32 @@ while running:
 
     elif current_state == "gameplay":
 
-        if game.update(dt) == "menu":
+        result = game.update(dt)
+
+        if result == "menu":
 
             current_state = "menu"
+
+        elif result == "respawn":
+
+            # Perdiste en modo normal: vuelve directo a la partida
+            data = (
+                load_save(current_save_path)
+                if current_save_path else None
+            )
+
+            if data is None:
+
+                current_state = "menu"
+
+            else:
+
+                game = NewGame(
+                    screen,
+                    player_name,
+                    save_path=current_save_path,
+                    save_data=data
+                )
 
 
     screen.fill((0, 0, 0))
@@ -252,6 +344,14 @@ while running:
     elif current_state == "name_input":
 
         name_menu.draw()
+
+    elif current_state == "password_set":
+
+        password_menu.draw()
+
+    elif current_state == "mode_select":
+
+        mode_menu.draw()
 
     elif current_state == "continue":
 
