@@ -321,6 +321,11 @@ class LightItem(MatchItem):
         return light_stats(self.kind)["radio_suelo"]
 
 
+# Las monedas no estan en data/items.json (no van al inventario), pero
+# si pueden aparecer en el mapa desde data/item_spawns.json.
+COIN_SPAWN_IDS = ("moneda", "moneda_5", "moneda_10")
+
+
 def make_spawn_items(zones, defs, collision_map, seed, collected):
     """Crea los items de cada zona en un punto caminable al azar.
 
@@ -337,7 +342,7 @@ def make_spawn_items(zones, defs, collision_map, seed, collected):
 
         item_id = zone.get("item")
 
-        if item_id not in defs:
+        if item_id not in defs and item_id not in COIN_SPAWN_IDS:
 
             print(
                 f"[items] La zona '{zone.get('id')}' usa '{item_id}', "
