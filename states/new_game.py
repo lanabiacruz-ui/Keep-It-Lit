@@ -84,6 +84,21 @@ FIRE_COOLDOWN = 0.45     # espera entre bola y bola, en segundos
 FIRE_FURY_SPEED = 2.0    # en furia dispara tantas veces mas rapido (y no gasta luz)
 FIRE_MUZZLE = 8.0        # a que distancia del cuerpo nace la bola (mundo)
 
+# Combo de bolas: 2 bolas normales y la 3ra es la fuerte (x2 de dano).
+FIRE_COMBO_SIZE = 3          # cada cuantas bolas sale la fuerte
+FIRE_HEAVY_MULT = 2          # la fuerte saca tantas veces mas dano
+FIRE_HEAVY_COST_MULT = 2.0   # y gasta tantas veces mas luz
+FIRE_HEAVY_COOLDOWN = 0.75   # espera despues de la fuerte (normal: FIRE_COOLDOWN)
+FIRE_COMBO_WINDOW = 1.0      # si pasa este tiempo sin tirar, el combo vuelve a 0
+
+# ---------- Flashbang (lo provoca el enemigo Destello al explotar) ----------
+# La pantalla se pone toda blanca: primero un "pum" (un circulo blanco que
+# se expande desde el destello), se queda blanca y despues se va aclarando.
+FLASH_EXPAND = 0.18   # duracion del "pum" (el circulo que se expande)
+FLASH_HOLD = 3.0      # segundos totales con la pantalla toda blanca (incluye el pum)
+FLASH_FADE = 2.0      # segundos que tarda en irse el blanco
+FLASH_TOTAL = FLASH_HOLD + FLASH_FADE   # = 5 segundos tapado
+
 # Que tan oscuro es todo lo que queda fuera de la luz (0 a 255).
 # 255 = negro total, 200 = se ve algo, 0 = sin oscuridad.
 DARKNESS_ALPHA = 248
@@ -388,7 +403,14 @@ class NewGame:
         self.fireballs = []
         self.fire_bursts = []
         self.fire_cooldown = 0.0
+        self.fire_combo = 0           # bolas tiradas en el combo actual
+        self.fire_combo_timer = 0.0   # cuanto queda para que se corte el combo
         self._fire_hold = False
+
+        # Flashbang (destello): segundos que le quedan al blanco
+        self.flash_t = 0.0
+        self.flash_pos = (0.0, 0.0)
+        self._flash_surf = None
 
         # Mapa completado: la sala de combate queda cerrada para siempre
         for arena in self.arenas:
@@ -664,6 +686,7 @@ class NewGame:
         )
 
         self.attack_mode = "golpe"
+        self.fire_combo = 0
 
         self._reset_fury()
 
@@ -1620,6 +1643,62 @@ class NewGame:
 
             target.take_damage(damage)
 
+    # ---------- flashbang (destello) ----------
+
+    def flashbang(self, x, y):
+        """Pantalla en blanco unos 5 segundos (x, y = donde exploto, en
+        coordenadas del mundo). Lo llama el enemigo Destello."""
+
+        self.flash_t = FLASH_TOTAL
+        self.flash_pos = (x, y)
+
+    def _update_flash(self, dt):
+
+        if self.flash_t > 0:
+            self.flash_t = max(0.0, self.flash_t - dt)
+
+    def _draw_flashbang(self):
+        """Blanco por encima de TODO (mundo y HUD)."""
+
+        if self.flash_t <= 0 or self.state != "playing":
+            return
+
+        w, h = self.screen.get_size()
+
+        elapsed = FLASH_TOTAL - self.flash_t
+
+        # El "pum": un circulo blanco que crece desde donde exploto
+        if elapsed < FLASH_EXPAND:
+
+            k = elapsed / FLASH_EXPAND
+            k = 1.0 - (1.0 - k) ** 3
+
+            cx = int(self.flash_pos[0] * self.camera.zoom - self.camera.x)
+            cy = int(self.flash_pos[1] * self.camera.zoom - self.camera.y)
+
+            radius = int((0.05 + 0.95 * k) * math.hypot(w, h))
+
+            pygame.draw.circle(
+                self.screen, (255, 255, 255), (cx, cy), max(1, radius)
+            )
+
+            return
+
+        if self._flash_surf is None or self._flash_surf.get_size() != (w, h):
+
+            self._flash_surf = pygame.Surface((w, h))
+            self._flash_surf.fill((255, 255, 255))
+
+        # Toda blanca y al final se va aclarando
+        if self.flash_t > FLASH_FADE:
+            alpha = 255
+        else:
+            alpha = int(255 * self.flash_t / FLASH_FADE)
+
+        self._flash_surf.set_alpha(alpha)
+
+        self.screen.blit(self._flash_surf, (0, 0))
+
     # ---------- bola de fuego (antorcha) ----------
 
     def _fire_available(self):
@@ -1649,12 +1728,14 @@ class NewGame:
         if self.attack_mode == "golpe":
 
             self.attack_mode = "fuego"
+            self.fire_combo = 0
 
             self.show_message("Bola de fuego")
 
         else:
 
             self.attack_mode = "golpe"
+            self.fire_combo = 0
 
             self.show_message("Golpe comun")
 
@@ -1676,27 +1757,57 @@ class NewGame:
         if not self.collision_map.point_is_walkable(x, y):
             x, y = px, py
 
+        # Combo: la ultima bola de cada serie es la fuerte (x2 de dano)
+        self.fire_combo += 1
+
+        heavy = self.fire_combo >= FIRE_COMBO_SIZE
+
+        damage = FIRE_DAMAGE * (FIRE_HEAVY_MULT if heavy else 1)
+
         self.fireballs.append(
-            Fireball(x, y, angle, FIRE_DAMAGE)
+            Fireball(x, y, angle, damage, heavy=heavy)
         )
 
         fury = self.melee.fury
 
-        self.fire_cooldown = FIRE_COOLDOWN / (
+        base_cooldown = FIRE_HEAVY_COOLDOWN if heavy else FIRE_COOLDOWN
+
+        self.fire_cooldown = base_cooldown / (
             FIRE_FURY_SPEED if fury else 1.0
         )
+
+        # Despues de la fuerte el combo arranca de nuevo
+        if heavy:
+
+            self.fire_combo = 0
+            self.fire_combo_timer = 0.0
+
+        else:
+
+            self.fire_combo_timer = FIRE_COMBO_WINDOW
 
         self.count_stat("fireballs")
 
         # En furia la luz no se gasta
         if not fury:
-            self.vida -= FIRE_COST
+
+            self.vida -= FIRE_COST * (
+                FIRE_HEAVY_COST_MULT if heavy else 1.0
+            )
 
         return True
 
     def _update_fireballs(self, dt):
 
         self.fire_cooldown = max(0.0, self.fire_cooldown - dt)
+
+        # Si dejas de tirar un rato, el combo vuelve a empezar
+        if self.fire_combo > 0:
+
+            self.fire_combo_timer -= dt
+
+            if self.fire_combo_timer <= 0:
+                self.fire_combo = 0
 
         # Manteniendo el click sigue tirando bolas
         if self._fire_hold:
@@ -1741,7 +1852,7 @@ class NewGame:
             if ball.dead:
 
                 self.fire_bursts.append(
-                    FireBurst(ball.x, ball.y)
+                    FireBurst(ball.x, ball.y, ball.heavy)
                 )
 
         self.fireballs = [
@@ -2496,6 +2607,9 @@ class NewGame:
 
         if self.state == "dying":
 
+            # Si moris con el flashbang puesto, el blanco no te sigue
+            self.flash_t = 0.0
+
             self.fade_alpha += (
                 255 / FADE_DURATION
             ) * dt
@@ -2776,6 +2890,8 @@ class NewGame:
 
         self._update_fireballs(dt)
 
+        self._update_flash(dt)
+
         # ---------------------------------------------------------
         # MUNECOS
         # ---------------------------------------------------------
@@ -2927,6 +3043,7 @@ class NewGame:
                     self.no_light_timer = 0.0
                     self.state = "dying"
                     self.fade_alpha = 0
+                    self.flash_t = 0.0
 
         else:
 
@@ -3468,6 +3585,9 @@ class NewGame:
 
         for arena in self.arenas:
             arena.draw_hud(self.screen)
+
+        # Flashbang del destello: blanco encima de todo
+        self._draw_flashbang()
 
         if self.debug_items:
 

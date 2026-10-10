@@ -42,6 +42,15 @@ Guardian. Imagenes del Guardian (opcionales, ver GuardianArt):
   assets/maps/combate/guardian_arma.png      el arma, apuntando hacia arriba
   assets/maps/combate/guardian_icono.png     56x56 (enciclopedia)
 
+Destello (hongun flashbang: tranquilo e ilumina, cuando te ve corre muy
+rapido, te choca, explota y te deja la pantalla blanca ~5 s). Imagenes
+(todas opcionales, ver DestelloArt):
+  assets/maps/combate/destello_anim.png      224x56 (4 cuadros, caminar tranquilo)
+  assets/maps/combate/destello_correr.png    224x56 (4 cuadros, corriendo)
+  assets/maps/combate/destello_alerta.png    112x56 (2 cuadros, aviso antes de correr)
+  assets/maps/combate/destello.png           56x56  (1 cuadro, para la enciclopedia)
+  assets/maps/combate/destello_golpe.png     56x56  (cuando le pegas)
+
 Guardian Tirador (igual al Guardian pero dispara bolas, ver
 GuardianShooterArt). Imagenes opcionales:
   assets/maps/combate/guardian_tirador.png          256x320 (4x4: caminar)
@@ -99,7 +108,8 @@ GATE_LEFT = pygame.Rect(650, 502, 10, 32)
 # ---------------------------------------------------------------
 # Oleadas (para balancear, se cambia todo aca)
 # ---------------------------------------------------------------
-# (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores)
+# (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
+#  destellos)  <- las tablas pueden traer de 4 a 7 numeros
 LEFT_WAVE_COMPOSITION = {
     1: (0,0 ,0,0,4),
     2: (0, 0, 0, 0, 2, 1),
@@ -124,8 +134,9 @@ WAVE_COMPOSITION = {
 
     # Oleadas 8, 9 y 10: aparecen los hongunes
     8: (10, 5, 8, 1),
-    9: (4, 6, 10, 3),
-    10: (5,6,7, 8),
+    # El 7mo numero son los destellos (hongun flashbang)
+    9: (4, 6, 10, 3, 0, 0, 2),
+    10: (5, 6, 7, 8, 0, 0, 4),
 }
 # Ultima oleada del mapa: al pasarla el mapa queda completado, el cofre
 # tira una gema y la sala se cierra para siempre.
@@ -139,11 +150,18 @@ MOSQUITOS_STEP = 1   # mosquitos que se suman por oleada despues de la ultima de
 MOSQUITOS_MAX = 20
 HONGUNS_STEP = 0     # hongunes que se suman por oleada despues de la ultima definida (0 = se quedan igual)
 HONGUNS_MAX = 8
+DESTELLOS_STEP = 0   # destellos que se suman por oleada despues de la ultima definida
+DESTELLOS_MAX = 8
 
 # Oleada de PRUEBA (solo mosquitos). La usa la partida "Prueba mosquitos".
 # Para cambiar cuantos salen, cambia el 3. Se puede borrar cuando termines.
 MOSQUITO_TEST_WAVE = 99
 MOSQUITO_TEST_COUNT = 3
+
+# Oleada de PRUEBA (solo destellos), igual que la de los mosquitos: poner
+# la oleada 98 en una partida de prueba. Se puede borrar cuando termines.
+DESTELLO_TEST_WAVE = 98
+DESTELLO_TEST_COUNT = 3
 
 # Monedas de premio por oleada (la 1 vale 18). Despues de la ultima
 # definida sube REWARD_STEP por oleada. "Sin escape" lo multiplica.
@@ -298,6 +316,41 @@ HONGUN_ANIM_FRAME = 0.15
 HONGUN_CHARGE_FRAME = 0.12
 
 # ---------------------------------------------------------------
+# Destello (un hongun mas veloz: flashbang)
+# Pasea tranquilo y da un poco de luz con el cuerpo. Cuando te ve se
+# frena un instante (aviso), sale corriendo muy rapido hacia vos, te
+# choca, te saca vida, te deja la pantalla en blanco unos 5 segundos y
+# muere. El tiempo del blanco se cambia en states/new_game.py (FLASH_*).
+# ---------------------------------------------------------------
+
+DESTELLO_HP = 2                 # golpes que aguanta (si lo matas a golpes NO explota)
+DESTELLO_HITBOX = (10, 12)
+DESTELLO_DRAW_SIZE = 17         # tamano dibujado (unidades del mundo)
+
+# Movimiento (unidades del mundo por segundo; el jugador va a 95)
+DESTELLO_WANDER_SPEED = 20.0    # paseando tranquilo
+DESTELLO_CHARGE_SPEED = 175.0   # corriendo hacia vos (casi el doble que el jugador)
+DESTELLO_TURN_TIME = (1.0, 2.6) # cada cuanto cambia de rumbo paseando
+
+# Luz que da con el cuerpo, siempre prendida (px de pantalla; la luz del
+# fosforo es 100). Durante el aviso y la carrera brilla un poco mas.
+DESTELLO_LIGHT = 40
+DESTELLO_LIGHT_ALERT = 64
+
+# Deteccion: te tiene que ver (distancia y sin paredes en el medio)
+DESTELLO_DETECT_RADIUS = 120.0
+DESTELLO_LOSE_RADIUS = 220.0    # si corriendo te alejas mas que esto, te pierde
+DESTELLO_ALERT_TIME = 0.35      # aviso quieto (parpadea blanco) antes de salir corriendo
+
+# Choque
+DESTELLO_DAMAGE = 0.15          # 0.15 = 15% de la vida de la luz
+DESTELLO_KNOCKBACK = 200.0      # empujon al jugador
+
+DESTELLO_ANIM_FRAME = 0.15
+DESTELLO_RUN_FRAME = 0.06
+DESTELLO_ALERT_FRAME = 0.10
+
+# ---------------------------------------------------------------
 # Tiempos
 # ---------------------------------------------------------------
 
@@ -377,31 +430,34 @@ def quantize_radius(radius):
 
 
 def wave_composition(wave, table=None):
-    """(pinos, troncos, mosquitos, hongunes, guardianes, tiradores) de una
-    oleada.
+    """(pinos, troncos, mosquitos, hongunes, guardianes, tiradores,
+    destellos) de una oleada.
 
     `table` es la tabla de la sala (por defecto la de la sala derecha).
-    Las tablas pueden tener 4 numeros (sin guardianes), 5 (con guardianes)
-    o 6 (con guardianes tiradores)."""
+    Las tablas pueden tener de 4 a 7 numeros (los que faltan valen 0)."""
     if table is None:
         table = WAVE_COMPOSITION
         if wave == MOSQUITO_TEST_WAVE:
-            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0, 0
+            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0, 0, 0
+        if wave == DESTELLO_TEST_WAVE:
+            return 0, 0, 0, 0, 0, 0, DESTELLO_TEST_COUNT
     if wave in table:
-        return tuple(table[wave]) + (0,) * (6 - len(table[wave]))
+        return tuple(table[wave]) + (0,) * (7 - len(table[wave]))
     last = max(table)
     pinos, troncos, mosquitos, honguns = table[last][:4]
     guardians = table[last][4] if len(table[last]) > 4 else 0
     shooters = table[last][5] if len(table[last]) > 5 else 0
+    destellos = table[last][6] if len(table[last]) > 6 else 0
     extra = max(0, wave - last)
     pinos += PINOS_STEP * extra
     troncos = min(TRONCOS_MAX, troncos + TRONCOS_STEP * extra)
     mosquitos = min(MOSQUITOS_MAX, mosquitos + MOSQUITOS_STEP * extra)
     honguns = min(HONGUNS_MAX, honguns + HONGUNS_STEP * extra)
-    total = pinos + troncos + mosquitos + honguns
+    destellos = min(DESTELLOS_MAX, destellos + DESTELLOS_STEP * extra)
+    total = pinos + troncos + mosquitos + honguns + destellos
     if total > ENEMIES_MAX:
         mosquitos = max(0, mosquitos - (total - ENEMIES_MAX))
-    return pinos, troncos, mosquitos, honguns, guardians, shooters
+    return pinos, troncos, mosquitos, honguns, guardians, shooters, destellos
 
 
 def enemies_for_wave(wave, table=None):
@@ -2352,6 +2408,443 @@ class Hongun(Enemy):
 
 
 # ---------------------------------------------------------------
+# Destello - imagenes y enemigo
+# ---------------------------------------------------------------
+
+class DestelloArt:
+    """Imagenes del destello (se cargan una sola vez). Todas opcionales:
+
+      assets/maps/combate/destello_anim.png    224x56  (4 cuadros de 56x56, caminar tranquilo)
+      assets/maps/combate/destello_correr.png  224x56  (4 cuadros de 56x56, corriendo)
+      assets/maps/combate/destello_alerta.png  112x56  (2 cuadros de 56x56, aviso antes de correr)
+      assets/maps/combate/destello.png         56x56   (1 cuadro: caminar si falta destello_anim)
+      assets/maps/combate/destello_golpe.png   56x56   (cuando le pegas)
+
+    Si falta destello_correr usa los de caminar (mas rapido). Si falta
+    destello_alerta usa el primer cuadro de caminar. El parpadeo blanco
+    del aviso lo hace el codigo.
+    """
+
+    def __init__(self):
+
+        walk = load_strip(COMBAT_DIR / "destello_anim.png")
+        single = load_strip(COMBAT_DIR / "destello.png")
+        run = load_strip(COMBAT_DIR / "destello_correr.png")
+        alert = load_strip(COMBAT_DIR / "destello_alerta.png")
+        hit = load_image(COMBAT_DIR / "destello_golpe.png")
+
+        self.walk = walk or single or [self._placeholder(0), self._placeholder(1)]
+        self.run = run or self.walk
+        self.alert = alert or [self.walk[0]]
+
+        if hit is None:
+
+            hit = self.walk[0].copy()
+            hit.fill((170, 170, 170, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+        self.hit = hit
+
+        self._zoom = None
+        self._scaled = None
+
+    @staticmethod
+    def _placeholder(step=0):
+
+        surf = pygame.Surface((56, 56), pygame.SRCALPHA)
+
+        dark = (150, 120, 40)
+        mid = (240, 220, 110)
+        light = (255, 250, 200)
+
+        # cuerpo
+        pygame.draw.rect(surf, mid, (14, 6, 28, 30))
+        pygame.draw.rect(surf, dark, (14, 6, 28, 30), 2)
+
+        # brillos
+        for x, y in ((18, 10), (32, 12), (22, 28), (34, 26)):
+            pygame.draw.rect(surf, light, (x, y, 6, 6))
+
+        # patas (se alternan para que parezca que camina)
+        off = 2 if step % 2 == 0 else -2
+
+        pygame.draw.rect(surf, dark, (14 + off, 36, 12, 14))
+        pygame.draw.rect(surf, dark, (30 - off, 36, 12, 14))
+
+        # cara (ojos grandes)
+        pygame.draw.rect(surf, (40, 30, 10), (19, 14, 6, 8))
+        pygame.draw.rect(surf, (40, 30, 10), (31, 14, 6, 8))
+        pygame.draw.rect(surf, (40, 30, 10), (24, 26, 8, 3))
+
+        return surf
+
+    def get(self, zoom):
+
+        if self._zoom != zoom:
+
+            px = max(1, int(DESTELLO_DRAW_SIZE * zoom))
+
+            def scale(frames):
+                return [pygame.transform.scale(f, (px, px)) for f in frames]
+
+            self._scaled = {
+                "walk": scale(self.walk),
+                "run": scale(self.run),
+                "alert": scale(self.alert),
+                "hit": pygame.transform.scale(self.hit, (px, px)),
+            }
+
+            self._zoom = zoom
+
+        return self._scaled
+
+
+class Destello(Enemy):
+    """Un hongun flashbang: pasea tranquilo dando un poco de luz -> si te
+    ve (distancia y sin paredes en el medio) se frena un instante
+    parpadeando en blanco -> sale corriendo muy rapido hacia vos -> al
+    chocarte explota: te saca DESTELLO_DAMAGE de vida, te empuja y te
+    deja la pantalla en blanco unos 5 segundos (flashbang). Muere al
+    explotar.
+
+    Los golpes le sacan vida pero no lo frenan ni lo empujan: sigue
+    corriendo. Si lo matas a golpes antes de que te choque, muere sin
+    explotar (sin flash)."""
+
+    fixed = False
+    contact_damage = False
+
+    WANDER = "wander"
+    ALERT = "alert"
+    CHARGE = "charge"
+
+    def __init__(self, x, y, spawn_delay=0.0):
+
+        super().__init__(x, y, DESTELLO_HP, DESTELLO_CHARGE_SPEED, spawn_delay)
+
+        self.rect = pygame.Rect(0, 0, *DESTELLO_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.phase = self.WANDER
+
+        self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+        self.turn_t = random.uniform(*DESTELLO_TURN_TIME)
+
+        self.alert_t = 0.0
+        self.boom = False      # True = exploto contra el jugador
+        self.boomed = False
+
+    # ---------- estado ----------
+
+    @property
+    def can_explode(self):
+        """Solo explota si ya salio corriendo (no paseando ni apareciendo)."""
+
+        return (
+            self.phase == self.CHARGE
+            and not self.spawning
+            and not self.dead
+            and not self.boomed
+        )
+
+    def light(self):
+        """(x, y, radio) de la luz de su cuerpo (siempre prendida)."""
+
+        if self.spawning or self.dead:
+            return None
+
+        radius = (
+            DESTELLO_LIGHT if self.phase == self.WANDER
+            else DESTELLO_LIGHT_ALERT
+        )
+
+        return (self.pos.x, self.pos.y, quantize_radius(radius))
+
+    # ---------- golpes ----------
+
+    def take_damage(self, amount):
+        """Recibe el dano pero NO retrocede ni se atonta."""
+
+        if self.spawning or self.dead:
+            return 0
+
+        self.hp -= amount
+        self.flash = ENEMY_FLASH_TIME
+
+        # Si lo golpean paseando, ya te vio: se pone en alerta
+        if self.phase == self.WANDER and not self.dead:
+
+            self.phase = self.ALERT
+            self.alert_t = DESTELLO_ALERT_TIME
+
+        return amount
+
+    # ---------- movimiento ----------
+
+    def _line_clear(self, a, b, collision_map):
+        """True si no hay paredes ni bloques entre `a` y `b`."""
+
+        a = pygame.Vector2(a)
+        b = pygame.Vector2(b)
+
+        steps = max(1, int(a.distance_to(b) // 4))
+
+        probe = pygame.Rect(0, 0, 4, 4)
+
+        for i in range(1, steps + 1):
+
+            p = a.lerp(b, i / steps)
+
+            probe.center = (round(p.x), round(p.y))
+
+            if not (self.room.contains(probe) and collision_map.can_move(probe)):
+                return False
+
+        return True
+
+    def _walk(self, dt, direction, speed, collision_map,
+              angles=(0, 45, -45, 90, -90)):
+        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
+        Devuelve la direccion que uso o None si no pudo moverse."""
+
+        step = speed * dt
+
+        for angle in angles:
+
+            d = direction.rotate(angle)
+
+            nx = self.pos.x + d.x * step
+            ny = self.pos.y + d.y * step
+
+            test = self.rect.copy()
+            test.center = (round(nx), round(ny))
+
+            if self._free(test, collision_map):
+
+                self.pos.update(nx, ny)
+                self.rect.center = test.center
+                self.vel = d * speed
+
+                return d
+
+        return None
+
+    def _run(self, dt, direction, collision_map):
+        """Corre hacia `direction` en pasos cortos (a esta velocidad un
+        solo paso por frame se saltaria paredes finas)."""
+
+        pieces = max(1, math.ceil(DESTELLO_CHARGE_SPEED * dt / 3.0))
+
+        last = None
+
+        for _ in range(pieces):
+
+            d = self._walk(
+                dt / pieces, direction, DESTELLO_CHARGE_SPEED, collision_map
+            )
+
+            if d is None:
+                break
+
+            last = d
+
+        return last
+
+    def update(self, dt, target, collision_map, others=None):
+
+        target = pygame.Vector2(target)
+
+        self.last_target = target.copy()
+        self.anim_t += dt
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.touch_cd > 0:
+            self.touch_cd = max(0.0, self.touch_cd - dt)
+
+        if self.spawn_t > 0:
+
+            self.spawn_t -= dt
+
+            return
+
+        self.vel = pygame.Vector2()
+
+        to_player = target - self.pos
+        dist = to_player.length()
+
+        if dist < 0.01:
+            to_player = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+            dist = 0.01
+
+        toward = to_player / dist
+
+        # ---- aviso: quieto, parpadeando, mirandote ----
+        if self.phase == self.ALERT:
+
+            self.alert_t -= dt
+
+            if self.alert_t <= 0:
+                self.phase = self.CHARGE
+
+            return
+
+        # ---- corriendo hacia vos ----
+        if self.phase == self.CHARGE:
+
+            if dist > DESTELLO_LOSE_RADIUS:
+
+                self.phase = self.WANDER
+                self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+            else:
+
+                self._run(dt, toward, collision_map)
+
+            return
+
+        # ---- paseando tranquilo ----
+        if (
+            dist <= DESTELLO_DETECT_RADIUS
+            and self._line_clear(self.pos, target, collision_map)
+        ):
+
+            self.phase = self.ALERT
+            self.alert_t = DESTELLO_ALERT_TIME
+
+            return
+
+        self.turn_t -= dt
+
+        if self.turn_t <= 0:
+
+            self.heading = self.heading.rotate(random.uniform(-80, 80))
+            self.turn_t = random.uniform(*DESTELLO_TURN_TIME)
+
+        d = self._walk(
+            dt, self.heading, DESTELLO_WANDER_SPEED, collision_map,
+            angles=(0, 40, -40, 90, -90, 140, -140, 180)
+        )
+
+        if d is not None:
+            self.heading = d
+
+    # ---------- dibujo ----------
+
+    def draw(self, screen, camera, art):
+
+        sprites = art.get(camera.zoom)
+
+        shake = 0
+        alerting = self.phase == self.ALERT
+        charging = self.phase == self.CHARGE
+
+        if self.flash > 0:
+
+            img = sprites["hit"]
+
+        else:
+
+            if alerting:
+
+                frames = sprites["alert"]
+                index = int(self.anim_t / DESTELLO_ALERT_FRAME) % len(frames)
+
+            elif charging:
+
+                frames = sprites["run"]
+                index = int(self.anim_t / DESTELLO_RUN_FRAME) % len(frames)
+
+            else:
+
+                frames = sprites["walk"]
+                moving = self.vel.length_squared() > 1.0
+
+                index = (
+                    int(self.anim_t / DESTELLO_ANIM_FRAME) % len(frames)
+                    if moving else 0
+                )
+
+            img = frames[index]
+
+            # Herido = mas oscuro (no durante el aviso, ahi parpadea blanco)
+            if self.hp < self.max_hp and not alerting:
+
+                shade = int(255 * (0.55 + 0.45 * max(0, self.hp) / self.max_hp))
+
+                img = img.copy()
+                img.fill(
+                    (shade, shade, shade, 255),
+                    special_flags=pygame.BLEND_RGBA_MULT
+                )
+
+            if alerting:
+
+                # Parpadea a blanco y tiembla: esta por salir corriendo
+                blink_on = math.sin(self.anim_t * 40) > 0
+
+                white = 255 if blink_on else 60
+
+                img = img.copy()
+                img.fill((white, white, white, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+                shake = int(math.sin(self.anim_t * 70) * 1.5 * camera.zoom)
+
+        if self.spawning:
+
+            t = 1.0 - max(0.0, self.spawn_t) / ENEMY_SPAWN_TIME
+
+            img = img.copy()
+            img.set_alpha(int(50 + 150 * max(0.0, min(1.0, t))))
+
+        dest = camera.apply(self.rect)
+
+        # Sombra
+        shadow = pygame.Surface(
+            (int(dest.width * 1.4), int(dest.height * 0.6)),
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(dest.centerx, dest.bottom))
+        )
+
+        # Estela de velocidad: dos copias transparentes detras
+        if charging and self.vel.length_squared() > 1.0 and not self.spawning:
+
+            back = -self.vel.normalize()
+
+            for i, alpha in ((2, 50), (1, 100)):
+
+                ghost = img.copy()
+                ghost.set_alpha(alpha)
+
+                screen.blit(
+                    ghost,
+                    ghost.get_rect(
+                        midbottom=(
+                            dest.centerx + int(back.x * 3 * i * camera.zoom),
+                            dest.bottom + int(2 * camera.zoom)
+                            + int(back.y * 3 * i * camera.zoom)
+                        )
+                    )
+                )
+
+        screen.blit(
+            img,
+            img.get_rect(
+                midbottom=(
+                    dest.centerx + shake,
+                    dest.bottom + int(2 * camera.zoom)
+                )
+            )
+        )
+
+
+# ---------------------------------------------------------------
 # Guardian (del tamano del jugador, pega con un golpe en arco igual
 # que el jugador, tiene mucha vida)
 # ---------------------------------------------------------------
@@ -3707,6 +4200,7 @@ class Arena:
         self.tronco_art = TroncoArt()
         self.mosquito_art = MosquitoArt()
         self.hongun_art = HongunArt()
+        self.destello_art = DestelloArt()
         self.guardian_art = GuardianArt()
         self.shooter_art = GuardianShooterArt()
         self.blasts = []            # explosiones de hongunes (aro + luz)
@@ -3850,7 +4344,7 @@ class Arena:
         # Cada hongun que recarga da un poco de luz, y su explosion tambien
         for enemy in self.enemies:
 
-            if isinstance(enemy, Hongun):
+            if isinstance(enemy, (Hongun, Destello)):
 
                 light = enemy.light()
 
@@ -3984,12 +4478,13 @@ class Arena:
     def _spawn_wave(self, game):
 
         (pinos, troncos, mosquitos, honguns, guardians,
-         shooters) = wave_composition(self.wave, self.cfg.table)
+         shooters, destellos) = wave_composition(self.wave, self.cfg.table)
 
         kinds = (
             ["pino"] * pinos + ["tronco"] * troncos
             + ["mosquito"] * mosquitos + ["hongun"] * honguns
             + ["guardian"] * guardians + ["tirador"] * shooters
+            + ["destello"] * destellos
         )
         random.shuffle(kinds)
 
@@ -4012,12 +4507,14 @@ class Arena:
 
         for i, kind in enumerate(kinds):
             pos = None
-            min_dist = 135 if kind in ("mosquito", "hongun", "guardian", "tirador") else 110
+            min_dist = 135 if kind in ("mosquito", "hongun", "guardian", "tirador", "destello") else 110
 
             if kind == "mosquito":
                 hitbox = MOSQUITO_HITBOX
             elif kind == "hongun":
                 hitbox = HONGUN_HITBOX
+            elif kind == "destello":
+                hitbox = DESTELLO_HITBOX
             elif kind in ("guardian", "tirador"):
                 hitbox = GUARDIAN_HITBOX
             else:
@@ -4047,6 +4544,8 @@ class Arena:
                 enemy = Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay)
             elif kind == "hongun":
                 enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "destello":
+                enemy = Destello(pos[0], pos[1], spawn_delay=delay)
             elif kind == "guardian":
                 enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
             elif kind == "tirador":
@@ -4465,6 +4964,18 @@ class Arena:
                 enemy.boomed = True
                 self._hongun_explode(game, enemy)
 
+        # Destellos que te alcanzaron corriendo: explotan (flashbang)
+        for enemy in self.enemies:
+            if (
+                isinstance(enemy, Destello)
+                and enemy.can_explode
+                and enemy.rect.colliderect(body)
+            ):
+                enemy.boom = True
+                enemy.boomed = True
+                enemy.hp = 0
+                self._destello_explode(game, enemy)
+
         for enemy in self.enemies:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
@@ -4532,6 +5043,30 @@ class Arena:
 
         p.kb_vel = away.normalize() * HONGUN_KNOCKBACK
 
+    def _destello_explode(self, game, enemy):
+        """Explota el destello: dano, empujon y pantalla en blanco."""
+
+        p = game.player
+        pos = pygame.Vector2(enemy.pos)
+        body = pygame.Vector2(p.rect.center)
+
+        # Pega siempre, aunque el jugador estuviera en su ratito de
+        # invulnerabilidad
+        p.invuln_timer = 0.0
+        p.hurt(pos)
+
+        game.take_damage(DESTELLO_DAMAGE)
+
+        away = body - pos
+
+        if away.length_squared() < 0.01:
+            away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        p.kb_vel = away.normalize() * DESTELLO_KNOCKBACK
+
+        # El "pum": la pantalla se pone blanca (lo dibuja el juego)
+        game.flashbang(pos.x, pos.y)
+
     def _death_puff(self, pos):
 
         for _ in range(10):
@@ -4582,6 +5117,8 @@ class Arena:
                 enemy.draw(screen, camera, self.mosquito_art)
             elif isinstance(enemy, Hongun):
                 enemy.draw(screen, camera, self.hongun_art)
+            elif isinstance(enemy, Destello):
+                enemy.draw(screen, camera, self.destello_art)
             elif isinstance(enemy, GuardianShooter):
                 enemy.draw(screen, camera, self.shooter_art)
             elif isinstance(enemy, Guardian):
