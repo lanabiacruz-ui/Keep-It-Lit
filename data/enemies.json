@@ -23,5 +23,10 @@
         "nombre": "Klon",
         "imagen": "klon_icon.png",
         "descripcion": "Del tamaño del jugador. Pasea tranquilo por la sala, pero si tu luz lo toca (o lo golpeas) va directo hacia vos sin parar hasta morir. Pega con el mismo golpe en arco que el jugador: levanta el arma y se ve la zona roja antes de pegar. Tiene mucha vida."
+    },
+    "destello": {
+        "nombre": "Destello",
+        "imagen": "destello.png",
+        "descripcion": "Pasea tranquilo y da un poco de luz con el cuerpo. Si te ve se frena y parpadea en blanco: ese es el aviso. Despues sale corriendo casi el doble de rapido que vos, te choca y explota: te saca vida, te empuja y deja la pantalla en blanco unos 5 segundos. Aguanta 2 golpes y si lo derrotas antes de que te alcance, no explota"
     }
 }

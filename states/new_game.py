@@ -982,10 +982,13 @@ class NewGame:
             },
             {
                 "text": (
-                    "Completá la enciclopedia: descubrí a los 6 "
+                    "Completá la enciclopedia: descubrí a los "
+                    f"{len(EnemyEncyclopedia.ORDER)} "
                     "enemigos (se ve desde el menú de pausa)."
                 ),
-                "done": lambda g: len(g.discovered_enemies) >= 6,
+                "done": lambda g: len(
+                    set(g.discovered_enemies) & set(EnemyEncyclopedia.ORDER)
+                ) >= len(EnemyEncyclopedia.ORDER),
             },
         ]
 

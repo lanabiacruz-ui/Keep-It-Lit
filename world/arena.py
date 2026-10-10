@@ -48,14 +48,14 @@ rapido, te choca, explota y te deja la pantalla blanca ~5 s). Imagenes
   assets/maps/combate/destello_anim.png      224x56 (4 cuadros, caminar tranquilo)
   assets/maps/combate/destello_correr.png    224x56 (4 cuadros, corriendo)
   assets/maps/combate/destello_alerta.png    112x56 (2 cuadros, aviso antes de correr)
-  assets/maps/combate/destello.png           56x56  (1 cuadro, para la enciclopedia)
+  assets/maps/combate/destello.png           56x56  (1 cuadro, tambien es el icono de la enciclopedia)
   assets/maps/combate/destello_golpe.png     56x56  (cuando le pegas)
 
 Guardian Tirador (igual al Guardian pero dispara bolas, ver
 GuardianShooterArt). Imagenes opcionales:
   assets/maps/combate/guardian_tirador.png          256x320 (4x4: caminar)
   assets/maps/combate/guardian_tirador_disparo.png  128x320 (2x4: apuntar y disparar)
-  assets/maps/combate/guardian_tirador_icono.png    56x56 (para la enciclopedia: todavia no se muestra)
+  assets/maps/combate/guardian_tirador_icono.png    128x128 (enciclopedia)
   assets/maps/combate/bola_guardian.png             32x32 (la bola, mirando a la derecha)
 """
 
@@ -111,7 +111,7 @@ GATE_LEFT = pygame.Rect(650, 502, 10, 32)
 # (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
 #  destellos)  <- las tablas pueden traer de 4 a 7 numeros
 LEFT_WAVE_COMPOSITION = {
-    1: (0,0 ,0,0,4),
+    1: (0,0,0,0,1,0,3),
     2: (0, 0, 0, 0, 2, 1),
 }
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
@@ -120,6 +120,7 @@ LEFT_WAVE_COMPOSITION = {
 # Despues de la ultima definida sube PINOS_STEP pinos y TRONCOS_STEP
 # troncos por oleada, sin pasar de ENEMIES_MAX en total.
 WAVE_COMPOSITION = {
+    # Oleada 1: un pino y el primer destello (el 7mo numero)
     1: (1, 0, 0, 0),
     2: (4, 0, 0, 0),
     3: (5, 1, 0, 0),
@@ -341,6 +342,11 @@ DESTELLO_LIGHT_ALERT = 64
 DESTELLO_DETECT_RADIUS = 120.0
 DESTELLO_LOSE_RADIUS = 220.0    # si corriendo te alejas mas que esto, te pierde
 DESTELLO_ALERT_TIME = 0.35      # aviso quieto (parpadea blanco) antes de salir corriendo
+# Primeras oleadas: el aviso dura mas, asi el primer encuentro es justo
+# (te da tiempo a verlo parpadear y a reaccionar). Para volver a como
+# era, poner DESTELLO_EARLY_WAVES = 0.
+DESTELLO_EARLY_WAVES = 2
+DESTELLO_ALERT_TIME_EARLY = 0.60
 
 # Choque
 DESTELLO_DAMAGE = 0.15          # 0.15 = 15% de la vida de la luz
@@ -2530,6 +2536,7 @@ class Destello(Enemy):
         self.turn_t = random.uniform(*DESTELLO_TURN_TIME)
 
         self.alert_t = 0.0
+        self.alert_time = DESTELLO_ALERT_TIME   # lo cambia la arena segun la oleada
         self.boom = False      # True = exploto contra el jugador
         self.boomed = False
 
@@ -2574,7 +2581,7 @@ class Destello(Enemy):
         if self.phase == self.WANDER and not self.dead:
 
             self.phase = self.ALERT
-            self.alert_t = DESTELLO_ALERT_TIME
+            self.alert_t = self.alert_time
 
         return amount
 
@@ -2710,7 +2717,7 @@ class Destello(Enemy):
         ):
 
             self.phase = self.ALERT
-            self.alert_t = DESTELLO_ALERT_TIME
+            self.alert_t = self.alert_time
 
             return
 
@@ -3498,7 +3505,7 @@ class GuardianShooterArt(GuardianArt):
       guardian_tirador_disparo.png  128x320  2 columnas x 4 filas (mismas
                                     filas). Columna 1 = apuntando/cargando,
                                     columna 2 = disparando
-      guardian_tirador_icono.png    56x56    enciclopedia (todavia no se muestra)
+      guardian_tirador_icono.png    128x128  enciclopedia
       bola_guardian.png             32x32    la bola, mirando a la DERECHA
     """
 
@@ -4546,6 +4553,8 @@ class Arena:
                 enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
             elif kind == "destello":
                 enemy = Destello(pos[0], pos[1], spawn_delay=delay)
+                if self.wave <= DESTELLO_EARLY_WAVES:
+                    enemy.alert_time = DESTELLO_ALERT_TIME_EARLY
             elif kind == "guardian":
                 enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
             elif kind == "tirador":

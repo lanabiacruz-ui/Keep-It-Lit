@@ -62,6 +62,7 @@ TUTORIAL_PAGES = [
     "ATENCIÓN: si tu luz se apaga peleando en una sala de combate, perdés de verdad, aunque hayas elegido jugar con escape.",
     "SALAS COMPLETAS: la sala de la derecha tiene 10 oleadas y la de la izquierda 2, con el Guardián al final. Al completarla se cierra para siempre.",
     "ENEMIGOS: las piñas chocan y rebotan, los troncos disparan proyectiles, los mosquitos se pegan, los hongun explotan y los guardianes pelean con armas.",
+    "DESTELLOS: pasean dando un poco de luz. Si te ven, parpadean en blanco y salen corriendo: al chocarte explotan y te dejan la pantalla en blanco unos 5 segundos. Matalos a golpes antes de que te alcancen y no explotan.",
     "MOSQUITOS: si tu luz los toca van directo hacia vos y se pegan un minuto chupándote vida. Después se sueltan y vuelven a intentarlo.",
     "ENCICLOPEDIA: en el menú de pausa. Cada enemigo se descubre cuando te lo encontrás en una oleada, y se empieza de cero en cada partida.",
     "SALA IZQUIERDA: los bloques de la cruz de piedra abren y cierran los pasos solos. Si el hueco parpadea en rojo, salí rápido: te aplastan y te sacan mucha luz.",

@@ -82,6 +82,18 @@ DEFAULT_DATA = {
             "adelantandose a donde vas a estar, asi que no corras en linea recta"
         ),
     },
+
+    "destello": {
+        "nombre": "Destello",
+        "imagen": "destello.png",
+        "descripcion": (
+            "Pasea tranquilo y da un poco de luz con el cuerpo. Si te ve se frena "
+            "y parpadea en blanco: ese es el aviso. Despues sale corriendo casi el "
+            "doble de rapido que vos, te choca y explota: te saca vida, te empuja y "
+            "deja la pantalla en blanco unos 5 segundos. Aguanta 2 golpes y si lo "
+            "derrotas antes de que te alcance, no explota."
+        ),
+    },
 }
 
 
@@ -109,6 +121,7 @@ class EnemyEncyclopedia:
         "hongun",
         "guardian",
         "guardian_tirador",
+        "destello",
     )
 
     # ---------- distribucion (en coordenadas de la imagen 1672x941) ----
@@ -123,8 +136,8 @@ class EnemyEncyclopedia:
     ROW_X = 456
     ROW_Y = 260
     ROW_W = 260
-    ROW_H = 56
-    ROW_GAP = 6
+    ROW_H = 52      # 7 enemigos: tienen que entrar sin tapar el boton REGRESAR
+    ROW_GAP = 5
 
     # Ficha del enemigo (derecha)
     CARD_BOX = (740, 252, 480, 403)
