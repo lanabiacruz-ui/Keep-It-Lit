@@ -1,5 +1,34 @@
+"""Cartel de OBJETIVO (arriba a la derecha).
+
+Imagenes (opcionales: si falta alguna se dibuja el rectangulo de
+siempre). Las dos del MISMO tamano, PNG transparente, en assets/maps/ui/:
+
+  objetivo.png         360x160   cartel normal (con el titulo "OBJETIVO"
+                                 ya dibujado por vos)
+  objetivo_hecho.png   360x160   cartel cuando se cumple (con "LISTO")
+
+El codigo escribe SOLO el texto del objetivo, dentro de la zona de texto
+(se achica solo si es largo). Zona de texto, en pixeles de la imagen:
+  izquierda 26, arriba 62, derecha 26, abajo 24  (-> 308 x 74)
+Dejala libre de dibujos. Si queres moverla: TEXT_MARGINS.
+"""
+
+from pathlib import Path
+
 import pygame
 
+
+UI_DIR = Path(__file__).resolve().parent.parent / "assets" / "maps" / "ui"
+
+OBJECTIVE_IMAGE = "objetivo.png"
+DONE_IMAGE = "objetivo_hecho.png"
+
+# Zona de texto dentro de la imagen: (izquierda, arriba, derecha, abajo)
+TEXT_MARGINS = (26, 62, 26, 24)
+IMAGE_TEXT_COLOR = (245, 245, 245)
+IMAGE_TEXT_SHADOW = (0, 0, 0)
+FONT_MAX = 26
+FONT_MIN = 16
 
 
 PANEL_WIDTH = 300
@@ -28,6 +57,19 @@ class Objectives:
         self.title_font = pygame.font.Font(None, 22)
         self.font = pygame.font.Font(None, 26)
 
+        # Carteles dibujados por vos (None = se dibuja el rectangulo)
+        self.frame_normal = self._load_frame(OBJECTIVE_IMAGE)
+        self.frame_done = self._load_frame(DONE_IMAGE)
+
+        self.use_images = (
+            self.frame_normal is not None and self.frame_done is not None
+        )
+
+        # Ancho del cartel (para que se deslice bien)
+        self.slide_w = (
+            self.frame_normal.get_width() if self.use_images else PANEL_WIDTH
+        )
+
        
         self.panels = [
             (
@@ -44,6 +86,57 @@ class Objectives:
 
         self.started = False
         self.finished = not self.objectives
+
+    @staticmethod
+    def _load_frame(name):
+
+        try:
+
+            return pygame.image.load(str(UI_DIR / name)).convert_alpha()
+
+        except (pygame.error, FileNotFoundError):
+
+            return None
+
+    def _build_framed(self, text, done):
+        """Tu cartel + el texto del objetivo escrito en la zona de texto."""
+
+        surf = (self.frame_done if done else self.frame_normal).copy()
+
+        left, top, right, bottom = TEXT_MARGINS
+
+        area = pygame.Rect(
+            left, top,
+            max(1, surf.get_width() - left - right),
+            max(1, surf.get_height() - top - bottom),
+        )
+
+        # El texto largo se achica hasta que entre
+        for size in range(FONT_MAX, FONT_MIN - 1, -1):
+
+            font = pygame.font.Font(None, size)
+            lines = self._wrap(font, text, area.width)
+
+            if font.get_linesize() * len(lines) <= area.height:
+                break
+
+        line_h = font.get_linesize()
+
+        # Centrado vertical dentro de la zona
+        y = area.top + (area.height - line_h * len(lines)) // 2
+
+        for line in lines:
+
+            surf.blit(
+                font.render(line, True, IMAGE_TEXT_SHADOW), (area.left + 1, y + 1)
+            )
+            surf.blit(
+                font.render(line, True, IMAGE_TEXT_COLOR), (area.left, y)
+            )
+
+            y += line_h
+
+        return surf
 
     @staticmethod
     def _wrap(font, text, max_width):
@@ -67,6 +160,9 @@ class Objectives:
         return lines
 
     def _build(self, text, done):
+
+        if self.use_images:
+            return self._build_framed(text, done)
 
         pad = 14
 
@@ -174,7 +270,7 @@ class Objectives:
 
   
     def _offset(self):
-        distance = PANEL_WIDTH + MARGIN + 12
+        distance = self.slide_w + MARGIN + 12
 
         if self.phase == "in":
 

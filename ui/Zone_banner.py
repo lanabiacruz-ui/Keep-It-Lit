@@ -1,5 +1,34 @@
+"""Cartel con el nombre de la zona (aparece al entrar a una sala).
+
+Imagen (opcional: si falta se dibuja el texto con la linea naranja de
+siempre):
+
+  assets/maps/hud/cartel_zona.png   560x140  PNG transparente
+
+    Es el cartel VACIO (sin texto): el codigo escribe el nombre de la
+    zona encima, centrado ("Tienda", "Sala de combate", ...). La linea
+    naranja de abajo ya no se dibuja: si la queres, dibujala en la
+    imagen. Si el nombre es muy largo el texto se achica solo para que
+    entre. Para subir/bajar el texto: TEXT_OFFSET_Y.
+"""
+
+from pathlib import Path
+
 import pygame
 
+
+BANNER_IMAGE = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "maps"
+    / "hud"
+    / "cartel_zona.png"
+)
+
+# Con imagen: margen a cada lado donde NO se escribe, y ajuste vertical
+# del texto (positivo = mas abajo).
+TEXT_MARGIN_X = 70
+TEXT_OFFSET_Y = 0
 
 
 FADE_IN = 0.45      
@@ -28,6 +57,20 @@ class ZoneBanner:
         self.age = None     
         self.image = None
 
+        # Cartel dibujado por vos (None = se usa el texto con la linea)
+        self.frame = self._load_frame()
+
+    @staticmethod
+    def _load_frame():
+
+        try:
+
+            return pygame.image.load(str(BANNER_IMAGE)).convert_alpha()
+
+        except (pygame.error, FileNotFoundError):
+
+            return None
+
     @property
     def total_time(self):
         return FADE_IN + HOLD + FADE_OUT
@@ -48,8 +91,44 @@ class ZoneBanner:
         if self.age >= self.total_time:
             self.age = None
 
+    def _build_framed(self, name):
+        """El cartel dibujado + el nombre escrito encima, centrado."""
+
+        surf = self.frame.copy()
+        w, h = surf.get_size()
+
+        text = self.font.render(name, True, TEXT_COLOR)
+        outline = self.font.render(name, True, OUTLINE_COLOR)
+
+        # Si el nombre no entra, se achica
+        max_w = max(1, w - TEXT_MARGIN_X * 2)
+
+        if text.get_width() > max_w:
+
+            k = max_w / text.get_width()
+            size = (max_w, max(1, int(text.get_height() * k)))
+
+            text = pygame.transform.smoothscale(text, size)
+            outline = pygame.transform.smoothscale(outline, size)
+
+        tx = (w - text.get_width()) // 2
+        ty = (h - text.get_height()) // 2 + TEXT_OFFSET_Y
+
+        for dx, dy in (
+            (-2, 0), (2, 0), (0, -2), (0, 2),
+            (-2, -2), (2, 2), (-2, 2), (2, -2)
+        ):
+            surf.blit(outline, (tx + dx, ty + dy))
+
+        surf.blit(text, (tx, ty))
+
+        return surf
+
     def _build(self, name):
-      
+
+        if self.frame is not None:
+            return self._build_framed(name)
+
         text = self.font.render(name, True, TEXT_COLOR)
         outline = self.font.render(name, True, OUTLINE_COLOR)
 

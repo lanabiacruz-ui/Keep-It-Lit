@@ -41,6 +41,13 @@ Guardian. Imagenes del Guardian (opcionales, ver GuardianArt):
   assets/maps/combate/guardian_ataque.png    128x320 (2x4: aviso y golpe)
   assets/maps/combate/guardian_arma.png      el arma, apuntando hacia arriba
   assets/maps/combate/guardian_icono.png     56x56 (enciclopedia)
+
+Guardian Tirador (igual al Guardian pero dispara bolas, ver
+GuardianShooterArt). Imagenes opcionales:
+  assets/maps/combate/guardian_tirador.png          256x320 (4x4: caminar)
+  assets/maps/combate/guardian_tirador_disparo.png  128x320 (2x4: apuntar y disparar)
+  assets/maps/combate/guardian_tirador_icono.png    56x56 (para la enciclopedia: todavia no se muestra)
+  assets/maps/combate/bola_guardian.png             32x32 (la bola, mirando a la derecha)
 """
 
 import math
@@ -49,6 +56,7 @@ from pathlib import Path
 
 import pygame
 
+from world.fireball import FIRE_SPEED
 from world.items import WorldItem, get_gem_icon
 from world.melee import (
     ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
@@ -91,9 +99,10 @@ GATE_LEFT = pygame.Rect(650, 502, 10, 32)
 # ---------------------------------------------------------------
 # Oleadas (para balancear, se cambia todo aca)
 # ---------------------------------------------------------------
+# (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores)
 LEFT_WAVE_COMPOSITION = {
     1: (0,0 ,0,0,4),
-    2: (0, 0, 0, 0, 2),
+    2: (0, 0, 0, 0, 2, 1),
 }
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
 # pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
@@ -368,19 +377,22 @@ def quantize_radius(radius):
 
 
 def wave_composition(wave, table=None):
-    """(pinos, troncos, mosquitos, hongunes, guardianes) de una oleada.
+    """(pinos, troncos, mosquitos, hongunes, guardianes, tiradores) de una
+    oleada.
 
     `table` es la tabla de la sala (por defecto la de la sala derecha).
-    Las tablas pueden tener 4 numeros (sin guardianes) o 5."""
+    Las tablas pueden tener 4 numeros (sin guardianes), 5 (con guardianes)
+    o 6 (con guardianes tiradores)."""
     if table is None:
         table = WAVE_COMPOSITION
         if wave == MOSQUITO_TEST_WAVE:
-            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0
+            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0, 0
     if wave in table:
-        return tuple(table[wave]) + (0,) * (5 - len(table[wave]))
+        return tuple(table[wave]) + (0,) * (6 - len(table[wave]))
     last = max(table)
     pinos, troncos, mosquitos, honguns = table[last][:4]
     guardians = table[last][4] if len(table[last]) > 4 else 0
+    shooters = table[last][5] if len(table[last]) > 5 else 0
     extra = max(0, wave - last)
     pinos += PINOS_STEP * extra
     troncos = min(TRONCOS_MAX, troncos + TRONCOS_STEP * extra)
@@ -389,7 +401,7 @@ def wave_composition(wave, table=None):
     total = pinos + troncos + mosquitos + honguns
     if total > ENEMIES_MAX:
         mosquitos = max(0, mosquitos - (total - ENEMIES_MAX))
-    return pinos, troncos, mosquitos, honguns, guardians
+    return pinos, troncos, mosquitos, honguns, guardians, shooters
 
 
 def enemies_for_wave(wave, table=None):
@@ -2393,14 +2405,24 @@ class GuardianArt:
     DIRS = ("up", "down", "left", "right")
     CELL = (64, 80)
 
+    # Archivos (el Guardian Tirador usa otros) y colores del reemplazo
+    WALK_FILE = "guardian.png"
+    ATTACK_FILE = "guardian_ataque.png"
+    WEAPON_FILE = "guardian_arma.png"
+    CLOTH = (88, 58, 120)
+    DARK = (46, 30, 68)
+
     def __init__(self):
 
-        walk = load_image(COMBAT_DIR / "guardian.png")
-        attack = load_image(COMBAT_DIR / "guardian_ataque.png")
+        walk = load_image(COMBAT_DIR / self.WALK_FILE)
+        attack = load_image(COMBAT_DIR / self.ATTACK_FILE)
 
         self.walk = self._cut(walk, 4) or self._placeholder_walk()
         self.attack = self._cut(attack, 2) or self._placeholder_attack()
-        self.weapon = load_image(COMBAT_DIR / "guardian_arma.png")
+        self.weapon = (
+            load_image(COMBAT_DIR / self.WEAPON_FILE)
+            if self.WEAPON_FILE else None
+        )
 
         self._zoom = None
         self._scaled = None
@@ -2439,8 +2461,8 @@ class GuardianArt:
         w, h = cls.CELL
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
 
-        cloth = (88, 58, 120)
-        dark = (46, 30, 68)
+        cloth = cls.CLOTH
+        dark = cls.DARK
         skin = (200, 175, 150)
         eye = (255, 215, 90)
 
@@ -2900,6 +2922,505 @@ class Guardian(Enemy):
 
 
 # ---------------------------------------------------------------
+# Guardian Tirador (igual al Guardian, pero en vez de pegar dispara
+# bolas como las del jugador, apunta muy bien y toma distancia)
+# ---------------------------------------------------------------
+
+GSHOOT_HP = 40                     # golpes que aguanta (el Guardian: 48)
+
+# Movimiento (unidades del mundo por segundo; el jugador va a 95)
+GSHOOT_WANDER_SPEED = GUARDIAN_WANDER_SPEED   # paseando tranquilo
+GSHOOT_MOVE_SPEED = 70.0           # acercandose / dando vueltas
+GSHOOT_RETREAT_SPEED = 80.0        # alejandose de vos
+GSHOOT_STRAFE_TIME = (1.0, 2.2)    # cada cuanto cambia el lado al dar vueltas
+
+# Distancias: busca quedarse entre MIN y MAX. Mas cerca que MIN retrocede,
+# mas lejos que MAX se acerca, y en el medio da vueltas a tu alrededor.
+GSHOOT_MIN_DIST = 70.0
+GSHOOT_MAX_DIST = 120.0
+
+# La bola: MISMA velocidad que la bola de fuego del jugador
+GSHOOT_BOLT_SPEED = FIRE_SPEED
+GSHOOT_BOLT_RANGE = 190.0          # hasta donde llega antes de apagarse
+GSHOOT_BOLT_HITBOX = 5
+GSHOOT_BOLT_DRAW_SIZE = 7.0        # tamano dibujado (mundo)
+GSHOOT_MUZZLE = 8.0                # a que distancia del cuerpo nace
+
+# Disparo
+GSHOOT_AIM_TIME = 0.35             # aviso: queda quieto apuntandote y carga
+GSHOOT_RECOVER = 0.18              # quieto un ratito despues de disparar
+GSHOOT_COOLDOWN = 1.2              # espera entre un disparo y el otro
+                                   # (la del jugador es 0.45: con esta punteria seria imposible)
+GSHOOT_AIM_TURN = 14.0             # que tan rapido gira la punteria mientras carga
+GSHOOT_LEAD_MAX = 0.8              # lo maximo (seg) que adelanta la punteria
+GSHOOT_DAMAGE = 0.15               # 0.10 = 10% de la vida de la luz
+GSHOOT_KNOCKBACK = 90.0            # empujon al jugador si lo toca la bola
+
+
+_gshoot_bolt_cache = {}
+
+
+def _gshoot_bolt_base():
+    """Imagen de la bola (32x32, mirando a la DERECHA). Si no hay
+    imagen se dibuja una violeta, para no confundirla con las tuyas."""
+
+    img = load_image(COMBAT_DIR / "bola_guardian.png")
+
+    if img is None:
+
+        img = pygame.Surface((32, 32), pygame.SRCALPHA)
+
+        pygame.draw.circle(img, (120, 50, 200), (22, 16), 9)
+        pygame.draw.circle(img, (190, 130, 255), (22, 16), 6)
+        pygame.draw.circle(img, (245, 230, 255), (22, 16), 3)
+
+    return img
+
+
+def _gshoot_bolt_sprite(zoom, angle_deg):
+    """Bola ya escalada al zoom y girada hacia donde vuela."""
+
+    deg = round(-angle_deg / 10) * 10
+
+    key = (zoom, deg)
+
+    if key not in _gshoot_bolt_cache:
+
+        size = max(4, int(GSHOOT_BOLT_DRAW_SIZE * zoom))
+
+        sprite = pygame.transform.smoothscale(_gshoot_bolt_base(), (size, size))
+
+        _gshoot_bolt_cache[key] = pygame.transform.rotate(sprite, deg)
+
+    return _gshoot_bolt_cache[key]
+
+
+class GuardianShooterArt(GuardianArt):
+    """Imagenes del Guardian Tirador (todas opcionales: si falta alguna
+    se dibuja un reemplazo).
+
+      guardian_tirador.png          256x320  hoja de caminar: 4 columnas x
+                                    4 filas (arriba, abajo, izquierda,
+                                    derecha), igual que el Guardian
+      guardian_tirador_disparo.png  128x320  2 columnas x 4 filas (mismas
+                                    filas). Columna 1 = apuntando/cargando,
+                                    columna 2 = disparando
+      guardian_tirador_icono.png    56x56    enciclopedia (todavia no se muestra)
+      bola_guardian.png             32x32    la bola, mirando a la DERECHA
+    """
+
+    WALK_FILE = "guardian_tirador.png"
+    ATTACK_FILE = "guardian_tirador_disparo.png"
+    WEAPON_FILE = None
+
+    # Colores del muneco de reemplazo
+    CLOTH = (40, 96, 112)
+    DARK = (20, 52, 66)
+
+
+class GuardianBolt(Shot):
+    """Bola del Guardian Tirador: vuela derecho (no rebota), a la misma
+    velocidad que la bola de fuego del jugador. Se apaga al tocar una
+    pared o al llegar a su alcance."""
+
+    damage = GSHOOT_DAMAGE
+    knockback = GSHOOT_KNOCKBACK
+
+    def __init__(self, pos, angle_deg):
+
+        super().__init__(pos, angle_deg)
+
+        self.angle = angle_deg
+        self.vel = pygame.Vector2(GSHOOT_BOLT_SPEED, 0).rotate(angle_deg)
+
+        self.rect = pygame.Rect(0, 0, GSHOOT_BOLT_HITBOX, GSHOOT_BOLT_HITBOX)
+        self.rect.center = (round(self.pos.x), round(self.pos.y))
+
+        self.range_left = GSHOOT_BOLT_RANGE
+
+    def update(self, dt, collision_map):
+
+        self.t += dt
+
+        if self.dead:
+            return
+
+        dist = self.vel.length() * dt
+
+        # De a pasitos para no atravesar paredes finas si un frame tarda
+        steps = max(1, math.ceil(dist / 3.0))
+        step = dist / steps
+
+        move = self.vel.normalize() * step if self.vel.length_squared() > 0 else None
+
+        if move is None:
+            self.dead = True
+            return
+
+        for _ in range(steps):
+
+            self.pos += move
+            self.range_left -= step
+
+            self.rect.center = (round(self.pos.x), round(self.pos.y))
+
+            if self.range_left <= 0 or not self._free(self.rect, collision_map):
+
+                self.dead = True
+
+                return
+
+    def draw(self, screen, camera, art=None):
+
+        img = _gshoot_bolt_sprite(camera.zoom, self.angle)
+
+        center = camera.apply(self.rect).center
+
+        screen.blit(img, img.get_rect(center=center))
+
+
+class GuardianShooter(Guardian):
+    """Del tamano del jugador. Pasea tranquilo; cuando tu luz lo toca (o
+    le pegas) se despierta y NO se acerca a pegarte: toma distancia (se
+    aleja si te acercas, se acerca si te alejas y da vueltas a tu
+    alrededor) y te dispara bolas como las tuyas. Antes de disparar queda
+    quieto un instante cargando (aviso). Apunta adelantandose a donde vas
+    a estar, y solo dispara cuando te ve (sin paredes en el medio)."""
+
+    def __init__(self, x, y, spawn_delay=0.0):
+
+        super().__init__(x, y, spawn_delay)
+
+        self.hp = GSHOOT_HP
+        self.max_hp = GSHOOT_HP
+        self.max_speed = GSHOOT_MOVE_SPEED
+
+        self.target_vel = pygame.Vector2()
+        self._prev_target = None
+
+        self.strafe_dir = random.choice((-1, 1))
+        self.strafe_t = random.uniform(*GSHOOT_STRAFE_TIME)
+
+        # Que no disparen todos juntos apenas se despiertan
+        self.cooldown = random.uniform(0.3, 0.9)
+
+        self._shots = []
+
+    # ---------- disparo ----------
+
+    def take_shots(self):
+        """Las bolas que acaba de soltar (y se vacia la lista)."""
+
+        shots, self._shots = self._shots, []
+
+        return shots
+
+    def _line_clear(self, a, b, collision_map):
+        """True si no hay paredes ni bloques entre `a` y `b`."""
+
+        a = pygame.Vector2(a)
+        b = pygame.Vector2(b)
+
+        steps = max(1, int(a.distance_to(b) // 4))
+
+        probe = pygame.Rect(0, 0, 4, 4)
+
+        for i in range(1, steps + 1):
+
+            p = a.lerp(b, i / steps)
+
+            probe.center = (round(p.x), round(p.y))
+
+            if not (self.room.contains(probe) and collision_map.can_move(probe)):
+                return False
+
+        return True
+
+    def _lead_point(self, target):
+        """Donde va a estar el jugador cuando llegue la bola (puntería
+        con intercepcion: usa la velocidad real del jugador y la de la
+        bola)."""
+
+        origin = self.pos
+        d = target - origin
+        v = self.target_vel
+        speed = GSHOOT_BOLT_SPEED
+
+        # |d + v*t| = speed*t  ->  a*t^2 + b*t + c = 0
+        a = v.dot(v) - speed * speed
+        b = 2.0 * d.dot(v)
+        c = d.dot(d)
+
+        t = None
+
+        if abs(a) < 1e-6:
+
+            if abs(b) > 1e-6:
+                t = -c / b
+
+        else:
+
+            disc = b * b - 4.0 * a * c
+
+            if disc >= 0:
+
+                root = math.sqrt(disc)
+
+                times = [
+                    x for x in ((-b - root) / (2.0 * a), (-b + root) / (2.0 * a))
+                    if x > 0
+                ]
+
+                if times:
+                    t = min(times)
+
+        if t is None or t <= 0:
+            t = d.length() / speed
+
+        t = min(t, GSHOOT_LEAD_MAX)
+
+        point = pygame.Vector2(target) + v * t
+
+        # Si el jugador corre contra una pared, no le apunta afuera de la sala
+        point.x = max(self.room.left + 4, min(self.room.right - 4, point.x))
+        point.y = max(self.room.top + 4, min(self.room.bottom - 4, point.y))
+
+        return point
+
+    def _aim_angle(self, target):
+        """Angulo (radianes) hacia donde hay que tirar para pegarte."""
+
+        point = self._lead_point(target)
+
+        direction = point - self.pos
+
+        if direction.length_squared() < 0.01:
+            direction = pygame.Vector2(target) - self.pos
+
+        if direction.length_squared() < 0.01:
+            return self.aim
+
+        return math.atan2(direction.y, direction.x)
+
+    def _fire(self):
+
+        direction = pygame.Vector2(math.cos(self.aim), math.sin(self.aim))
+
+        start = self.pos + direction * GSHOOT_MUZZLE
+
+        shot = GuardianBolt(start, math.degrees(self.aim))
+        shot.room = self.room
+
+        self._shots.append(shot)
+
+    # ---------- movimiento ----------
+
+    def _keep_distance(self, dt, toward, dist, can_see, collision_map):
+        """Retrocede / se acerca / da vueltas segun la distancia."""
+
+        side = self.strafe_dir
+
+        self.strafe_t -= dt
+
+        if self.strafe_t <= 0:
+
+            self.strafe_dir = side = -side
+            self.strafe_t = random.uniform(*GSHOOT_STRAFE_TIME)
+
+        perp = pygame.Vector2(-toward.y, toward.x) * side
+
+        if dist < GSHOOT_MIN_DIST:
+
+            # Se aleja (prefiere irse de costado, asi no se encajona)
+            d = self._walk(
+                dt, -toward, GSHOOT_RETREAT_SPEED, collision_map,
+                angles=(0, 40 * side, -40 * side, 80 * side, -80 * side)
+            )
+
+            if d is None:
+                # Arrinconado: da vueltas igual (y sigue disparando)
+                d = self._walk(
+                    dt, perp, GSHOOT_MOVE_SPEED, collision_map,
+                    angles=(0, 30, -30)
+                )
+
+        elif dist > GSHOOT_MAX_DIST:
+
+            d = self._walk(dt, toward, GSHOOT_MOVE_SPEED, collision_map)
+
+        else:
+
+            # Dentro de su distancia: da vueltas. Si hay una pared en el
+            # medio, tambien: asi cambia de angulo hasta verte.
+            d = self._walk(
+                dt, perp, GSHOOT_MOVE_SPEED, collision_map,
+                angles=(0, 25, -25)
+            )
+
+            if d is None:
+                self.strafe_dir = -side
+
+        if d is not None:
+            self.moving = True
+
+        self._face(toward)
+
+    # ---------- actualizar ----------
+
+    def update(self, dt, target, collision_map, light_on, light_radius):
+
+        target = pygame.Vector2(target)
+        self.last_target = target.copy()
+
+        self.anim_t += dt
+        self.moving = False
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.spawning:
+
+            self.spawn_t -= dt
+            self._prev_target = target.copy()
+
+            return
+
+        # Velocidad del jugador, suavizada (para adelantar la punteria)
+        if self._prev_target is not None and dt > 0:
+
+            raw = (target - self._prev_target) / dt
+
+            if raw.length() > 140.0:
+                raw.scale_to_length(140.0)
+
+            self.target_vel += (raw - self.target_vel) * min(1.0, dt * 10.0)
+
+        self._prev_target = target.copy()
+
+        if self.cooldown > 0:
+            self.cooldown = max(0.0, self.cooldown - dt)
+
+        to_player = target - self.pos
+        dist = to_player.length()
+        toward = to_player / dist if dist > 0.01 else pygame.Vector2(1, 0)
+
+        # ---- paseando tranquilo: la luz lo despierta ----
+        if self.phase == self.WANDER:
+
+            if light_on and dist <= light_radius:
+
+                self.phase = self.CHASE
+
+            else:
+
+                self.turn_t -= dt
+
+                if self.turn_t <= 0:
+
+                    self.heading = self.heading.rotate(random.uniform(-80, 80))
+                    self.turn_t = random.uniform(*GUARDIAN_TURN_TIME)
+
+                d = self._walk(
+                    dt, self.heading, GSHOOT_WANDER_SPEED, collision_map,
+                    angles=(0, 40, -40, 90, -90, 140, -140, 180)
+                )
+
+                if d is not None:
+                    self.heading = d
+                    self.moving = True
+                    self._face(d)
+
+                return
+
+        # ---- cargando: quieto, apuntandote (aviso) ----
+        if self.phase == self.WINDUP:
+
+            self.phase_t += dt
+
+            want = self._aim_angle(target)
+            diff = (want - self.aim + math.pi) % math.tau - math.pi
+            self.aim += diff * min(1.0, GSHOOT_AIM_TURN * dt)
+
+            self._face(pygame.Vector2(math.cos(self.aim), math.sin(self.aim)))
+
+            if self.phase_t >= GSHOOT_AIM_TIME:
+
+                # Se corto la linea (te metiste detras de algo): no dispara
+                if not self._line_clear(self.pos, target, collision_map):
+
+                    self.phase = self.CHASE
+                    self.cooldown = 0.3
+
+                    return
+
+                # Justo antes de soltarla, apunta lo mas fino posible
+                self.aim = self._aim_angle(target)
+
+                self._fire()
+
+                self.phase = self.SWING
+                self.phase_t = 0.0
+                self.cooldown = GSHOOT_COOLDOWN
+
+            return
+
+        # ---- recien disparo: quieto un ratito ----
+        if self.phase == self.SWING:
+
+            self.phase_t += dt
+
+            if self.phase_t >= GSHOOT_RECOVER:
+                self.phase = self.CHASE
+
+            return
+
+        # ---- despierto: toma distancia y dispara ----
+        can_see = False
+
+        if self.cooldown <= 0 or dist <= GSHOOT_MAX_DIST:
+
+            can_see = self._line_clear(self.pos, target, collision_map)
+
+        if (
+            can_see
+            and self.cooldown <= 0
+            and dist <= GSHOOT_MAX_DIST + 25.0
+        ):
+
+            self.phase = self.WINDUP
+            self.phase_t = 0.0
+            self.aim = self._aim_angle(target)
+
+            return
+
+        self._keep_distance(dt, toward, dist, can_see, collision_map)
+
+    # ---------- dibujo ----------
+
+    def _draw_attack(self, screen, camera, dest, art):
+        """Mientras carga se ve una bolita creciendo en la punta."""
+
+        if self.phase != self.WINDUP:
+            return
+
+        zoom = camera.zoom
+
+        direction = pygame.Vector2(math.cos(self.aim), math.sin(self.aim))
+
+        pos = pygame.Vector2(dest.center) + direction * GSHOOT_MUZZLE * zoom
+
+        k = min(1.0, self.phase_t / GSHOOT_AIM_TIME)
+
+        radius = max(2, int((1.0 + 2.5 * k) * zoom))
+
+        center = (round(pos.x), round(pos.y))
+
+        pygame.draw.circle(screen, (120, 50, 200), center, radius)
+        pygame.draw.circle(screen, (190, 130, 255), center, max(1, int(radius * 0.65)))
+        pygame.draw.circle(screen, (245, 230, 255), center, max(1, int(radius * 0.3)))
+
+
+# ---------------------------------------------------------------
 # Cofre del premio
 # ---------------------------------------------------------------
 
@@ -3120,7 +3641,7 @@ RIGHT_ARENA = ArenaConfig(
 # Sala grande de la IZQUIERDA: solo 2 oleadas.
 #   Oleada 1: mobs de siempre.
 #   Oleada 2: el Guardian (mismo tamano que el personaje).
-# Cada numero: (pinos, troncos, mosquitos, hongunes, guardianes)
+# Cada numero: (pinos, troncos, mosquitos, hongunes, guardianes, tiradores)
 # ---------------------------------------------------------------
 
 
@@ -3187,6 +3708,7 @@ class Arena:
         self.mosquito_art = MosquitoArt()
         self.hongun_art = HongunArt()
         self.guardian_art = GuardianArt()
+        self.shooter_art = GuardianShooterArt()
         self.blasts = []            # explosiones de hongunes (aro + luz)
         self.mosquito_alert = False
 
@@ -3461,14 +3983,13 @@ class Arena:
 
     def _spawn_wave(self, game):
 
-        pinos, troncos, mosquitos, honguns, guardians = wave_composition(
-            self.wave, self.cfg.table
-        )
+        (pinos, troncos, mosquitos, honguns, guardians,
+         shooters) = wave_composition(self.wave, self.cfg.table)
 
         kinds = (
             ["pino"] * pinos + ["tronco"] * troncos
             + ["mosquito"] * mosquitos + ["hongun"] * honguns
-            + ["guardian"] * guardians
+            + ["guardian"] * guardians + ["tirador"] * shooters
         )
         random.shuffle(kinds)
 
@@ -3491,13 +4012,13 @@ class Arena:
 
         for i, kind in enumerate(kinds):
             pos = None
-            min_dist = 135 if kind in ("mosquito", "hongun", "guardian") else 110
+            min_dist = 135 if kind in ("mosquito", "hongun", "guardian", "tirador") else 110
 
             if kind == "mosquito":
                 hitbox = MOSQUITO_HITBOX
             elif kind == "hongun":
                 hitbox = HONGUN_HITBOX
-            elif kind == "guardian":
+            elif kind in ("guardian", "tirador"):
                 hitbox = GUARDIAN_HITBOX
             else:
                 hitbox = ENEMY_HITBOX
@@ -3528,6 +4049,8 @@ class Arena:
                 enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
             elif kind == "guardian":
                 enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "tirador":
+                enemy = GuardianShooter(pos[0], pos[1], spawn_delay=delay)
             else:
                 enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
 
@@ -3862,6 +4385,10 @@ class Arena:
                 if enemy.attached and enemy.damage_t <= 0.0:
                     game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
+            elif isinstance(enemy, GuardianShooter):
+                # No pega: dispara bolas (se mueven y pegan con self.shots)
+                enemy.update(dt, target, game.collision_map, light_on, light_world)
+                self.shots.extend(enemy.take_shots())
             elif isinstance(enemy, Guardian):
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
                 if enemy.swing_hits(body.center):
@@ -3904,7 +4431,16 @@ class Arena:
                 continue
             if shot.rect.colliderect(body):
                 if p.hurt(shot.pos):
-                    game.take_damage(damage * SHOT_DAMAGE_MULT)
+                    # Las bolas del Guardian Tirador traen su propio dano
+                    amount = getattr(shot, "damage", None)
+                    game.take_damage(
+                        amount if amount is not None
+                        else damage * SHOT_DAMAGE_MULT
+                    )
+                    push = getattr(shot, "knockback", 0.0)
+                    away = pygame.Vector2(body.center) - shot.pos
+                    if push and away.length_squared() > 0.01:
+                        p.kb_vel = away.normalize() * push
                 shot.dead = True
 
         self.shots = [s for s in self.shots if not s.dead]
@@ -4031,6 +4567,8 @@ class Arena:
                 enemy.draw(screen, camera, self.mosquito_art)
             elif isinstance(enemy, Hongun):
                 enemy.draw(screen, camera, self.hongun_art)
+            elif isinstance(enemy, GuardianShooter):
+                enemy.draw(screen, camera, self.shooter_art)
             elif isinstance(enemy, Guardian):
                 enemy.draw(screen, camera, self.guardian_art)
             else:

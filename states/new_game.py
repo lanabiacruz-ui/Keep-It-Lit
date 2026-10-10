@@ -823,6 +823,38 @@ class NewGame:
                 )
         )
 
+    def _nearest_pickup(self):
+        """Lo que se agarra con E: ("light", luz) / ("item", objeto) /
+        (None, None). Gana lo MAS CERCANO al jugador. Las luces del piso
+        solo cuentan si no tenes una luz encendida (si ya tenes una no se
+        pueden agarrar, asi que no tapan a los objetos de al lado)."""
+
+        px, py = self.player.rect.center
+        me = pygame.Vector2(px, py)
+
+        best = (None, None)
+        best_dist = None
+
+        if not self.has_match:
+
+            light = self._nearest_light_drop()
+
+            if light is not None:
+
+                best = ("light", light)
+                best_dist = pygame.Vector2(light.rect.center).distance_to(me)
+
+        item = self._nearest_item()
+
+        if item is not None:
+
+            d = pygame.Vector2(item.rect.center).distance_to(me)
+
+            if best_dist is None or d < best_dist:
+                best = ("item", item)
+
+        return best
+
     def pick_up_item(self, item):
         """Agarra un objeto del piso (moneda o item de inventario)."""
 
@@ -2066,37 +2098,28 @@ class NewGame:
 
             elif event.key == pygame.K_e:
 
-                # Agarrar luz
-                light = self._nearest_light_drop()
+                # Agarrar lo que tengas mas cerca (luz del piso u objeto).
+                # Una luz que no podes agarrar (ya tenes una encendida)
+                # NO bloquea: se agarra el objeto de al lado.
+                kind, thing = self._nearest_pickup()
 
-                if light is not None:
+                if kind == "light":
 
-                    if not self.has_match:
+                    self.light_drops.remove(
+                        thing
+                    )
 
-                        self.light_drops.remove(
-                            light
-                        )
-
-                        self.equip_match(
-                            light.kind,
-                            light.life
-                        )
-
-                    else:
-
-                        self.show_message(
-                            "Ya tenes una luz encendida"
-                        )
+                    self.equip_match(
+                        thing.kind,
+                        thing.life
+                    )
 
                     return None
 
-                # Agarrar objeto
-                item = self._nearest_item()
-
-                if item is not None:
+                if kind == "item":
 
                     self.pick_up_item(
-                        item
+                        thing
                     )
 
                     return None
@@ -3123,19 +3146,13 @@ class NewGame:
                 self._attack_pivot()
             )
 
-        near_drop = (
-            None if self.has_match else self._nearest_light_drop()
-        )
+        if self.state == "playing":
 
-        if near_drop is not None:
-            near_drop.draw_prompt(self.screen, self.camera)
+            # El cartelito [E] sale sobre lo que se va a agarrar
+            _, near_thing = self._nearest_pickup()
 
-        elif self.state == "playing":
-
-            near_item = self._nearest_item()
-
-            if near_item is not None:
-                near_item.draw_prompt(self.screen, self.camera)
+            if near_thing is not None:
+                near_thing.draw_prompt(self.screen, self.camera)
 
         # Cartelito [F] del vendedor
         if (

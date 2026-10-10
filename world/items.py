@@ -301,6 +301,10 @@ class LightItem(MatchItem):
             if icon is not None:
                 self.original = icon
 
+    # Area de agarre de la luz tirada: mas chica que la de los objetos
+    # (45), asi no tapa a lo que tiene al lado (ej. la resina).
+    INTERACT_DISTANCE = 24
+
     # Misma animacion que los objetos: sale de la boca del vendedor y
     # cae en el piso
     start_fly = WorldItem.start_fly

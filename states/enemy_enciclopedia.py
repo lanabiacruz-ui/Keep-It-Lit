@@ -67,8 +67,19 @@ DEFAULT_DATA = {
         "imagen": "guardian_icono.png",
         "descripcion": (
             "Es del tamaño del jugador. Actua de manera tranquila, pero si tu luz lo "
-            "toca empieza a perseguirte hasta derrotarte. Ataca"
+            "toca empieza a perseguirte hasta derrotarte. Ataca "
             "igual que el jugador y es bastante resistente"
+        ),
+    },
+
+    "guardian_tirador": {
+        "nombre": "Guardián Tirador",
+        "imagen": "guardian_tirador_icono.png",
+        "descripcion": (
+            "Es del tamaño del jugador. Actua de manera tranquila, pero si tu luz lo "
+            "toca se despierta. No se acerca a pegarte por lo que toma distancia, da vueltas "
+            "a tu alrededor y te dispara bolas tan rapidas como las tuyas. Apunta "
+            "adelantandose a donde vas a estar, asi que no corras en linea recta"
         ),
     },
 }
@@ -97,6 +108,7 @@ class EnemyEncyclopedia:
         "mosquito",
         "hongun",
         "guardian",
+        "guardian_tirador",
     )
 
     # ---------- distribucion (en coordenadas de la imagen 1672x941) ----
@@ -112,13 +124,13 @@ class EnemyEncyclopedia:
     ROW_Y = 260
     ROW_W = 260
     ROW_H = 56
-    ROW_GAP = 8
+    ROW_GAP = 6
 
     # Ficha del enemigo (derecha)
     CARD_BOX = (740, 252, 480, 403)
 
     # Boton REGRESAR (abajo a la izquierda)
-    BACK_BOX = (456, 609, 170, 46)
+    BACK_BOX = (456, 692, 170, 46)
 
     TEXT_COLOR = (235, 245, 250)
     TEXT_DARK = (10, 22, 28)
