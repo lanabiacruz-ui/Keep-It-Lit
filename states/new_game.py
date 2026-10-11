@@ -238,7 +238,7 @@ class NewGame:
         self.collision_map.obstacles.extend(self.chests.blocking_rects)
 
         # Salas de combate: la sala grande de la derecha (10 oleadas) y la
-        # sala grande de la izquierda (2 oleadas, la 2da con el Guardian)
+        # sala grande de la izquierda (10 oleadas, con Guardianes)
         self.arena = Arena((self.width, self.height), RIGHT_ARENA)
         self.arena_left = Arena((self.width, self.height), LEFT_ARENA)
         self.arenas = [self.arena, self.arena_left]
@@ -974,7 +974,7 @@ class NewGame:
             {
                 "text": (
                     "Completá la sala del Guardián (la de la "
-                    "izquierda): 2 oleadas."
+                    "izquierda): 10 oleadas."
                 ),
                 "done": lambda g: g.arena_left.completed,
             },

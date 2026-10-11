@@ -6,7 +6,7 @@ Uso desde cualquier archivo:
 
     audio.play("coin")
 
-Los sonidos estan en assets/sounds/*.wav (se generan con
+Los sonidos estan en assets/sounds/*.wav (o assets/maps/sounds) (se generan con
 tools/make_sounds.py; se pueden reemplazar por cualquier .wav u .ogg con
 el mismo nombre). Si no hay placa de sonido o falta un archivo, no pasa
 nada: simplemente no suena.
@@ -21,7 +21,11 @@ from pathlib import Path
 import pygame
 
 ROOT = Path(__file__).resolve().parent.parent
-SOUND_DIR = ROOT / "assets" / "sounds"
+# Carpetas donde se buscan los sonidos (la primera que tenga el archivo)
+SOUND_DIRS = (
+    ROOT / "assets" / "sounds",
+    ROOT / "assets" / "maps" / "sounds",
+)
 SETTINGS_PATH = ROOT / "data" / "settings.json"
 
 # nombre -> (volumen propio 0..1, espera minima entre dos sonidos iguales
@@ -103,18 +107,26 @@ class AudioManager:
 
         sound = None
 
-        for ext in (".wav", ".ogg"):
+        for folder in SOUND_DIRS:
 
-            path = SOUND_DIR / f"{name}{ext}"
+            for ext in (".wav", ".ogg"):
 
-            if path.exists():
+                path = folder / f"{name}{ext}"
 
-                try:
-                    sound = pygame.mixer.Sound(str(path))
-                except pygame.error:
-                    sound = None
+                if path.exists():
 
+                    try:
+                        sound = pygame.mixer.Sound(str(path))
+                    except pygame.error:
+                        sound = None
+
+                    break
+
+            if sound is not None:
                 break
+
+        if sound is None:
+            print(f"[audio] no se encontro el sonido '{name}'")
 
         self._sounds[name] = sound
 

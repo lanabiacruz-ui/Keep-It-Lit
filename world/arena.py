@@ -35,8 +35,7 @@ Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/hongun_golpe.png       56x56  (opcional)
 
 La sala grande de la IZQUIERDA tambien es una sala de oleadas (ver
-LEFT_ARENA): 2 oleadas. La 1 trae los mobs de siempre y la 2 trae al
-Guardian. Imagenes del Guardian (opcionales, ver GuardianArt):
+LEFT_ARENA): 10 oleadas, cada vez mas dificiles, con Guardianes en todas. Imagenes del Guardian (opcionales, ver GuardianArt):
   assets/maps/combate/guardian.png           256x320 (4x4: caminar)
   assets/maps/combate/guardian_ataque.png    128x320 (2x4: aviso y golpe)
   assets/maps/combate/guardian_arma.png      el arma, apuntando hacia arriba
@@ -129,9 +128,21 @@ GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 # ---------------------------------------------------------------
 # (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
 #  destellos, golems)  <- las tablas pueden traer de 4 a 8 numeros
+# Sala IZQUIERDA: 10 oleadas, de menos a mas. Cada fila es
+# (pinos, troncos, mosquitos, hongunes, guardianes, tiradores,
+#  destellos, golems). Ninguna pasa de ~32 enemigos para que no se
+# trabe el juego.
 LEFT_WAVE_COMPOSITION = {
     1: (6,5,10,9,3,0,0,0),
-    2: (7,6,12,10,4,0,0,0),
+    2: (7,6,12,10,4,0,0,0), 
+    3: (6,6,16,11,6,3,0,0), 
+    4: (10,7,16,15,6,6,0,0), 
+    5:  (4, 4, 6, 4, 2, 2, 1, 0),    # 23  aparece el 1er destello
+    6:  (5, 4, 8, 4, 3, 2, 2, 0),    # 28
+    7:  (5, 5, 8, 5, 3, 2, 2, 1),    # 31  aparece el 1er golem
+    8:  (5, 4, 8, 5, 4, 3, 2, 1),    # 32
+    9:  (4, 5, 8, 4, 4, 3, 2, 2),    # 32
+    10: (4, 4, 6, 4, 5, 4, 3, 2),    # 32  oleada final
 }
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
 # pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
@@ -322,7 +333,7 @@ HONGUN_DRAW_SIZE = 18          # tamano dibujado (unidades del mundo)
 
 # Movimiento (unidades del mundo por segundo; el jugador va a 95)
 HONGUN_WANDER_SPEED = 22.0     # paseando tranquilo
-HONGUN_CHASE_SPEED = 52.0      # persiguiendote (caminata normal)
+HONGUN_CHASE_SPEED = 70.0      # persiguiendote (el jugador va a 95)
 HONGUN_TURN_TIME = (1.0, 2.6)  # cada cuanto cambia de rumbo paseando
 
 # Deteccion
@@ -330,10 +341,12 @@ HONGUN_DETECT_RADIUS = 85.0    # si entras en este radio te empieza a perseguir
 HONGUN_LOSE_RADIUS = 140.0     # si te alejas mas que esto te deja de perseguir
 
 # Recarga y explosion
-HONGUN_FUSE_DIST = 24.0        # a esta distancia empieza a recargar
-HONGUN_FUSE_CANCEL_DIST = 46.0 # si te alejas mas que esto durante la recarga, se cancela
-HONGUN_FUSE_TIME = 1.3         # segundos recargando hasta explotar
-HONGUN_BLAST_RADIUS = 40.0     # radio de la explosion (unidades del mundo)
+HONGUN_FUSE_DIST = 34.0        # a esta distancia empieza a recargar
+HONGUN_FUSE_CANCEL_DIST = 90.0 # si te alejas mas que esto durante la recarga, se cancela
+HONGUN_FUSE_WALK_SPEED = 48.0  # mientras recarga te sigue de a poquito (asi no lo esquivas dando un paso)
+HONGUN_FUSE_DECAY = 0.6        # si se cancela, la carga baja despacio (antes 2.0: perdia todo enseguida)
+HONGUN_FUSE_TIME = 1.1         # segundos recargando hasta explotar
+HONGUN_BLAST_RADIUS = 48.0     # radio de la explosion (unidades del mundo)
 HONGUN_DAMAGE = 0.75           # 0.75 = 75% de la vida de la luz
 HONGUN_KNOCKBACK = 340.0       # empujon al jugador (el golpe normal de un pino es 120)
 HONGUN_LIGHT_MIN = 24          # luz que da al empezar a recargar (px de pantalla)
@@ -2642,11 +2655,21 @@ class Hongun(Enemy):
                     self.boom = True
                     self.hp = 0
 
+                    return
+
+                # Mientras recarga te sigue de a poquito: si das un
+                # paso para atras no se queda atras y explota igual
+                if dist > 14.0:
+
+                    self._walk(
+                        dt, toward, HONGUN_FUSE_WALK_SPEED, collision_map
+                    )
+
                 return
 
         # La luz de la recarga se apaga de a poco si no esta recargando
         if self.fuse_t > 0:
-            self.fuse_t = max(0.0, self.fuse_t - dt * 2.0)
+            self.fuse_t = max(0.0, self.fuse_t - dt * HONGUN_FUSE_DECAY)
 
         # ---- persiguiendote ----
         if self.phase == self.CHASE:
@@ -5134,23 +5157,27 @@ RIGHT_ARENA = ArenaConfig(
 )
 
 # ---------------------------------------------------------------
-# Sala grande de la IZQUIERDA: solo 2 oleadas.
-#   Oleada 1: mobs de siempre.
-#   Oleada 2: el Guardian (mismo tamano que el personaje).
+# Sala grande de la IZQUIERDA: 10 oleadas.
+#   Los guardianes (mismo tamano que el personaje) y los tiradores
+#   aparecen desde el principio y suben con las oleadas.
 # Cada numero: (pinos, troncos, mosquitos, hongunes, guardianes, tiradores)
 # ---------------------------------------------------------------
 
 
 
-LEFT_WAVE_REWARDS = {1: 40, 2: 90}
+LEFT_WAVE_REWARDS = {
+    1: 40, 2: 60, 3: 80, 4: 100, 5: 125,
+    6: 150, 7: 180, 8: 210, 9: 240, 10: 300,
+}
 
-LEFT_LAST_WAVE = 2
+LEFT_LAST_WAVE = 10
 
 LEFT_ARENA = ArenaConfig(
     "left", "Sala del Guardian",
     ROOM_LEFT, TRIGGER_LEFT, EXIT_POS_LEFT, GATE_LEFT,
     LEFT_WAVE_COMPOSITION, LEFT_WAVE_REWARDS, LEFT_LAST_WAVE,
     "arena_left_wave", "arena_left_completed",
+    show_total=True,
     sealed_text="Sala completada: esta cerrada",
     done_text="Sala completada! Se cerro para siempre",
 )

@@ -2,63 +2,69 @@
     "player_name": "ujuju",
     "mode": "normal",
     "created_at": "2026-10-10T22:55:15",
-    "last_played": "2026-10-11T16:27:39",
+    "last_played": "2026-10-11T17:01:03",
     "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
     "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
-    "x": 958,
-    "y": 149,
-    "coins": 96781,
-    "gems": 0,
+    "x": 700,
+    "y": 554,
+    "coins": 95712,
+    "gems": 2,
     "has_match": true,
     "light": "antorcha",
-    "vida": 1.0,
-    "escudo": 0.29000000000000015,
+    "vida": 0.5104606666666593,
+    "escudo": 0.8500000000000001,
     "inventory": [
         [
             "aceite",
+            6
+        ],
+        [
+            "repelente",
             9
         ],
         [
             "hongo_azul",
-            11
+            1
         ],
         [
             "polvora",
-            11
-        ],
-        [
-            "repelente",
             7
         ]
     ],
     "collected": [
-        "moneda_sala_central#0",
-        "madera_09#0",
-        "moneda_pasillo_cabana#1",
-        "madera_04#0",
         "aceite_01#0",
-        "cera_02#0",
-        "madera_05#0",
-        "moneda_pasillo_izq#0",
-        "moneda_pasillo_cabana#0",
-        "madera_11#0",
+        "madera_04#0",
         "madera_10#0",
-        "moneda_sala_central#1",
         "moneda_pasillo_tienda#1",
+        "madera_11#0",
+        "moneda_pasillo_cofres#0",
+        "cera_03#0",
+        "moneda_pasillo_izq#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_der#0",
+        "moneda_sala_central#1",
+        "cera_02#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_tienda#0",
+        "madera_09#0",
         "aceite_03#0",
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_cabana#1",
         "madera_08#0",
-        "moneda_pasillo_tienda#0"
+        "madera_05#0"
     ],
     "item_seed": 162672674,
     "arena_wave": 1,
-    "arena_completed": false,
-    "arena_left_wave": 2,
+    "arena_completed": true,
+    "arena_left_wave": 3,
     "arena_left_completed": false,
     "broken_doors": [
         "cabana",
         "hub_abajo",
         "hub_arriba",
+        "hub_derecha",
         "hub_izquierda",
+        "sala_der",
         "sala_izq",
         "sup_central_abajo",
         "sup_izq_central"
@@ -74,11 +80,11 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 102,
+        "items_used": 225,
         "chests_opened": 0,
-        "purchases": 8,
-        "fireballs": 334,
-        "kills": 142
+        "purchases": 12,
+        "fireballs": 900,
+        "kills": 270
     },
     "zones_seen": [
         "central",

@@ -249,20 +249,31 @@ class EnemyEncyclopedia:
                 ""
             )
 
-            path = COMBAT_DIR / filename
+            # Si falta el icono (ej: golem_icono.png) se prueba con la
+            # imagen normal del enemigo (golem.png)
+            candidates = [filename, f"{key}.png"]
 
-            try:
+            image = None
 
-                image = pygame.image.load(
-                    path
-                ).convert_alpha()
+            for name in candidates:
 
-            except (
-                OSError,
-                pygame.error
-            ):
+                if not name:
+                    continue
 
-                image = None
+                try:
+
+                    image = pygame.image.load(
+                        COMBAT_DIR / name
+                    ).convert_alpha()
+
+                    break
+
+                except (
+                    OSError,
+                    pygame.error
+                ):
+
+                    image = None
 
             self.images[key] = image
 
