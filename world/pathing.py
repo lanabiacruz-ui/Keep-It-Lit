@@ -18,11 +18,39 @@ import math
 import pygame
 
 CELL = 8                # tamano de celda (unidades del mundo)
-MAX_EXPANSIONS = 2500   # tope de nodos por busqueda (evita tirones)
+MAX_EXPANSIONS = 1500   # tope de nodos por busqueda (evita tirones)
+
+# Maximo de caminos A* que se calculan por frame (entre todos los
+# enemigos). Los que no entran esperan al frame siguiente. Asi 40
+# enemigos no calculan todos a la vez y el juego no se tranca.
+PATHS_PER_FRAME = 2
+
+# Cada cuanto (ms) se revisa si el mapa cambio (puertas, crusher)
+KEY_CHECK_MS = 250
 
 _SQRT2 = math.sqrt(2.0)
 
-_cache = {"key": None, "free": {}}
+_cache = {"key": None, "free": {}, "checked": -10000}
+
+_budget = {"left": PATHS_PER_FRAME}
+
+
+def begin_frame():
+    """Llamar una vez por frame (la arena lo hace): renueva el cupo de
+    caminos que se pueden calcular."""
+
+    _budget["left"] = PATHS_PER_FRAME
+
+
+def take_budget():
+    """True si todavia se puede calcular un camino en este frame."""
+
+    if _budget["left"] <= 0:
+        return False
+
+    _budget["left"] -= 1
+
+    return True
 
 
 def _world_key(collision_map):
@@ -61,6 +89,18 @@ def _cell_free(cx, cy, size, room, collision_map):
 
 
 def _refresh_cache(collision_map):
+    """Borra el cache solo si cambio el mapa. Se revisa cada
+    KEY_CHECK_MS y no en cada llamada: armar la clave recorre todos
+    los obstaculos, y el crusher los cambia a cada rato (antes eso
+    vaciaba el cache en cada frame y todos los enemigos recalculaban
+    todo de cero = lag en la sala izquierda)."""
+
+    now = pygame.time.get_ticks()
+
+    if now - _cache["checked"] < KEY_CHECK_MS:
+        return
+
+    _cache["checked"] = now
 
     key = _world_key(collision_map)
 

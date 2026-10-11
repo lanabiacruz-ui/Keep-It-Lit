@@ -15,15 +15,50 @@ class PlayerLight:
 
         self._cache = {}
         self._soft_cache = {}
+        self._base = None
+
+    LIGHT_STEP = 4        # los radios se redondean de a 4 px
+    BASE_RADIUS = 256     # luz grande que se dibuja una vez y se escala
+    MAX_CACHE = 120       # tope de luces guardadas
 
     def _get_light(self, radius):
+        """Luz para ese radio. Los radios se redondean y se guardan:
+        antes, cuando la luz parpadeaba (poca vida) el radio cambiaba
+        en cada frame y se dibujaba una luz nueva con un circulo por
+        cada 2 px de radio, a cada rato = tirones."""
 
-        if radius not in self._cache:
-            self._cache[radius] = self._create_light_surface(radius)
+        radius = max(
+            self.LIGHT_STEP,
+            int(round(radius / self.LIGHT_STEP)) * self.LIGHT_STEP
+        )
 
-        return self._cache[radius]
+        light = self._cache.get(radius)
+
+        if light is None:
+
+            if len(self._cache) >= self.MAX_CACHE:
+                self._cache.clear()
+
+            light = self._create_light_surface(radius)
+            self._cache[radius] = light
+
+        return light
 
     def _create_light_surface(self, radius):
+
+        # La luz base se dibuja una sola vez; las demas son ESA luz
+        # escalada (una operacion, en vez de ~radio/2 circulos)
+        if self._base is None:
+            self._base = self._draw_light(self.BASE_RADIUS)
+
+        if radius == self.BASE_RADIUS:
+            return self._base
+
+        size = radius * 2 + 2
+
+        return pygame.transform.smoothscale(self._base, (size, size))
+
+    def _draw_light(self, radius):
         size = radius * 2 + 2
 
         light = pygame.Surface(
@@ -116,12 +151,23 @@ class PlayerLight:
                 special_flags=pygame.BLEND_RGBA_SUB
             )
 
+        screen_w, screen_h = self.screen_size
+
         for wx, wy, radius in sources:
 
             light = self._get_light(int(radius))
 
             sx = int(wx * camera.zoom - camera.x)
             sy = int(wy * camera.zoom - camera.y)
+
+            # Luz que queda toda fuera de la pantalla: no se dibuja
+            half = light.get_width() // 2
+
+            if (
+                sx + half < 0 or sx - half > screen_w
+                or sy + half < 0 or sy - half > screen_h
+            ):
+                continue
 
             self._darkness.blit(
                 light,

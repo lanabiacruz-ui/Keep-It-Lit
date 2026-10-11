@@ -77,6 +77,7 @@ from pathlib import Path
 
 import pygame
 
+from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
 from world.items import WorldItem, get_gem_icon
@@ -496,6 +497,35 @@ def draw_text(screen, text, size, color, **anchor):
     screen.blit(label, rect)
 
     return rect
+
+
+_SHADOWS = {}
+
+
+def get_shadow(size, alpha=90):
+    """Sombra ovalada ya dibujada (se arma una vez por tamano y se
+    reutiliza: antes se creaba una superficie nueva por enemigo y por
+    frame)."""
+
+    w = max(1, int(size[0]))
+    h = max(1, int(size[1]))
+
+    key = (w, h, alpha)
+
+    surf = _SHADOWS.get(key)
+
+    if surf is None:
+
+        if len(_SHADOWS) > 200:
+            _SHADOWS.clear()
+
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        pygame.draw.ellipse(surf, (0, 0, 0, alpha), surf.get_rect())
+
+        _SHADOWS[key] = surf
+
+    return surf
 
 
 def quantize_radius(radius):
@@ -1101,7 +1131,9 @@ class Enemy:
 
         self._nav_ready = True
         self._nav_path = []
-        self._nav_t = 0.0
+        # Cada enemigo recalcula en un momento distinto (si todos
+        # arrancan juntos, el primer frame de la oleada se tranca)
+        self._nav_t = random.uniform(0.0, self.NAV_REPLAN)
         self._nav_force = 0.0
 
         self._stk_pos = self.pos.copy()
@@ -1120,7 +1152,7 @@ class Enemy:
         a = pygame.Vector2(a)
         b = pygame.Vector2(b)
 
-        steps = max(1, int(a.distance_to(b) // 3))
+        steps = max(1, int(a.distance_to(b) // 5))
 
         probe = self.rect.copy()
 
@@ -1149,13 +1181,19 @@ class Enemy:
 
         if self._nav_t <= 0:
 
-            self._nav_t = self.NAV_REPLAN
+            self._nav_t = self.NAV_REPLAN + random.uniform(0.0, 0.15)
 
             if (
                 self._nav_force <= 0
                 and self._body_line_free(self.pos, goal, collision_map)
             ):
                 self._nav_path = []
+
+            elif not pathing.take_budget():
+
+                # Ya se calcularon varios caminos en este frame: este
+                # espera al siguiente (sigue con el camino que tenia)
+                self._nav_t = 0.03
 
             else:
 
@@ -1397,12 +1435,7 @@ class Enemy:
             )
 
         # Sombra
-        shadow = pygame.Surface(
-            (int(dest.width * 1.3), int(dest.height * 0.6)),
-            pygame.SRCALPHA
-        )
-
-        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+        shadow = get_shadow((int(dest.width * 1.3), int(dest.height * 0.6)), 90)
 
         screen.blit(
             shadow,
@@ -2352,12 +2385,7 @@ class Tronco(Enemy):
         dest = camera.apply(self.rect)
 
         # Sombra
-        shadow = pygame.Surface(
-            (int(dest.width * 1.3), int(dest.height * 0.6)),
-            pygame.SRCALPHA
-        )
-
-        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+        shadow = get_shadow((int(dest.width * 1.3), int(dest.height * 0.6)), 90)
 
         screen.blit(
             shadow,
@@ -2748,12 +2776,7 @@ class Hongun(Enemy):
         dest = camera.apply(self.rect)
 
         # Sombra
-        shadow = pygame.Surface(
-            (int(dest.width * 1.4), int(dest.height * 0.6)),
-            pygame.SRCALPHA
-        )
-
-        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+        shadow = get_shadow((int(dest.width * 1.4), int(dest.height * 0.6)), 90)
 
         screen.blit(
             shadow,
@@ -3175,12 +3198,7 @@ class Destello(Enemy):
         dest = camera.apply(self.rect)
 
         # Sombra
-        shadow = pygame.Surface(
-            (int(dest.width * 1.4), int(dest.height * 0.6)),
-            pygame.SRCALPHA
-        )
-
-        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+        shadow = get_shadow((int(dest.width * 1.4), int(dest.height * 0.6)), 90)
 
         screen.blit(
             shadow,
@@ -3800,12 +3818,7 @@ class Golem(Enemy):
         dest = camera.apply(self.rect)
 
         # Sombra (mas grande: es enorme)
-        shadow = pygame.Surface(
-            (int(img.get_width() * 0.7), int(img.get_height() * 0.22)),
-            pygame.SRCALPHA
-        )
-
-        pygame.draw.ellipse(shadow, (0, 0, 0, 100), shadow.get_rect())
+        shadow = get_shadow((int(img.get_width() * 0.7), int(img.get_height() * 0.22)), 100)
 
         screen.blit(
             shadow,
@@ -4342,12 +4355,7 @@ class Guardian(Enemy):
         dest = camera.apply(self.rect)
 
         # Sombra
-        shadow = pygame.Surface(
-            (int(dest.width * 1.5), int(dest.height * 0.35)),
-            pygame.SRCALPHA
-        )
-
-        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+        shadow = get_shadow((int(dest.width * 1.5), int(dest.height * 0.35)), 90)
 
         screen.blit(
             shadow,
@@ -5575,6 +5583,8 @@ class Arena:
         self.chest = RewardChest(pos[0], pos[1])
         self.state = self.CLEAR
 
+        audio.play("wave_clear")
+
         # Ya no quedan enemigos: se puede salir
         self._open_gate(game)
 
@@ -5888,6 +5898,9 @@ class Arena:
 
     def _update_wave(self, game, dt):
 
+        # Renueva el cupo de caminos A* de este frame
+        pathing.begin_frame()
+
         # Enciclopedia: cada enemigo que ya aparecio en la sala queda
         # descubierto en esta partida
         for e in self.enemies:
@@ -5915,7 +5928,10 @@ class Arena:
             elif isinstance(enemy, GuardianShooter):
                 # No pega: dispara bolas (se mueven y pegan con self.shots)
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
-                self.shots.extend(enemy.take_shots())
+                new_shots = enemy.take_shots()
+                if new_shots:
+                    audio.play("shot")
+                self.shots.extend(new_shots)
             elif isinstance(enemy, Golem):
                 enemy.update(dt, target, game.collision_map, others=self.enemies)
                 self._golem_step(game, enemy, body, dt)
@@ -5933,7 +5949,10 @@ class Arena:
                     enemy.light_radius = light_world
                 enemy.update(dt, target, game.collision_map, self.enemies)
                 if enemy.fixed:
-                    self.shots.extend(enemy.take_shots())
+                    new_shots = enemy.take_shots()
+                    if new_shots:
+                        audio.play("shot")
+                    self.shots.extend(new_shots)
 
         # Si el golem que te tenia murio (polvora, bola de fuego...) o ya
         # no hay ninguno agarrandote, quedas libre
@@ -5943,10 +5962,15 @@ class Arena:
         ):
             self._release_player(game)
 
+        was_alert = self.mosquito_alert
+
         self.mosquito_alert = any(
             isinstance(e, Mosquito) and e.alert and not e.dead
             for e in self.enemies
         )
+
+        if self.mosquito_alert and not was_alert:
+            audio.play("alert")
 
         bounce_enemies(self.enemies, game.collision_map, target)
 
@@ -6139,6 +6163,8 @@ class Arena:
         p = game.player
         pos = pygame.Vector2(enemy.pos)
 
+        audio.play("explosion")
+
         self.blasts.append({"x": pos.x, "y": pos.y, "t": 0.0})
 
         for _ in range(40):
@@ -6205,6 +6231,8 @@ class Arena:
 
     def _death_puff(self, pos):
 
+        audio.play("enemy_die")
+
         for _ in range(10):
 
             angle = random.uniform(0, math.tau)
@@ -6248,7 +6276,13 @@ class Arena:
     def draw_world(self, screen, camera):
         """Enemigos, cofre y barrera (debajo de la oscuridad)."""
 
+        # Solo se dibujan los enemigos que se ven en pantalla (con 40
+        # enemigos en la sala, dibujar los de afuera era tiempo perdido)
+        view = screen.get_rect().inflate(320, 320)
+
         for enemy in self.enemies:
+            if not view.colliderect(camera.apply(enemy.rect)):
+                continue
             if isinstance(enemy, Mosquito):
                 enemy.draw(screen, camera, self.mosquito_art)
             elif isinstance(enemy, Hongun):

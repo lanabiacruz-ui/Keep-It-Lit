@@ -1,5 +1,7 @@
 import json
 import pygame
+
+from core.audio_manager import audio
 from pathlib import Path
 
 
@@ -210,6 +212,10 @@ class Settings:
 
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(self.values[key])
+
+        elif key == "sfx_volume":
+
+            audio.set_sfx_volume(self.values[key])
 
         elif key == "fullscreen":
 

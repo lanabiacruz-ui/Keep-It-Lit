@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.audio_manager import audio
 from core.Save_manager import (
     save_progress, delete_save, normalize_mode, MODE_HARDCORE
 )
@@ -640,6 +641,8 @@ class NewGame:
         if amount <= 0:
             return
 
+        audio.play("hurt")
+
         absorbed = min(self.escudo, amount)
 
         self.escudo -= absorbed
@@ -819,6 +822,8 @@ class NewGame:
     def _burn_out(self):
 
         # Se le acabo la vida al fosforo
+        audio.play("light_out")
+
         self.vida = 0.0
 
         self.base_burn = 1.0
@@ -1090,6 +1095,8 @@ class NewGame:
             # ya se contaron al explotar (value = 0).
             self.gems += int(getattr(item, "value", 1))
 
+            audio.play("gem")
+
         else:
 
             slot = self._free_slot_for(item_id)
@@ -1108,6 +1115,8 @@ class NewGame:
                 self.hud.counts[slot] += 1
 
             self.items_picked += 1
+
+            audio.play("pickup")
 
             self.show_message(
                 f"Agarraste {self._item_name(item_id)}"
@@ -1135,6 +1144,8 @@ class NewGame:
             return
 
         self.coins += amount
+
+        audio.play("coin_big" if amount >= 5 else "coin")
 
         # Si todavia se ve el "+N" anterior, se acumula
         if self.coin_gain_timer <= 0:
@@ -1570,6 +1581,8 @@ class NewGame:
         if not self.melee.start():
             return
 
+        audio.play("swing")
+
         # Cada golpe gasta un poco de la vida de la luz (en furia no)
         if not self.melee.fury:
 
@@ -1616,6 +1629,7 @@ class NewGame:
 
                 # Ninguna luz la rompe (ej: la puerta azul)
                 target.resist()
+                audio.play("door_resist")
 
                 self.show_message(
                     "Esta puerta no es posible de romper"
@@ -1624,6 +1638,7 @@ class NewGame:
             elif target.kind not in light["rompe"]:
 
                 target.resist()
+                audio.play("door_resist")
 
                 if target.kind == "azul":
                     self.show_message(
@@ -1638,10 +1653,16 @@ class NewGame:
 
                 cost = target.take_damage(damage)
 
+                audio.play(
+                    "door_break" if target.broken else "door_hit"
+                )
+
                 if not free:
                     self.vida -= cost
 
         elif isinstance(target, Chest):
+
+            audio.play("door_hit")
 
             target.take_damage(damage)
 
@@ -1657,6 +1678,10 @@ class NewGame:
 
         else:
 
+            audio.play(
+                "hit_heavy" if self.melee.heavy or damage >= 2 else "hit"
+            )
+
             target.take_damage(damage)
 
     # ---------- flashbang (destello) ----------
@@ -1667,6 +1692,8 @@ class NewGame:
 
         self.flash_t = FLASH_TOTAL
         self.flash_pos = (x, y)
+
+        audio.play("flashbang")
 
     def _update_flash(self, dt):
 
@@ -1783,6 +1810,8 @@ class NewGame:
         self.fireballs.append(
             Fireball(x, y, angle, damage, heavy=heavy)
         )
+
+        audio.play("fireball")
 
         fury = self.melee.fury
 
@@ -1921,6 +1950,8 @@ class NewGame:
 
                 chest.show_open()
 
+                audio.play("chest_open")
+
         self.minigame = None
         self.minigame_chest = None
 
@@ -1992,6 +2023,8 @@ class NewGame:
                 self.light_drops.append(item)
             else:
                 self.world_items.append(item)
+
+        audio.play("buy")
 
         self.show_message("Compra hecha")
 

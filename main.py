@@ -12,8 +12,10 @@ from states.startup import Startup
 from states.settings import Settings
 
 from core.Save_manager import create_new_save, load_save
+from core.audio_manager import audio
 
 pygame.init()
+audio.preload()
 
 ANCHO = 1280
 ALTO = 720
