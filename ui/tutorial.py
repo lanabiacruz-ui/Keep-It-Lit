@@ -37,7 +37,7 @@ TUTORIAL_PAGES = [
 
     # ---------- LUCES ----------
     "LUCES: el fósforo dura 30 segundos, la vela 60 y la antorcha 120. Al agarrar una se equipa sola en el casillero de la luz. Solo podés llevar una.",
-    "VELA Y ANTORCHA: alumbran más y cada tanto entran en FURIA: pegan rapidísimo. Son las únicas que rompen las puertas grises.",
+    "VELA Y ANTORCHA: alumbran más y cada tanto entran en FURIA: pegan rapidísimo. Son las únicas que rompen las puertas grises. Cada TERCER golpe seguido es más fuerte: la luz brilla de otro color.",
     "ANTORCHA: apretá G para cambiar entre golpe común y bola de fuego, que sale disparada hacia el mouse. Solo la antorcha lanza fuego.",
 
     # ---------- OBJETOS ----------
@@ -49,7 +49,7 @@ TUTORIAL_PAGES = [
 
     # ---------- MAPA ----------
     "PUERTAS: pegales con la luz para romperlas (cada golpe gasta un poco de luz). Las marrones aguantan 2 golpes y las verdes 6. Una puerta rota no vuelve.",
-    "PUERTAS GRISES: solo las rompen la vela y la antorcha. Las azules tienen candado: todavía no se pueden abrir.",
+    "PUERTAS GRISES: solo las rompen la vela y la antorcha. Las violetas (azules) solo las rompe la antorcha.",
     "COFRES: pegale a un cofre con la luz para abrirlo. Sale un minijuego: frená el marcador dentro de la zona con click, ESPACIO o E. Hay que acertar 3 veces.",
     "COFRES: si fallás, el minijuego termina; ESC lo cancela. Después tardan 3 minutos en recargarse. La ganzúa abre un cofre cercano sin minijuego.",
     "MONEDAS Y GEMAS: las monedas amarillas valen 1, las azules 5 y las rojas 10, y se juntan solas al acercarte. Las gemas son el premio por completar una sala.",

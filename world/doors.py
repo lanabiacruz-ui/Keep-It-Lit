@@ -20,8 +20,8 @@ DOOR_TYPES = {
     "verde": {"hits": 6, "cost": 0.05},
     # Solo se rompe con la vela o la antorcha
     "gris": {"hits": 4, "cost": 0.05},
-    # Se abre con otro objeto (todavia no existe)
-    "azul": {"hits": None, "cost": 0.0},
+    # La violeta/azul: solo la rompe la antorcha (ver world/lights.py)
+    "azul": {"hits": 8, "cost": 0.05},
 }
 
 # ---------------------------------------------------------------

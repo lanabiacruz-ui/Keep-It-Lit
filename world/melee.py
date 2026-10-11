@@ -47,6 +47,22 @@ TRAIL_DEGREES = 55
 # Cuanto tarda en apagarse la estela cuando termina el golpe
 GLOW_TIME = 0.12
 
+# ---------------------------------------------------------------
+# Combo (solo vela y antorcha): el TERCER golpe seguido es fuerte.
+# Si pasa mas de COMBO_WINDOW segundos sin pegar, el combo se pierde.
+# ---------------------------------------------------------------
+COMBO_KINDS = ("vela", "antorcha")
+COMBO_HITS = 3
+COMBO_WINDOW = 0.9
+HEAVY_DAMAGE_MULT = 2          # el golpe fuerte saca el doble
+
+# Como se ve el golpe fuerte (violeta + mas grande + chispazo)
+HEAVY_COLOR = (200, 100, 255)
+HEAVY_CORE = (255, 235, 255)
+HEAVY_RADIUS_MULT = 1.35
+GLOW_TIME_HEAVY = 0.30
+IMPACT_TIME = 0.35
+
 # El sprite item_fosforo.png (32x32) tiene la cabeza hacia arriba a la
 # derecha (-45 grados en pantalla) y el palito mide unos 23 px.
 SPRITE_HEAD_ANGLE = -45
@@ -105,6 +121,17 @@ class Melee:
         self.cooldown = 0.0
         self.glow = 0.0
         self.glow_angle = 0.0
+        self.glow_total = GLOW_TIME
+        self.glow_heavy = False
+
+        # Combo: golpes seguidos, tiempo que queda para seguir el
+        # combo, y si el golpe actual es el fuerte
+        self.combo = 0
+        self.combo_t = 0.0
+        self.heavy = False
+
+        # Chispazos del golpe fuerte: [x, y, tiempo]
+        self.impacts = []
 
         # Que luz se esta usando para pegar y cuanto espera entre golpes
         self.kind = "fosforo"
@@ -150,7 +177,14 @@ class Melee:
     @property
     def damage(self):
 
-        return light_stats(self.kind).get("dano", DAMAGE)
+        base = light_stats(self.kind).get("dano", DAMAGE)
+
+        return base * HEAVY_DAMAGE_MULT if self.heavy else base
+
+    def add_impact(self, pos):
+        """Chispazo violeta donde pego el golpe fuerte."""
+
+        self.impacts.append([pos[0], pos[1], IMPACT_TIME])
 
     def set_light(self, kind):
         """Cambia la luz con la que se pega (fosforo, vela...): cambia
@@ -159,6 +193,9 @@ class Melee:
         self.kind = kind
         self.cooldown_time = light_stats(kind)["cooldown"]
         self.fury_speed = 1.0
+        self.combo = 0
+        self.combo_t = 0.0
+        self.heavy = False
 
         # Obliga a rearmar el sprite en el proximo dibujo
         self._sprite_zoom = None
@@ -194,6 +231,17 @@ class Melee:
         if not self.can_attack():
             return False
 
+        # Combo: si todavia estas dentro de la ventana, suma un golpe
+        if self.kind in COMBO_KINDS:
+
+            self.combo = self.combo + 1 if self.combo_t > 0 else 1
+            self.heavy = self.combo >= COMBO_HITS
+
+        else:
+
+            self.combo = 0
+            self.heavy = False
+
         self.swinging = True
         self.final_pass = False
         self.t = 0.0
@@ -208,6 +256,9 @@ class Melee:
         self.swinging = False
         self.final_pass = False
         self.glow = 0.0
+        self.heavy = False
+        self.combo = 0
+        self.combo_t = 0.0
 
     def update(self, dt, pivot, mouse_world):
         """pivot y mouse_world en coordenadas del mundo."""
@@ -219,6 +270,20 @@ class Melee:
 
         if self.glow > 0:
             self.glow = max(0.0, self.glow - dt)
+
+        # Chispazos del golpe fuerte
+        if self.impacts:
+            for imp in self.impacts:
+                imp[2] -= dt
+            self.impacts = [i for i in self.impacts if i[2] > 0]
+
+        # Tiempo para encadenar el siguiente golpe del combo
+        if not self.swinging and self.combo_t > 0:
+
+            self.combo_t = max(0.0, self.combo_t - dt)
+
+            if self.combo_t <= 0:
+                self.combo = 0
 
         if not self.swinging:
 
@@ -244,8 +309,18 @@ class Melee:
             self.final_pass = True
 
             self.cooldown = self.cooldown_time / self.fury_speed
-            self.glow = GLOW_TIME
+
+            self.glow_heavy = self.heavy
+            self.glow_total = GLOW_TIME_HEAVY if self.heavy else GLOW_TIME
+            self.glow = self.glow_total
             self.glow_angle = self.end_angle
+
+            if self.heavy:
+                # El fuerte cierra el combo: el proximo arranca de cero
+                self.combo = 0
+                self.combo_t = 0.0
+            else:
+                self.combo_t = COMBO_WINDOW
 
     # ---------- golpes ----------
 
@@ -381,12 +456,15 @@ class Melee:
             y * camera.zoom - camera.y
         )
 
-    def _draw_trail(self, screen, camera, pivot, angle, strength):
+    def _draw_trail(self, screen, camera, pivot, angle, strength,
+                    heavy=False):
         """Estela: franja que se va apagando detras del fosforo."""
 
         zoom = camera.zoom
 
-        size = int(OUTER_RADIUS * 2 * zoom) + 4
+        outer = OUTER_RADIUS * (HEAVY_RADIUS_MULT if heavy else 1.0)
+
+        size = int(outer * 2 * zoom) + 4
         center = size / 2
 
         layer = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -398,14 +476,16 @@ class Melee:
         segments = 10
 
         r_in = (INNER_RADIUS + 2) * zoom
-        r_out = OUTER_RADIUS * zoom
+        r_out = outer * zoom
 
         for i in range(segments):
 
             a0 = back + (angle - back) * i / segments
             a1 = back + (angle - back) * (i + 1) / segments
 
-            alpha = int(170 * strength * ((i + 1) / segments) ** 2)
+            alpha = int(
+                (230 if heavy else 170) * strength * ((i + 1) / segments) ** 2
+            )
 
             if alpha <= 0:
                 continue
@@ -415,10 +495,29 @@ class Melee:
                 + arc_points(center, center, r_in, a1, a0, 2)
             )
 
-            color = (255, 120, 50) if self.fury else (255, 205, 120)
+            if heavy:
+                color = HEAVY_COLOR
+            elif self.fury:
+                color = (255, 120, 50)
+            else:
+                color = (255, 205, 120)
 
             pygame.draw.polygon(layer, (*color, alpha), points)
 
+        # El golpe fuerte tiene un filo blanco-violeta en la punta
+        if heavy:
+
+            tip_a = int(255 * strength)
+
+            pygame.draw.line(
+                layer,
+                (*HEAVY_CORE, tip_a),
+                (center + math.cos(angle) * r_in,
+                 center + math.sin(angle) * r_in),
+                (center + math.cos(angle) * r_out,
+                 center + math.sin(angle) * r_out),
+                max(2, round(2 * zoom)),
+            )
         px, py = self._to_screen(camera, pivot[0], pivot[1])
 
         screen.blit(layer, layer.get_rect(center=(round(px), round(py))))
@@ -427,11 +526,13 @@ class Melee:
         """Estela y fosforo girando. Se dibuja encima de la oscuridad
         para que brille."""
 
+        self._draw_impacts(screen, camera)
+
         if self.swinging:
 
             angle = self.current_angle
 
-            self._draw_trail(screen, camera, pivot, angle, 1.0)
+            self._draw_trail(screen, camera, pivot, angle, 1.0, self.heavy)
 
             sprite = pygame.transform.rotate(
                 self._get_sprite(camera.zoom),
@@ -447,6 +548,26 @@ class Melee:
                 pivot[1] + math.sin(angle) * distance
             )
 
+            if self.heavy:
+
+                # Aureola violeta alrededor de la luz
+                radius = round(11 * camera.zoom)
+
+                halo = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+
+                pygame.draw.circle(
+                    halo, (*HEAVY_COLOR, 90), (radius, radius), radius
+                )
+                pygame.draw.circle(
+                    halo, (*HEAVY_CORE, 120), (radius, radius),
+                    max(2, radius // 2)
+                )
+
+                screen.blit(
+                    halo,
+                    halo.get_rect(center=(round(px), round(py)))
+                )
+
             screen.blit(
                 sprite,
                 sprite.get_rect(center=(round(px), round(py)))
@@ -459,8 +580,47 @@ class Melee:
                 camera,
                 pivot,
                 self.glow_angle,
-                self.glow / GLOW_TIME
+                self.glow / self.glow_total,
+                self.glow_heavy,
             )
+
+    def _draw_impacts(self, screen, camera):
+        """Aro y chispas violetas donde pego el golpe fuerte."""
+
+        for x, y, t in self.impacts:
+
+            k = 1.0 - t / IMPACT_TIME
+
+            radius = max(2, round((5 + 16 * k) * camera.zoom))
+
+            alpha = int(230 * (1.0 - k))
+
+            layer = pygame.Surface((radius * 2 + 8, radius * 2 + 8), pygame.SRCALPHA)
+
+            c = radius + 4
+
+            pygame.draw.circle(
+                layer, (*HEAVY_COLOR, alpha), (c, c), radius,
+                max(2, round(1.5 * camera.zoom))
+            )
+
+            for i in range(8):
+
+                a = math.tau * i / 8 + k
+
+                pygame.draw.line(
+                    layer,
+                    (*HEAVY_CORE, alpha),
+                    (c + math.cos(a) * radius * 0.5,
+                     c + math.sin(a) * radius * 0.5),
+                    (c + math.cos(a) * radius,
+                     c + math.sin(a) * radius),
+                    max(1, round(camera.zoom * 0.7)),
+                )
+
+            sx, sy = self._to_screen(camera, x, y)
+
+            screen.blit(layer, layer.get_rect(center=(round(sx), round(sy))))
 
     def draw_debug(self, screen, camera, pivot):
         """Como tu dibujo: el area en naranja y el recorrido en rojo."""

@@ -61,7 +61,7 @@ LIGHTS = {
         "consumo": 0.38,
         "cooldown": 0.35,
         "golpe_costo": 0.003,
-        "rompe": ("comun", "verde", "gris"),
+        "rompe": ("comun", "verde", "gris", "azul"),
         "furia_cada": 10.0,
         "furia_duracion": 30.0,
         "furia_velocidad": 8.0,

@@ -1587,6 +1587,10 @@ class NewGame:
 
         for target in self.melee.new_hits(targets, pivot):
 
+            # Tercer golpe (fuerte): chispazo donde pego
+            if self.melee.heavy:
+                self.melee.add_impact(target.rect.center)
+
             self._hit_target(
                 target,
                 self.melee.damage,
@@ -1617,9 +1621,14 @@ class NewGame:
 
                 target.resist()
 
-                self.show_message(
-                    "Tu luz no puede romper esta puerta"
-                )
+                if target.kind == "azul":
+                    self.show_message(
+                        "Solo la antorcha puede romper esta puerta"
+                    )
+                else:
+                    self.show_message(
+                        "Tu luz no puede romper esta puerta"
+                    )
 
             else:
 

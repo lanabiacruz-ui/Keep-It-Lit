@@ -136,8 +136,8 @@ class EnemyEncyclopedia:
     ROW_X = 456
     ROW_Y = 260
     ROW_W = 260
-    ROW_H = 52      # 7 enemigos: tienen que entrar sin tapar el boton REGRESAR
-    ROW_GAP = 5
+    ROW_H = 50      # 7 enemigos: tienen que entrar sin tapar el boton REGRESAR
+    ROW_GAP = 4
 
     # Ficha del enemigo (derecha)
     CARD_BOX = (740, 252, 480, 403)
@@ -993,34 +993,59 @@ class EnemyEncyclopedia:
             y += font.get_linesize() + 2
 
     def _draw_hint(self):
+        """Texto de abajo de la lista. Se achica / acomoda solo para que
+        NUNCA pise el boton REGRESAR, sin importar el tamano de pantalla."""
 
         hint_x = self._enemy_rect(0).left
+        width = self._enemy_rect(0).width
 
-        hint_y = (
+        top = (
             self._enemy_rect(len(self.ORDER) - 1).bottom
-            + round(14 * self.sy)
+            + round(4 * self.sy)
         )
+
+        # Lo ultimo que puede llegar el texto: justo antes del boton
+        limit = self.back_rect.top - round(4 * self.sy)
 
         total = len(self.ORDER)
 
         count = sum(1 for k in self.ORDER if self.is_discovered(k))
 
-        for line in self._wrap(
-            self.small_font,
-            f"Descubiertos: {count}/{total}   "
-            "Flechas / W-S / mouse: elegir   ESC: volver",
-            self._enemy_rect(0).width,
-        ):
+        parts = (
+            f"Descubiertos: {count}/{total}",
+            "Flechas / W-S: elegir   ESC: volver",
+        )
 
-            hint = self.small_font.render(
-                line,
-                True,
-                self.MUTED_COLOR,
-            )
+        size = max(14, round(24 * self.sy))
 
-            self.screen.blit(hint, (hint_x, hint_y))
+        while True:
 
-            hint_y += hint.get_height() + 2
+            font = self._font(max(10, size))
+
+            lines = []
+
+            for part in parts:
+                lines.extend(self._wrap(font, part, width))
+
+            line_h = font.get_linesize()
+
+            total_h = len(lines) * line_h
+
+            if top + total_h <= limit or size <= 10:
+                break
+
+            size -= 1
+
+        # Si ni con la letra mas chica entra, se sube lo que haga falta
+        y = min(top, limit - total_h)
+
+        for line in lines:
+
+            hint = font.render(line, True, self.MUTED_COLOR)
+
+            self.screen.blit(hint, (hint_x, y))
+
+            y += line_h
 
     def _draw_back_button(self):
 

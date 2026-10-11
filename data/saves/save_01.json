@@ -2,21 +2,21 @@
     "player_name": "op",
     "mode": "normal",
     "created_at": "2026-10-10T01:06:05",
-    "last_played": "2026-10-10T20:17:42",
+    "last_played": "2026-10-10T21:12:28",
     "password_salt": "f01f88fbef8858810c310b9660ff68a8",
     "password_hash": "74e3b13e3684ed1e54c016b1eaa4e6e08362e14f4ad230a782628af502e315ae",
-    "x": 884,
-    "y": 460,
-    "coins": 98977,
+    "x": 939,
+    "y": 273,
+    "coins": 98923,
     "gems": 1,
     "has_match": true,
     "light": "antorcha",
-    "vida": 0.5819873333333214,
+    "vida": 0.9143326666666647,
     "escudo": 0.0,
     "inventory": [
         [
             "aceite",
-            4
+            1
         ],
         [
             "polvora",
@@ -24,35 +24,36 @@
         ],
         [
             "cera",
-            1
+            2
         ],
-        [
-            "madera",
-            4
-        ]
+        null
     ],
     "collected": [
-        "madera_04#0",
-        "moneda_pasillo_tienda#0",
-        "cera_02#0",
-        "madera_11#0",
-        "moneda_pasillo_izq#0",
-        "madera_06#0",
-        "aceite_03#0",
-        "moneda5_pasillo_cofres#0",
-        "madera_10#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_sala_central#0",
-        "madera_09#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_sala_central#1",
-        "madera_05#0",
-        "cera_03#0",
-        "madera_08#0",
-        "madera_01#0",
-        "madera_07#0",
         "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#1"
+        "madera_08#0",
+        "moneda_pasillo_cabana#0",
+        "cera_01#0",
+        "moneda_pasillo_tienda#1",
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_central#0",
+        "moneda_sala_central#1",
+        "madera_04#0",
+        "aceite_02#0",
+        "madera_10#0",
+        "madera_11#0",
+        "cera_02#0",
+        "cera_03#0",
+        "aceite_01#0",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#0",
+        "madera_05#0",
+        "madera_01#0",
+        "moneda_pasillo_cofres#0",
+        "madera_09#0",
+        "moneda_pasillo_der#0",
+        "aceite_03#0",
+        "madera_06#0",
+        "madera_07#0"
     ],
     "item_seed": 406280299,
     "arena_wave": 1,
@@ -63,9 +64,12 @@
         "cabana",
         "hub_abajo",
         "hub_arriba",
+        "hub_derecha",
         "hub_izquierda",
+        "sala_der",
         "sala_izq",
-        "sup_central_abajo"
+        "sup_central_abajo",
+        "sup_der_sala"
     ],
     "chests": {},
     "enemies_seen": [
@@ -73,14 +77,15 @@
         "guardian_tirador"
     ],
     "stats": {
-        "items_used": 0,
+        "items_used": 9,
         "chests_opened": 0,
-        "purchases": 0,
-        "fireballs": 0,
+        "purchases": 1,
+        "fireballs": 56,
         "kills": 0
     },
     "zones_seen": [
         "central",
+        "combate",
         "tienda"
     ]
 }

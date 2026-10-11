@@ -66,6 +66,7 @@ from pathlib import Path
 import pygame
 
 from world.fireball import FIRE_SPEED
+from world import pathing
 from world.items import WorldItem, get_gem_icon
 from world.melee import (
     ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
@@ -93,16 +94,21 @@ TRIGGER = pygame.Rect(1262, 400, 400, 260)
 # Donde te deja "Salir": en el pasillo, afuera de la sala
 EXIT_POS = (1190, 520)
 
-# Barrera que cierra la entrada en "sin escape"
-GATE = pygame.Rect(1236, 500, 10, 40)
+# Barrera que cierra la entrada en "sin escape" / mapa completado.
+# Llena el hueco del pasillo de pared a pared (el hueco dibujado en
+# mapa.png mide 41 px de alto: y 499 a 540), dentro del tramo con
+# paredes y pegada a la sala, sin pisar la puerta gris (x 1206-1222).
+GATE = pygame.Rect(1224, 498, 14, 44)
 
 
 # La sala grande de la IZQUIERDA (igual que en world/collision.py).
 # Se entra por el pasillo de la derecha (el que sale del hub).
 ROOM_LEFT = pygame.Rect(148, 336, 500, 408)
 TRIGGER_LEFT = pygame.Rect(166, 348, 464, 384)
-EXIT_POS_LEFT = (664, 518)
-GATE_LEFT = pygame.Rect(650, 502, 10, 32)
+EXIT_POS_LEFT = (700, 518)
+# El hueco dibujado mide 42 px de alto (y 497 a 539) y las paredes
+# empiezan en x=658: la barrera va dentro del tramo con paredes.
+GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 
 
 # ---------------------------------------------------------------
@@ -867,6 +873,10 @@ class Enemy:
         if hit_x or hit_y:
             self.aim_after_bounce(to_target, hit_x, hit_y)
 
+        # Si quedo incrustado en una pared (spawn o empujon), lo saca
+        if not self._free(self.rect, collision_map):
+            self._rescue(collision_map)
+
         # Rueda y salta segun lo que recorrio (no camina)
         moved = self.pos.distance_to(before)
         side = 1.0 if self.vel.x >= 0 else -1.0
@@ -1006,6 +1016,268 @@ class Enemy:
             self.pos.y = ny
             self.rect.centery = test.centery
 
+
+    # ---------- navegacion y anti-atasco ----------
+
+    NAV_REPLAN = 0.35        # cada cuanto recalcula el camino (seg)
+    STUCK_CHECK = 0.25       # cada cuanto mide si avanzo (seg)
+    STUCK_MIN_MOVE = 1.2     # menos que esto en STUCK_CHECK = no avanza
+
+    def _nav_init(self):
+        """Prepara el estado de navegacion la primera vez que se usa."""
+
+        if getattr(self, "_nav_ready", False):
+            return
+
+        self._nav_ready = True
+        self._nav_path = []
+        self._nav_t = 0.0
+        self._nav_force = 0.0
+
+        self._stk_pos = self.pos.copy()
+        self._stk_clock = 0.0
+        self._stk_time = 0.0
+        self._stk_stage = 0
+
+        self._esc_t = 0.0
+        self._esc_dir = pygame.Vector2()
+
+        self.last_good = self.pos.copy()
+
+    def _body_line_free(self, a, b, collision_map):
+        """True si el cuerpo del enemigo puede ir en linea recta de a a b."""
+
+        a = pygame.Vector2(a)
+        b = pygame.Vector2(b)
+
+        steps = max(1, int(a.distance_to(b) // 3))
+
+        probe = self.rect.copy()
+
+        for i in range(1, steps + 1):
+
+            p = a.lerp(b, i / steps)
+
+            probe.center = (round(p.x), round(p.y))
+
+            if not self._free(probe, collision_map):
+                return False
+
+        return True
+
+    def nav_dir(self, goal, collision_map, dt):
+        """Direccion (unitaria) para ir hacia `goal` rodeando paredes.
+        Si el camino esta libre va derecho; si no, sigue un camino A*
+        que se recalcula cada NAV_REPLAN segundos."""
+
+        self._nav_init()
+
+        goal = pygame.Vector2(goal)
+
+        self._nav_t -= dt
+        self._nav_force = max(0.0, self._nav_force - dt)
+
+        if self._nav_t <= 0:
+
+            self._nav_t = self.NAV_REPLAN
+
+            if (
+                self._nav_force <= 0
+                and self._body_line_free(self.pos, goal, collision_map)
+            ):
+                self._nav_path = []
+
+            else:
+
+                path = pathing.find_path(
+                    self.pos, goal, self.rect.size, self.room, collision_map
+                )
+
+                self._nav_path = path or []
+
+        # Ya llego a los puntos de adelante: se descartan
+        while self._nav_path and self.pos.distance_to(self._nav_path[0]) < 4.0:
+            self._nav_path.pop(0)
+
+        # Atajo: si ve el siguiente punto en linea recta, saltea el actual
+        if len(self._nav_path) > 1 and self._body_line_free(
+            self.pos, self._nav_path[1], collision_map
+        ):
+            self._nav_path.pop(0)
+
+        aim = pygame.Vector2(self._nav_path[0]) if self._nav_path else goal
+
+        d = aim - self.pos
+
+        if d.length_squared() < 0.01:
+            d = goal - self.pos
+
+        if d.length_squared() < 0.01:
+            return pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        return d.normalize()
+
+    def _nudge(self, dt, direction, speed, collision_map):
+        """Empuja al enemigo un poco hacia `direction` (si hay lugar)."""
+
+        step = speed * dt
+
+        for angle in (0, 45, -45):
+
+            d = direction.rotate(angle)
+
+            test = self.rect.copy()
+            test.center = (
+                round(self.pos.x + d.x * step),
+                round(self.pos.y + d.y * step),
+            )
+
+            if self._free(test, collision_map):
+
+                self.pos.update(
+                    self.pos.x + d.x * step, self.pos.y + d.y * step
+                )
+                self.rect.center = test.center
+
+                return True
+
+        return False
+
+    def _random_open_dir(self, collision_map):
+        """Una direccion con lugar libre adelante (la prueba al azar)."""
+
+        angles = list(range(0, 360, 45))
+        random.shuffle(angles)
+
+        for angle in angles:
+
+            d = pygame.Vector2(1, 0).rotate(angle)
+
+            test = self.rect.copy()
+            test.center = (
+                round(self.pos.x + d.x * 8),
+                round(self.pos.y + d.y * 8),
+            )
+
+            if self._free(test, collision_map):
+                return d
+
+        return pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+    def _teleport(self, point):
+
+        self.pos.update(point[0], point[1])
+        self.rect.center = (round(point[0]), round(point[1]))
+
+        self.vel = pygame.Vector2()
+        self._nav_path = []
+        self._nav_t = 0.0
+
+    def _rescue(self, collision_map):
+        """Lo saca al lugar libre mas cercano (incrustado o atascado)."""
+
+        self._nav_init()
+
+        spot = pathing.nearest_free(
+            self.last_good, self.rect.size, self.room, collision_map
+        )
+
+        # Si el ultimo lugar bueno es justo donde esta atascado, busca
+        # desde donde esta ahora
+        if spot is None or self.pos.distance_to(spot) < 3.0:
+
+            spot = pathing.nearest_free(
+                self.pos, self.rect.size, self.room, collision_map
+            )
+
+        if spot is not None and self.pos.distance_to(spot) >= 3.0:
+            self._teleport(spot)
+
+        self._stk_time = 0.0
+        self._stk_stage = 0
+        self._stk_pos = self.pos.copy()
+
+    def anti_stuck(self, dt, collision_map, goal=None, speed=40.0):
+        """Llamar CADA frame mientras el enemigo esta tratando de
+        caminar. Si no avanza, lo destraba en etapas:
+
+          0.5 s -> fuerza recalcular el camino y se desliza de costado
+          1.5 s -> prueba otra direccion libre
+          3.0 s -> lo saca al lugar libre mas cercano
+
+        Devuelve True cuando acaba de detectar un atasco (asi quien
+        lo llama puede cambiar de rumbo)."""
+
+        self._nav_init()
+
+        # Incrustado en una pared: afuera ya
+        if not self._free(self.rect, collision_map):
+
+            self._rescue(collision_map)
+
+            return True
+
+        # Se esta deslizando para salir del atasco
+        if self._esc_t > 0:
+
+            self._esc_t -= dt
+            self._nudge(dt, self._esc_dir, speed, collision_map)
+
+        self._stk_clock += dt
+
+        if self._stk_clock < self.STUCK_CHECK:
+            return False
+
+        self._stk_clock = 0.0
+
+        moved = self.pos.distance_to(self._stk_pos)
+        self._stk_pos = self.pos.copy()
+
+        # Ya esta encima del objetivo: no es un atasco
+        if goal is not None and self.pos.distance_to(goal) < 14.0:
+
+            self._stk_time = 0.0
+            self._stk_stage = 0
+
+            return False
+
+        if moved >= self.STUCK_MIN_MOVE:
+
+            self._stk_time = 0.0
+            self._stk_stage = 0
+            self.last_good = self.pos.copy()
+
+            return False
+
+        self._stk_time += self.STUCK_CHECK
+
+        if self._stk_time >= 3.0:
+
+            self._rescue(collision_map)
+
+            return True
+
+        if self._stk_time >= 1.5 and self._stk_stage < 2:
+
+            self._stk_stage = 2
+            self._esc_dir = self._random_open_dir(collision_map)
+            self._esc_t = 0.8
+            self._nav_force = 2.0
+            self._nav_t = 0.0
+
+            return True
+
+        if self._stk_time >= 0.5 and self._stk_stage < 1:
+
+            self._stk_stage = 1
+            self._esc_dir = self._random_open_dir(collision_map)
+            self._esc_t = 0.45
+            self._nav_force = 1.5
+            self._nav_t = 0.0
+
+            return True
+
+        return False
 
     # ---------- dibujo ----------
 
@@ -1932,7 +2204,11 @@ class Tronco(Enemy):
 
         if dist > ideal + TRONCO_BAND:
 
-            self._walk(dt, toward, collision_map)
+            self._walk(
+                dt, self.nav_dir(target, collision_map, dt), collision_map
+            )
+
+            self.anti_stuck(dt, collision_map, target, TRONCO_SPEED)
 
         elif dist < ideal - TRONCO_BAND:
 
@@ -2289,7 +2565,16 @@ class Hongun(Enemy):
 
             else:
 
-                self._walk(dt, toward, HONGUN_CHASE_SPEED, collision_map)
+                self._walk(
+                    dt,
+                    self.nav_dir(target, collision_map, dt),
+                    HONGUN_CHASE_SPEED,
+                    collision_map,
+                )
+
+                self.anti_stuck(
+                    dt, collision_map, target, HONGUN_CHASE_SPEED
+                )
 
             return
 
@@ -2314,6 +2599,9 @@ class Hongun(Enemy):
 
         if d is not None:
             self.heading = d
+
+        if self.anti_stuck(dt, collision_map, None, HONGUN_WANDER_SPEED):
+            self.heading = self._random_open_dir(collision_map)
 
     # ---------- dibujo ----------
 
@@ -2706,7 +2994,13 @@ class Destello(Enemy):
 
             else:
 
-                self._run(dt, toward, collision_map)
+                self._run(
+                    dt, self.nav_dir(target, collision_map, dt), collision_map
+                )
+
+                self.anti_stuck(
+                    dt, collision_map, target, DESTELLO_CHARGE_SPEED
+                )
 
             return
 
@@ -2735,6 +3029,10 @@ class Destello(Enemy):
 
         if d is not None:
             self.heading = d
+
+        # Atascado paseando: cambia de rumbo
+        if self.anti_stuck(dt, collision_map, None, DESTELLO_WANDER_SPEED):
+            self.heading = self._random_open_dir(collision_map)
 
     # ---------- dibujo ----------
 
@@ -3316,7 +3614,14 @@ class Guardian(Enemy):
         # a vos sin empujarte
         if dist > GUARDIAN_ATTACK_DIST * 0.7:
 
-            d = self._walk(dt, toward, GUARDIAN_CHASE_SPEED, collision_map)
+            d = self._walk(
+                dt,
+                self.nav_dir(target, collision_map, dt),
+                GUARDIAN_CHASE_SPEED,
+                collision_map,
+            )
+
+            self.anti_stuck(dt, collision_map, target, GUARDIAN_CHASE_SPEED)
 
             if d is not None:
                 self.moving = True
@@ -3746,7 +4051,16 @@ class GuardianShooter(Guardian):
 
         elif dist > GSHOOT_MAX_DIST:
 
-            d = self._walk(dt, toward, GSHOOT_MOVE_SPEED, collision_map)
+            d = self._walk(
+                dt,
+                self.nav_dir(self.last_target, collision_map, dt),
+                GSHOOT_MOVE_SPEED,
+                collision_map,
+            )
+
+            self.anti_stuck(
+                dt, collision_map, self.last_target, GSHOOT_MOVE_SPEED
+            )
 
         else:
 

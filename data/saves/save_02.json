@@ -1,81 +1,8 @@
 {
     "player_name": "ooo",
     "mode": "normal",
-    "created_at": "2026-10-10T20:17:54",
-    "last_played": "2026-10-10T20:22:32",
-    "password_salt": "41ab0d68eaefb917c294221d2eeacac4",
-    "password_hash": "86d6bbab9bc895e90c8219e1840ceed9720d6db6bd95cd714c79919f12db2f53",
-    "x": 923,
-    "y": 458,
-    "coins": 99441,
-    "gems": 0,
-    "has_match": true,
-    "light": "antorcha",
-    "vida": 0.3755740000000013,
-    "escudo": 0.7,
-    "inventory": [
-        [
-            "aceite",
-            13
-        ],
-        [
-            "polvora",
-            14
-        ],
-        [
-            "hongo_azul",
-            9
-        ],
-        [
-            "aceite",
-            13
-        ]
-    ],
-    "collected": [
-        "madera_10#0",
-        "moneda_sala_central#1",
-        "moneda_pasillo_tienda#0",
-        "madera_05#0",
-        "madera_04#0",
-        "moneda_pasillo_izq#0",
-        "madera_08#0",
-        "madera_09#0",
-        "moneda_sala_central#0",
-        "moneda_pasillo_cabana#0",
-        "aceite_03#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#1"
-    ],
-    "item_seed": 616918550,
-    "arena_wave": 1,
-    "arena_completed": false,
-    "arena_left_wave": 2,
-    "arena_left_completed": false,
-    "broken_doors": [
-        "cabana",
-        "hub_abajo",
-        "hub_arriba",
-        "hub_izquierda",
-        "sala_izq",
-        "sup_central_abajo"
-    ],
-    "chests": {},
-    "enemies_seen": [
-        "destello",
-        "guardian"
-    ],
-    "stats": {
-        "items_used": 18,
-        "chests_opened": 0,
-        "purchases": 2,
-        "fireballs": 40,
-        "kills": 4
-    },
-    "zones_seen": [
-        "central",
-        "inicio",
-        "tienda"
-    ],
-    "objective_index": 8,
-    "objectives_minimized": true
+    "created_at": "2026-10-10T20:53:16",
+    "last_played": "2026-10-10T20:53:16",
+    "password_salt": "c6c691789eacdcd6ae27a7f4f861dd3c",
+    "password_hash": "6ec522c0605c53ed1acf82d042e944e1bf28347ec27f80fc437d63cb7499cb8c"
 }
