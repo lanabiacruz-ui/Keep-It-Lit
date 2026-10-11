@@ -105,6 +105,11 @@ class Player:
         self.kb_vel = pygame.Vector2()
         self._kb_rest = pygame.Vector2()
 
+        # Agarrado por un Golem: no se puede mover ni recibir otros
+        # golpes, y se dibuja levantado (grab_lift = unidades del mundo)
+        self.grabbed = False
+        self.grab_lift = 0.0
+
         base = Path(__file__).resolve().parent.parent
         player_dir = base / "assets" / "maps" / "player"
 
@@ -190,7 +195,7 @@ class Player:
         """Recibe un golpe: se pone rojo, empujon y un rato sin poder
         recibir otro. Devuelve False si todavia era invulnerable."""
 
-        if self.invuln_timer > 0:
+        if self.invuln_timer > 0 or self.grabbed:
             return False
 
         self.hurt_timer = self.HURT_TIME
@@ -356,11 +361,18 @@ class Player:
 
     def update(self, dt, collision_map):
 
-        result = self.movement.update(
-            self.rect,
-            collision_map,
-            dt
-        )
+        if self.grabbed:
+
+            # Agarrado: no camina (el golem lo maneja)
+            result = (False, None)
+
+        else:
+
+            result = self.movement.update(
+                self.rect,
+                collision_map,
+                dt
+            )
 
         self.moving = result[0]
 
@@ -449,13 +461,21 @@ class Player:
             )
 
         # Despues del rojo, parpadea un poco mientras es invulnerable
-        elif self.invuln_timer > 0 and int(self.invuln_timer * 14) % 2:
+        elif (
+            self.invuln_timer > 0
+            and not self.grabbed
+            and int(self.invuln_timer * 14) % 2
+        ):
 
             sprite.set_alpha(140)
 
         dest = sprite.get_rect(
             midbottom=camera.apply(self.image_rect).midbottom
         )
+
+        # Agarrado por un golem: lo levanta del piso
+        if self.grab_lift > 0:
+            dest.y -= int(self.grab_lift * camera.zoom)
 
         screen.blit(
             sprite,

@@ -51,6 +51,18 @@ rapido, te choca, explota y te deja la pantalla blanca ~5 s). Imagenes
   assets/maps/combate/destello.png           56x56  (1 cuadro, tambien es el icono de la enciclopedia)
   assets/maps/combate/destello_golpe.png     56x56  (cuando le pegas)
 
+Golem (enorme y MUY lento: pasea tranquilo, si te ve va directo hacia vos
+y si te toca te agarra: una animacion lo muestra apretandote y te saca
+TODO el escudo; si no tenias escudo te saca TODA la vida de la luz). Ver
+GolemArt. Imagenes opcionales (si falta alguna se dibuja un reemplazo):
+  assets/maps/combate/golem_anim.png         448x112 (4 cuadros de 112x112, caminar tranquilo)
+  assets/maps/combate/golem_perseguir.png    448x112 (4 cuadros, persiguiendote; opcional)
+  assets/maps/combate/golem_alerta.png       224x112 (2 cuadros, aviso al verte)
+  assets/maps/combate/golem_agarre.png       672x112 (6 cuadros, la animacion del agarre)
+  assets/maps/combate/golem.png              112x112 (1 cuadro, por si falta golem_anim)
+  assets/maps/combate/golem_golpe.png        112x112 (cuando le pegas; opcional)
+  assets/maps/combate/golem_icono.png        128x128 (enciclopedia)
+
 Guardian Tirador (igual al Guardian pero dispara bolas, ver
 GuardianShooterArt). Imagenes opcionales:
   assets/maps/combate/guardian_tirador.png          256x320 (4x4: caminar)
@@ -115,7 +127,7 @@ GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 # Oleadas (para balancear, se cambia todo aca)
 # ---------------------------------------------------------------
 # (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
-#  destellos)  <- las tablas pueden traer de 4 a 7 numeros
+#  destellos, golems)  <- las tablas pueden traer de 4 a 8 numeros
 LEFT_WAVE_COMPOSITION = {
     1: (0,0,0,0,1,0,3),
     2: (0, 0, 0, 0, 2, 1),
@@ -142,8 +154,9 @@ WAVE_COMPOSITION = {
     # Oleadas 8, 9 y 10: aparecen los hongunes
     8: (10, 5, 8, 1),
     # El 7mo numero son los destellos (hongun flashbang)
-    9: (4, 6, 10, 3, 0, 0, 2),
-    10: (5, 6, 7, 8, 0, 0, 4),
+    9: (4, 6, 10, 3, 0, 0, 2, 1),
+    # El 8vo numero son los golems (lentos, te agarran y te sacan el escudo)
+    10: (5, 6, 7, 8, 0, 0, 4, 2),
 }
 # Ultima oleada del mapa: al pasarla el mapa queda completado, el cofre
 # tira una gema y la sala se cierra para siempre.
@@ -159,6 +172,8 @@ HONGUNS_STEP = 0     # hongunes que se suman por oleada despues de la ultima def
 HONGUNS_MAX = 8
 DESTELLOS_STEP = 0   # destellos que se suman por oleada despues de la ultima definida
 DESTELLOS_MAX = 8
+GOLEMS_STEP = 0      # golems que se suman por oleada despues de la ultima definida
+GOLEMS_MAX = 4
 
 # Oleada de PRUEBA (solo mosquitos). La usa la partida "Prueba mosquitos".
 # Para cambiar cuantos salen, cambia el 3. Se puede borrar cuando termines.
@@ -169,6 +184,11 @@ MOSQUITO_TEST_COUNT = 3
 # la oleada 98 en una partida de prueba. Se puede borrar cuando termines.
 DESTELLO_TEST_WAVE = 98
 DESTELLO_TEST_COUNT = 3
+
+# Oleada de PRUEBA (solo golems): poner la oleada 97 en una partida de
+# prueba. Se puede borrar cuando termines.
+GOLEM_TEST_WAVE = 97
+GOLEM_TEST_COUNT = 2
 
 # Monedas de premio por oleada (la 1 vale 18). Despues de la ultima
 # definida sube REWARD_STEP por oleada. "Sin escape" lo multiplica.
@@ -330,7 +350,7 @@ HONGUN_CHARGE_FRAME = 0.12
 # muere. El tiempo del blanco se cambia en states/new_game.py (FLASH_*).
 # ---------------------------------------------------------------
 
-DESTELLO_HP = 2                 # golpes que aguanta (si lo matas a golpes NO explota)
+DESTELLO_HP = 5                 # golpes que aguanta (si lo matas a golpes NO explota)
 DESTELLO_HITBOX = (10, 12)
 DESTELLO_DRAW_SIZE = 17         # tamano dibujado (unidades del mundo)
 
@@ -361,6 +381,50 @@ DESTELLO_KNOCKBACK = 200.0      # empujon al jugador
 DESTELLO_ANIM_FRAME = 0.15
 DESTELLO_RUN_FRAME = 0.06
 DESTELLO_ALERT_FRAME = 0.10
+
+# ---------------------------------------------------------------
+# Golem (enorme y muy lento)
+# Pasea tranquilo. Si te ve (distancia y sin paredes en el medio) ruge un
+# instante (aviso) y va DIRECTO hacia vos, despacito pero sin parar. Si te
+# toca UNA sola vez te agarra: una animacion lo muestra levantandote y
+# apretandote. Al apretar te saca TODO el escudo; si no tenias escudo, te
+# saca TODA la vida de la luz. Despues te suelta, te empuja y queda
+# cansado unos segundos.
+# ---------------------------------------------------------------
+
+GOLEM_HP = 40                   # golpes que aguanta
+GOLEM_HITBOX = (16, 18)         # lo que choca y lo que golpea el jugador
+# Tamano dibujado (unidades del mundo). Con zoom x4 son 112 x 112 px,
+# que es el tamano de cada cuadro de las imagenes.
+GOLEM_DRAW_SIZE = 28
+
+# Movimiento (unidades del mundo por segundo; el jugador va a 95)
+GOLEM_WANDER_SPEED = 12.0       # paseando tranquilo
+GOLEM_CHASE_SPEED = 30.0        # persiguiendote (muy lento)
+GOLEM_TURN_TIME = (1.8, 4.0)    # cada cuanto cambia de rumbo paseando
+
+# Deteccion: te tiene que ver (distancia y sin paredes en el medio)
+GOLEM_DETECT_RADIUS = 110.0
+GOLEM_LOSE_RADIUS = 200.0       # si te alejas mas que esto, te pierde
+GOLEM_ALERT_TIME = 0.9          # aviso quieto (ruge) antes de empezar a perseguirte
+
+# Agarre
+GOLEM_GRAB_REACH = 3            # cuanto "alcanza" mas alla de su cuerpo (unidades)
+GOLEM_GRAB_TIME = 1.8           # duracion de la animacion completa
+GOLEM_SQUEEZE_AT = 0.8          # segundo del agarre en que aprieta (ahi se saca el escudo / la vida)
+GOLEM_GRAB_LIFT = 5.0           # cuanto te levanta (unidades del mundo)
+GOLEM_HOLD_DY = 2               # donde te sostiene: pies del jugador = base del golem + esto
+GOLEM_HOLD_PULL = 120.0         # que tan rapido te acomoda en sus manos (unidades/s)
+GOLEM_KNOCKBACK = 230.0         # empujon al soltarte
+GOLEM_POST_INVULN = 1.5         # segundos que no te puede agarrar nadie despues de soltarte
+GOLEM_REST_TIME = 3.0           # cansado (quieto) despues de agarrarte
+
+GOLEM_HIT_PUSH = 14.0           # cuanto lo mueve un golpe tuyo (casi nada: es pesado)
+GOLEM_ANIM_FRAME = 0.28         # caminar tranquilo (lento)
+GOLEM_CHASE_FRAME = 0.20        # persiguiendote
+GOLEM_ALERT_FRAME = 0.12
+GOLEM_FLASH_TIME = 0.10
+GOLEM_SPAWN_TIME = 1.0
 
 # ---------------------------------------------------------------
 # Tiempos
@@ -443,33 +507,39 @@ def quantize_radius(radius):
 
 def wave_composition(wave, table=None):
     """(pinos, troncos, mosquitos, hongunes, guardianes, tiradores,
-    destellos) de una oleada.
+    destellos, golems) de una oleada.
 
     `table` es la tabla de la sala (por defecto la de la sala derecha).
-    Las tablas pueden tener de 4 a 7 numeros (los que faltan valen 0)."""
+    Las tablas pueden tener de 4 a 8 numeros (los que faltan valen 0)."""
     if table is None:
         table = WAVE_COMPOSITION
+    # Oleadas de prueba (solo en la sala de la derecha). Antes estaban
+    # adentro del "if table is None" y como la arena siempre pasa su
+    # tabla nunca se activaban.
+    if table is WAVE_COMPOSITION:
         if wave == MOSQUITO_TEST_WAVE:
-            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0, 0, 0
+            return 0, 0, MOSQUITO_TEST_COUNT, 0, 0, 0, 0, 0
         if wave == DESTELLO_TEST_WAVE:
-            return 0, 0, 0, 0, 0, 0, DESTELLO_TEST_COUNT
+            return 0, 0, 0, 0, 0, 0, DESTELLO_TEST_COUNT, 0
+        if wave == GOLEM_TEST_WAVE:
+            return 0, 0, 0, 0, 0, 0, 0, GOLEM_TEST_COUNT
     if wave in table:
-        return tuple(table[wave]) + (0,) * (7 - len(table[wave]))
+        return tuple(table[wave]) + (0,) * (8 - len(table[wave]))
     last = max(table)
-    pinos, troncos, mosquitos, honguns = table[last][:4]
-    guardians = table[last][4] if len(table[last]) > 4 else 0
-    shooters = table[last][5] if len(table[last]) > 5 else 0
-    destellos = table[last][6] if len(table[last]) > 6 else 0
+    row = tuple(table[last]) + (0,) * (8 - len(table[last]))
+    pinos, troncos, mosquitos, honguns, guardians, shooters, destellos, golems = row
     extra = max(0, wave - last)
     pinos += PINOS_STEP * extra
     troncos = min(TRONCOS_MAX, troncos + TRONCOS_STEP * extra)
     mosquitos = min(MOSQUITOS_MAX, mosquitos + MOSQUITOS_STEP * extra)
     honguns = min(HONGUNS_MAX, honguns + HONGUNS_STEP * extra)
     destellos = min(DESTELLOS_MAX, destellos + DESTELLOS_STEP * extra)
-    total = pinos + troncos + mosquitos + honguns + destellos
+    golems = min(GOLEMS_MAX, golems + GOLEMS_STEP * extra)
+    total = pinos + troncos + mosquitos + honguns + destellos + golems
     if total > ENEMIES_MAX:
         mosquitos = max(0, mosquitos - (total - ENEMIES_MAX))
-    return pinos, troncos, mosquitos, honguns, guardians, shooters, destellos
+    return (pinos, troncos, mosquitos, honguns, guardians, shooters,
+            destellos, golems)
 
 
 def enemies_for_wave(wave, table=None):
@@ -3150,6 +3220,610 @@ class Destello(Enemy):
 
 
 # ---------------------------------------------------------------
+# Golem (enorme y muy lento: te agarra y te saca el escudo / la luz)
+# ---------------------------------------------------------------
+
+class GolemArt:
+    """Imagenes del golem (se cargan una sola vez). Todas opcionales:
+
+      assets/maps/combate/golem_anim.png       448x112 (4 cuadros de 112x112, caminar tranquilo)
+      assets/maps/combate/golem_perseguir.png  448x112 (4 cuadros de 112x112, persiguiendote)
+      assets/maps/combate/golem_alerta.png     224x112 (2 cuadros de 112x112, aviso al verte)
+      assets/maps/combate/golem_agarre.png     672x112 (6 cuadros de 112x112, el agarre)
+      assets/maps/combate/golem.png            112x112 (1 cuadro: caminar si falta golem_anim)
+      assets/maps/combate/golem_golpe.png      112x112 (cuando le pegas)
+
+    Cada cuadro es cuadrado de 112x112 y se dibuja de 28x28 unidades del
+    mundo (zoom x4). El golem mira de frente (no hay una hoja por
+    direccion), con los pies pegados al borde de abajo del cuadro.
+
+    El AGARRE (golem_agarre.png) son 6 cuadros seguidos:
+      cuadros 1-2: estira los brazos hacia vos y te levanta
+      cuadros 3-4: aprieta (el cuadro 3 es cuando se saca el escudo / vida)
+      cuadros 5-6: te suelta / te tira para atras
+    Mientras dura, el jugador se dibuja ENCIMA del golem, centrado abajo:
+    con zoom x4 sus pies quedan ~20 px por debajo del borde de abajo del
+    cuadro, y lo levanta 20 px. Dibuja las manos del golem alrededor de
+    esa zona (aprox. x 30 a 82, y 60 a 105).
+
+    Si falta golem_perseguir usa los de caminar (mas rapido). Si falta
+    golem_alerta usa el primer cuadro de caminar. El temblor del aviso
+    lo hace el codigo.
+    """
+
+    FRAME = 112
+
+    def __init__(self):
+
+        walk = load_strip(COMBAT_DIR / "golem_anim.png")
+        single = load_strip(COMBAT_DIR / "golem.png")
+        chase = load_strip(COMBAT_DIR / "golem_perseguir.png")
+        alert = load_strip(COMBAT_DIR / "golem_alerta.png")
+        grab = load_strip(COMBAT_DIR / "golem_agarre.png")
+        hit = load_image(COMBAT_DIR / "golem_golpe.png")
+
+        self.walk = walk or single or [self._placeholder("walk", 0),
+                                       self._placeholder("walk", 1)]
+        self.chase = chase or self.walk
+        self.alert = alert or (
+            [self._placeholder("alert", 0), self._placeholder("alert", 1)]
+            if not (walk or single) else [self.walk[0]]
+        )
+        self.grab = grab or [
+            self._placeholder("grab", i) for i in range(6)
+        ]
+
+        if hit is None:
+
+            hit = self.walk[0].copy()
+            hit.fill((150, 150, 150, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+        self.hit = hit
+
+        self._zoom = None
+        self._scaled = None
+
+    @classmethod
+    def _placeholder(cls, mode="walk", step=0):
+        """Golem de piedra dibujado con rectangulos (por si faltan las
+        imagenes)."""
+
+        s = cls.FRAME
+        surf = pygame.Surface((s, s), pygame.SRCALPHA)
+
+        stone = (116, 116, 128)
+        dark = (66, 66, 78)
+        light = (158, 158, 170)
+        eye = (255, 170, 50) if mode != "alert" else (255, 60, 40)
+
+        bob = 2 if (step % 2 == 1 and mode == "walk") else 0
+
+        # patas
+        off = 4 if step % 2 == 0 else -4
+
+        if mode == "walk":
+            pygame.draw.rect(surf, dark, (32 + off, 82, 20, 28))
+            pygame.draw.rect(surf, dark, (60 - off, 82, 20, 28))
+        else:
+            pygame.draw.rect(surf, dark, (32, 82, 20, 28))
+            pygame.draw.rect(surf, dark, (60, 82, 20, 28))
+
+        # torso
+        pygame.draw.rect(surf, stone, (24, 32 - bob, 64, 54))
+        pygame.draw.rect(surf, dark, (24, 32 - bob, 64, 54), 3)
+
+        # grietas y musgo
+        pygame.draw.line(surf, dark, (40, 44 - bob), (52, 62 - bob), 2)
+        pygame.draw.line(surf, dark, (52, 62 - bob), (46, 76 - bob), 2)
+        pygame.draw.rect(surf, (80, 120, 74), (66, 38 - bob, 14, 8))
+
+        # cabeza
+        pygame.draw.rect(surf, stone, (38, 8 - bob, 36, 28))
+        pygame.draw.rect(surf, dark, (38, 8 - bob, 36, 28), 3)
+        pygame.draw.rect(surf, eye, (45, 18 - bob, 8, 7))
+        pygame.draw.rect(surf, eye, (59, 18 - bob, 8, 7))
+
+        # brazos
+        if mode == "walk":
+
+            sw = 5 if step % 2 == 0 else -5
+
+            pygame.draw.rect(surf, stone, (6, 38 + sw, 20, 46))
+            pygame.draw.rect(surf, dark, (6, 38 + sw, 20, 46), 3)
+            pygame.draw.rect(surf, stone, (86, 38 - sw, 20, 46))
+            pygame.draw.rect(surf, dark, (86, 38 - sw, 20, 46), 3)
+
+        elif mode == "alert":
+
+            # brazos arriba (ruge)
+            up = 0 if step % 2 == 0 else 6
+
+            pygame.draw.rect(surf, stone, (4, 6 + up, 20, 44))
+            pygame.draw.rect(surf, dark, (4, 6 + up, 20, 44), 3)
+            pygame.draw.rect(surf, stone, (88, 6 + up, 20, 44))
+            pygame.draw.rect(surf, dark, (88, 6 + up, 20, 44), 3)
+
+        else:   # grab: 6 cuadros
+
+            # (x de cada mano, y de las manos): se abren, aprietan y sueltan
+            hands = [
+                (14, 70), (26, 84), (38, 90),   # estira y levanta
+                (44, 86), (40, 86),            # aprieta
+                (6, 54),                       # suelta
+            ][min(step, 5)]
+
+            hx, hy = hands
+
+            for side in (-1, 1):
+
+                shoulder = (56 + side * 34, 48)
+                hand = (56 + side * (56 - hx), hy)
+
+                pygame.draw.line(surf, dark, shoulder, hand, 18)
+                pygame.draw.line(surf, stone, shoulder, hand, 12)
+                pygame.draw.rect(
+                    surf, light, (hand[0] - 9, hand[1] - 9, 18, 18)
+                )
+                pygame.draw.rect(
+                    surf, dark, (hand[0] - 9, hand[1] - 9, 18, 18), 3
+                )
+
+        return surf
+
+    def get(self, zoom):
+
+        if self._zoom != zoom:
+
+            px = max(1, int(GOLEM_DRAW_SIZE * zoom))
+
+            def scale(frames):
+                return [pygame.transform.scale(f, (px, px)) for f in frames]
+
+            self._scaled = {
+                "walk": scale(self.walk),
+                "chase": scale(self.chase),
+                "alert": scale(self.alert),
+                "grab": scale(self.grab),
+                "hit": pygame.transform.scale(self.hit, (px, px)),
+            }
+
+            self._zoom = zoom
+
+        return self._scaled
+
+
+class Golem(Enemy):
+    """Enorme y MUY lento. Pasea tranquilo -> si te ve (distancia y sin
+    paredes en el medio) se frena y ruge (aviso) -> va directo hacia
+    vos, despacito pero sin parar -> si te toca UNA vez te agarra: te
+    levanta y te aprieta (animacion). Al apretar te saca TODO el escudo;
+    si no tenias escudo, te saca TODA la vida de la luz. Despues te
+    suelta, te empuja y queda cansado unos segundos.
+
+    Los golpes le sacan vida pero casi no lo mueven ni lo frenan, y
+    mientras te tiene agarrado no se lo puede lastimar. Lo de pegarle al
+    jugador (escudo / vida) lo hace la arena (Arena._golem_step)."""
+
+    fixed = False
+    contact_damage = False
+
+    WANDER = "wander"
+    ALERT = "alert"
+    CHASE = "chase"
+    GRAB = "grab"
+    REST = "rest"
+
+    def __init__(self, x, y, spawn_delay=0.0):
+
+        super().__init__(x, y, GOLEM_HP, GOLEM_CHASE_SPEED, spawn_delay)
+
+        self.spawn_t = GOLEM_SPAWN_TIME + spawn_delay
+
+        self.rect = pygame.Rect(0, 0, *GOLEM_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.phase = self.WANDER
+
+        self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+        self.turn_t = random.uniform(*GOLEM_TURN_TIME)
+
+        self.phase_t = 0.0
+        self.moving = False
+
+        self.grab_dir = pygame.Vector2(0, 1)   # hacia donde tira al jugador al soltarlo
+        self._squeeze_pending = False   # apreto y la arena todavia no lo aplico
+        self._release_pending = False   # solto y la arena todavia no lo aplico
+        self._squeezed = False          # ya apreto en este agarre
+
+    # ---------- estado ----------
+
+    @property
+    def holding(self):
+        """True mientras tiene agarrado al jugador."""
+
+        return self.phase == self.GRAB
+
+    @property
+    def lift(self):
+        """Cuanto levanta al jugador ahora mismo (unidades del mundo):
+        sube al empezar el agarre y baja al soltarlo."""
+
+        if self.phase != self.GRAB:
+            return 0.0
+
+        up = min(1.0, self.phase_t / 0.35)
+        down = min(1.0, max(0.0, (GOLEM_GRAB_TIME - self.phase_t) / 0.25))
+
+        return GOLEM_GRAB_LIFT * ease_out(min(up, down))
+
+    def can_grab(self, body):
+        """True si esta persiguiendo y toca el cuerpo del jugador."""
+
+        if self.phase != self.CHASE or self.spawning or self.dead:
+            return False
+
+        reach = self.rect.inflate(GOLEM_GRAB_REACH * 2, GOLEM_GRAB_REACH * 2)
+
+        return reach.colliderect(body)
+
+    def start_grab(self, direction=None):
+        """`direction`: de que lado vino el jugador (para tirarlo para
+        ese mismo lado al soltarlo)."""
+
+        if direction is not None and pygame.Vector2(direction).length_squared() > 0.01:
+            self.grab_dir = pygame.Vector2(direction).normalize()
+        else:
+            self.grab_dir = pygame.Vector2(0, 1)
+
+        self.phase = self.GRAB
+        self.phase_t = 0.0
+        self.vel = pygame.Vector2()
+        self._squeeze_pending = False
+        self._release_pending = False
+        self._squeezed = False
+
+    def take_squeeze(self):
+        """True UNA vez por agarre: cuando aprieta."""
+
+        if self._squeeze_pending:
+
+            self._squeeze_pending = False
+
+            return True
+
+        return False
+
+    def take_release(self):
+        """True UNA vez por agarre: cuando suelta al jugador."""
+
+        if self._release_pending:
+
+            self._release_pending = False
+
+            return True
+
+        return False
+
+    # ---------- golpes que recibe ----------
+
+    def take_damage(self, amount):
+        """Pierde vida, parpadea y se da cuenta de que lo atacan. Casi no
+        retrocede y no se atonta: es pesado. Mientras te agarra no se le
+        puede hacer dano."""
+
+        if self.spawning or self.dead or self.phase == self.GRAB:
+            return 0
+
+        self.hp -= amount
+        self.flash = GOLEM_FLASH_TIME
+
+        away = self.pos - self.last_target
+
+        if away.length_squared() > 0.01 and self.phase != self.ALERT:
+            self.pos += away.normalize() * GOLEM_HIT_PUSH * 0.05
+            self.rect.center = (round(self.pos.x), round(self.pos.y))
+
+        # Si lo golpean paseando, ya te vio
+        if self.phase == self.WANDER:
+
+            self.phase = self.ALERT
+            self.phase_t = 0.0
+
+        return amount
+
+    # ---------- movimiento ----------
+
+    def _line_clear(self, a, b, collision_map):
+        """True si no hay paredes ni bloques entre `a` y `b`."""
+
+        a = pygame.Vector2(a)
+        b = pygame.Vector2(b)
+
+        steps = max(1, int(a.distance_to(b) // 4))
+
+        probe = pygame.Rect(0, 0, 4, 4)
+
+        for i in range(1, steps + 1):
+
+            p = a.lerp(b, i / steps)
+
+            probe.center = (round(p.x), round(p.y))
+
+            if not (self.room.contains(probe) and collision_map.can_move(probe)):
+                return False
+
+        return True
+
+    def _walk(self, dt, direction, speed, collision_map,
+              angles=(0, 45, -45, 90, -90)):
+        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
+        Devuelve la direccion que uso o None si no pudo moverse."""
+
+        step = speed * dt
+
+        for angle in angles:
+
+            d = direction.rotate(angle)
+
+            nx = self.pos.x + d.x * step
+            ny = self.pos.y + d.y * step
+
+            test = self.rect.copy()
+            test.center = (round(nx), round(ny))
+
+            if self._free(test, collision_map):
+
+                self.pos.update(nx, ny)
+                self.rect.center = test.center
+                self.vel = d * speed
+
+                return d
+
+        return None
+
+    def update(self, dt, target, collision_map, others=None):
+
+        target = pygame.Vector2(target)
+
+        self.last_target = target.copy()
+        self.anim_t += dt
+        self.moving = False
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.touch_cd > 0:
+            self.touch_cd = max(0.0, self.touch_cd - dt)
+
+        if self.spawn_t > 0:
+
+            self.spawn_t -= dt
+
+            return
+
+        self.vel = pygame.Vector2()
+
+        to_player = target - self.pos
+        dist = to_player.length()
+
+        # ---- agarrando: no se mueve, la animacion manda ----
+        if self.phase == self.GRAB:
+
+            self.phase_t += dt
+
+            if not self._squeezed and self.phase_t >= GOLEM_SQUEEZE_AT:
+
+                self._squeezed = True
+                self._squeeze_pending = True
+
+            if self.phase_t >= GOLEM_GRAB_TIME:
+
+                self.phase = self.REST
+                self.phase_t = 0.0
+                self._release_pending = True
+
+            return
+
+        # ---- cansado despues de agarrarte: quieto ----
+        if self.phase == self.REST:
+
+            self.phase_t += dt
+
+            if self.phase_t >= GOLEM_REST_TIME:
+
+                self.phase = (
+                    self.CHASE if dist <= GOLEM_LOSE_RADIUS else self.WANDER
+                )
+                self.phase_t = 0.0
+
+            return
+
+        # ---- aviso: quieto, ruge, mirandote ----
+        if self.phase == self.ALERT:
+
+            self.phase_t += dt
+
+            if self.phase_t >= GOLEM_ALERT_TIME:
+
+                self.phase = self.CHASE
+                self.phase_t = 0.0
+
+            return
+
+        # ---- persiguiendote, directo, despacito pero sin parar ----
+        if self.phase == self.CHASE:
+
+            if dist > GOLEM_LOSE_RADIUS:
+
+                self.phase = self.WANDER
+                self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+                return
+
+            d = self._walk(
+                dt,
+                self.nav_dir(target, collision_map, dt),
+                GOLEM_CHASE_SPEED,
+                collision_map,
+            )
+
+            self.anti_stuck(dt, collision_map, target, GOLEM_CHASE_SPEED)
+
+            if d is not None:
+                self.moving = True
+
+            return
+
+        # ---- paseando tranquilo ----
+        if (
+            dist <= GOLEM_DETECT_RADIUS
+            and self._line_clear(self.pos, target, collision_map)
+        ):
+
+            self.phase = self.ALERT
+            self.phase_t = 0.0
+
+            return
+
+        self.turn_t -= dt
+
+        if self.turn_t <= 0:
+
+            self.heading = self.heading.rotate(random.uniform(-80, 80))
+            self.turn_t = random.uniform(*GOLEM_TURN_TIME)
+
+        d = self._walk(
+            dt, self.heading, GOLEM_WANDER_SPEED, collision_map,
+            angles=(0, 40, -40, 90, -90, 140, -140, 180)
+        )
+
+        if d is not None:
+            self.heading = d
+            self.moving = True
+
+        # Atascado paseando: cambia de rumbo
+        if self.anti_stuck(dt, collision_map, None, GOLEM_WANDER_SPEED):
+            self.heading = self._random_open_dir(collision_map)
+
+    # ---------- dibujo ----------
+
+    def draw(self, screen, camera, art):
+
+        sprites = art.get(camera.zoom)
+
+        shake = 0
+        alerting = self.phase == self.ALERT
+
+        if self.flash > 0:
+
+            img = sprites["hit"]
+
+        else:
+
+            if self.phase == self.GRAB:
+
+                frames = sprites["grab"]
+                index = min(
+                    len(frames) - 1,
+                    int(self.phase_t / GOLEM_GRAB_TIME * len(frames))
+                )
+
+            elif alerting:
+
+                frames = sprites["alert"]
+                index = int(self.anim_t / GOLEM_ALERT_FRAME) % len(frames)
+
+            elif self.phase == self.CHASE:
+
+                frames = sprites["chase"]
+                index = (
+                    int(self.anim_t / GOLEM_CHASE_FRAME) % len(frames)
+                    if self.moving else 0
+                )
+
+            else:
+
+                frames = sprites["walk"]
+                index = (
+                    int(self.anim_t / GOLEM_ANIM_FRAME) % len(frames)
+                    if self.moving else 0
+                )
+
+            img = frames[index]
+
+            # Herido = mas oscuro
+            if self.hp < self.max_hp:
+
+                shade = int(255 * (0.55 + 0.45 * max(0, self.hp) / self.max_hp))
+
+                img = img.copy()
+                img.fill(
+                    (shade, shade, shade, 255),
+                    special_flags=pygame.BLEND_RGBA_MULT
+                )
+
+            if alerting:
+
+                # Tiembla y se tiñe de rojo: te vio
+                blink_on = math.sin(self.anim_t * 30) > 0
+
+                img = img.copy()
+                img.fill(
+                    (90 if blink_on else 30, 0, 0, 0),
+                    special_flags=pygame.BLEND_RGB_ADD
+                )
+
+                shake = int(math.sin(self.anim_t * 60) * 1.5 * camera.zoom)
+
+            elif self.phase == self.GRAB:
+
+                # Tiembla de la fuerza cuando aprieta
+                if abs(self.phase_t - GOLEM_SQUEEZE_AT) < 0.3:
+                    shake = int(math.sin(self.anim_t * 80) * 1.2 * camera.zoom)
+
+            elif self.phase == self.REST:
+
+                # Cansado: se ve un poco mas apagado
+                img = img.copy()
+                img.fill(
+                    (200, 200, 215, 255),
+                    special_flags=pygame.BLEND_RGBA_MULT
+                )
+
+        if self.spawning:
+
+            t = 1.0 - max(0.0, self.spawn_t) / GOLEM_SPAWN_TIME
+
+            img = img.copy()
+            img.set_alpha(int(50 + 150 * max(0.0, min(1.0, t))))
+
+        dest = camera.apply(self.rect)
+
+        # Sombra (mas grande: es enorme)
+        shadow = pygame.Surface(
+            (int(img.get_width() * 0.7), int(img.get_height() * 0.22)),
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.ellipse(shadow, (0, 0, 0, 100), shadow.get_rect())
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(dest.centerx, dest.bottom))
+        )
+
+        screen.blit(
+            img,
+            img.get_rect(
+                midbottom=(
+                    dest.centerx + shake,
+                    dest.bottom + int(2 * camera.zoom)
+                )
+            )
+        )
+
+
+# ---------------------------------------------------------------
 # Guardian (del tamano del jugador, pega con un golpe en arco igual
 # que el jugador, tiene mucha vida)
 # ---------------------------------------------------------------
@@ -4522,6 +5196,7 @@ class Arena:
         self.mosquito_art = MosquitoArt()
         self.hongun_art = HongunArt()
         self.destello_art = DestelloArt()
+        self.golem_art = GolemArt()
         self.guardian_art = GuardianArt()
         self.shooter_art = GuardianShooterArt()
         self.blasts = []            # explosiones de hongunes (aro + luz)
@@ -4799,13 +5474,15 @@ class Arena:
     def _spawn_wave(self, game):
 
         (pinos, troncos, mosquitos, honguns, guardians,
-         shooters, destellos) = wave_composition(self.wave, self.cfg.table)
+         shooters, destellos, golems) = wave_composition(
+            self.wave, self.cfg.table
+        )
 
         kinds = (
             ["pino"] * pinos + ["tronco"] * troncos
             + ["mosquito"] * mosquitos + ["hongun"] * honguns
             + ["guardian"] * guardians + ["tirador"] * shooters
-            + ["destello"] * destellos
+            + ["destello"] * destellos + ["golem"] * golems
         )
         random.shuffle(kinds)
 
@@ -4828,7 +5505,7 @@ class Arena:
 
         for i, kind in enumerate(kinds):
             pos = None
-            min_dist = 135 if kind in ("mosquito", "hongun", "guardian", "tirador", "destello") else 110
+            min_dist = 135 if kind in ("mosquito", "hongun", "guardian", "tirador", "destello", "golem") else 110
 
             if kind == "mosquito":
                 hitbox = MOSQUITO_HITBOX
@@ -4836,6 +5513,8 @@ class Arena:
                 hitbox = HONGUN_HITBOX
             elif kind == "destello":
                 hitbox = DESTELLO_HITBOX
+            elif kind == "golem":
+                hitbox = GOLEM_HITBOX
             elif kind in ("guardian", "tirador"):
                 hitbox = GUARDIAN_HITBOX
             else:
@@ -4869,6 +5548,8 @@ class Arena:
                 enemy = Destello(pos[0], pos[1], spawn_delay=delay)
                 if self.wave <= DESTELLO_EARLY_WAVES:
                     enemy.alert_time = DESTELLO_ALERT_TIME_EARLY
+            elif kind == "golem":
+                enemy = Golem(pos[0], pos[1], spawn_delay=delay)
             elif kind == "guardian":
                 enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
             elif kind == "tirador":
@@ -5025,8 +5706,18 @@ class Arena:
         game.camera.update(p)
         game.melee.cancel()
 
+    def _release_player(self, game):
+        """Por si el jugador quedo agarrado por un golem (termina la
+        oleada, sale de la sala, muere...): lo deja libre."""
+
+        p = game.player
+
+        p.grabbed = False
+        p.grab_lift = 0.0
+
     def _end_run(self, game):
 
+        self._release_player(game)
         self._credit_leftover(game)
         self._open_gate(game)
 
@@ -5225,6 +5916,9 @@ class Arena:
                 # No pega: dispara bolas (se mueven y pegan con self.shots)
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
                 self.shots.extend(enemy.take_shots())
+            elif isinstance(enemy, Golem):
+                enemy.update(dt, target, game.collision_map, others=self.enemies)
+                self._golem_step(game, enemy, body, dt)
             elif isinstance(enemy, Guardian):
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
                 if enemy.swing_hits(body.center):
@@ -5240,6 +5934,14 @@ class Arena:
                 enemy.update(dt, target, game.collision_map, self.enemies)
                 if enemy.fixed:
                     self.shots.extend(enemy.take_shots())
+
+        # Si el golem que te tenia murio (polvora, bola de fuego...) o ya
+        # no hay ninguno agarrandote, quedas libre
+        if p.grabbed and not any(
+            isinstance(e, Golem) and e.holding and not e.dead
+            for e in self.enemies
+        ):
+            self._release_player(game)
 
         self.mosquito_alert = any(
             isinstance(e, Mosquito) and e.alert and not e.dead
@@ -5319,6 +6021,117 @@ class Arena:
         if not self.enemies:
             self.shots = []
             self._wave_cleared(game)
+
+    # ---------- golem ----------
+
+    def _golem_step(self, game, enemy, body, dt):
+        """Todo lo que pasa entre un golem y el jugador: agarrarlo,
+        sostenerlo, apretar (escudo / vida) y soltarlo."""
+
+        p = game.player
+
+        # ---- empieza el agarre: lo tocó una vez y listo ----
+        if (
+            enemy.can_grab(body)
+            and not p.grabbed
+            and p.invuln_timer <= 0
+        ):
+            enemy.start_grab(pygame.Vector2(p.rect.center) - enemy.pos)
+
+            p.grabbed = True
+            p.kb_vel = pygame.Vector2()
+            game.melee.cancel()
+
+        # ---- lo tiene agarrado: lo acomoda en sus manos y lo levanta ----
+        if enemy.holding:
+
+            self._golem_hold(game, enemy, dt)
+
+            # El apreton: se saca el escudo (o toda la vida de la luz)
+            if enemy.take_squeeze():
+                self._golem_squeeze(game, enemy)
+
+        # ---- lo suelta: empujon e invulnerabilidad ----
+        if enemy.take_release():
+
+            p.grabbed = False
+            p.grab_lift = 0.0
+
+            # Te tira para el lado de donde viniste
+            p.kb_vel = enemy.grab_dir * GOLEM_KNOCKBACK
+            p.invuln_timer = max(p.invuln_timer, GOLEM_POST_INVULN)
+
+    def _golem_hold(self, game, enemy, dt):
+        """Mientras dura el agarre el jugador no se mueve ni pega: el
+        golem lo va acomodando adelante de sus manos y lo levanta."""
+
+        p = game.player
+
+        hold = pygame.Vector2(
+            enemy.rect.centerx, enemy.rect.bottom + GOLEM_HOLD_DY
+        )
+        cur = pygame.Vector2(p.rect.center)
+        gap = hold - cur
+        dist = gap.length()
+
+        if dist > 0.5:
+
+            nxt = cur + gap / dist * min(dist, GOLEM_HOLD_PULL * dt)
+
+            test = p.rect.copy()
+            test.center = (round(nxt.x), round(nxt.y))
+
+            if game.collision_map.can_move(test):
+                p.rect.center = test.center
+
+        p.image_rect.midbottom = (p.rect.centerx, p.rect.bottom + 3)
+
+        p.kb_vel = pygame.Vector2()
+        p.grabbed = True
+        p.grab_lift = enemy.lift
+
+        game.melee.cancel()
+
+    def _golem_squeeze(self, game, enemy):
+        """El golem aprieta: te saca TODO el escudo; si no tenias
+        escudo, te saca TODA la vida de la luz."""
+
+        p = game.player
+        pos = pygame.Vector2(p.rect.center)
+
+        p.hurt_timer = p.HURT_TIME   # se pone rojo
+
+        if game.escudo > 0:
+
+            game.escudo = 0.0
+
+            game.show_message("El Golem te saco todo el escudo!")
+
+        else:
+
+            game.vida = 0.0
+
+            game.show_message("El Golem te aplasto: se apago tu luz!")
+
+        # Polvo de piedra
+        for _ in range(34):
+
+            angle = random.uniform(0, math.tau)
+            speed = random.uniform(25, 110)
+            life = random.uniform(0.3, 0.8)
+
+            self.particles.append({
+                "x": pos.x,
+                "y": pos.y - 6,
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "life": life,
+                "max": life,
+                "color": random.choice([
+                    (150, 150, 160), (110, 110, 122),
+                    (190, 190, 198), (90, 80, 70)
+                ]),
+            })
 
     def _hongun_explode(self, game, enemy):
         """Explota el hongun: efecto, dano y empujon al jugador."""
@@ -5442,6 +6255,8 @@ class Arena:
                 enemy.draw(screen, camera, self.hongun_art)
             elif isinstance(enemy, Destello):
                 enemy.draw(screen, camera, self.destello_art)
+            elif isinstance(enemy, Golem):
+                enemy.draw(screen, camera, self.golem_art)
             elif isinstance(enemy, GuardianShooter):
                 enemy.draw(screen, camera, self.shooter_art)
             elif isinstance(enemy, Guardian):

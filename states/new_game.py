@@ -1555,6 +1555,10 @@ class NewGame:
             self.show_message("Necesitas una luz")
             return
 
+        # Agarrado por un Golem: no puede pegar
+        if self.player.grabbed:
+            return
+
         # Modo bola de fuego (solo antorcha): no hay swing, sale una bola
         if self._fire_available() and self.attack_mode == "fuego":
             self._shoot_fireball()
@@ -1830,6 +1834,7 @@ class NewGame:
 
             elif (
                 self.state == "playing"
+                and not self.player.grabbed
                 and self._fire_available()
                 and self.attack_mode == "fuego"
             ):

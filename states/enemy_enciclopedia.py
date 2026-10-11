@@ -94,6 +94,18 @@ DEFAULT_DATA = {
             "derrotas antes de que te alcance, no explota."
         ),
     },
+
+    "golem": {
+        "nombre": "Golem",
+        "imagen": "golem_icono.png",
+        "descripcion": (
+            "Enorme y muy lento. Pasea tranquilo, pero si te ve va directo hacia "
+            "vos sin parar. Si te toca una sola vez te agarra, te levanta y te "
+            "aprieta: te saca todo el escudo y, si no tenias escudo, toda la vida "
+            "de tu luz. Despues te suelta y queda cansado unos segundos. Tiene "
+            "mucha vida: no te dejes alcanzar."
+        ),
+    },
 }
 
 
@@ -122,6 +134,7 @@ class EnemyEncyclopedia:
         "guardian",
         "guardian_tirador",
         "destello",
+        "golem",
     )
 
     # ---------- distribucion (en coordenadas de la imagen 1672x941) ----
@@ -136,7 +149,7 @@ class EnemyEncyclopedia:
     ROW_X = 456
     ROW_Y = 260
     ROW_W = 260
-    ROW_H = 50      # 7 enemigos: tienen que entrar sin tapar el boton REGRESAR
+    ROW_H = 46      # 8 enemigos: tienen que entrar dentro de la pantalla de la tablet y sin tapar el boton REGRESAR
     ROW_GAP = 4
 
     # Ficha del enemigo (derecha)

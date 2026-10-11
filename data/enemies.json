@@ -28,5 +28,10 @@
         "nombre": "Destello",
         "imagen": "destello.png",
         "descripcion": "Pasea tranquilo y da un poco de luz con el cuerpo. Si te ve se frena y parpadea en blanco: ese es el aviso. Despues sale corriendo casi el doble de rapido que vos, te choca y explota: te saca vida, te empuja y deja la pantalla en blanco unos 5 segundos. Aguanta 2 golpes y si lo derrotas antes de que te alcance, no explota"
+    },
+    "golem": {
+        "nombre": "Golem",
+        "imagen": "golem_icono.png",
+        "descripcion": "Enorme y muy lento. Pasea tranquilo, pero si te ve va directo hacia ti sin parar. Si te toca una sola vez te agarra, te levanta y te aprieta: te saca todo el escudo y, si no tenias escudo, toda la vida de tu luz. Despues te suelta y queda cansado unos segundos. Tiene mucha vida: no te dejes alcanzar."
     }
 }
