@@ -129,8 +129,8 @@ GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 # (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
 #  destellos, golems)  <- las tablas pueden traer de 4 a 8 numeros
 LEFT_WAVE_COMPOSITION = {
-    1: (0,0,0,0,1,0,3),
-    2: (0, 0, 0, 0, 2, 1),
+    1: (0,0,0,0,0,0,4,3),
+    2: (0, 0, 0, 0, 2, 1,),
 }
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
 # pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
