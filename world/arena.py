@@ -129,8 +129,8 @@ GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 # (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
 #  destellos, golems)  <- las tablas pueden traer de 4 a 8 numeros
 LEFT_WAVE_COMPOSITION = {
-    1: (0,0,0,0,0,0,4,3),
-    2: (0, 0, 0, 0, 2, 1,),
+    1: (6,5,10,9,3,0,0,0),
+    2: (7,6,12,10,4,0,0,0),
 }
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
 # pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
@@ -154,9 +154,9 @@ WAVE_COMPOSITION = {
     # Oleadas 8, 9 y 10: aparecen los hongunes
     8: (10, 5, 8, 1),
     # El 7mo numero son los destellos (hongun flashbang)
-    9: (4, 6, 10, 3, 0, 0, 2, 1),
+    9: (4, 6, 10, 3,),
     # El 8vo numero son los golems (lentos, te agarran y te sacan el escudo)
-    10: (5, 6, 7, 8, 0, 0, 4, 2),
+    10: (5, 6, 7, 8,),
 }
 # Ultima oleada del mapa: al pasarla el mapa queda completado, el cofre
 # tira una gema y la sala se cierra para siempre.

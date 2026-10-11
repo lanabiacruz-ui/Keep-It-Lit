@@ -100,10 +100,10 @@ DEFAULT_DATA = {
         "imagen": "golem_icono.png",
         "descripcion": (
             "Enorme y muy lento. Pasea tranquilo, pero si te ve va directo hacia "
-            "vos sin parar. Si te toca una sola vez te agarra, te levanta y te "
+            "ti sin parar. Si te golpea una sola vez te agarra, te levanta y te "
             "aprieta: te saca todo el escudo y, si no tenias escudo, toda la vida "
             "de tu luz. Despues te suelta y queda cansado unos segundos. Tiene "
-            "mucha vida: no te dejes alcanzar."
+            "mucha vida: no te dejes alcanzar"
         ),
     },
 }
