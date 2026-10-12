@@ -92,12 +92,6 @@ while running:
 
             running = False
         
-        if current_state == "startup":
-
-            if startup.update(dt) == "done":
-
-                current_state = "menu"
-
         if current_state == "menu":
 
             action = menu.handle_event(
@@ -282,7 +276,16 @@ while running:
                 current_state = "menu"
 
 
-    if current_state == "loading":
+    # La pantalla de inicio avanza sola, una vez por frame (antes se
+    # actualizaba dentro del bucle de eventos y solo avanzaba con
+    # clicks, teclas o movimiento del mouse).
+    if current_state == "startup":
+
+        if startup.update(dt) == "done":
+
+            current_state = "menu"
+
+    elif current_state == "loading":
 
         if loading.update(dt) == "done":
 

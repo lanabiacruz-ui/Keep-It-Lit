@@ -209,7 +209,18 @@ class MainMenu:
     def _setup_cat(self, original):
         """Recorta el gato del fondo para poder hacerlo respirar."""
 
-        x0, y0, w, h = CAT_RECT
+        # CAT_RECT esta en coordenadas "logicas" (745x421). El fondo real
+        # puede tener otra resolucion, asi que se convierte a pixeles de
+        # la imagen original antes de recortar.
+        kx = original.get_width() / BG_W
+        ky = original.get_height() / BG_H
+
+        lx, ly, lw, lh = CAT_RECT
+
+        x0 = round(lx * kx)
+        y0 = round(ly * ky)
+        w = round(lw * kx)
+        h = round(lh * ky)
 
         px = [
             [tuple(original.get_at((x0 + x, y0 + y))[:3]) for x in range(w)]
@@ -226,15 +237,15 @@ class MainMenu:
                 if mask[y][x]:
                     sprite.set_at((x, y), (*px[y][x], 255))
 
-        # Mismo escalado "a pixel" que el fondo
+        # Tamano en pantalla: lo que ocupa esa zona en la ventana
         size = (
-            max(1, round(w * self.sx)),
-            max(1, round(h * self.sy))
+            max(1, round(lw * self.sx)),
+            max(1, round(lh * self.sy))
         )
 
-        self.cat_sprite = pygame.transform.scale(sprite, size)
+        self.cat_sprite = pygame.transform.smoothscale(sprite, size)
 
-        self.cat_pos = (round(x0 * self.sx), round(y0 * self.sy))
+        self.cat_pos = (round(lx * self.sx), round(ly * self.sy))
 
         # Punto fijo de la respiracion: abajo al medio del gato
         self.cat_anchor = (size[0] / 2, size[1] * 0.93)
