@@ -61,6 +61,27 @@
           "precio": 13
         }
       ]
+    },
+    {
+      "nombre": "Construcción",
+      "items": [
+        {
+          "id": "bolsa",
+          "precio": 12
+        },
+        {
+          "id": "cofre",
+          "precio": 25
+        },
+        {
+          "id": "fogata",
+          "precio": 30
+        },
+        {
+          "id": "faro",
+          "precio": 45
+        }
+      ]
     }
   ]
 }

@@ -2,62 +2,59 @@
     "player_name": "ujuju",
     "mode": "normal",
     "created_at": "2026-10-10T22:55:15",
-    "last_played": "2026-10-11T22:11:07",
+    "last_played": "2026-10-12T19:58:12",
     "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
     "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
-    "x": 1010,
-    "y": 132,
-    "coins": 56642,
+    "x": 949,
+    "y": 142,
+    "coins": 56320,
     "gems": 2,
     "has_match": true,
     "light": "antorcha",
     "vida": 1.0,
-    "escudo": 0.25,
+    "escudo": 0.5,
     "inventory": [
+        null,
         [
-            "esfera",
-            9
+            "polvora",
+            11
         ],
         [
             "repelente",
             8
         ],
         [
-            "polvora",
-            11
-        ],
-        [
-            "hongo_azul",
-            1
+            "fogata",
+            2
         ]
     ],
     "collected": [
-        "moneda_pasillo_tienda#0",
-        "aceite_02#0",
-        "cera_02#0",
-        "madera_07#0",
-        "moneda_pasillo_cabana#0",
-        "moneda5_pasillo_cofres#0",
-        "madera_08#0",
         "moneda_sala_central#1",
-        "aceite_01#0",
-        "madera_12#0",
         "madera_05#0",
-        "madera_03#0",
-        "madera_04#0",
-        "moneda_pasillo_izq#0",
-        "moneda_pasillo_cofres#0",
         "madera_06#0",
+        "moneda_pasillo_cofres#0",
+        "madera_01#0",
+        "moneda5_pasillo_cofres#0",
         "cera_03#0",
+        "aceite_01#0",
+        "madera_04#0",
+        "madera_11#0",
+        "moneda_pasillo_tienda#1",
+        "aceite_03#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_sala_central#0",
         "madera_10#0",
         "moneda_pasillo_der#0",
-        "aceite_03#0",
-        "madera_11#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#1",
         "madera_09#0",
-        "madera_01#0",
-        "moneda_sala_central#0"
+        "madera_03#0",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_cabana#0",
+        "cera_02#0",
+        "madera_12#0",
+        "madera_07#0",
+        "aceite_02#0",
+        "moneda_pasillo_tienda#0",
+        "madera_08#0"
     ],
     "item_seed": 162672674,
     "arena_wave": 1,
@@ -87,9 +84,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1796,
+        "items_used": 1802,
         "chests_opened": 0,
-        "purchases": 95,
+        "purchases": 101,
         "fireballs": 3361,
         "kills": 1682
     },
@@ -98,5 +95,75 @@
         "inicio",
         "tienda"
     ],
-    "gems_green": 1
+    "gems_green": 1,
+    "placeables": [
+        {
+            "t": "bolsa",
+            "x": 1000,
+            "y": 156,
+            "slots": [
+                null,
+                null,
+                null,
+                null
+            ]
+        },
+        {
+            "t": "cofre",
+            "x": 1018,
+            "y": 136,
+            "slots": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ]
+        },
+        {
+            "t": "fogata",
+            "x": 956,
+            "y": 154,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 942,
+            "y": 446,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 948,
+            "y": 555,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 1073,
+            "y": 518,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 1036,
+            "y": 471,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 1027,
+            "y": 424,
+            "fuel": 0.0
+        },
+        {
+            "t": "faro",
+            "x": 870,
+            "y": 436,
+            "fuel": 0.0
+        }
+    ]
 }

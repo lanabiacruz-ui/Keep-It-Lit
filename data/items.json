@@ -152,5 +152,29 @@
                 "duracion": 120
             }
         ]
+    },
+    "bolsa": {
+        "nombre": "Bolsa",
+        "descripcion": "No va al inventario. Mantené click izquierdo sobre ella para arrastrarla; click derecho para ver qué tiene adentro. 4 casilleros, 15 de cada cosa por casillero.",
+        "requiere_fosforo": false,
+        "efectos": []
+    },
+    "cofre": {
+        "nombre": "Cofre",
+        "descripcion": "Elegilo en la hotbar y hacé click en el mapa donde lo querés poner: queda fijo para siempre. Click derecho sobre él para abrirlo. 8 casilleros, 15 por casillero.",
+        "requiere_fosforo": false,
+        "efectos": []
+    },
+    "faro": {
+        "nombre": "Faro",
+        "descripcion": "Linterna antigua. Elegila y hacé click donde la querés poner. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarla con cera (con la cera elegida, F o click derecho cerca). Se arrastra con click izquierdo mantenido.",
+        "requiere_fosforo": false,
+        "efectos": []
+    },
+    "fogata": {
+        "nombre": "Fogata",
+        "descripcion": "Elegila y hacé click donde la querés poner: queda fija para siempre. Ilumina mucho, dura mucho y se alimenta con un poquito de madera (con la madera elegida, F o click derecho cerca).",
+        "requiere_fosforo": false,
+        "efectos": []
     }
 }

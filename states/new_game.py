@@ -32,6 +32,7 @@ from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker
 from world.shop import Shopkeeper, load_catalog, price_table
+from world.placeables import PlaceableManager
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
@@ -544,6 +545,12 @@ class NewGame:
         print(
             f"[items] {len(self.item_defs)} tipos de item, "
             f"{len(self.world_items)} objetos en el mapa"
+        )
+
+        # Bolsas, cofres, faros y fogatas colocados (se guardan con la
+        # partida)
+        self.placeables = PlaceableManager(
+            self.save_data.get("placeables", [])
         )
 
         # F3 = ver donde estan los objetos
@@ -1306,6 +1313,11 @@ class NewGame:
         item_id = self.hud.items[slot]
 
         if item_id is None:
+            return
+
+        # Cofre / faro / fogata: se colocan. Cera y madera cerca de un
+        # faro / fogata: los alimentan.
+        if self.placeables.try_use(self, slot):
             return
 
         item = self.item_defs.get(item_id, {})
@@ -2105,6 +2117,29 @@ class NewGame:
         item_ids = []
 
         for item_id, qty in cart.items():
+
+            # La bolsa no es un item de inventario: sale al piso como
+            # objeto propio (se arrastra con click izquierdo)
+            if item_id == "bolsa":
+
+                for _ in range(qty):
+
+                    try:
+                        landing = self.shopkeeper._landing_point(
+                            self.collision_map
+                        )
+                        mouth = self.shopkeeper.MOUTH
+                    except Exception:
+                        landing = self.player.rect.center
+                        mouth = None
+
+                    self.placeables.spawn_bag(
+                        landing[0], landing[1],
+                        src=mouth, delay=0.3
+                    )
+
+                continue
+
             item_ids.extend([item_id] * qty)
 
         for item in self.shopkeeper.spit(item_ids, self.collision_map):
@@ -2189,6 +2224,8 @@ class NewGame:
             "broken_doors": sorted(self.doors.broken_ids),
 
             "chests": self.chests.save_data(),
+
+            "placeables": self.placeables.save_data(),
 
             "enemies_seen": sorted(self.discovered_enemies),
 
@@ -2428,6 +2465,14 @@ class NewGame:
                 self,
                 event
             )
+
+            return None
+
+        # ---------------------------------------------------------
+        # BOLSA / COFRE / FARO / FOGATA (arrastrar, abrir, cerrar)
+        # ---------------------------------------------------------
+
+        if self.placeables.handle_event(self, event):
 
             return None
 
@@ -3085,6 +3130,8 @@ class NewGame:
         # salen volando de su boca
         self.shopkeeper.update(dt)
 
+        self.placeables.update(self, dt)
+
         for drop in self.light_drops:
 
             if getattr(drop, "fly", None) is not None:
@@ -3506,6 +3553,8 @@ class NewGame:
 
         self.chests.draw(self.screen, self.camera)
 
+        self.placeables.draw(self.screen, self.camera)
+
         self.shopkeeper.draw(self.screen, self.camera)
 
         for dummy in self.dummies:
@@ -3540,6 +3589,9 @@ class NewGame:
                 drop.rect.centery,
                 drop.light_radius
             ))
+
+        # Faros y fogatas encendidos
+        sources.extend(self.placeables.light_sources())
 
         if self.has_match:
 
@@ -3648,6 +3700,9 @@ class NewGame:
 
             self.screen.blit(ring, (0, 0))
 
+        # Vista previa del cofre / faro / fogata que tenes en la mano
+        self.placeables.draw_ghost(self, self.screen)
+
         # Brillo del cofre, explosion y chispas (encima de la oscuridad)
         for arena in self.arenas:
             arena.draw_fx(self.screen, self.camera)
@@ -3741,6 +3796,9 @@ class NewGame:
 
         for arena in self.arenas:
             arena.draw_hud(self.screen)
+
+        # Contenido de la bolsa / cofre abierto
+        self.placeables.draw_panel(self, self.screen)
 
         # Flashbang del destello: blanco encima de todo
         self._draw_flashbang()
