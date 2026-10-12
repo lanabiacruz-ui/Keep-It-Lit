@@ -18,6 +18,7 @@ from world.items import (
     LightItem,
     WorldItem,
     get_gem_icon,
+    get_green_gem_icon,
     load_item_defs,
     load_spawn_zones,
     make_spawn_items
@@ -271,10 +272,38 @@ class NewGame:
             "cabana"
         )
 
-        spawn_x = self.save_data.get("x", spawn_x)
-        spawn_y = self.save_data.get("y", spawn_y)
-
         self.player = Player(spawn_x, spawn_y)
+
+        # Donde queda el hitbox al aparecer en la cabaña (por si hay
+        # que rescatar al jugador mas abajo)
+        spawn_center = self.player.rect.center
+
+        # Posicion guardada. Se guarda el CENTRO DEL HITBOX (los pies),
+        # pero Player(x, y) recibe el centro del DIBUJO: pasarle la
+        # posicion guardada directo corria al personaje 18 px hacia
+        # abajo en cada "Continuar" (hasta quedar dentro de una pared,
+        # sin poder moverse). Por eso se coloca el hitbox directamente.
+        if "x" in self.save_data and "y" in self.save_data:
+
+            try:
+                saved_pos = (
+                    int(self.save_data["x"]),
+                    int(self.save_data["y"]),
+                )
+            except (TypeError, ValueError):
+                saved_pos = None
+
+            if saved_pos is not None:
+
+                self.player.rect.center = saved_pos
+
+                self.player.image_rect.midbottom = (
+                    self.player.rect.centerx,
+                    self.player.rect.bottom + 3,
+                )
+
+        # Partidas que ya quedaron guardadas dentro de una pared
+        self._unstick_player(spawn_center)
 
         self.camera = Camera(
             self.width,
@@ -369,6 +398,10 @@ class NewGame:
 
         # Gemas (las tira el cofre al completar el mapa)
         self.gems = int(self.save_data.get("gems", 0))
+
+        # Gemas verde oscuro (las tira el cofre de la sala del Guardian,
+        # la de la izquierda)
+        self.gems_green = int(self.save_data.get("gems_green", 0))
 
         # ---------- Fosforo / vida ----------
 
@@ -594,6 +627,7 @@ class NewGame:
         self._flicker_time = 0.0
 
         self._gem_icon = None
+        self._gem_green_icon = None
 
         pantalla_perdiste_path = (
             Path(__file__).resolve().parent.parent
@@ -617,6 +651,53 @@ class NewGame:
         self.fade_overlay.fill((0, 0, 0))
 
     # ---------- utilidades ----------
+
+    def _unstick_player(self, fallback_center, max_radius=120):
+        """Si el jugador esta en un lugar donde no puede estar (pared,
+        fuera del mapa), lo mueve al punto caminable mas cercano. Si no
+        hay ninguno cerca, vuelve a la cabaña.
+
+        Arregla tambien las partidas viejas que ya se guardaron
+        atascadas por el bug de la posicion al continuar.
+        """
+
+        rect = self.player.rect
+
+        if self.collision_map.can_move(rect):
+            return
+
+        origin = rect.center
+
+        for radius in range(1, max_radius + 1):
+
+            # Se prueba en un anillo alrededor del punto original
+            for dx in range(-radius, radius + 1):
+                for dy in range(-radius, radius + 1):
+
+                    if max(abs(dx), abs(dy)) != radius:
+                        continue
+
+                    test = rect.copy()
+                    test.center = (origin[0] + dx, origin[1] + dy)
+
+                    if self.collision_map.can_move(test):
+
+                        rect.center = test.center
+
+                        self.player.image_rect.midbottom = (
+                            rect.centerx,
+                            rect.bottom + 3,
+                        )
+
+                        return
+
+        # Sin salida cerca: se lo manda a la cabaña
+        self.player.rect.center = fallback_center
+
+        self.player.image_rect.midbottom = (
+            self.player.rect.centerx,
+            self.player.rect.bottom + 3,
+        )
 
     def _font(self, size):
 
@@ -974,7 +1055,8 @@ class NewGame:
             {
                 "text": (
                     "Completá la sala del Guardián (la de la "
-                    "izquierda): 10 oleadas."
+                    "izquierda): 10 oleadas. ¡Te espera una gema "
+                    "verde oscuro!"
                 ),
                 "done": lambda g: g.arena_left.completed,
             },
@@ -1094,6 +1176,14 @@ class NewGame:
             # Las gemas no van al inventario. Las del cofre de la arena
             # ya se contaron al explotar (value = 0).
             self.gems += int(getattr(item, "value", 1))
+
+            audio.play("gem")
+
+        elif item_id == "gema_verde":
+
+            # Igual que la gema normal: no va al inventario y la del
+            # cofre ya se conto al explotar (value = 0)
+            self.gems_green += int(getattr(item, "value", 1))
 
             audio.play("gem")
 
@@ -2073,6 +2163,7 @@ class NewGame:
 
             "coins": self.coins,
             "gems": self.gems,
+            "gems_green": self.gems_green,
 
             "has_match": self.has_match,
             "light": self.light_type,
@@ -2168,6 +2259,7 @@ class NewGame:
         if not NORMAL_KEEP_COINS:
             self.coins = 0
             self.gems = 0
+            self.gems_green = 0
 
         spawn_x, spawn_y = get_spawn_point(self.collision_map, "cabana")
         self.player.rect.center = (spawn_x, spawn_y)
@@ -3118,7 +3210,7 @@ class NewGame:
 
         item_id = item.item_id
 
-        if item_id in COIN_VALUES or item_id == "gema":
+        if item_id in COIN_VALUES or item_id in ("gema", "gema_verde"):
             return True
 
         # Items de inventario: solo si hay lugar
@@ -3315,9 +3407,11 @@ class NewGame:
         )
 
     def _draw_gems(self):
-        """RECONSTRUIDO: contador de gemas arriba a la derecha."""
+        """RECONSTRUIDO: contadores de gemas arriba a la derecha (la
+        gema normal y, debajo, la verde oscuro). Solo se muestra la que
+        ya tenes."""
 
-        if self.gems <= 0:
+        if self.gems <= 0 and self.gems_green <= 0:
             return
 
         if self._gem_icon is None:
@@ -3327,28 +3421,40 @@ class NewGame:
             except TypeError:
                 self._gem_icon = get_gem_icon()
 
-        x = self.width - GEMS_MARGIN[0]
+        if self._gem_green_icon is None:
+            self._gem_green_icon = get_green_gem_icon()
+
+        rows = []
+
+        if self.gems > 0:
+            rows.append((self._gem_icon, self.gems))
+
+        if self.gems_green > 0:
+            rows.append((self._gem_green_icon, self.gems_green))
+
         y = GEMS_MARGIN[1]
 
-        if self._gem_icon is not None:
+        for icon, amount in rows:
 
-            self.screen.blit(
-                self._gem_icon,
-                (x, y)
+            x = self.width - GEMS_MARGIN[0]
+
+            if icon is not None:
+
+                self.screen.blit(icon, (x, y))
+
+                x += icon.get_width() + 6
+
+            text = self._font(28).render(
+                str(amount),
+                True,
+                (255, 255, 255)
             )
 
-            x += self._gem_icon.get_width() + 6
+            self.screen.blit(text, (x, y))
 
-        text = self._font(28).render(
-            str(self.gems),
-            True,
-            (255, 255, 255)
-        )
+            row_h = icon.get_height() if icon is not None else 28
 
-        self.screen.blit(
-            text,
-            (x, y)
-        )
+            y += row_h + 4
 
     def _draw_debug_items(self):
         """F3: marca donde estan los objetos y las luces."""

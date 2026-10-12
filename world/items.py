@@ -116,7 +116,42 @@ def _gem_placeholder():
     return surf
 
 
+def _green_gem_placeholder():
+    """Gema verde oscuro dibujada por codigo, por si falta
+    icon_gema_verde.png."""
+
+    surf = pygame.Surface((64, 64), pygame.SRCALPHA)
+
+    top = [(32, 6), (56, 24), (32, 58), (8, 24)]
+
+    pygame.draw.polygon(surf, (22, 96, 62), top)
+    pygame.draw.polygon(surf, (70, 160, 110), [(32, 6), (56, 24), (32, 24)])
+    pygame.draw.polygon(surf, (12, 60, 40), [(8, 24), (32, 24), (32, 58)])
+    pygame.draw.polygon(surf, (150, 215, 180), top, 3)
+
+    return surf
+
+
 _gem_cache = None
+_green_gem_cache = None
+
+
+def get_green_gem_icon():
+    """Icono de la gema verde oscuro (la de la sala del Guardian):
+    assets/maps/hud/icon_gema_verde.png (64x64). Si no existe, una
+    dibujada por codigo."""
+
+    global _green_gem_cache
+
+    if _green_gem_cache is None:
+
+        icon = load_icon("gema_verde")
+
+        _green_gem_cache = (
+            icon if icon is not None else _green_gem_placeholder()
+        )
+
+    return _green_gem_cache
 
 
 def get_gem_icon():
@@ -187,10 +222,13 @@ class WorldItem(MatchItem):
         elif item_id == "gema":
             self.original = get_gem_icon()
 
-        # Las monedas y la gema se juntan solas al pasar cerca (sin
+        elif item_id == "gema_verde":
+            self.original = get_green_gem_icon()
+
+        # Las monedas y las gemas se juntan solas al pasar cerca (sin
         # apretar E)
         self.auto = item_id in (
-            "moneda", "moneda_5", "moneda_10", "gema"
+            "moneda", "moneda_5", "moneda_10", "gema", "gema_verde"
         )
 
         # Animacion de "salir del cofre" (None = quieto en el piso)

@@ -37,6 +37,17 @@ def load_settings():
     return settings
 
 
+def window_is_fullscreen():
+    """True si la ventana esta de verdad en pantalla completa."""
+
+    try:
+        return bool(pygame.display.is_fullscreen())
+    except AttributeError:
+        surface = pygame.display.get_surface()
+
+        return bool(surface and surface.get_flags() & pygame.FULLSCREEN)
+
+
 def save_settings(settings):
 
     try:
@@ -142,6 +153,11 @@ class Settings:
 
         self.values = load_settings()
 
+        # El interruptor muestra lo que la ventana ES, no lo que quedo
+        # guardado en el archivo (si no, podia decir "activado" con la
+        # ventana en modo ventana).
+        self.values["fullscreen"] = window_is_fullscreen()
+
         self.selected = 0
         self.dragging = None
 
@@ -219,10 +235,16 @@ class Settings:
 
         elif key == "fullscreen":
 
-            try:
-                pygame.display.toggle_fullscreen()
-            except pygame.error:
-                pass
+            before = window_is_fullscreen()
+
+            # Solo se cambia la ventana si hace falta
+            if before != bool(self.values[key]):
+
+                try:
+                    pygame.display.toggle_fullscreen()
+                except pygame.error:
+                    # No se pudo: el interruptor vuelve a como estaba
+                    self.values[key] = before
 
     def _set_slider_from_mouse(self, index, mouse_x):
 

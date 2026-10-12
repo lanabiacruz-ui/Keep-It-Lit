@@ -15,6 +15,8 @@ la siguiente oleada.
 Al terminar la oleada LAST_WAVE (10) el mapa queda completado: el cofre
 tambien tira una gema, aparece el cartel de 'Mapa completado', te sacan
 de la sala y la entrada se cierra para siempre (se guarda en la partida).
+La sala de la derecha tira la gema normal; la de la IZQUIERDA (Sala del
+Guardian) tira la GEMA VERDE OSCURO (ver gem_id en ArenaConfig).
 
 Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/enemigo.png            56x56
@@ -29,6 +31,7 @@ Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
   assets/maps/combate/pantalla_mapa_completado.png 420x200 (oleada 10)
   assets/maps/combate/sala_sellada.png       40x160 (entrada cerrada)
   assets/maps/hud/icon_gema.png              64x64
+  assets/maps/hud/icon_gema_verde.png        64x64 (gema verde oscuro, sala izquierda)
   assets/maps/combate/hongun_anim.png        224x56 (4 frames, caminar)
   assets/maps/combate/hongun_carga.png       112x56 (2 frames, recargando)
   assets/maps/combate/hongun.png             56x56  (opcional, 1 solo cuadro)
@@ -79,7 +82,7 @@ import pygame
 from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
-from world.items import WorldItem, get_gem_icon
+from world.items import WorldItem, get_gem_icon, get_green_gem_icon
 from world.melee import (
     ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
     ease_out, sector_outline,
@@ -133,16 +136,16 @@ GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 #  destellos, golems). Ninguna pasa de ~32 enemigos para que no se
 # trabe el juego.
 LEFT_WAVE_COMPOSITION = {
-    1: (6,5,10,9,3,0,0,0),
-    2: (7,6,12,10,4,0,0,0), 
-    3: (6,6,16,11,6,3,0,0), 
-    4: (10,7,16,15,6,6,0,0), 
-    5:  (4, 4, 6, 4, 2, 2, 1, 0),    # 23  aparece el 1er destello
-    6:  (5, 4, 8, 4, 3, 2, 2, 0),    # 28
-    7:  (5, 5, 8, 5, 3, 2, 2, 1),    # 31  aparece el 1er golem
-    8:  (5, 4, 8, 5, 4, 3, 2, 1),    # 32
-    9:  (4, 5, 8, 4, 4, 3, 2, 2),    # 32
-    10: (4, 4, 6, 4, 5, 4, 3, 2),    # 32  oleada final
+    1: (1,1,3,1,1,0,0,0),
+    2: (2,1,5,1,1,0,0,0), 
+    3: (3,1,7,1,1,1,0,0), 
+    4: (4,1,8,1,1,1,0,0), 
+    5:  (5,2,9,2,2,1,1,0),    # 23  aparece el 1er destello
+    6:  (6,3,10,3,3,1,1,0),    # 28
+    7:  (7,4,12,4,4,2,1,0),    # 31  aparece el 1er golem
+    8:  (8,5,13,5,5,3,2,1),    # 32
+    9:  (9,6,14,6,6,4,3,2),    # 32
+    10: (9,6,20,6,5,3,4,3),    # 32  oleada final
 }
 # Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
 # pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
@@ -222,6 +225,11 @@ ENEMY_DAMAGE_MAX = 0.15
 
 # Si te quedas sin vida en "con escape", te dejan con esta llama
 ESCAPE_REVIVE_LIFE = 0.15
+
+# Con escape: segundos que podes estar afuera de la sala (en la puerta o
+# el pasillo) antes de que se cancele la oleada. Si volves a entrar antes,
+# la oleada sigue como si nada. 0 = se cancela apenas pisas afuera.
+ESCAPE_GRACE = 2.5
 
 
 # ---------------------------------------------------------------
@@ -364,7 +372,7 @@ HONGUN_CHARGE_FRAME = 0.12
 # muere. El tiempo del blanco se cambia en states/new_game.py (FLASH_*).
 # ---------------------------------------------------------------
 
-DESTELLO_HP = 5                 # golpes que aguanta (si lo matas a golpes NO explota)
+DESTELLO_HP = 3                 # golpes que aguanta (si lo matas a golpes NO explota)
 DESTELLO_HITBOX = (10, 12)
 DESTELLO_DRAW_SIZE = 17         # tamano dibujado (unidades del mundo)
 
@@ -406,7 +414,7 @@ DESTELLO_ALERT_FRAME = 0.10
 # cansado unos segundos.
 # ---------------------------------------------------------------
 
-GOLEM_HP = 40                   # golpes que aguanta
+GOLEM_HP = 50                  # golpes que aguanta
 GOLEM_HITBOX = (16, 18)         # lo que choca y lo que golpea el jugador
 # Tamano dibujado (unidades del mundo). Con zoom x4 son 112 x 112 px,
 # que es el tamano de cada cuadro de las imagenes.
@@ -420,6 +428,7 @@ GOLEM_TURN_TIME = (1.8, 4.0)    # cada cuanto cambia de rumbo paseando
 # Deteccion: te tiene que ver (distancia y sin paredes en el medio)
 GOLEM_DETECT_RADIUS = 110.0
 GOLEM_LOSE_RADIUS = 200.0       # si te alejas mas que esto, te pierde
+GOLEM_CHASE_FOREVER = True      # True: una vez que te ve te persigue toda la partida (nunca te pierde)
 GOLEM_ALERT_TIME = 0.9          # aviso quieto (ruge) antes de empezar a perseguirte
 
 # Agarre
@@ -3673,7 +3682,9 @@ class Golem(Enemy):
             if self.phase_t >= GOLEM_REST_TIME:
 
                 self.phase = (
-                    self.CHASE if dist <= GOLEM_LOSE_RADIUS else self.WANDER
+                    self.CHASE
+                    if GOLEM_CHASE_FOREVER or dist <= GOLEM_LOSE_RADIUS
+                    else self.WANDER
                 )
                 self.phase_t = 0.0
 
@@ -3694,7 +3705,7 @@ class Golem(Enemy):
         # ---- persiguiendote, directo, despacito pero sin parar ----
         if self.phase == self.CHASE:
 
-            if dist > GOLEM_LOSE_RADIUS:
+            if not GOLEM_CHASE_FOREVER and dist > GOLEM_LOSE_RADIUS:
 
                 self.phase = self.WANDER
                 self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
@@ -3864,7 +3875,7 @@ class Golem(Enemy):
 # que el jugador, tiene mucha vida)
 # ---------------------------------------------------------------
 
-GUARDIAN_HP = 48                  # golpes que aguanta
+GUARDIAN_HP = 30                  # golpes que aguanta
 GUARDIAN_HITBOX = (10, 16)        # lo que choca y lo que golpea el jugador
 # Tamano dibujado en unidades del mundo: el mismo que el personaje
 # (54x74 px en pantalla con el zoom x4)
@@ -4436,7 +4447,7 @@ class Guardian(Enemy):
 # bolas como las del jugador, apunta muy bien y toma distancia)
 # ---------------------------------------------------------------
 
-GSHOOT_HP = 40                     # golpes que aguanta (el Guardian: 48)
+GSHOOT_HP = 28                     # golpes que aguanta (el Guardian: 48)
 
 # Movimiento (unidades del mundo por segundo; el jugador va a 95)
 GSHOOT_WANDER_SPEED = GUARDIAN_WANDER_SPEED   # paseando tranquilo
@@ -5130,7 +5141,8 @@ class ArenaConfig:
                  table, rewards, last_wave, save_wave, save_done,
                  show_total=False,
                  sealed_text="Mapa completado: la sala esta cerrada",
-                 done_text="Mapa completado! La sala se cerro para siempre"):
+                 done_text="Mapa completado! La sala se cerro para siempre",
+                 gem_id="gema", gem_name="gema"):
 
         self.key = key
         self.title = title
@@ -5146,6 +5158,8 @@ class ArenaConfig:
         self.show_total = show_total      # "Oleada 1/2" en el cartel
         self.sealed_text = sealed_text
         self.done_text = done_text
+        self.gem_id = gem_id              # que gema tira el cofre final
+        self.gem_name = gem_name          # como se llama en los mensajes
 
 
 # Sala grande de la DERECHA: 10 oleadas
@@ -5180,6 +5194,8 @@ LEFT_ARENA = ArenaConfig(
     show_total=True,
     sealed_text="Sala completada: esta cerrada",
     done_text="Sala completada! Se cerro para siempre",
+    gem_id="gema_verde",
+    gem_name="gema verde oscuro",
 )
 
 
@@ -5258,6 +5274,9 @@ class Arena:
 
         self._gate_time = 0.0
 
+        # Tiempo que lleva el jugador afuera de la sala durante una oleada
+        self._out_t = 0.0
+
         # ---------- imagenes ----------
 
         w, h = screen_size
@@ -5286,7 +5305,10 @@ class Arena:
         )
 
         self.coin_icon = load_image(HUD_DIR / "icon_moneda.png", (22, 22))
-        self.gem_icon = get_gem_icon()
+        self.gem_icon = (
+            get_green_gem_icon() if self.cfg.gem_id == "gema_verde"
+            else get_gem_icon()
+        )
 
         self.btn_imgs = {}
 
@@ -5675,9 +5697,9 @@ class Arena:
         # contarla dos veces al agarrarla.
         if self.wave == self.cfg.last_wave:
 
-            game.gems += 1
+            self._add_gem(game)
 
-            gem = WorldItem("gema", cx, cy)
+            gem = WorldItem(self.cfg.gem_id, cx, cy)
             gem.value = 0
 
             gem.start_fly(
@@ -5722,12 +5744,25 @@ class Arena:
             game.world_items.remove(coin)
 
             # La gema ya se conto al explotar el cofre (value = 0)
-            if coin.item_id == "gema":
-                game.gems += getattr(coin, "value", 1)
+            if coin.item_id in ("gema", "gema_verde"):
+                self._add_gem(
+                    game, getattr(coin, "value", 1), coin.item_id
+                )
             else:
                 game.add_coins(getattr(coin, "value", 1))
 
         self.reward_coins = []
+
+    # ---------- gemas ----------
+
+    def _add_gem(self, game, amount=1, item_id=None):
+        """Suma gemas al contador que corresponde: la verde oscuro
+        (sala del Guardian) o la normal (sala de la derecha)."""
+
+        if (item_id or self.cfg.gem_id) == "gema_verde":
+            game.gems_green += amount
+        else:
+            game.gems += amount
 
     # ---------- salir / terminar ----------
 
@@ -5765,6 +5800,7 @@ class Arena:
         self.mode = None
         self.banner_t = 0.0
         self.final_clear = False
+        self._out_t = 0.0
         self.state = self.IDLE
 
         # Mapa completado: la entrada queda cerrada para siempre
@@ -5875,8 +5911,25 @@ class Arena:
         if self.banner_t > 0:
             self.banner_t = max(0.0, self.banner_t - dt)
 
-        # Con escape podes irte caminando
-        if not self.cfg.room.collidepoint(p.rect.center):
+        # Con escape podes irte caminando, pero solo se cancela si te
+        # quedas afuera ESCAPE_GRACE segundos (si solo rozas la puerta
+        # y volves a entrar, la oleada sigue)
+        outside = not self.cfg.room.collidepoint(p.rect.center)
+
+        if outside:
+            self._out_t += dt
+        else:
+            self._out_t = 0.0
+
+        if outside and self._out_t < ESCAPE_GRACE:
+
+            # Todavia hay margen: se avisa una sola vez y sigue el juego
+            if self._out_t - dt <= 0.0 and self.state == self.WAVE:
+                game.show_message("Volve a la sala o se cancela la oleada")
+
+            outside = False
+
+        if outside:
 
             if self.state == self.WAVE:
 
@@ -5893,13 +5946,13 @@ class Arena:
                 # completado (si no, podria repetir la oleada 10)
                 if self.wave == self.cfg.last_wave:
 
-                    game.gems += 1
+                    self._add_gem(game)
 
                     self.wave += 1
                     self.completed = True
 
                     game.show_message(
-                        f"+{self.reward} monedas y 1 gema. "
+                        f"+{self.reward} monedas y 1 {self.cfg.gem_name}. "
                         "Mapa completado!"
                     )
 

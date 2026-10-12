@@ -9,7 +9,7 @@ from states.loading import Loading
 from states.comic import Comic
 from states.new_game import NewGame
 from states.startup import Startup
-from states.settings import Settings
+from states.settings import Settings, load_settings
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
@@ -20,9 +20,20 @@ audio.preload()
 ANCHO = 1280
 ALTO = 720
 
-screen = pygame.display.set_mode(
-    (ANCHO, ALTO)
-)
+# SCALED: el juego siempre se dibuja en 1280x720 y pygame lo estira a
+# la pantalla. Asi la pantalla completa se prende y apaga bien (y el
+# mouse sigue coincidiendo con lo que se ve).
+# Se arranca como dice Configuraciones (antes siempre arrancaba en
+# ventana, aunque el interruptor dijera "activado").
+_flags = pygame.SCALED
+
+if load_settings().get("fullscreen"):
+    _flags |= pygame.FULLSCREEN
+
+try:
+    screen = pygame.display.set_mode((ANCHO, ALTO), _flags)
+except pygame.error:
+    screen = pygame.display.set_mode((ANCHO, ALTO))
 
 pygame.display.set_caption(
     "Keep It Lit"
