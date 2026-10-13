@@ -14,6 +14,7 @@ from world.camera import Camera
 from world.spawn import get_spawn_point
 from player.player import Player
 from world.lighting import PlayerLight
+from world.fx import FxManager
 from world.items import (
     LightItem,
     WorldItem,
@@ -158,7 +159,10 @@ MAGNET_NEEDS_ITEM = True
 REPEL_RING_COLOR = (120, 235, 130)
 
 # Cuanto tarda la pantalla en ponerse del todo negra al perder.
-FADE_DURATION = 1.2
+FADE_DURATION = 2.4
+
+# Transicion al juego despues de las instrucciones (segundos)
+INTRO_TIME = 2.2
 
 # Cuanto se queda la pantalla de "Perdiste" antes de volver al menu.
 LOST_SCREEN_TIME = 3.0
@@ -319,6 +323,11 @@ class NewGame:
             (self.width, self.height),
             darkness_alpha=DARKNESS_ALPHA
         )
+
+        # Efectos: chispas de golpe, monedas, oleadas, auras
+        self.fx = FxManager()
+        self._intro_pending = False
+        self.intro_t = None
 
         self.hud = Hud((self.width, self.height))
 
@@ -636,20 +645,22 @@ class NewGame:
         self._gem_icon = None
         self._gem_green_icon = None
 
-        pantalla_perdiste_path = (
+        ui_dir = (
             Path(__file__).resolve().parent.parent
             / "assets"
             / "maps"
             / "ui"
-            / "pantalla_perdiste.png"
         )
 
-        self.pantalla_perdiste = pygame.transform.smoothscale(
-            pygame.image.load(
-                str(pantalla_perdiste_path)
-            ).convert(),
-            (self.width, self.height)
-        )
+        def _lost_img(name):
+            return pygame.transform.smoothscale(
+                pygame.image.load(str(ui_dir / name)).convert(),
+                (self.width, self.height)
+            )
+
+        # Hardcore: "Regresaras al menu". Normal: "Regresaras a la Cabana"
+        self.pantalla_perdiste = _lost_img("pantalla_perdiste.png")
+        self.pantalla_perdiste_normal = _lost_img("pantalla_perdiste2.png")
 
         self.fade_overlay = pygame.Surface(
             (self.width, self.height)
@@ -730,6 +741,8 @@ class NewGame:
             return
 
         audio.play("hurt")
+
+        self.fx.player_hurt(*self.player.rect.center)
 
         absorbed = min(self.escudo, amount)
 
@@ -1177,6 +1190,8 @@ class NewGame:
                 value = COIN_VALUES[item_id]
 
             self.add_coins(int(value))
+
+            self.fx.coin(item.rect.centerx, item.rect.centery, int(value))
 
         elif item_id == "gema":
 
@@ -1707,7 +1722,7 @@ class NewGame:
         for target in self.melee.new_hits(targets, pivot):
 
             # Tercer golpe (fuerte): chispazo donde pego
-            if self.melee.heavy:
+            if self.melee.heavy and not self.melee.fury:
                 self.melee.add_impact(target.rect.center)
 
             self._hit_target(
@@ -1715,6 +1730,107 @@ class NewGame:
                 self.melee.damage,
                 free=self.melee.fury
             )
+
+    def _update_fx(self, dt):
+        """Efectos visuales: avanza chispas y suelta brasas de las auras."""
+
+        self.fx.update(dt)
+
+        if self.intro_t is not None:
+
+            self.intro_t += dt
+
+            if self.intro_t >= INTRO_TIME:
+                self.intro_t = None
+
+        if self.melee.swinging:
+
+            ang = self.melee.current_angle
+            pvx, pvy = self._attack_pivot()
+            reach = 24 * (1.35 if self.melee.heavy else 1.0)
+
+            self.fx.swing_sparks(
+                pvx + math.cos(ang) * reach,
+                pvy + math.sin(ang) * reach,
+                ang, self.melee.heavy, self.melee.fury
+            )
+
+        if not self.has_match or self._light_radius_px < 8:
+            return
+
+        z = max(1, self.camera.zoom)
+        px, py = self.player.rect.center
+        r = self._light_radius_px / z
+
+        if self.polvora_timer > 0:
+            self.fx.emit_aura(
+                "polvora", px, py, r, (255, 150, 50), dt, rate=26
+            )
+
+        if self.repel_timer > 0:
+            self.fx.emit_aura(
+                "repel", px, py, r, REPEL_RING_COLOR, dt, rate=14
+            )
+
+        if self._magnet_active():
+            self.fx.emit_aura(
+                "iman", px, py, MAGNET_RADIUS, (120, 190, 255), dt,
+                rate=10, inward=True
+            )
+
+        if self.fury_active_fx():
+            self.fx.emit_aura(
+                "furia", px, py, 6, (255, 70, 50), dt, rate=30
+            )
+
+    def fury_active_fx(self):
+        """La furia esta encendida ahora mismo (solo para el efecto)."""
+
+        return bool(getattr(self.melee, "fury", 0) and self.melee.fury)
+
+    GLOW_COLORS = {
+        "fosforo": (255, 175, 80),
+        "vela": (255, 190, 95),
+        "antorcha": (255, 120, 45),
+    }
+
+    def _draw_warm_glows(self, sources):
+        """Tine de calido el aire alrededor de las luces."""
+
+        t = pygame.time.get_ticks() / 1000.0
+
+        for i, (wx, wy, radius) in enumerate(sources):
+
+            # Las luces de la camara/luz del jugador llegan en pixeles
+            # de pantalla; el resto tambien (ver lighting.draw)
+            if radius < 12:
+                continue
+
+            is_player = (
+                self.has_match
+                and int(wx) == int(self.player.rect.centerx)
+                and int(wy) == int(self.player.rect.centery)
+            )
+
+            if is_player:
+
+                color = self.GLOW_COLORS.get(self.light_type, (255, 180, 85))
+
+                k = 0.5 + 0.08 * math.sin(t * 40 + 1.3) \
+                    + 0.06 * math.sin(t * 23)
+
+                self.light.add_glow(
+                    self.screen, self.camera, wx, wy,
+                    radius * 1.05, color, k
+                )
+
+            else:
+
+                self.light.add_glow(
+                    self.screen, self.camera, wx, wy,
+                    radius, (255, 170, 90),
+                    0.28 + 0.05 * math.sin(t * 31 + i)
+                )
 
     def _hit_target(self, target, damage, free=False):
         """Aplica un golpe (o una bola) a lo que toco.
@@ -1724,6 +1840,17 @@ class NewGame:
         """
 
         light = light_stats(self.light_type)
+
+        # Chispas donde pego (para el lado contrario al jugador)
+        tx, ty = target.rect.center
+        px, py = self.player.rect.center
+
+        self.fx.hit(
+            tx, ty,
+            angle=math.atan2(ty - py, tx - px),
+            heavy=bool((self.melee.heavy or damage >= 2) and not self.melee.fury),
+            fury=bool(self.melee.fury),
+        )
 
         if isinstance(target, Door):
 
@@ -2741,6 +2868,20 @@ class NewGame:
 
     def update(self, dt):
 
+        # Hit-stop: el juego se congela un instante al pegar (solo los
+        # efectos siguen, mas lentos)
+        if (
+            self.fx.hitstop > 0
+            and self.state == "playing"
+            and self.pause_view is None
+            and self.tutorial is None
+        ):
+
+            self.fx.hitstop = max(0.0, self.fx.hitstop - dt)
+            self.fx.update(dt * 0.25)
+
+            return None
+
         # ---------------------------------------------------------
         # TUTORIAL
         # ---------------------------------------------------------
@@ -2756,6 +2897,15 @@ class NewGame:
             if not self.tutorial.active:
 
                 self.tutorial = None
+
+                # Partida nueva: transicion al juego
+                if getattr(self, "_intro_pending", False):
+                    self._intro_pending = False
+                    self.intro_t = 0.0
+                    self.fx._ring(
+                        *self.player.rect.center, 4, 70, 1.1,
+                        (255, 215, 140), 3
+                    )
 
             return None
 
@@ -2997,6 +3147,8 @@ class NewGame:
                         self.polvora_dps * POLVORA_TICK
                     )
 
+                    self.fx.pulse("polvora")
+
             if self.polvora_timer <= 0:
 
                 self.polvora_timer = 0
@@ -3074,6 +3226,8 @@ class NewGame:
         )
 
         self._melee_hits(pivot)
+
+        self._update_fx(dt)
 
         self._update_fireballs(dt)
 
@@ -3538,6 +3692,20 @@ class NewGame:
 
     def draw(self):
 
+        # Sacudon de camara (golpe fuerte / inicio de oleada). Se resta al
+        # final del dibujo, asi no mueve la camara de verdad.
+        shake_x, shake_y = self.fx.shake_offset()
+
+        self.camera.x += shake_x
+        self.camera.y += shake_y
+
+        self._draw_scene()
+
+        self.camera.x -= shake_x
+        self.camera.y -= shake_y
+
+    def _draw_scene(self):
+
         self.world_map.draw(
             self.screen,
             self.camera
@@ -3604,6 +3772,17 @@ class NewGame:
             if inset > 0:
                 radius *= max(0.0, 1.0 - inset / SHOP_LIGHT_FADE)
 
+            # Transicion de entrada: la luz se enciende de a poco
+            if self.intro_t is not None:
+
+                k = min(1.0, self.intro_t / INTRO_TIME)
+
+                radius *= 0.3 + 0.7 * (1 - (1 - k) ** 3)
+
+            # Al morir la luz se va apagando de a poco
+            if self.state in ("dying", "lost"):
+                radius *= max(0.0, 1.0 - 1.5 * self.fade_alpha / 255)
+
             if self.vida < FLICKER_THRESHOLD:
 
                 self._flicker_time += 0.02
@@ -3652,53 +3831,35 @@ class NewGame:
             self._lit_rects()
         )
 
-        # Polvora: aro naranja en el borde de la luz
-        if (
-            self.has_match
-            and self.polvora_timer > 0
-            and self._light_radius_px >= 2
-        ):
+        # Resplandor calido de cada luz (el jugador, faros, fogatas...)
+        self._draw_warm_glows(sources)
 
-            cx = int(self.player.rect.centerx * self.camera.zoom - self.camera.x)
-            cy = int(self.player.rect.centery * self.camera.zoom - self.camera.y)
+        # Auras de efectos: el aro marca el RADIO real del efecto
+        if self.has_match and self._light_radius_px >= 8:
 
-            pulse = 2 + int(abs(math.sin(self._flicker_time * 6 + self.polvora_timer * 5)) * 3)
+            cx = self.player.rect.centerx * self.camera.zoom - self.camera.x
+            cy = self.player.rect.centery * self.camera.zoom - self.camera.y
 
-            pygame.draw.circle(
-                self.screen,
-                (255, 140, 40),
-                (cx, cy),
-                int(self._light_radius_px),
-                pulse
-            )
+            if self.polvora_timer > 0:
+                self.fx.draw_aura(
+                    self.screen, "polvora", cx, cy,
+                    self._light_radius_px, (255, 140, 40),
+                    pygame.time.get_ticks() / 1000.0 + self.polvora_timer
+                )
 
-        # Repelente: aro verde en el borde de la luz (area que espanta
-        # a los mosquitos)
-        if (
-            self.has_match
-            and self.repel_timer > 0
-            and self._light_radius_px >= 2
-        ):
+            if self.repel_timer > 0:
+                self.fx.draw_aura(
+                    self.screen, "repel", cx, cy,
+                    self._light_radius_px, REPEL_RING_COLOR,
+                    pygame.time.get_ticks() / 1000.0 * 0.8 + self.repel_timer, 0.8
+                )
 
-            cx = int(self.player.rect.centerx * self.camera.zoom - self.camera.x)
-            cy = int(self.player.rect.centery * self.camera.zoom - self.camera.y)
-
-            pulse = 0.5 + 0.5 * math.sin(self._flicker_time * 5 + self.repel_timer * 3)
-
-            ring = pygame.Surface(
-                (self.width, self.height),
-                pygame.SRCALPHA
-            )
-
-            pygame.draw.circle(
-                ring,
-                (*REPEL_RING_COLOR, int(70 + 70 * pulse)),
-                (cx, cy),
-                int(self._light_radius_px),
-                3
-            )
-
-            self.screen.blit(ring, (0, 0))
+            if self._magnet_active():
+                self.fx.draw_aura(
+                    self.screen, "iman", cx, cy,
+                    MAGNET_RADIUS * self.camera.zoom, (110, 180, 255),
+                    pygame.time.get_ticks() / 1000.0 * 0.6, 0.55
+                )
 
         # Vista previa del cofre / faro / fogata que tenes en la mano
         self.placeables.draw_ghost(self, self.screen)
@@ -3706,6 +3867,17 @@ class NewGame:
         # Brillo del cofre, explosion y chispas (encima de la oscuridad)
         for arena in self.arenas:
             arena.draw_fx(self.screen, self.camera)
+
+        # Brillo de las monedas que salieron del cofre
+        now = pygame.time.get_ticks() / 1000.0
+
+        for item in self.world_items:
+
+            if getattr(item, "sparkle", False):
+                self.fx.draw_item_glow(self.screen, self.camera, item, now)
+
+        # Chispas, aros y "+N" de monedas
+        self.fx.draw(self.screen, self.camera)
 
         # El golpe va encima de la oscuridad, para que brille
         self.melee.draw(
@@ -3800,6 +3972,20 @@ class NewGame:
         # Contenido de la bolsa / cofre abierto
         self.placeables.draw_panel(self, self.screen)
 
+        # Destello de pantalla, vineta y titulo de oleada
+        self.fx.draw_overlay(self.screen)
+
+        # Transicion de entrada: sale de la oscuridad
+        if self.intro_t is not None:
+
+            k = min(1.0, self.intro_t / INTRO_TIME)
+
+            fade = pygame.Surface((self.width, self.height))
+            fade.fill((0, 0, 0))
+            fade.set_alpha(int(200 * (1 - k) ** 2))
+
+            self.screen.blit(fade, (0, 0))
+
         # Flashbang del destello: blanco encima de todo
         self._draw_flashbang()
 
@@ -3840,4 +4026,14 @@ class NewGame:
 
         if self.state == "lost":
 
-            self.screen.blit(self.pantalla_perdiste, (0, 0))
+            if self.mode == MODE_HARDCORE and DELETE_SAVE_ON_LOSS:
+                lost_img = self.pantalla_perdiste
+            else:
+                lost_img = self.pantalla_perdiste_normal
+
+            # Aparece de a poco, no de golpe
+            lost_img.set_alpha(
+                int(255 * min(1.0, (LOST_SCREEN_TIME - self.lost_timer) / 0.6))
+            )
+
+            self.screen.blit(lost_img, (0, 0))

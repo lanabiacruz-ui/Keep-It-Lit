@@ -1,4 +1,5 @@
 import json
+import math
 import random
 
 import pygame
@@ -268,6 +269,10 @@ class WorldItem(MatchItem):
             self.fly = None
             self._lift = 0.0
 
+            # Cae al piso con un rebotecito
+            if getattr(self, "sparkle", False):
+                self._land_ms = pygame.time.get_ticks()
+
             return
 
         t = f["t"]
@@ -300,7 +305,21 @@ class WorldItem(MatchItem):
 
         dest = camera.apply(self.rect)
 
-        lift = int(self._lift * camera.zoom)
+        lift_w = self._lift
+
+        # Rebote al caer: 2 saltitos que se van achicando
+        land = getattr(self, "_land_ms", None)
+
+        if land is not None and f is None:
+
+            b = (pygame.time.get_ticks() - land) / 1000.0
+
+            if b < 0.55:
+                lift_w = 7.0 * abs(math.sin(b * math.pi * 3.0)) * (1 - b / 0.55)
+            else:
+                self._land_ms = None
+
+        lift = int(lift_w * camera.zoom)
 
         screen.blit(
             sprite,

@@ -205,10 +205,10 @@ DESTELLO_TEST_COUNT = 3
 GOLEM_TEST_WAVE = 97
 GOLEM_TEST_COUNT = 2
 
-# Monedas de premio por oleada (la 1 vale 18). Despues de la ultima
+# Monedas de premio por oleada (la 1 vale 100). Despues de la ultima
 # definida sube REWARD_STEP por oleada. "Sin escape" lo multiplica.
-WAVE_REWARDS = {1: 18, 2: 30, 3: 45}
-REWARD_STEP = 15
+WAVE_REWARDS = {1: 100, 2: 200, 3: 300}
+REWARD_STEP = 100
 NO_ESCAPE_MULT = 2
 
 # Vida y velocidad de los enemigos segun la oleada
@@ -5180,8 +5180,8 @@ RIGHT_ARENA = ArenaConfig(
 
 
 LEFT_WAVE_REWARDS = {
-    1: 40, 2: 60, 3: 80, 4: 100, 5: 125,
-    6: 150, 7: 180, 8: 210, 9: 240, 10: 300,
+    1: 1500, 2: 1700, 3: 1900, 4: 2100, 5: 2300,
+    6: 2500, 7: 2700, 8: 2900, 9: 3100, 10: 3300,
 }
 
 LEFT_LAST_WAVE = 10
@@ -5624,6 +5624,16 @@ class Arena:
 
             self.enemies.append(enemy)
 
+        # Efecto de arranque: onda, sacudon, titulo y humo por enemigo
+        fx = getattr(game, "fx", None)
+
+        if fx is not None:
+            fx.wave_start(
+                self.cfg.room.centerx, self.cfg.room.centery, self.wave,
+                self.cfg.room,
+                [e.pos for e in self.enemies]
+            )
+
     def _wave_cleared(self, game):
 
         pos = self.last_death or self.cfg.room.center
@@ -5678,6 +5688,7 @@ class Arena:
             coin = WorldItem("moneda", cx, cy)
 
             coin.value = base + (1 if n < extra else 0)
+            coin.sparkle = True
 
             target = self._coin_target(game, cx, cy)
 
@@ -5701,6 +5712,7 @@ class Arena:
 
             gem = WorldItem(self.cfg.gem_id, cx, cy)
             gem.value = 0
+            gem.sparkle = True
 
             gem.start_fly(
                 (cx, cy), self._coin_target(game, cx, cy),

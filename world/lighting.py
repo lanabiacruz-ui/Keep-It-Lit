@@ -15,6 +15,7 @@ class PlayerLight:
 
         self._cache = {}
         self._soft_cache = {}
+        self._glow_cache = {}
         self._base = None
 
     LIGHT_STEP = 4        # los radios se redondean de a 4 px
@@ -68,14 +69,15 @@ class PlayerLight:
 
         center = radius + 1
 
-        for r in range(radius, -1, -2):
+        # Caida suave: nucleo bien claro y borde que se funde con la
+        # oscuridad (antes era lineal y con escalones de 2 px)
+        for r in range(radius, -1, -1):
 
-            strength = 1.0 - (r / radius)
+            t = r / radius
+            x = max(0.0, min(1.0, (t - 0.15) / 0.85))
+            strength = 1.0 - x * x * (3 - 2 * x)
 
-            alpha = max(
-                0,
-                min(255, int(255 * strength))
-            )
+            alpha = max(0, min(255, int(255 * strength)))
 
             pygame.draw.circle(
                 light,
@@ -85,6 +87,54 @@ class PlayerLight:
             )
 
         return light
+
+    def add_glow(self, screen, camera, wx, wy, radius, color, intensity):
+        """Resplandor calido de una luz (se suma encima de la oscuridad,
+        asi el aire cerca del fuego se ve tenido de color)."""
+
+        radius = int(radius)
+
+        if radius < 8 or intensity <= 0.01:
+            return
+
+        step = max(8, int(round(radius / 8)) * 8)
+        level = max(1, int(round(min(1.0, intensity) * 12)))
+
+        key = (step, color, level)
+
+        spr = self._glow_cache.get(key)
+
+        if spr is None:
+
+            if len(self._glow_cache) > 160:
+                self._glow_cache.clear()
+
+            size = step * 2
+            spr = pygame.Surface((size, size))
+            spr.fill((0, 0, 0))
+
+            k = level / 12.0
+
+            for r in range(step, 0, -2):
+
+                t = 1.0 - r / step
+                f = t * t * k * 0.55
+
+                pygame.draw.circle(
+                    spr,
+                    (int(color[0] * f), int(color[1] * f), int(color[2] * f)),
+                    (step, step), r
+                )
+
+            self._glow_cache[key] = spr
+
+        sx = int(wx * camera.zoom - camera.x)
+        sy = int(wy * camera.zoom - camera.y)
+
+        screen.blit(
+            spr, spr.get_rect(center=(sx, sy)),
+            special_flags=pygame.BLEND_RGB_ADD
+        )
 
     def _soft_rect(self, w, h, feather, strength):
         """Cuadrado iluminado con el borde difuminado (se arma una vez y

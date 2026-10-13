@@ -13,7 +13,7 @@
         },
         {
           "id": "antorcha",
-          "precio": 110
+          "precio": 160
         }
       ]
     },
@@ -46,7 +46,7 @@
         },
         {
           "id": "hongo_azul",
-          "precio": 11
+          "precio": 10
         },
         {
           "id": "repelente",
@@ -67,19 +67,19 @@
       "items": [
         {
           "id": "bolsa",
-          "precio": 12
+          "precio": 20
         },
         {
           "id": "cofre",
-          "precio": 25
+          "precio": 45
         },
         {
           "id": "fogata",
-          "precio": 30
+          "precio": 100
         },
         {
           "id": "faro",
-          "precio": 45
+          "precio": 55
         }
       ]
     }

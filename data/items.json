@@ -166,8 +166,8 @@
         "efectos": []
     },
     "faro": {
-        "nombre": "Linterna antigua",
-        "descripcion": "Linterna antigua. Elegila y hacé click donde la querés poner. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarla con cera (con la cera elegida, F o click derecho cerca). Se arrastra con click izquierdo mantenido.",
+        "nombre": "Candil",
+        "descripcion": "El candil. Eligela y hacé click donde la quieras poner. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarla con cera (con la cera elegida, F o click derecho cerca). Se arrastra con click izquierdo mantenido.",
         "requiere_fosforo": false,
         "efectos": []
     },

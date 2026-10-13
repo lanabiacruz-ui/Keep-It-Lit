@@ -473,36 +473,85 @@ class Melee:
 
         back = max(self.start_angle, angle - trail)
 
-        segments = 10
+        # Con furia el golpe se repite muy rapido: menos segmentos
+        segments = 20 if self.fury else 24
 
         r_in = (INNER_RADIUS + 2) * zoom
         r_out = outer * zoom
+
+        # Con furia siempre naranja (aunque toque el golpe fuerte)
+        if self.fury:
+            heavy = False
+            color = (255, 110, 45)
+            core = (255, 230, 170)
+        elif heavy:
+            color = HEAVY_COLOR
+            core = HEAVY_CORE
+        else:
+            color = (255, 195, 100)
+            core = (255, 250, 220)
 
         for i in range(segments):
 
             a0 = back + (angle - back) * i / segments
             a1 = back + (angle - back) * (i + 1) / segments
 
+            t = (i + 1) / segments
+
             alpha = int(
-                (230 if heavy else 170) * strength * ((i + 1) / segments) ** 2
+                (235 if heavy else 190) * strength * t ** 1.6
             )
 
             if alpha <= 0:
                 continue
 
-            points = (
+            # Media luna: fina atras, gruesa en la punta
+            thick = 0.30 + 0.70 * t
+            seg_in = r_out - (r_out - r_in) * thick
+
+            pts = (
                 arc_points(center, center, r_out, a0, a1, 2)
-                + arc_points(center, center, r_in, a1, a0, 2)
+                + arc_points(center, center, seg_in, a1, a0, 2)
             )
 
-            if heavy:
-                color = HEAVY_COLOR
-            elif self.fury:
-                color = (255, 120, 50)
-            else:
-                color = (255, 205, 120)
+            pygame.draw.polygon(layer, (*color, alpha), pts)
 
-            pygame.draw.polygon(layer, (*color, alpha), points)
+            # Nucleo caliente (mas claro y mas angosto, pegado al borde)
+            core_in = r_out - (r_out - seg_in) * 0.45
+
+            pts = (
+                arc_points(center, center, r_out, a0, a1, 2)
+                + arc_points(center, center, core_in, a1, a0, 2)
+            )
+
+            pygame.draw.polygon(
+                layer, (*core, int(alpha * 0.85)), pts
+            )
+
+        # Filo exterior brillante a lo largo de toda la estela
+        edge = [
+            (center + math.cos(back + (angle - back) * k / 20) * r_out,
+             center + math.sin(back + (angle - back) * k / 20) * r_out)
+            for k in range(21)
+        ]
+
+        if len(edge) > 1:
+            pygame.draw.lines(
+                layer, (*core, int(200 * strength)), False, edge,
+                max(1, round(zoom * 0.5))
+            )
+
+        # Destello en la punta del tajo
+        tip_x = center + math.cos(angle) * r_out * 0.92
+        tip_y = center + math.sin(angle) * r_out * 0.92
+
+        for rad, a in ((9, 55), (6, 110), (3, 230)):
+
+            pygame.draw.circle(
+                layer, (*core, int(a * strength)),
+                (round(tip_x), round(tip_y)),
+                max(2, round(rad * zoom * 0.5))
+            )
 
         # El golpe fuerte tiene un filo blanco-violeta en la punta
         if heavy:
@@ -518,6 +567,7 @@ class Melee:
                  center + math.sin(angle) * r_out),
                 max(2, round(2 * zoom)),
             )
+
         px, py = self._to_screen(camera, pivot[0], pivot[1])
 
         screen.blit(layer, layer.get_rect(center=(round(px), round(py))))
@@ -532,7 +582,10 @@ class Melee:
 
             angle = self.current_angle
 
-            self._draw_trail(screen, camera, pivot, angle, 1.0, self.heavy)
+            self._draw_trail(
+                screen, camera, pivot, angle, 1.0,
+                self.heavy and not self.fury
+            )
 
             sprite = pygame.transform.rotate(
                 self._get_sprite(camera.zoom),
@@ -548,7 +601,7 @@ class Melee:
                 pivot[1] + math.sin(angle) * distance
             )
 
-            if self.heavy:
+            if self.heavy and not self.fury:
 
                 # Aureola violeta alrededor de la luz
                 radius = round(11 * camera.zoom)

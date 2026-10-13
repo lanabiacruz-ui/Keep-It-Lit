@@ -263,6 +263,10 @@ while running:
                     mode=current_mode
                 )
 
+                # Partida nueva: al terminar las instrucciones hay una
+                # transicion al juego (la luz se enciende de a poco)
+                game._intro_pending = True
+
                 current_state = "gameplay"
 
         elif current_state == "gameplay":
