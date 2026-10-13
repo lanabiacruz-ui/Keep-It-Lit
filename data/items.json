@@ -166,7 +166,7 @@
         "efectos": []
     },
     "faro": {
-        "nombre": "Faro",
+        "nombre": "Linterna antigua",
         "descripcion": "Linterna antigua. Elegila y hacé click donde la querés poner. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarla con cera (con la cera elegida, F o click derecho cerca). Se arrastra con click izquierdo mantenido.",
         "requiere_fosforo": false,
         "efectos": []

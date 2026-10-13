@@ -16,6 +16,18 @@
   FOGATA  item de inventario. Se coloca igual (permanente). Ilumina mucho,
           dura mucho y se alimenta con poquita MADERA (misma forma).
 
+AVISO: si mantenes click izquierdo sobre un faro / fogata (estando cerca)
+aparece un cartelito con cuanta luz le queda, con que se alimenta y como.
+Se ve solo mientras lo tenes apretado (en el codigo: FEED_HINT_*).
+
+ANIMACION (encendidos, sobre tus PNG icon_faro.png / icon_fogata.png):
+  FARO    resplandor calido que respira alrededor de la mecha y una
+          chispita que sube. Titila si le queda poco combustible.
+  FOGATA  resplandor que baila, lenguas de fuego que se mueven encima de
+          la llama del dibujo y brasas que suben. Titila y se achica con
+          poco combustible. Todo se ajusta en las constantes ANIM_* de
+          abajo (poner ANIM_ENABLED = False lo apaga).
+
 Todos los numeros para balancear estan en las constantes de abajo.
 """
 
@@ -68,6 +80,34 @@ FOGATA_RADIUS = 300        # ilumina bastante (mas que la antorcha: 250)
 # Con poco combustible (fraccion del maximo) la luz parpadea y achica
 LOW_FUEL = 0.15
 
+# ---------------------------------------------------------------
+# ANIMACION DEL FARO Y LA FOGATA (solo visual, no cambia el juego)
+# ---------------------------------------------------------------
+ANIM_ENABLED = True
+
+# Donde esta la mecha del faro dentro de icon_faro.png (0 a 1)
+FARO_WICK = (0.51, 0.70)
+
+# Resplandor (tamano en ancho del dibujo) e intensidad. Faro: poquito
+FARO_GLOW_SIZE = 0.55
+FARO_GLOW_COLOR = (150, 100, 30)
+FARO_CORE_COLOR = (170, 105, 18)
+FARO_EMBERS = 2
+
+# Fogata: bastante mas viva
+FOGATA_GLOW_SIZE = 0.80
+FOGATA_GLOW_COLOR = (200, 110, 30)
+FOGATA_EMBERS = 7
+
+# Cartelito que aparece al mantener click izquierdo sobre el faro / fogata
+FEED_HINT_ENABLED = True
+FEED_HINT_LINE2 = "En la hotbar elegí {item} y apretá F o click derecho"
+
+# Cuanto titila el radio de la luz (0.03 = +-3%). Solo se ve, el
+# alcance para curar no cambia
+FARO_LIGHT_FLICKER = 0.02
+FOGATA_LIGHT_FLICKER = 0.035
+
 # Item que alimenta a cada uno
 FUEL_ITEM = {
     "faro": "cera",
@@ -115,6 +155,103 @@ PANEL_BOTTOM = 32         # espacio de abajo (para el texto de ayuda)
 
 def _sprite_path(kind, suffix=""):
     return HUD_DIR / f"icon_{kind}{suffix}.png"
+
+
+# ---------------------------------------------------------------
+# EFECTOS DE LUZ (se SUMAN a lo que ya hay dibujado: brillo / brasas)
+# ---------------------------------------------------------------
+
+_GLOW_CACHE = {}
+
+
+def _glow_surface(radius, level, color):
+    """Circulo de luz suave (negro afuera, brillante al centro) listo
+    para sumarse a la pantalla. Se guarda en cache por tamano/nivel."""
+
+    radius = max(4, int(radius) // 4 * 4)
+    lv = max(1, min(8, int(round(level * 8))))
+
+    key = (radius, lv, color)
+
+    surf = _GLOW_CACHE.get(key)
+
+    if surf is None:
+
+        if len(_GLOW_CACHE) > 120:
+            _GLOW_CACHE.clear()
+
+        surf = pygame.Surface((radius * 2, radius * 2))
+        surf.fill((0, 0, 0))
+
+        steps = max(6, min(24, radius // 3))
+
+        for i in range(steps, 0, -1):
+
+            t = i / steps
+            k = ((1.0 - t) ** 1.4) * lv / 8.0
+
+            pygame.draw.circle(
+                surf, tuple(int(c * k) for c in color),
+                (radius, radius), max(1, int(radius * t))
+            )
+
+        _GLOW_CACHE[key] = surf
+
+    return surf
+
+
+def _add_glow(screen, cx, cy, radius, level, color):
+    """Suma un resplandor centrado en (cx, cy). level va de 0 a 1."""
+
+    if level <= 0.05 or radius < 4:
+        return
+
+    surf = _glow_surface(radius, level, color)
+
+    screen.blit(
+        surf,
+        (int(cx) - surf.get_width() // 2, int(cy) - surf.get_height() // 2),
+        special_flags=pygame.BLEND_RGB_ADD
+    )
+
+
+def _draw_embers(screen, ox, oy, rise, spread, size, clock, phase,
+                 count, level):
+    """Brasitas que suben desde (ox, oy), se achican y se apagan. No
+    guardan estado: la posicion sale del reloj."""
+
+    if level <= 0.05:
+        return
+
+    for i in range(count):
+
+        seed = i * 1.618 + phase
+
+        life = (
+            clock * (0.35 + 0.07 * (i % 4)) + i / count + phase * 0.1
+        ) % 1.0
+
+        x = ox + math.sin(seed * 5.3 + life * 5.0) * spread * (0.3 + life)
+        y = oy - life * rise
+
+        fade = ((1.0 - life) ** 0.8) * level
+
+        if fade <= 0.05:
+            continue
+
+        # Amarillo al nacer, rojizo al apagarse
+        color = (
+            int(255 * fade),
+            int((200 - 130 * life) * fade),
+            int((90 - 80 * life) * fade),
+        )
+
+        sz = max(1, int(size * (1.0 - life * 0.5)))
+
+        screen.fill(
+            color, pygame.Rect(int(x), int(y), sz, sz),
+            special_flags=pygame.BLEND_RGB_ADD
+        )
 
 
 # ---------------------------------------------------------------
@@ -351,6 +488,7 @@ class Placeable:
     container_capacity = None
     fuel_max = 0.0
     light_radius_px = 0
+    light_flicker = 0.0
 
     def __init__(self, x, y, fuel=None):
 
@@ -403,6 +541,19 @@ class Placeable:
         if self.lit:
             self.fuel = max(0.0, self.fuel - dt)
 
+    def _flicker(self, clock):
+        """1.0 normal. Con poco combustible titila (igual que la luz)."""
+
+        if self.fuel_fraction < LOW_FUEL:
+            return 0.45 + 0.55 * abs(math.sin(clock * 14 + self._phase))
+
+        return 1.0
+
+    def _size_k(self):
+        """Que tan grande se ve la llama (se achica con poco combustible)."""
+
+        return 0.55 + 0.45 * min(1.0, self.fuel_fraction * 3)
+
     # ----- luz -----
 
     def light_radius(self, clock):
@@ -413,6 +564,16 @@ class Placeable:
         frac = self.fuel_fraction
 
         radius = self.light_radius_px * (0.55 + 0.45 * min(1.0, frac * 3))
+
+        # Titileo suave de la llama (la luz "respira")
+        if ANIM_ENABLED and self.light_flicker:
+
+            ph = self._phase
+
+            radius *= 1.0 + self.light_flicker * (
+                0.6 * math.sin(clock * 9 + ph)
+                + 0.4 * math.sin(clock * 23 + ph * 2.3)
+            )
 
         if frac < LOW_FUEL:
 
@@ -579,25 +740,66 @@ class Lighthouse(Placeable):
     draggable = True
     fuel_max = FARO_MAX
     light_radius_px = FARO_RADIUS
+    light_flicker = FARO_LIGHT_FLICKER
 
     def draw_extras(self, screen, r, clock):
 
-        if self._real or not self.lit:
+        if not self.lit:
             return
 
-        # Brillito en la lampara
-        pulse = 0.75 + 0.25 * math.sin(clock * 6 + self._phase)
+        if not self._real:
 
-        glow = pygame.Surface((r.w, r.w), pygame.SRCALPHA)
+            # Brillito en la lampara (dibujo de respaldo por codigo)
+            pulse = 0.75 + 0.25 * math.sin(clock * 6 + self._phase)
 
-        pygame.draw.circle(
-            glow, (255, 230, 120, int(110 * pulse)),
-            (r.w // 2, r.w // 2), r.w // 2
+            glow = pygame.Surface((r.w, r.w), pygame.SRCALPHA)
+
+            pygame.draw.circle(
+                glow, (255, 230, 120, int(110 * pulse)),
+                (r.w // 2, r.w // 2), r.w // 2
+            )
+
+            screen.blit(
+                glow,
+                glow.get_rect(center=(r.centerx, r.top + int(r.h * .26)))
+            )
+
+            return
+
+        if not ANIM_ENABLED:
+            return
+
+        # Con tu icon_faro.png: la llama respira y se mueve un poquito
+        ph = self._phase
+        k = self._flicker(clock)
+
+        breath = (
+            0.80
+            + 0.12 * math.sin(clock * 2.1 + ph)
+            + 0.08 * math.sin(clock * 7.3 + ph * 1.7)
         )
 
-        screen.blit(
-            glow,
-            glow.get_rect(center=(r.centerx, r.top + int(r.h * .26)))
+        cx = r.left + int(r.w * FARO_WICK[0]) + int(
+            math.sin(clock * 1.3 + ph) * r.w * 0.015
+        )
+        cy = r.top + int(r.h * FARO_WICK[1])
+
+        # Resplandor suave alrededor de la lampara
+        _add_glow(
+            screen, cx, cy, r.w * FARO_GLOW_SIZE,
+            breath * k, FARO_GLOW_COLOR
+        )
+
+        # Nucleo caliente justo en la mecha
+        _add_glow(
+            screen, cx, cy, r.w * 0.20,
+            (0.70 + 0.30 * breath) * k, FARO_CORE_COLOR
+        )
+
+        # Una chispita que se escapa por arriba
+        _draw_embers(
+            screen, r.centerx, r.top + r.h * 0.06, r.h * 0.30, r.w * 0.10,
+            max(1, r.w // 30), clock, ph, FARO_EMBERS, 0.6 * k
         )
 
 
@@ -606,36 +808,112 @@ class Campfire(Placeable):
     kind = "fogata"
     fuel_max = FOGATA_MAX
     light_radius_px = FOGATA_RADIUS
+    light_flicker = FOGATA_LIGHT_FLICKER
 
     def draw_extras(self, screen, r, clock):
 
-        if self._real or not self.lit:
+        if not self.lit:
             return
 
-        # Llama que se mueve
-        s = 0.85 + 0.15 * math.sin(clock * 11 + self._phase)
-        s2 = 0.85 + 0.15 * math.sin(clock * 17 + self._phase * 2)
+        if not self._real:
 
-        base_y = r.top + int(r.h * .72)
-        fh = int(r.h * .85 * s)
-        fw = int(r.w * .46)
+            # Llama que se mueve (dibujo de respaldo por codigo)
+            s = 0.85 + 0.15 * math.sin(clock * 11 + self._phase)
+            s2 = 0.85 + 0.15 * math.sin(clock * 17 + self._phase * 2)
 
-        outer = [
-            (r.centerx - fw // 2, base_y),
-            (r.centerx + int(2 * math.sin(clock * 9)), base_y - fh),
-            (r.centerx + fw // 2, base_y),
-        ]
+            base_y = r.top + int(r.h * .72)
+            fh = int(r.h * .85 * s)
+            fw = int(r.w * .46)
 
-        pygame.draw.polygon(screen, (255, 150, 40), outer)
+            outer = [
+                (r.centerx - fw // 2, base_y),
+                (r.centerx + int(2 * math.sin(clock * 9)), base_y - fh),
+                (r.centerx + fw // 2, base_y),
+            ]
 
-        ih = int(fh * .6 * s2)
-        iw = int(fw * .5)
+            pygame.draw.polygon(screen, (255, 150, 40), outer)
 
-        pygame.draw.polygon(screen, (255, 226, 110), [
-            (r.centerx - iw // 2, base_y),
-            (r.centerx, base_y - ih),
-            (r.centerx + iw // 2, base_y),
-        ])
+            ih = int(fh * .6 * s2)
+            iw = int(fw * .5)
+
+            pygame.draw.polygon(screen, (255, 226, 110), [
+                (r.centerx - iw // 2, base_y),
+                (r.centerx, base_y - ih),
+                (r.centerx + iw // 2, base_y),
+            ])
+
+            return
+
+        if not ANIM_ENABLED:
+            return
+
+        # Con tu icon_fogata.png: llama viva por encima del dibujo
+        ph = self._phase
+        k = self._flicker(clock)
+        size_k = self._size_k()
+
+        f1 = math.sin(clock * 11 + ph)
+        f2 = math.sin(clock * 17 + ph * 2)
+        f3 = math.sin(clock * 5.3 + ph * 0.7)
+
+        flare = 0.85 + 0.09 * f1 + 0.06 * f2
+
+        cx = r.centerx
+
+        # Resplandor que baila alrededor de la llama
+        _add_glow(
+            screen, cx, r.top + int(r.h * 0.62),
+            r.w * FOGATA_GLOW_SIZE * size_k * (1.0 + 0.05 * f1),
+            flare * k, FOGATA_GLOW_COLOR
+        )
+
+        # Lenguas de fuego: se dibujan en negro y se suman, asi solo
+        # aclaran la llama del PNG y no tapan nada
+        layer = pygame.Surface((r.w, r.h))
+        layer.fill((0, 0, 0))
+
+        base = r.h * 0.70
+        fw = r.w * 0.30 * size_k
+        fh = r.h * 0.60 * size_k * (0.90 + 0.12 * f1 + 0.08 * f2)
+        sway = r.w * 0.035 * f3
+
+        def tongue(x0, width, height, tilt, color):
+
+            pygame.draw.polygon(layer, tuple(int(c * k) for c in color), [
+                (x0 - width / 2, base),
+                (x0 - width * 0.20 + tilt * 0.5, base - height * 0.55),
+                (x0 + tilt, base - height),
+                (x0 + width * 0.20 + tilt * 0.5, base - height * 0.55),
+                (x0 + width / 2, base),
+            ])
+
+        mid = r.w / 2
+
+        # Lenguas chicas de los costados (bailan a distinto ritmo)
+        for side, off in ((-1, 1.7), (1, 4.1)):
+
+            wob = math.sin(clock * 13 + off + ph)
+
+            tongue(
+                mid + side * fw * 0.38,
+                fw * 0.55,
+                fh * (0.50 + 0.14 * wob),
+                side * r.w * 0.02 + sway * 0.8,
+                (70, 32, 5)
+            )
+
+        # Lengua principal y su centro mas claro
+        tongue(mid, fw, fh, sway, (95, 45, 8))
+        tongue(mid, fw * 0.55, fh * 0.65, sway * 0.7, (80, 72, 24))
+
+        screen.blit(layer, r.topleft, special_flags=pygame.BLEND_RGB_ADD)
+
+        # Brasas que suben
+        _draw_embers(
+            screen, cx, r.top + r.h * 0.30, r.h * 0.60, r.w * 0.20,
+            max(1, r.w // 26), clock, ph,
+            max(2, int(FOGATA_EMBERS * size_k)), k
+        )
 
 
 KINDS = {
@@ -1011,9 +1289,117 @@ class PlaceableManager:
 
         return False
 
+    def _draw_feed_hints(self, game, screen):
+        """Cartelito arriba del faro / fogata que mantenes apretado con
+        el click izquierdo: cuanta luz tiene, con que se alimenta y como.
+        Se dibuja encima de la oscuridad."""
+
+        if not FEED_HINT_ENABLED:
+            return
+
+        if (
+            game.state != "playing"
+            or self.open_obj is not None
+            or getattr(game, "shop", None) is not None
+            or getattr(game, "pause_view", None) is not None
+            or getattr(game, "tutorial", None) is not None
+        ):
+            return
+
+        sw = screen.get_width()
+
+        # Faro / fogata que tenes apretado con el click izquierdo (mantenido)
+        held = None
+
+        if pygame.mouse.get_pressed()[0]:
+
+            held = self.dragging or self._under_mouse(game)
+
+            if held is not None and not held.uses_fuel:
+                held = None
+
+        for obj in self.objects:
+
+            if not obj.uses_fuel or obj.fly is not None:
+                continue
+
+            # Solo se ve mientras mantenes el click izquierdo apretado
+            if obj is not held:
+                continue
+
+            is_held = True
+            fade = 1.0
+
+            item = game._item_name(FUEL_ITEM[obj.kind])
+            name = game._item_name(obj.kind)
+
+            if obj.fuel >= obj.fuel_max - 0.01:
+                lines = [f"{name}: está llena"]
+            else:
+                lines = [
+                    f"Alimentala con {item.upper()}",
+                    FEED_HINT_LINE2.format(item=item.upper()),
+                ]
+
+            # Con el click apretado tambien se ve cuanta luz le queda
+            if is_held:
+                lines.insert(
+                    0, f"{name}: {int(obj.fuel)} / {int(obj.fuel_max)} s de luz"
+                )
+
+            # Misma posicion que en draw(): arriba del dibujo
+            sprite = obj._sprite(game.camera.zoom)
+            dest = game.camera.apply(obj.rect)
+            lift = int(obj._lift * game.camera.zoom)
+
+            r = sprite.get_rect(
+                midbottom=(dest.centerx, dest.bottom - lift)
+            )
+
+            # Letra que entre en la pantalla
+            for size in (22, 20, 18, 16, 14):
+
+                font = self._font(size)
+
+                if max(font.size(ln)[0] for ln in lines) <= sw - 40:
+                    break
+
+            line_h = font.get_linesize()
+
+            w = max(font.size(ln)[0] for ln in lines) + 16
+            h = line_h * len(lines) + 8
+
+            box = pygame.Rect(0, 0, w, h)
+            box.midbottom = (r.centerx, r.top - 12)
+            box.clamp_ip(screen.get_rect())
+
+            card = pygame.Surface(box.size, pygame.SRCALPHA)
+
+            pygame.draw.rect(
+                card, (16, 14, 12, 190), card.get_rect(), border_radius=8
+            )
+
+            y = 4
+
+            for n, ln in enumerate(lines):
+
+                color = (255, 224, 150) if n == 0 else (225, 225, 230)
+
+                img = font.render(ln, True, color)
+
+                card.blit(img, img.get_rect(midtop=(box.w // 2, y)))
+
+                y += line_h
+
+            card.set_alpha(int(255 * fade))
+
+            screen.blit(card, box)
+
     def draw_ghost(self, game, screen):
         """Vista previa del objeto que tenes en mano, en el mouse: verde si
         se puede poner ahi, rojo si no."""
+
+        self._draw_feed_hints(game, screen)
 
         if game.state != "playing" or self.open_obj is not None:
             return
@@ -1240,6 +1626,54 @@ class PlaceableManager:
         if moved:
             audio.play("pickup")
 
+    def _draw_hint(self, screen, panel, text, color=(170, 176, 192)):
+        """Texto de ayuda abajo del panel. Si no entra en el ancho del
+        cartel se parte en 2 lineas (por los " . ") y, si hace falta,
+        se achica la letra: nunca sobresale del panel."""
+
+        parts = [p.strip() for p in text.split("\u00b7")]
+
+        max_w = panel.w - 16
+        avail = PANEL_BOTTOM - 4
+
+        for size in (20, 18, 16, 14, 12):
+
+            font = self._font(size)
+
+            lines = []
+            cur = ""
+
+            for part in parts:
+
+                test = f"{cur}  \u00b7  {part}" if cur else part
+
+                if cur and font.size(test)[0] > max_w:
+                    lines.append(cur)
+                    cur = part
+                else:
+                    cur = test
+
+            if cur:
+                lines.append(cur)
+
+            line_h = font.get_linesize()
+
+            if (
+                all(font.size(ln)[0] <= max_w for ln in lines)
+                and line_h * len(lines) <= avail
+            ):
+                break
+
+        y = panel.bottom - 6
+
+        for ln in reversed(lines):
+
+            img = font.render(ln, True, color)
+
+            screen.blit(img, img.get_rect(midbottom=(panel.centerx, y)))
+
+            y -= line_h
+
     def draw_panel(self, game, screen):
 
         obj = self.open_obj
@@ -1327,13 +1761,9 @@ class PlaceableManager:
             if hover:
                 hover_name = game._item_name(s[0])
 
-        hint = self._font(20).render(
-            "Click: pasar todo  ·  Click derecho: de a 1  ·  Esc: cerrar",
-            True, (170, 176, 192)
-        )
-
-        screen.blit(
-            hint, hint.get_rect(midbottom=(panel.centerx, panel.bottom - 8))
+        self._draw_hint(
+            screen, panel,
+            "Click: pasar todo  \u00b7  Click derecho: de a 1  \u00b7  Esc: cerrar"
         )
 
         if hover_name:

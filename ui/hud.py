@@ -381,16 +381,63 @@ class Hud:
 
         if message:
 
-            text = self.msg_font.render(message, True, (255, 255, 255))
+            self._draw_message(screen, message)
 
-            shadow = self.msg_font.render(message, True, (0, 0, 0))
+    def _draw_message(self, screen, message):
+        """Aviso de abajo (arriba de la barra). Si la frase es mas ancha
+        que la pantalla se achica la letra y, si aun asi no entra, se
+        parte en 2 lineas: nunca se sale por los costados."""
 
-            pos = text.get_rect(
-                midbottom=(screen.get_width() // 2, self.bar_rect.top - 14)
-            )
+        max_w = screen.get_width() - 40
+
+        lines = [message]
+        font = self.msg_font
+
+        cache = self.__dict__.setdefault("_msg_fonts", {})
+
+        for size in (28, 26, 24, 22):
+
+            font = cache.get(size)
+
+            if font is None:
+                font = cache[size] = pygame.font.Font(None, size)
+
+            if font.size(message)[0] <= max_w:
+                lines = [message]
+                break
+
+        else:
+
+            # Partir por palabras en lineas que entren
+            lines = []
+            cur = ""
+
+            for word in message.split():
+
+                test = f"{cur} {word}".strip()
+
+                if cur and font.size(test)[0] > max_w:
+                    lines.append(cur)
+                    cur = word
+                else:
+                    cur = test
+
+            if cur:
+                lines.append(cur)
+
+        y = self.bar_rect.top - 14
+
+        for line in reversed(lines):
+
+            text = font.render(line, True, (255, 255, 255))
+            shadow = font.render(line, True, (0, 0, 0))
+
+            pos = text.get_rect(midbottom=(screen.get_width() // 2, y))
 
             screen.blit(shadow, pos.move(2, 2))
             screen.blit(text, pos)
+
+            y -= font.get_linesize()
 
     def _draw_bar(self, screen, frame, fill, pos, pct, bbox):
 

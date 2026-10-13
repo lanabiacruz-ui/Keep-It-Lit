@@ -46,6 +46,7 @@ TUTORIAL_PAGES = [
     "MÁS OBJETOS: la cera hace que tu luz dure casi 3 veces más, la pólvora hace que tu luz queme a los enemigos y la esfera de vidrio amplía tu luz.",
     "REPELENTE: durante casi 2 minutos tu luz espanta a los mosquitos y los que tenés pegados se sueltan.",
     "IMÁN: una vez usado, atrae solo las monedas, gemas e items cercanos durante 7 minutos. Apretá O para prenderlo o apagarlo (apagado no gasta tiempo).",
+    "FARO Y FOGATA: elegí cerca de ellos (en la hotbar) la CERA para la linterna antigua o la MADERA para la fogata y apretá F o click derecho. Mantené click izquierdo sobre ellos para ver cuánta luz les queda y cómo alimentarlos.",
 
     # ---------- MAPA ----------
     "PUERTAS: pegales con la luz para romperlas (cada golpe gasta un poco de luz). Las marrones aguantan 2 golpes y las verdes 6. Una puerta rota no vuelve.",
