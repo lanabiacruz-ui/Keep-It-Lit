@@ -10,6 +10,7 @@ from states.comic import Comic
 from states.new_game import NewGame
 from states.startup import Startup
 from states.settings import Settings, load_settings
+from ui.slide_transition import SlideTransition
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
@@ -58,6 +59,13 @@ current_password = ""
 current_save_path = None
 pending_save_data = None
 is_continue = False
+
+# Transicion de entrada al juego (la pantalla anterior se desliza). Mientras
+# esta activa el juego no avanza (ni el tutorial) y no recibe clicks.
+transition = None
+
+# Tambien hacer la transicion al volver a jugar despues de perder
+SLIDE_ON_RESPAWN = True
 
 
 current_state = "startup"
@@ -267,9 +275,18 @@ while running:
                 # transicion al juego (la luz se enciende de a poco)
                 game._intro_pending = True
 
+                # La pantalla del comic se desliza y deja ver el juego
+                # (el tutorial arranca recien cuando termina)
+                transition = SlideTransition(screen.copy())
+
                 current_state = "gameplay"
 
         elif current_state == "gameplay":
+
+            # Durante la transicion de entrada no se juega: el tutorial
+            # espera y los clicks no pasan al juego
+            if transition is not None:
+                continue
 
             result = game.handle_event(
                 event
@@ -302,6 +319,9 @@ while running:
                     save_data=pending_save_data
                 )
 
+                # Al continuar una partida: la pantalla de carga se desliza
+                transition = SlideTransition(screen.copy())
+
                 current_state = "gameplay"
 
             else:
@@ -319,7 +339,17 @@ while running:
 
     elif current_state == "gameplay":
 
-        result = game.update(dt)
+        if transition is not None:
+
+            # Transicion de entrada: el juego espera
+            if transition.update(dt) == "done":
+                transition = None
+
+            result = None
+
+        else:
+
+            result = game.update(dt)
 
         if result == "menu":
 
@@ -345,6 +375,9 @@ while running:
                     save_path=current_save_path,
                     save_data=data
                 )
+
+                if SLIDE_ON_RESPAWN:
+                    transition = SlideTransition(screen.copy())
 
 
     screen.fill((0, 0, 0))
@@ -388,6 +421,9 @@ while running:
     elif current_state == "gameplay":
 
         game.draw()
+
+        if transition is not None:
+            transition.draw(screen)
 
 
     pygame.display.flip()

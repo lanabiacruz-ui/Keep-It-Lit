@@ -359,7 +359,7 @@ HONGUN_DAMAGE = 0.75           # 0.75 = 75% de la vida de la luz
 HONGUN_KNOCKBACK = 340.0       # empujon al jugador (el golpe normal de un pino es 120)
 HONGUN_LIGHT_MIN = 24          # luz que da al empezar a recargar (px de pantalla)
 HONGUN_LIGHT_MAX = 80          # luz que da justo antes de explotar
-HONGUN_BLAST_TIME = 0.5        # duracion del aro de la explosion
+HONGUN_BLAST_TIME = 0.65       # duracion del aro y de la luz de la explosion
 
 HONGUN_ANIM_FRAME = 0.15
 HONGUN_CHARGE_FRAME = 0.12
@@ -5410,7 +5410,7 @@ class Arena:
 
             sources.append((
                 blast["x"], blast["y"],
-                quantize_radius(70 + 110 * (1 - k))
+                quantize_radius(80 + 190 * (1 - k) ** 1.5)
             ))
 
         if self.boom_light_t is not None:
@@ -6249,6 +6249,87 @@ class Arena:
                 ]),
             })
 
+    def _hongun_fx(self, game, pos, player_dist):
+        """Efectos de la explosion del hongun: nucleo de luz, ondas de
+        choque, chispas, nube de esporas, trozos del sombrero, humo, y
+        temblor de pantalla (mas fuerte cuanto mas cerca estes)."""
+
+        fx = game.fx
+
+        x, y = pos.x, pos.y
+        R = HONGUN_BLAST_RADIUS
+
+        # --- Nucleo: un fogonazo blanco y un halo verde grande ---
+        fx._spark(x, y, 0, 0, 0.12, (255, 255, 255), size=44, drag=0)
+        fx._spark(x, y, 0, 0, 0.22, (255, 250, 200), size=34, drag=0)
+        fx._spark(x, y, 0, 0, 0.45, (130, 235, 120), size=R * 0.75, drag=0)
+
+        # --- Ondas de choque (la blanca llega justo al radio del dano) ---
+        fx._ring(x, y, 4, R, 0.32, (255, 255, 255), 6)
+        fx._ring(x, y, 2, R * 1.2, 0.5, (150, 255, 140), 4, delay=0.05)
+        fx._ring(x, y, 2, R * 0.65, 0.28, (255, 236, 150), 3, delay=0.09)
+
+        # --- Chispas con estela, salen en todas direcciones ---
+        for _ in range(38):
+
+            fx._spark(
+                x, y, random.uniform(0, math.tau),
+                random.uniform(150, 430), random.uniform(0.25, 0.6),
+                random.choice((
+                    (255, 255, 255), (235, 255, 215),
+                    (150, 240, 130), (255, 235, 140)
+                )),
+                size=random.uniform(1.6, 3.2), drag=3.2, streak=True
+            )
+
+        # --- Nube de esporas: verde, lenta, sube de a poco ---
+        for _ in range(28):
+
+            fx._spark(
+                x + random.uniform(-4, 4), y + random.uniform(-4, 4),
+                random.uniform(0, math.tau),
+                random.uniform(20, 95), random.uniform(0.8, 1.6),
+                random.choice((
+                    (90, 190, 85), (120, 215, 110), (170, 240, 150)
+                )),
+                size=random.uniform(2.5, 5.0), drag=1.7, grav=-22
+            )
+
+        # --- Trozos del sombrero: caen con gravedad ---
+        for _ in range(14):
+
+            fx._spark(
+                x, y - 3, random.uniform(math.pi * 1.05, math.pi * 1.95),
+                random.uniform(70, 190), random.uniform(0.5, 0.95),
+                random.choice((
+                    (205, 70, 60), (240, 215, 175), (170, 50, 50)
+                )),
+                size=random.uniform(2.0, 3.6), drag=1.6, grav=340
+            )
+
+        # --- Humo que se queda un ratito ---
+        for _ in range(10):
+
+            fx._spark(
+                x + random.uniform(-5, 5), y + random.uniform(-3, 3),
+                random.uniform(0, math.tau),
+                random.uniform(8, 40), random.uniform(1.0, 1.7),
+                (95, 100, 98),
+                size=random.uniform(4.0, 6.5), drag=1.4, grav=-12,
+                delay=0.08
+            )
+
+        # --- Temblor y freeze: se sienten mas cerca de la explosion ---
+        near = max(0.0, min(1.0, 1.0 - player_dist / (R * 2.4)))
+
+        fx.shake(2.5 + 8.0 * near, 0.3 + 0.3 * near)
+
+        if player_dist <= R:
+
+            fx.hitstop = max(fx.hitstop, 0.06)
+
+            fx.flash(0.2, (225, 255, 215), 0.45)
+
     def _hongun_explode(self, game, enemy):
         """Explota el hongun: efecto, dano y empujon al jugador."""
 
@@ -6259,24 +6340,9 @@ class Arena:
 
         self.blasts.append({"x": pos.x, "y": pos.y, "t": 0.0})
 
-        for _ in range(40):
+        body = pygame.Vector2(p.rect.center)
 
-            angle = random.uniform(0, math.tau)
-            speed = random.uniform(30, 120)
-            life = random.uniform(0.3, 0.7)
-
-            self.particles.append({
-                "x": pos.x,
-                "y": pos.y - 3,
-                "vx": math.cos(angle) * speed,
-                "vy": math.sin(angle) * speed,
-                "life": life,
-                "max": life,
-                "color": random.choice([
-                    (255, 255, 255), (235, 255, 220),
-                    (120, 205, 110), (80, 175, 80), (255, 235, 140)
-                ]),
-            })
+        self._hongun_fx(game, pos, body.distance_to(pos))
 
         body = pygame.Vector2(p.rect.center)
 

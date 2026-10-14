@@ -69,6 +69,7 @@ FARO_START = 30.0          # recien colocado trae 30 s
 FARO_PER_CERA = 25.0       # cada cera suma 25 s (3-4 ceras = lleno)
 FARO_RADIUS = 140          # radio de luz (pixeles de pantalla): poquito,
                            # pero mas que el fosforo (100)
+FOGATA_HEAL = 0.025        # la fogata cura un poco mas que el faro
 FARO_HEAL = 0.015          # vida de tu luz que recupera POR SEGUNDO si
                            # estas dentro de su luz (el fosforo gasta 0.033)
 
@@ -107,6 +108,12 @@ FEED_HINT_LINE2 = "En la hotbar elegí {item} y apretá F o click derecho"
 # alcance para curar no cambia
 FARO_LIGHT_FLICKER = 0.02
 FOGATA_LIGHT_FLICKER = 0.035
+
+# Cuanta vida de tu luz devuelve cada uno por segundo (si estas en su luz)
+HEAL_RATE = {
+    "faro": FARO_HEAL,
+    "fogata": FOGATA_HEAL,
+}
 
 # Item que alimenta a cada uno
 FUEL_ITEM = {
@@ -1792,21 +1799,25 @@ class PlaceableManager:
 
             obj.near = self._dist(game, obj) <= REACH + 24
 
-        # El faro (linterna antigua) le devuelve vida a tu luz si estas
-        # dentro de su luz
+        # El faro (linterna antigua) y la fogata le devuelven vida a tu luz
+        # si estas dentro de su luz (cura el que mas cura, no se suman)
         if game.has_match and game.vida < 1.0:
+
+            heal = 0.0
 
             for obj in self.objects:
 
+                rate = HEAL_RATE.get(obj.kind, 0.0)
+
                 if (
-                    obj.kind == "faro"
+                    rate > heal
                     and obj.fly is None
                     and self._dist(game, obj) <= obj.heal_range(game.camera.zoom)
                 ):
+                    heal = rate
 
-                    game.vida = min(1.0, game.vida + FARO_HEAL * dt)
-
-                    break
+            if heal > 0.0:
+                game.vida = min(1.0, game.vida + heal * dt)
 
         # Se cierra solo si te alejas del contenedor abierto
         if self.open_obj is not None:
