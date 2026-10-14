@@ -39,7 +39,7 @@ from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
-from ui.zone_banner import ZoneBanner
+from ui.Zone_banner import ZoneBanner
 from ui.objectives import Objectives
 from states.pause_menu import PauseMenu
 from states.enemy_enciclopedia import EnemyEncyclopedia

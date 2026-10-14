@@ -51,7 +51,19 @@ class PasswordMenu:
         self.input_rect = self._scale_box(self.INPUT_BOX)
         self.close_rect = self._scale_box(self.CLOSE_BOX)
 
-        self.text_max_width = self.input_rect.width - 32
+        # Boton de "ojo" dentro de la caja, pegado a la derecha
+        eye_size = max(14, self.input_rect.height - 6)
+
+        self.eye_rect = pygame.Rect(
+            self.input_rect.right - eye_size - 4,
+            self.input_rect.centery - eye_size // 2,
+            eye_size,
+            eye_size,
+        )
+
+        self.show_password = False
+
+        self.text_max_width = self.eye_rect.left - self.input_rect.left - 12
 
         self.font = pygame.font.Font(None, 24)
         self.label_font = pygame.font.Font(None, max(18, int(30 * self.sy)))
@@ -171,6 +183,10 @@ class PasswordMenu:
 
                 return "back"
 
+            if self.eye_rect.collidepoint(event.pos):
+
+                self.show_password = not self.show_password
+
         return None
 
     # ---------- dibujo ----------
@@ -193,10 +209,25 @@ class PasswordMenu:
                 ),
             )
 
-        # La contraseña se muestra con asteriscos
-        shown = "*" * len(self.text)
+        # Asteriscos, o el texto real si el ojo esta activado
+        if self.show_password:
+            shown = self.text
+        else:
+            shown = "*" * len(self.text)
 
         text_surface = self.font.render(shown, True, (255, 255, 255))
+
+        # Si no entra en la caja, se muestra el final (donde se escribe)
+        if text_surface.get_width() > self.text_max_width:
+
+            text_surface = text_surface.subsurface(
+                pygame.Rect(
+                    text_surface.get_width() - self.text_max_width,
+                    0,
+                    self.text_max_width,
+                    text_surface.get_height(),
+                )
+            )
 
         text_rect = text_surface.get_rect(
             midleft=(self.input_rect.left + 6, self.input_rect.centery)
@@ -215,6 +246,8 @@ class PasswordMenu:
                 (cursor_x, self.input_rect.bottom - 4),
                 2,
             )
+
+        self._draw_eye()
 
         hint = self.message
 
@@ -249,3 +282,37 @@ class PasswordMenu:
                 bottomright=(self.width - 18, self.height - 15)
             ),
         )
+
+    def _draw_eye(self):
+
+        hover = self.eye_rect.collidepoint(pygame.mouse.get_pos())
+
+        color = (255, 255, 255) if hover else (205, 220, 240)
+
+        r = self.eye_rect
+        cx, cy = r.center
+
+        eye_w = r.width - 2
+        eye_h = max(6, int(r.height * 0.55))
+
+        pygame.draw.ellipse(
+            self.screen,
+            color,
+            pygame.Rect(cx - eye_w // 2, cy - eye_h // 2, eye_w, eye_h),
+            2,
+        )
+
+        pygame.draw.circle(
+            self.screen, color, (cx, cy), max(2, eye_h // 4)
+        )
+
+        # Tachado cuando la contraseña esta oculta
+        if not self.show_password:
+
+            pygame.draw.line(
+                self.screen,
+                color,
+                (r.left + 2, r.bottom - 2),
+                (r.right - 2, r.top + 2),
+                2,
+            )

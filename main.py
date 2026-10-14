@@ -11,6 +11,7 @@ from states.new_game import NewGame
 from states.startup import Startup
 from states.settings import Settings, load_settings
 from ui.slide_transition import SlideTransition
+from ui.zoom_transition import ZoomTransition
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
@@ -73,6 +74,40 @@ current_state = "startup"
 
 running = True
 
+
+def handle_menu_action(action):
+    """Lo que pasa cuando el menu principal entrega una opcion."""
+
+    global name_menu, continue_menu, settings_menu
+    global current_state, running
+
+    if action == "new_game":
+
+        name_menu = MenuCarga(screen)
+
+        current_state = "name_input"
+
+    elif action == "continue_game":
+
+        continue_menu = ContinueGame(screen)
+
+        current_state = "continue"
+
+    elif action == "settings":
+
+        settings_menu = Settings(screen)
+
+        current_state = "settings"
+
+    elif action == "achievements":
+
+        print("Logros")
+
+    elif action == "quit":
+
+        running = False
+
+
 while running:
 
     dt = min(clock.tick(60) / 1000, 0.05)
@@ -102,38 +137,9 @@ while running:
         
         if current_state == "menu":
 
-            action = menu.handle_event(
-                event
-            )
-
-            if action == "new_game":
-
-                
-                name_menu = MenuCarga(screen)
-
-                current_state = "name_input"
-
-            elif action == "continue_game":
-
-                continue_menu = ContinueGame(screen)
-
-                current_state = "continue"
-
-            elif action == "settings":
-
-                settings_menu = Settings(screen)
-
-                current_state = "settings"
-    
-            elif action == "achievements":
-
-                print(
-                    "Logros"
-                )
-
-            elif action == "quit":
-
-                running = False
+            # La accion elegida la entrega menu.poll() cuando termina el
+            # efecto del clic (mas abajo, en la parte de update)
+            menu.handle_event(event)
 
         elif current_state == "settings":
 
@@ -261,6 +267,10 @@ while running:
 
         elif current_state == "comic":
 
+            # Durante el zoom al monitor el comic todavia no arranca
+            if transition is not None:
+                continue
+
             if comic.handle_event(event) == "done":
 
                 
@@ -296,6 +306,8 @@ while running:
 
                 current_state = "menu"
 
+                menu.play_intro()
+
 
     # La pantalla de inicio avanza sola, una vez por frame (antes se
     # actualizaba dentro del bucle de eventos y solo avanzaba con
@@ -305,6 +317,16 @@ while running:
         if startup.update(dt) == "done":
 
             current_state = "menu"
+
+            menu.play_intro()
+
+    elif current_state == "menu":
+
+        action = menu.poll()
+
+        if action is not None:
+
+            handle_menu_action(action)
 
     elif current_state == "loading":
 
@@ -319,14 +341,18 @@ while running:
                     save_data=pending_save_data
                 )
 
-                # Al continuar una partida: la pantalla de carga se desliza
-                transition = SlideTransition(screen.copy())
+                # Al continuar una partida: zoom al monitor y aparece la
+                # partida (parte del ultimo cuadro de la pantalla de carga)
+                transition = ZoomTransition(screen.copy())
 
                 current_state = "gameplay"
 
             else:
 
                 comic = Comic(screen)
+
+                # Zoom al monitor y aparece el comic
+                transition = ZoomTransition(screen.copy())
 
                 current_state = "comic"
     elif current_state == "settings":
@@ -335,7 +361,15 @@ while running:
 
     elif current_state == "comic":
 
-        comic.update(dt)
+        if transition is not None:
+
+            # Zoom de entrada: el comic espera
+            if transition.update(dt) == "done":
+                transition = None
+
+        else:
+
+            comic.update(dt)
 
     elif current_state == "gameplay":
 
@@ -354,6 +388,8 @@ while running:
         if result == "menu":
 
             current_state = "menu"
+
+            menu.play_intro()
 
         elif result == "respawn":
 
@@ -417,6 +453,9 @@ while running:
     elif current_state == "comic":
 
         comic.draw()
+
+        if transition is not None:
+            transition.draw(screen)
 
     elif current_state == "gameplay":
 

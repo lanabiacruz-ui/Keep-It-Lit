@@ -1,0 +1,90 @@
+{
+    "player_name": "bruh",
+    "mode": "normal",
+    "created_at": "2026-10-14T08:42:59",
+    "last_played": "2026-10-14T09:07:35",
+    "password_salt": "341bbcd99793617827c3f36efb31730e",
+    "password_hash": "d827de9b6751c072b46decd3b7caeee8d0a462581c8db07926bcbe729c6a0d3b",
+    "x": 929,
+    "y": 144,
+    "coins": 99850,
+    "gems": 0,
+    "gems_green": 0,
+    "has_match": true,
+    "light": "fosforo",
+    "vida": 1.0,
+    "escudo": 0.75,
+    "inventory": [
+        [
+            "esfera",
+            2
+        ],
+        [
+            "hongo_azul",
+            3
+        ],
+        [
+            "aceite",
+            8
+        ],
+        [
+            "madera",
+            2
+        ]
+    ],
+    "collected": [
+        "cera_02#0",
+        "moneda_sala_central#0",
+        "madera_03#0",
+        "madera_01#0",
+        "madera_08#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_cabana#0",
+        "madera_10#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_cofres#0",
+        "moneda5_pasillo_cofres#0",
+        "aceite_02#0",
+        "moneda_pasillo_der#0",
+        "madera_05#0",
+        "moneda_pasillo_tienda#0",
+        "madera_02#0",
+        "madera_04#0"
+    ],
+    "item_seed": 39231565,
+    "arena_wave": 1,
+    "arena_completed": false,
+    "arena_left_wave": 1,
+    "arena_left_completed": false,
+    "broken_doors": [
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "hub_derecha",
+        "sup_central_abajo",
+        "sup_izq_central",
+        "sup_izq_sala"
+    ],
+    "chests": {
+        "cofre_02": {
+            "usos": 13
+        }
+    },
+    "placeables": [],
+    "enemies_seen": [],
+    "stats": {
+        "items_used": 16,
+        "chests_opened": 1,
+        "purchases": 3,
+        "fireballs": 0,
+        "kills": 0
+    },
+    "zones_seen": [
+        "central",
+        "cofres",
+        "inicio",
+        "tienda"
+    ],
+    "objective_index": 9,
+    "objectives_minimized": false
+}
