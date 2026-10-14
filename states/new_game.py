@@ -99,7 +99,7 @@ FIRE_COMBO_WINDOW = 1.0      # si pasa este tiempo sin tirar, el combo vuelve a 
 # La pantalla se pone toda blanca: primero un "pum" (un circulo blanco que
 # se expande desde el destello), se queda blanca y despues se va aclarando.
 FLASH_EXPAND = 0.18   # duracion del "pum" (el circulo que se expande)
-FLASH_HOLD = 3.0      # segundos totales con la pantalla toda blanca (incluye el pum)
+FLASH_HOLD = 1.0      # segundos totales con la pantalla toda blanca (incluye el pum)
 FLASH_FADE = 2.0      # segundos que tarda en irse el blanco
 FLASH_TOTAL = FLASH_HOLD + FLASH_FADE   # = 5 segundos tapado
 
