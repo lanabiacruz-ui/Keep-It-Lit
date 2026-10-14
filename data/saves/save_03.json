@@ -1,0 +1,182 @@
+{
+    "player_name": "ujuju",
+    "mode": "normal",
+    "created_at": "2026-10-10T22:55:15",
+    "last_played": "2026-10-13T21:15:51",
+    "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
+    "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
+    "x": 941,
+    "y": 159,
+    "coins": 56160,
+    "gems": 2,
+    "has_match": true,
+    "light": "antorcha",
+    "vida": 0.7482553333333412,
+    "escudo": 0.5,
+    "inventory": [
+        [
+            "cera",
+            15
+        ],
+        [
+            "polvora",
+            11
+        ],
+        [
+            "repelente",
+            8
+        ],
+        null
+    ],
+    "collected": [
+        "cera_02#0",
+        "moneda_pasillo_cabana#1",
+        "cera_01#0",
+        "madera_03#0",
+        "madera_12#0",
+        "moneda_pasillo_tienda#1",
+        "madera_01#0",
+        "moneda5_pasillo_cofres#0",
+        "madera_09#0",
+        "madera_11#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#0",
+        "aceite_02#0",
+        "madera_06#0",
+        "aceite_01#0",
+        "moneda_pasillo_der#0",
+        "moneda_sala_central#0",
+        "madera_10#0",
+        "madera_07#0",
+        "madera_04#0",
+        "aceite_03#0",
+        "moneda_pasillo_cabana#0",
+        "madera_05#0",
+        "moneda_pasillo_cofres#0",
+        "cera_03#0",
+        "madera_08#0"
+    ],
+    "item_seed": 162672674,
+    "arena_wave": 1,
+    "arena_completed": true,
+    "arena_left_wave": 11,
+    "arena_left_completed": true,
+    "broken_doors": [
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "hub_derecha",
+        "hub_izquierda",
+        "sala_der",
+        "sala_izq",
+        "sup_central_abajo",
+        "sup_izq_central"
+    ],
+    "chests": {},
+    "enemies_seen": [
+        "destello",
+        "golem",
+        "guardian",
+        "guardian_tirador",
+        "hongun",
+        "mosquito",
+        "pino",
+        "tronco"
+    ],
+    "stats": {
+        "items_used": 1803,
+        "chests_opened": 0,
+        "purchases": 105,
+        "fireballs": 3364,
+        "kills": 1682
+    },
+    "zones_seen": [
+        "central",
+        "inicio",
+        "tienda"
+    ],
+    "gems_green": 1,
+    "placeables": [
+        {
+            "t": "bolsa",
+            "x": 981,
+            "y": 486,
+            "slots": [
+                null,
+                null,
+                null,
+                null
+            ]
+        },
+        {
+            "t": "cofre",
+            "x": 1018,
+            "y": 136,
+            "slots": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ]
+        },
+        {
+            "t": "fogata",
+            "x": 956,
+            "y": 154,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 942,
+            "y": 446,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 948,
+            "y": 555,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 1073,
+            "y": 518,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 1036,
+            "y": 471,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 1027,
+            "y": 424,
+            "fuel": 0.0
+        },
+        {
+            "t": "faro",
+            "x": 912,
+            "y": 456,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 961,
+            "y": 518,
+            "fuel": 0.0
+        },
+        {
+            "t": "fogata",
+            "x": 935,
+            "y": 517,
+            "fuel": 0.0
+        }
+    ]
+}

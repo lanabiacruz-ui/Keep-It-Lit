@@ -9,6 +9,9 @@ class CollisionMap:
         self.world_height = 1080
         self.doors = None
 
+        # Rect de 1x1 que se reutiliza para probar puntos
+        self._pt = pygame.Rect(0, 0, 1, 1)
+
      
 
         self.walkable = [
@@ -96,6 +99,43 @@ class CollisionMap:
 
             # Bloque de la derecha
             pygame.Rect(1594, 501, 36, 42),
+
+            # ---- Sala grande izquierda (la del Guardian) ----
+
+            # Cruz de piedra del medio. La barra vertical va en tres
+            # tramos porque esta un poco inclinada en el dibujo. Los
+            # huecos de arriba y abajo (entre la punta y la pared) los
+            # abre y cierra world/crusher.py
+            pygame.Rect(374, 369, 52, 111),
+            pygame.Rect(375, 480, 55, 120),
+            pygame.Rect(376, 600, 58, 110),
+
+            # Barra horizontal de la cruz
+            pygame.Rect(191, 514, 383, 55),
+
+            # Bloques sueltos
+            pygame.Rect(190, 374, 70, 69),     # arriba a la izquierda
+            pygame.Rect(496, 365, 36, 30),     # arriba a la derecha
+            pygame.Rect(524, 430, 38, 64),     # derecha (alto)
+            pygame.Rect(458, 431, 34, 38),     # centro arriba
+            pygame.Rect(284, 447, 33, 34),     # chiquito izquierda
+            pygame.Rect(462, 588, 30, 36),     # centro abajo
+            pygame.Rect(263, 595, 82, 36),     # barra abajo izquierda
+            pygame.Rect(187, 676, 94, 36),     # barra abajo del todo
+
+            # Bloque inclinado (abajo a la derecha): como la colision
+            # es de rectangulos, se arma en escalones siguiendo la
+            # diagonal
+            pygame.Rect(557, 597, 30, 12),
+            pygame.Rect(549, 609, 56, 12),
+            pygame.Rect(541, 621, 66, 12),
+            pygame.Rect(533, 633, 62, 12),
+            pygame.Rect(525, 645, 61, 12),
+            pygame.Rect(516, 657, 61, 12),
+            pygame.Rect(507, 669, 61, 12),
+            pygame.Rect(501, 681, 59, 12),
+            pygame.Rect(509, 693, 44, 12),
+            pygame.Rect(525, 705, 21, 12),
         ]
 
     
@@ -109,7 +149,7 @@ class CollisionMap:
             "habitacion_superior_izquierda": (452, 132),
             "habitacion_superior_centro": (950, 160),
             "habitacion_superior_derecha": (1388, 138),
-            "habitacion_izquierda": (398, 540),
+            "habitacion_izquierda": (610, 540),
             "habitacion_derecha": (1462, 530),
         }
 
@@ -121,58 +161,52 @@ class CollisionMap:
         if x < 0 or y < 0:
             return False
 
-        x = int(x)
-        y = int(y)
+        # collidelist corre en C: es muchisimo mas rapido que recorrer
+        # las listas con un for de Python (esto se llama miles de veces
+        # por frame cuando hay muchos enemigos)
+        pt = self._pt
+        pt.topleft = (int(x), int(y))
 
-        
-        inside_walkable = False
-
-        for zone in self.walkable:
-
-            if zone.collidepoint(x, y):
-                inside_walkable = True
-                break
-
-        if not inside_walkable:
+        if pt.collidelist(self.walkable) == -1:
             return False
 
-        
-       
-        for obstacle in self.obstacles:
-
-            if obstacle.collidepoint(x, y):
-                return False
+        if pt.collidelist(self.obstacles) != -1:
+            return False
 
         return True
 
-  
     def can_move(self, rect):
 
-        
-        points = [
+        # Rects de las puertas (se arma una sola vez por llamada)
+        door_rects = (
+            [d.rect for d in self.doors.doors]
+            if self.doors is not None
+            else None
+        )
 
-            (rect.left, rect.top),
-            (rect.centerx, rect.top),
-            (rect.right - 1, rect.top),
+        pt = self._pt
 
-            (rect.left, rect.centery),
-            (rect.right - 1, rect.centery),
+        left = rect.left
+        right = rect.right - 1
+        top = rect.top
+        bottom = rect.bottom - 1
+        cx = rect.centerx
+        cy = rect.centery
 
-            (rect.left, rect.bottom - 1),
-            (rect.centerx, rect.bottom - 1),
-            (rect.right - 1, rect.bottom - 1)
-        ]
-
-        for x, y in points:
+        for x, y in (
+            (left, top), (cx, top), (right, top),
+            (left, cy), (right, cy),
+            (left, bottom), (cx, bottom), (right, bottom),
+        ):
 
             if not self.point_is_walkable(x, y):
                 return False
-            if self.doors is not None:
 
-                for door in self.doors.doors:
+            if door_rects:
 
-                    if door.rect.collidepoint(x, y):
-                        return False
+                pt.topleft = (int(x), int(y))
 
+                if pt.collidelist(door_rects) != -1:
+                    return False
 
         return True

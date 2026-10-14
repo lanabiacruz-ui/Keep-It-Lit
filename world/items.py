@@ -1,4 +1,5 @@
 import json
+import math
 import random
 
 import pygame
@@ -116,7 +117,42 @@ def _gem_placeholder():
     return surf
 
 
+def _green_gem_placeholder():
+    """Gema verde oscuro dibujada por codigo, por si falta
+    icon_gema_verde.png."""
+
+    surf = pygame.Surface((64, 64), pygame.SRCALPHA)
+
+    top = [(32, 6), (56, 24), (32, 58), (8, 24)]
+
+    pygame.draw.polygon(surf, (22, 96, 62), top)
+    pygame.draw.polygon(surf, (70, 160, 110), [(32, 6), (56, 24), (32, 24)])
+    pygame.draw.polygon(surf, (12, 60, 40), [(8, 24), (32, 24), (32, 58)])
+    pygame.draw.polygon(surf, (150, 215, 180), top, 3)
+
+    return surf
+
+
 _gem_cache = None
+_green_gem_cache = None
+
+
+def get_green_gem_icon():
+    """Icono de la gema verde oscuro (la de la sala del Guardian):
+    assets/maps/hud/icon_gema_verde.png (64x64). Si no existe, una
+    dibujada por codigo."""
+
+    global _green_gem_cache
+
+    if _green_gem_cache is None:
+
+        icon = load_icon("gema_verde")
+
+        _green_gem_cache = (
+            icon if icon is not None else _green_gem_placeholder()
+        )
+
+    return _green_gem_cache
 
 
 def get_gem_icon():
@@ -187,9 +223,14 @@ class WorldItem(MatchItem):
         elif item_id == "gema":
             self.original = get_gem_icon()
 
-        # Las monedas y la gema se juntan solas al pasar cerca (sin
+        elif item_id == "gema_verde":
+            self.original = get_green_gem_icon()
+
+        # Las monedas y las gemas se juntan solas al pasar cerca (sin
         # apretar E)
-        self.auto = item_id in ("moneda", "gema")
+        self.auto = item_id in (
+            "moneda", "moneda_5", "moneda_10", "gema", "gema_verde"
+        )
 
         # Animacion de "salir del cofre" (None = quieto en el piso)
         self.fly = None
@@ -228,6 +269,10 @@ class WorldItem(MatchItem):
             self.fly = None
             self._lift = 0.0
 
+            # Cae al piso con un rebotecito
+            if getattr(self, "sparkle", False):
+                self._land_ms = pygame.time.get_ticks()
+
             return
 
         t = f["t"]
@@ -260,7 +305,21 @@ class WorldItem(MatchItem):
 
         dest = camera.apply(self.rect)
 
-        lift = int(self._lift * camera.zoom)
+        lift_w = self._lift
+
+        # Rebote al caer: 2 saltitos que se van achicando
+        land = getattr(self, "_land_ms", None)
+
+        if land is not None and f is None:
+
+            b = (pygame.time.get_ticks() - land) / 1000.0
+
+            if b < 0.55:
+                lift_w = 7.0 * abs(math.sin(b * math.pi * 3.0)) * (1 - b / 0.55)
+            else:
+                self._land_ms = None
+
+        lift = int(lift_w * camera.zoom)
 
         screen.blit(
             sprite,
@@ -269,19 +328,26 @@ class WorldItem(MatchItem):
 
 
 class LightItem(MatchItem):
-    """Luz tirada en el piso (fosforo o vela). Ilumina un poco y se
+    """Luz tirada en el piso (fosforo, vela o antorcha). Ilumina un poco y se
     recuerda cuanta vida le quedaba, asi al agarrarla sigue igual."""
 
     def __init__(self, kind, x, y, life=1.0):
 
-        # La vela es un poco mas grande que el fosforo
+        # La vela es un poco mas grande que el fosforo, y la antorcha
+        # un poco mas que la vela
         if kind == "vela":
             self.WORLD_SIZE = 16
+        elif kind == "antorcha":
+            self.WORLD_SIZE = 20
 
         super().__init__(x, y)
 
         self.kind = kind
         self.life = float(life)
+
+        # Animacion de "salir disparada" (None = quieta en el piso)
+        self.fly = None
+        self._lift = 0.0
 
         # El fosforo usa el sprite de MatchItem; las demas luces usan su
         # icono (assets/maps/hud/icon_<luz>.png)
@@ -292,10 +358,33 @@ class LightItem(MatchItem):
             if icon is not None:
                 self.original = icon
 
+    # Area de agarre de la luz tirada: mas chica que la de los objetos
+    # (45), asi no tapa a lo que tiene al lado (ej. la resina).
+    INTERACT_DISTANCE = 24
+
+    # Misma animacion que los objetos: sale de la boca del vendedor y
+    # cae en el piso
+    start_fly = WorldItem.start_fly
+    update_fly = WorldItem.update_fly
+    draw = WorldItem.draw
+
+    def is_near(self, player):
+
+        # En el aire no se puede agarrar
+        if self.fly is not None:
+            return False
+
+        return super().is_near(player)
+
     @property
     def light_radius(self):
 
         return light_stats(self.kind)["radio_suelo"]
+
+
+# Las monedas no estan en data/items.json (no van al inventario), pero
+# si pueden aparecer en el mapa desde data/item_spawns.json.
+COIN_SPAWN_IDS = ("moneda", "moneda_5", "moneda_10")
 
 
 def make_spawn_items(zones, defs, collision_map, seed, collected):
@@ -314,7 +403,7 @@ def make_spawn_items(zones, defs, collision_map, seed, collected):
 
         item_id = zone.get("item")
 
-        if item_id not in defs:
+        if item_id not in defs and item_id not in COIN_SPAWN_IDS:
 
             print(
                 f"[items] La zona '{zone.get('id')}' usa '{item_id}', "

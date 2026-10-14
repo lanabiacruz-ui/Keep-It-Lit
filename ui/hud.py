@@ -87,7 +87,11 @@ class Hud:
 
         self.equipped_icons = {
             "fosforo": scaled(load("icon_fosforo.png"), equipped_scale),
-            "vela": scaled(load("icon_vela_equipado.png"), equipped_scale)
+            "vela": scaled(load("icon_vela_equipado.png"), equipped_scale),
+            "antorcha": scaled(
+                load("icon_antorcha_equipado.png"),
+                equipped_scale
+            )
         }
 
         # Versiones "seleccionado" (reemplazan al contorno dibujado)
@@ -103,6 +107,10 @@ class Hud:
             ),
             "vela": scaled(
                 load("icon_vela_equipado_select.png"),
+                equipped_scale
+            ),
+            "antorcha": scaled(
+                load("icon_antorcha_equipado_select.png"),
                 equipped_scale
             )
         }
@@ -143,6 +151,17 @@ class Hud:
         # Item equipado: a la izquierda de la hotbar
         self.equipped_rect = self.equipped_frame.get_rect(
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
+        )
+
+        # Panel "CAMBIAR GOLPE [G]" (solo con la antorcha): a la derecha
+        # de la hotbar. Una imagen por modo.
+        self.attack_panels = {
+            "golpe": scaled(load("hud_antorcha_golpe.png"), 0.75),
+            "fuego": scaled(load("hud_antorcha_fuego.png"), 0.75),
+        }
+
+        self.attack_panel_rect = self.attack_panels["golpe"].get_rect(
+            bottomleft=(self.bar_rect.right + 12, self.bar_rect.bottom)
         )
 
         # ---------- Vida y escudo ----------
@@ -206,11 +225,39 @@ class Hud:
 
         self.coin_icon = scaled(load("hud_monedas.png"), bar_scale)
 
-        self.coin_rect = self.coin_icon.get_rect(
+        # Boton Menu: arriba a la derecha de todo, y las monedas quedan
+        # a su izquierda. Al tocarlo se abre el menu de pausa.
+        menu_img = load("menu.png")
+
+        menu_size = self.coin_icon.get_height()
+
+        self.menu_icon = pygame.transform.smoothscale(
+            menu_img,
+            (menu_size, menu_size)
+        )
+
+        # Version mas clara para cuando el mouse esta encima
+        self.menu_icon_hover = self.menu_icon.copy()
+        self.menu_icon_hover.fill(
+            (45, 45, 45, 0),
+            special_flags=pygame.BLEND_RGB_ADD
+        )
+
+        self.menu_rect = self.menu_icon.get_rect(
             topright=(w - margin, margin)
         )
 
+        # new_game.py lee este nombre para detectar el click
+        self.menu_button_rect = self.menu_rect
+
+        self.coin_rect = self.coin_icon.get_rect(
+            topright=(self.menu_rect.left - 6, margin)
+        )
+
         self.coin_font = pygame.font.Font(None, 32)
+
+        # Fuente del "+N" de debajo del contador (se crea al usarla)
+        self.gain_font = None
 
         # Centro del numero dentro de hud_monedas.png (110x60):
         # a la derecha de la moneda dibujada.
@@ -334,16 +381,63 @@ class Hud:
 
         if message:
 
-            text = self.msg_font.render(message, True, (255, 255, 255))
+            self._draw_message(screen, message)
 
-            shadow = self.msg_font.render(message, True, (0, 0, 0))
+    def _draw_message(self, screen, message):
+        """Aviso de abajo (arriba de la barra). Si la frase es mas ancha
+        que la pantalla se achica la letra y, si aun asi no entra, se
+        parte en 2 lineas: nunca se sale por los costados."""
 
-            pos = text.get_rect(
-                midbottom=(screen.get_width() // 2, self.bar_rect.top - 14)
-            )
+        max_w = screen.get_width() - 40
+
+        lines = [message]
+        font = self.msg_font
+
+        cache = self.__dict__.setdefault("_msg_fonts", {})
+
+        for size in (28, 26, 24, 22):
+
+            font = cache.get(size)
+
+            if font is None:
+                font = cache[size] = pygame.font.Font(None, size)
+
+            if font.size(message)[0] <= max_w:
+                lines = [message]
+                break
+
+        else:
+
+            # Partir por palabras en lineas que entren
+            lines = []
+            cur = ""
+
+            for word in message.split():
+
+                test = f"{cur} {word}".strip()
+
+                if cur and font.size(test)[0] > max_w:
+                    lines.append(cur)
+                    cur = word
+                else:
+                    cur = test
+
+            if cur:
+                lines.append(cur)
+
+        y = self.bar_rect.top - 14
+
+        for line in reversed(lines):
+
+            text = font.render(line, True, (255, 255, 255))
+            shadow = font.render(line, True, (0, 0, 0))
+
+            pos = text.get_rect(midbottom=(screen.get_width() // 2, y))
 
             screen.blit(shadow, pos.move(2, 2))
             screen.blit(text, pos)
+
+            y -= font.get_linesize()
 
     def _draw_bar(self, screen, frame, fill, pos, pct, bbox):
 
@@ -375,7 +469,10 @@ class Hud:
         escudo=0.0,
         countdown=None,
         coins=0,
-        equipped_selected=False
+        equipped_selected=False,
+        coin_gain=0,
+        coin_gain_alpha=1.0,
+        attack_mode=None
     ):
 
         # Vida y escudo, arriba a la izquierda
@@ -397,7 +494,15 @@ class Hud:
             self.escudo_bbox
         )
 
-        # Monedas, arriba a la derecha
+        # Boton Menu (esquina de arriba a la derecha)
+        hover = self.menu_rect.collidepoint(pygame.mouse.get_pos())
+
+        screen.blit(
+            self.menu_icon_hover if hover else self.menu_icon,
+            self.menu_rect
+        )
+
+        # Monedas, a la izquierda del boton Menu
         screen.blit(self.coin_icon, self.coin_rect)
 
         coin_text = self.coin_font.render(
@@ -430,6 +535,33 @@ class Hud:
 
         screen.blit(coin_text, coin_text_rect)
 
+        # "+N": las monedas que conseguiste "en el momento", justo
+        # debajo del contador (se desvanece solo)
+        if coin_gain > 0 and coin_gain_alpha > 0:
+
+            gain_text = f"+{format_coins(coin_gain)}"
+
+            if self.gain_font is None:
+                self.gain_font = pygame.font.Font(None, 30)
+
+            alpha = int(255 * max(0.0, min(1.0, coin_gain_alpha)))
+
+            shadow = self.gain_font.render(gain_text, True, (0, 0, 0))
+            label = self.gain_font.render(gain_text, True, (255, 226, 92))
+
+            shadow.set_alpha(alpha)
+            label.set_alpha(alpha)
+
+            pos = label.get_rect(
+                midtop=(
+                    self.coin_rect.left + self.coin_text_offset[0],
+                    self.coin_rect.bottom + 2
+                )
+            )
+
+            screen.blit(shadow, pos.move(2, 2))
+            screen.blit(label, pos)
+
         # Contador de "sin luz" (10 -> 0), centrado arriba
         if countdown is not None:
 
@@ -448,6 +580,14 @@ class Hud:
             )
 
             screen.blit(number, number_rect)
+
+        # Panel del golpe de la antorcha (G): "golpe" o "fuego"
+        if attack_mode in self.attack_panels:
+
+            screen.blit(
+                self.attack_panels[attack_mode],
+                self.attack_panel_rect
+            )
 
         # Hotbar
         screen.blit(self.bar, self.bar_rect)

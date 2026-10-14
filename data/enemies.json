@@ -1,0 +1,37 @@
+{
+    "pino": {
+        "nombre": "Piña",
+        "imagen": "enemigo.png",
+        "descripcion": "Enemigo de contacto que se mueve por la sala y rebota contra los obstaculos. Hace daño cuando choca con el jugador."
+    },
+    "tronco": {
+        "nombre": "Tronco",
+        "imagen": "tronco.png",
+        "descripcion": "Mantiene distancia del jugador y dispara tres proyectiles que rebotan por la sala 2 veces"
+    },
+    "mosquito": {
+        "nombre": "Mosquito",
+        "imagen": "mosquito.png",
+        "descripcion": "Tranquilo pero si recibe luz ataca al jugador pegandose  a su cuerpo por 1 min para despues soltarse e irse. Su aviso indica cuando esta por realizar una accion peligrosa."
+    },
+    "hongun": {
+        "nombre": "Hongun",
+        "imagen": "hongun.png",
+        "descripcion": "Camina por la sala y persigue al jugador cuando lo detecta a vista. Al acercarse al jugador recarga y libera una explosion masiva, muriendo pero realizando un daño desafiante."
+    },
+    "klon": {
+        "nombre": "Klon",
+        "imagen": "klon_icon.png",
+        "descripcion": "Del tamaño del jugador. Pasea tranquilo por la sala, pero si tu luz lo toca (o lo golpeas) va directo hacia vos sin parar hasta morir. Pega con el mismo golpe en arco que el jugador: levanta el arma y se ve la zona roja antes de pegar. Tiene mucha vida."
+    },
+    "destello": {
+        "nombre": "Destello",
+        "imagen": "destello.png",
+        "descripcion": "Pasea tranquilo y da un poco de luz con el cuerpo. Si te ve se frena y parpadea en blanco: ese es el aviso. Despues sale corriendo casi el doble de rapido que vos, te choca y explota: te saca vida, te empuja y deja la pantalla en blanco unos 5 segundos. Aguanta 2 golpes y si lo derrotas antes de que te alcance, no explota"
+    },
+    "golem": {
+        "nombre": "Golem",
+        "imagen": "golem_icono.png",
+        "descripcion": "Enorme y muy lento. Pasea tranquilo, pero si te ve va directo hacia ti sin parar. Si te toca una sola vez te agarra, te levanta y te aprieta: te saca todo el escudo y, si no tenias escudo, toda la vida de tu luz. Despues te suelta y queda cansado unos segundos. Tiene mucha vida: no te dejes alcanzar."
+    }
+}

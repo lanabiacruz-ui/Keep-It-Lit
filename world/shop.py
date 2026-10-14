@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pygame
 
-from world.items import WorldItem, HUD_DIR
+from world.items import WorldItem, LightItem, HUD_DIR
+from world.lights import LIGHTS
 
 
 DATA_FILE = (
@@ -27,6 +28,7 @@ DEFAULT_CATALOG = [
         "items": [
             {"id": "fosforo", "precio": 40},
             {"id": "vela", "precio": 90},
+            {"id": "antorcha", "precio": 180},
         ],
     },
     {
@@ -231,7 +233,10 @@ class Shopkeeper:
 
         for n, item_id in enumerate(item_ids):
 
-            item = WorldItem(item_id, *self.MOUTH)
+            if item_id in LIGHTS:
+                item = LightItem(item_id, *self.MOUTH)
+            else:
+                item = WorldItem(item_id, *self.MOUTH)
 
             item.start_fly(
                 self.MOUTH,

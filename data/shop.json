@@ -10,6 +10,10 @@
         {
           "id": "vela",
           "precio": 55
+        },
+        {
+          "id": "antorcha",
+          "precio": 160
         }
       ]
     },
@@ -42,7 +46,40 @@
         },
         {
           "id": "hongo_azul",
-          "precio": 11
+          "precio": 10
+        },
+        {
+          "id": "repelente",
+          "precio": 14
+        },
+        {
+          "id": "iman",
+          "precio": 16
+        },
+        {
+          "id": "esfera",
+          "precio": 13
+        }
+      ]
+    },
+    {
+      "nombre": "Construcción",
+      "items": [
+        {
+          "id": "bolsa",
+          "precio": 20
+        },
+        {
+          "id": "cofre",
+          "precio": 45
+        },
+        {
+          "id": "fogata",
+          "precio": 100
+        },
+        {
+          "id": "faro",
+          "precio": 55
         }
       ]
     }

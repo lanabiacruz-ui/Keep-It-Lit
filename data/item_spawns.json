@@ -143,6 +143,105 @@
                 740,
                 525
             ]
+        },
+        {
+            "id": "moneda_pasillo_cabana",
+            "item": "moneda",
+            "zona": [
+                940,
+                658,
+                8,
+                198
+            ],
+            "cantidad": 2
+        },
+        {
+            "id": "moneda_sala_central",
+            "item": "moneda",
+            "zona": [
+                844,
+                408,
+                200,
+                204
+            ],
+            "cantidad": 2
+        },
+        {
+            "id": "moneda_pasillo_tienda",
+            "item": "moneda",
+            "zona": [
+                940,
+                215,
+                4,
+                138
+            ],
+            "cantidad": 2
+        },
+        {
+            "id": "moneda_pasillo_izq",
+            "item": "moneda",
+            "zona": [
+                698,
+                512,
+                92,
+                12
+            ],
+            "cantidad": 1
+        },
+        {
+            "id": "moneda_pasillo_der",
+            "item": "moneda",
+            "zona": [
+                1106,
+                512,
+                92,
+                16
+            ],
+            "cantidad": 1
+        },
+        {
+            "id": "moneda_pasillo_cofres",
+            "item": "moneda",
+            "zona": [
+                630,
+                132,
+                192,
+                8
+            ],
+            "cantidad": 1
+        },
+        {
+            "id": "moneda_sala_cofres",
+            "item": "moneda",
+            "zona": [
+                324,
+                52,
+                256,
+                160
+            ],
+            "cantidad": 2
+        },
+        {
+            "id": "moneda5_pasillo_cofres",
+            "item": "moneda_5",
+            "zona": [
+                630,
+                132,
+                192,
+                8
+            ],
+            "cantidad": 1
+        },
+        {
+            "id": "moneda5_sala_cofres",
+            "item": "moneda_5",
+            "zona": [
+                324,
+                52,
+                256,
+                160
+            ],
+            "cantidad": 1
         }
     ]
 }

@@ -15,15 +15,51 @@ class PlayerLight:
 
         self._cache = {}
         self._soft_cache = {}
+        self._glow_cache = {}
+        self._base = None
+
+    LIGHT_STEP = 4        # los radios se redondean de a 4 px
+    BASE_RADIUS = 256     # luz grande que se dibuja una vez y se escala
+    MAX_CACHE = 120       # tope de luces guardadas
 
     def _get_light(self, radius):
+        """Luz para ese radio. Los radios se redondean y se guardan:
+        antes, cuando la luz parpadeaba (poca vida) el radio cambiaba
+        en cada frame y se dibujaba una luz nueva con un circulo por
+        cada 2 px de radio, a cada rato = tirones."""
 
-        if radius not in self._cache:
-            self._cache[radius] = self._create_light_surface(radius)
+        radius = max(
+            self.LIGHT_STEP,
+            int(round(radius / self.LIGHT_STEP)) * self.LIGHT_STEP
+        )
 
-        return self._cache[radius]
+        light = self._cache.get(radius)
+
+        if light is None:
+
+            if len(self._cache) >= self.MAX_CACHE:
+                self._cache.clear()
+
+            light = self._create_light_surface(radius)
+            self._cache[radius] = light
+
+        return light
 
     def _create_light_surface(self, radius):
+
+        # La luz base se dibuja una sola vez; las demas son ESA luz
+        # escalada (una operacion, en vez de ~radio/2 circulos)
+        if self._base is None:
+            self._base = self._draw_light(self.BASE_RADIUS)
+
+        if radius == self.BASE_RADIUS:
+            return self._base
+
+        size = radius * 2 + 2
+
+        return pygame.transform.smoothscale(self._base, (size, size))
+
+    def _draw_light(self, radius):
         size = radius * 2 + 2
 
         light = pygame.Surface(
@@ -33,14 +69,15 @@ class PlayerLight:
 
         center = radius + 1
 
-        for r in range(radius, -1, -2):
+        # Caida suave: nucleo bien claro y borde que se funde con la
+        # oscuridad (antes era lineal y con escalones de 2 px)
+        for r in range(radius, -1, -1):
 
-            strength = 1.0 - (r / radius)
+            t = r / radius
+            x = max(0.0, min(1.0, (t - 0.15) / 0.85))
+            strength = 1.0 - x * x * (3 - 2 * x)
 
-            alpha = max(
-                0,
-                min(255, int(255 * strength))
-            )
+            alpha = max(0, min(255, int(255 * strength)))
 
             pygame.draw.circle(
                 light,
@@ -50,6 +87,54 @@ class PlayerLight:
             )
 
         return light
+
+    def add_glow(self, screen, camera, wx, wy, radius, color, intensity):
+        """Resplandor calido de una luz (se suma encima de la oscuridad,
+        asi el aire cerca del fuego se ve tenido de color)."""
+
+        radius = int(radius)
+
+        if radius < 8 or intensity <= 0.01:
+            return
+
+        step = max(8, int(round(radius / 8)) * 8)
+        level = max(1, int(round(min(1.0, intensity) * 12)))
+
+        key = (step, color, level)
+
+        spr = self._glow_cache.get(key)
+
+        if spr is None:
+
+            if len(self._glow_cache) > 160:
+                self._glow_cache.clear()
+
+            size = step * 2
+            spr = pygame.Surface((size, size))
+            spr.fill((0, 0, 0))
+
+            k = level / 12.0
+
+            for r in range(step, 0, -2):
+
+                t = 1.0 - r / step
+                f = t * t * k * 0.55
+
+                pygame.draw.circle(
+                    spr,
+                    (int(color[0] * f), int(color[1] * f), int(color[2] * f)),
+                    (step, step), r
+                )
+
+            self._glow_cache[key] = spr
+
+        sx = int(wx * camera.zoom - camera.x)
+        sy = int(wy * camera.zoom - camera.y)
+
+        screen.blit(
+            spr, spr.get_rect(center=(sx, sy)),
+            special_flags=pygame.BLEND_RGB_ADD
+        )
 
     def _soft_rect(self, w, h, feather, strength):
         """Cuadrado iluminado con el borde difuminado (se arma una vez y
@@ -116,12 +201,23 @@ class PlayerLight:
                 special_flags=pygame.BLEND_RGBA_SUB
             )
 
+        screen_w, screen_h = self.screen_size
+
         for wx, wy, radius in sources:
 
             light = self._get_light(int(radius))
 
             sx = int(wx * camera.zoom - camera.x)
             sy = int(wy * camera.zoom - camera.y)
+
+            # Luz que queda toda fuera de la pantalla: no se dibuja
+            half = light.get_width() // 2
+
+            if (
+                sx + half < 0 or sx - half > screen_w
+                or sy + half < 0 or sy - half > screen_h
+            ):
+                continue
 
             self._darkness.blit(
                 light,

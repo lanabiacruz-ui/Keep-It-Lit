@@ -1,5 +1,7 @@
 import json
 import pygame
+
+from core.audio_manager import audio
 from pathlib import Path
 
 
@@ -33,6 +35,17 @@ def load_settings():
         pass
 
     return settings
+
+
+def window_is_fullscreen():
+    """True si la ventana esta de verdad en pantalla completa."""
+
+    try:
+        return bool(pygame.display.is_fullscreen())
+    except AttributeError:
+        surface = pygame.display.get_surface()
+
+        return bool(surface and surface.get_flags() & pygame.FULLSCREEN)
 
 
 def save_settings(settings):
@@ -77,7 +90,7 @@ class Settings:
         ("Pantalla completa", "fullscreen", "toggle"),
     ]
 
-    def __init__(self, screen):
+    def __init__(self, screen, background="mapaajustes.png"):
 
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -92,8 +105,15 @@ class Settings:
             / "ui"
         )
 
+        # Fondo de la pantalla (otro archivo = otra pantalla). Si el
+        # archivo todavia no existe se usa el de siempre.
+        background_path = ui_dir / background
+
+        if not background_path.exists():
+            background_path = ui_dir / "mapaajustes.png"
+
         background = pygame.image.load(
-            ui_dir / "mapaajustes.png"
+            background_path
         ).convert()
 
         self.background = pygame.transform.smoothscale(
@@ -132,6 +152,11 @@ class Settings:
         )
 
         self.values = load_settings()
+
+        # El interruptor muestra lo que la ventana ES, no lo que quedo
+        # guardado en el archivo (si no, podia decir "activado" con la
+        # ventana en modo ventana).
+        self.values["fullscreen"] = window_is_fullscreen()
 
         self.selected = 0
         self.dragging = None
@@ -204,12 +229,22 @@ class Settings:
             if pygame.mixer.get_init():
                 pygame.mixer.music.set_volume(self.values[key])
 
+        elif key == "sfx_volume":
+
+            audio.set_sfx_volume(self.values[key])
+
         elif key == "fullscreen":
 
-            try:
-                pygame.display.toggle_fullscreen()
-            except pygame.error:
-                pass
+            before = window_is_fullscreen()
+
+            # Solo se cambia la ventana si hace falta
+            if before != bool(self.values[key]):
+
+                try:
+                    pygame.display.toggle_fullscreen()
+                except pygame.error:
+                    # No se pudo: el interruptor vuelve a como estaba
+                    self.values[key] = before
 
     def _set_slider_from_mouse(self, index, mouse_x):
 

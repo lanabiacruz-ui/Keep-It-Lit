@@ -1,9 +1,37 @@
+"""Tienda (ventana de compra) del vendedor.
+
+IMAGENES (carpeta assets/maps/tienda/). Todas son opcionales: si falta
+alguna, la tienda la dibuja por codigo.
+
+  tienda_panel.png          900 x 520   fondo de la tienda
+  tienda_carrito.png        258 x 388   columna del carrito
+  tienda_tarjeta.png        182 x 104   tarjeta de un producto
+  tienda_tarjeta_hover.png  182 x 104   tarjeta con el mouse encima
+  tienda_icono_fondo.png     46 x 46    fondo del icono del producto
+  tienda_badge.png           26 x 20    globito con la cantidad
+  tienda_fila.png           242 x 42    fila del carrito
+  tienda_mas.png.png         20 x 20    boton +
+  tienda_menos.png           20 x 20    boton -
+  tienda_boton_comprar.png (+ _hover, .off)  178 x 40   boton comprar
+  tienda_boton_tacho.png     40 x 40    vaciar carrito
+  tienda_flecha.png          34 x 34    flecha
+  tienda_monedas.png        112 x 40    cartelito de monedas
+  2026_10_04_05p_Kleki.png   36 x 36    boton cerrar
+
+  NUEVA  tienda_info_panel.png   460 x 360 (recomendado)
+         Fondo de la ventanita de info (click en la rueda sobre un
+         producto). Si existe, se usa con SU tamano (podes dibujarla
+         mas grande o mas chica) y el texto se acomoda solo adentro:
+         si es largo, la letra se achica hasta que entre. Los margenes
+         donde va el texto se cambian en las constantes INFO_PAD_*.
+         Si no existe, se dibuja el cuadro de siempre.
+"""
 import math
 from pathlib import Path
 
 import pygame
 
-from world.items import load_icon
+from world.items import load_icon, HUD_DIR
 from world.lights import LIGHTS
 
 
@@ -33,7 +61,19 @@ IMAGES = {
     "arrow": "tienda_flecha.png",
     "coins": "tienda_monedas.png",
     "close": "2026_10_04_05p_Kleki.png",
+    "info": "tienda_info_panel.png",
 }
+
+# Imagenes que no hace falta tener (no avisa si faltan)
+OPTIONAL_IMAGES = ("info",)
+
+# Ventanita de info (click en la rueda). Margenes del TEXTO dentro de tu
+# imagen tienda_info_panel.png, en pixeles
+INFO_PAD_X = 28        # izquierda y derecha
+INFO_PAD_TOP = 24      # de arriba del cuadro al icono + nombre
+INFO_HEADER_H = 44     # alto de la fila del icono + nombre
+INFO_PAD_BOTTOM = 34   # espacio de abajo (para "Click para cerrar")
+INFO_FONT_SIZES = (23, 21, 19, 17, 15)   # el texto achica hasta entrar
 
 _raw_cache = {}
 
@@ -49,7 +89,8 @@ def _load_raw(key):
         try:
             _raw_cache[key] = pygame.image.load(str(path)).convert_alpha()
         except (pygame.error, FileNotFoundError):
-            print(f"[tienda] Falta la imagen {path.name}")
+            if key not in OPTIONAL_IMAGES:
+                print(f"[tienda] Falta la imagen {path.name}")
             _raw_cache[key] = None
 
     return _raw_cache[key]
@@ -69,6 +110,7 @@ C_BADGE = (251, 146, 60)
 TILE_COLORS = {
     "fosforo": (66, 36, 10),
     "vela": (16, 40, 86),
+    "antorcha": (86, 30, 12),
     "madera": (60, 36, 12),
     "cera": (44, 44, 48),
     "aceite": (16, 50, 18),
@@ -104,7 +146,8 @@ class ShopUI:
     FOOT_H = 118
 
     def __init__(
-        self, screen_size, catalog, item_defs, coins, match_duration=30.0
+        self, screen_size, catalog, item_defs, coins, match_duration=30.0,
+        cart=None
     ):
 
         self.sw, self.sh = screen_size
@@ -122,8 +165,14 @@ class ShopUI:
             for it in sec["items"]
         }
 
-        # {id: cantidad}, en el orden en que se fueron agregando
-        self.cart = {}
+        # {id: cantidad}, en el orden en que se fueron agregando.
+        # Si se cerro la tienda sin comprar, vuelve con lo que habias
+        # puesto (new_game se lo pasa en `cart`).
+        self.cart = {
+            item_id: min(MAX_PER_ITEM, int(qty))
+            for item_id, qty in (cart or {}).items()
+            if item_id in self.prices and int(qty) > 0
+        }
 
         self.message = ""
         self.message_timer = 0.0
@@ -137,6 +186,7 @@ class ShopUI:
         self.small_font = pygame.font.Font(None, 23)
         self.tiny_font = pygame.font.Font(None, 21)
         self.button_font = pygame.font.Font(None, 30)
+        self._font_cache = {}
 
         self.panel = pygame.Rect(0, 0, self.PANEL_W, self.PANEL_H)
         self.panel.center = (self.sw // 2, self.sh // 2)
@@ -248,6 +298,9 @@ class ShopUI:
         lines.append(radio)
         lines.append(f"Duración: {duracion:g} segundos")
 
+        if stats.get("dano", 1) > 1:
+            lines.append(f"Fuerza: {stats['dano']:g} de daño por golpe")
+
         if stats.get("furia_cada", 0) > 0:
             lines.append(
                 f"Furia: cada {stats['furia_cada']:g} s entra en furia "
@@ -269,7 +322,21 @@ class ShopUI:
 
         if key not in self._icons:
 
-            icon = load_icon(item_id)
+            # El fosforo usa el dibujo del fosforo (item_fosforo.png) y
+            # no icon_fosforo.png, que es el casillero del HUD
+            if item_id == "fosforo":
+
+                path = HUD_DIR / "item_fosforo.png"
+
+                icon = (
+                    pygame.image.load(str(path)).convert_alpha()
+                    if path.exists()
+                    else load_icon(item_id)
+                )
+
+            else:
+
+                icon = load_icon(item_id)
 
             if icon is not None:
                 icon = pygame.transform.smoothscale(icon, (size, size))
@@ -577,13 +644,57 @@ class ShopUI:
 
         return img
 
+    def _font_for(self, size):
+        """Fuente por defecto del tamano pedido (se guarda para no
+        crearla en cada cuadro)."""
+
+        font = self._font_cache.get(size)
+
+        if font is None:
+            font = pygame.font.Font(None, size)
+            self._font_cache[size] = font
+
+        return font
+
+    def _fit_font(self, text, max_w, size, min_size=14):
+        """Fuente del tamano `size`, o mas chica si hace falta, para que
+        `text` entre en `max_w` pixeles en una sola linea."""
+
+        while size > min_size:
+
+            font = self._font_for(size)
+
+            if font.size(text)[0] <= max_w:
+                return font
+
+            size -= 1
+
+        return self._font_for(min_size)
+
     @staticmethod
     def _wrap(font, text, max_width):
+        """Parte `text` en lineas de hasta `max_width` pixeles. Una
+        palabra que sola es mas ancha que la linea tambien se corta."""
 
         lines = []
         line = ""
 
         for word in text.split():
+
+            # Palabra gigante: se corta en pedazos que entren
+            while font.size(word)[0] > max_width and len(word) > 1:
+
+                n = len(word) - 1
+
+                while n > 1 and font.size(word[:n] + "-")[0] > max_width:
+                    n -= 1
+
+                if line:
+                    lines.append(line)
+                    line = ""
+
+                lines.append(word[:n] + "-")
+                word = word[n:]
 
             test = f"{line} {word}".strip()
 
@@ -672,8 +783,12 @@ class ShopUI:
         if icon is not None:
             screen.blit(icon, icon.get_rect(center=tile.center))
 
+        card_name = self.item_name(item_id)
+
         self._text(
-            screen, self.name_font, self.item_name(item_id), C_TEXT,
+            screen,
+            self._fit_font(card_name, rect.w - 16, 28),
+            card_name, C_TEXT,
             midtop=(rect.centerx, tile.bottom + 6)
         )
 
@@ -872,8 +987,12 @@ class ShopUI:
                         icon, icon.get_rect(midleft=(row.x + 4, row.centery))
                     )
 
+                row_name = self.item_name(item_id)
+
                 self._text(
-                    screen, self.small_font, self.item_name(item_id), C_TEXT,
+                    screen,
+                    self._fit_font(row_name, row.w - 96, 23),
+                    row_name, C_TEXT,
                     topleft=(row.x + 40, row.y + 4)
                 )
 
@@ -1025,63 +1144,117 @@ class ShopUI:
                 C_TEXT if self.cart else C_MUTED
             )
 
+    def _info_body(self, item_id, max_w, max_h=None):
+        """Texto de la info ya partido en lineas. Si se pasa `max_h`,
+        prueba letras cada vez mas chicas hasta que todo entre."""
+
+        raws = self.info_lines(item_id)
+
+        for size in INFO_FONT_SIZES:
+
+            font = self._font_for(size)
+            body = []
+
+            for raw in raws:
+
+                if raw == "":
+                    body.append("")
+                    continue
+
+                body.extend(self._wrap(font, raw, max_w))
+
+            line_h = font.get_linesize()
+
+            if max_h is None or len(body) * line_h <= max_h:
+                break
+
+        return font, body, line_h
+
     def _draw_info(self, screen, item_id):
         """Ventanita con lo que hace el producto (o los numeros de la
-        luz). Se cierra con cualquier click o tecla."""
+        luz). Se cierra con cualquier click o tecla.
 
-        width = 420
-        pad = 18
-        max_w = width - pad * 2
+        Si existe assets/maps/tienda/tienda_info_panel.png se usa de
+        fondo (con su propio tamano); si no, el cuadro dibujado."""
 
-        body = []
+        info_img = _load_raw("info")
 
-        for raw in self.info_lines(item_id):
+        if info_img is not None:
 
-            if raw == "":
-                body.append("")
-                continue
+            box = info_img.get_rect(center=self.panel.center)
+            box.clamp_ip(screen.get_rect())
 
-            body.extend(self._wrap(self.small_font, raw, max_w))
+            pad_x = INFO_PAD_X
+            top = INFO_PAD_TOP
 
-        line_h = self.small_font.get_linesize()
+            font, body, line_h = self._info_body(
+                item_id,
+                box.w - pad_x * 2,
+                box.h - INFO_PAD_TOP - INFO_HEADER_H - INFO_PAD_BOTTOM,
+            )
 
-        height = pad * 2 + 36 + len(body) * line_h + 22
+            body_y = box.y + INFO_PAD_TOP + INFO_HEADER_H
+            foot_y = box.bottom - 10
 
-        box = pygame.Rect(0, 0, width, height)
-        box.center = self.panel.center
+        else:
+
+            pad_x = 18
+            top = 18
+
+            width = 420
+
+            font, body, line_h = self._info_body(item_id, width - pad_x * 2)
+
+            height = pad_x * 2 + 36 + len(body) * line_h + 22
+
+            box = pygame.Rect(0, 0, width, height)
+            box.center = self.panel.center
+            box.clamp_ip(screen.get_rect())
+
+            body_y = box.y + top + 44
+            foot_y = box.bottom - 8
 
         shade = pygame.Surface((self.sw, self.sh), pygame.SRCALPHA)
         shade.fill((0, 0, 0, 120))
         screen.blit(shade, (0, 0))
 
-        pygame.draw.rect(screen, C_PANEL, box, border_radius=14)
-        pygame.draw.rect(screen, C_BADGE, box, width=2, border_radius=14)
+        if info_img is not None:
+
+            screen.blit(info_img, box.topleft)
+
+        else:
+
+            pygame.draw.rect(screen, C_PANEL, box, border_radius=14)
+            pygame.draw.rect(screen, C_BADGE, box, width=2, border_radius=14)
 
         icon = self._icon(item_id, 34)
 
         if icon is not None:
-            screen.blit(icon, (box.x + pad, box.y + pad - 2))
+            screen.blit(icon, (box.x + pad_x, box.y + top - 2))
+
+        name = self.item_name(item_id)
+        name_w = box.w - pad_x * 2 - 44
 
         self._text(
-            screen, self.name_font, self.item_name(item_id), C_TEXT,
-            midleft=(box.x + pad + 44, box.y + pad + 15)
+            screen, self._fit_font(name, name_w, 28), name, C_TEXT,
+            midleft=(box.x + pad_x + 44, box.y + top + 15)
         )
 
-        y = box.y + pad + 44
+        y = body_y
 
         for line in body:
 
             if line:
                 self._text(
-                    screen, self.small_font, line, C_TEXT,
-                    topleft=(box.x + pad, y)
+                    screen, font, line, C_TEXT,
+                    topleft=(box.x + pad_x, y)
                 )
 
             y += line_h
 
         self._text(
             screen, self.tiny_font, "Click para cerrar", C_MUTED,
-            midbottom=(box.centerx, box.bottom - 8)
+            midbottom=(box.centerx, foot_y)
         )
 
     def draw(self, screen):
@@ -1179,9 +1352,15 @@ class ShopUI:
             self._draw_info(screen, self.info_id)
 
         # Ayuda abajo
+        help_text = (
+            "Click: agregar  ·  Click derecho: quitar  ·  "
+            "Click en la rueda: info  ·  Rueda: bajar  ·  E / Esc: cerrar"
+        )
+
         self._text(
-            screen, self.tiny_font,
-            "Click: agregar  ·  Click derecho: quitar  ·  Click en la rueda: info  ·  Rueda: bajar  ·  E / Esc: cerrar",
+            screen,
+            self._fit_font(help_text, self.panel.w - self.PAD * 2, 21),
+            help_text,
             C_MUTED,
             midbottom=(self.panel.centerx, self.panel.bottom - 8)
         )

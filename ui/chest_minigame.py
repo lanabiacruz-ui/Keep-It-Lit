@@ -20,10 +20,10 @@ HITS_NEEDED = 3
 
 # Ancho de la zona (en px) segun cuantos aciertos llevas.
 # La primera es el ancho real del PNG (140).
-ZONE_WIDTHS = [140, 116, 96]
+ZONE_WIDTHS = [140, 98, 62]
 
 # Velocidad del marcador (px por segundo) segun cuantos aciertos llevas
-SPEEDS = [330, 420, 520]
+SPEEDS = [300, 460, 680]
 
 # Despues de abrirse, se ignoran los golpes un ratito para que el
 # mismo click que le pego al cofre no cuente como acierto

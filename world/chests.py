@@ -34,6 +34,9 @@ OPEN_SHOW_TIME = 0.7
 DROP_MIN_DIST = 16
 DROP_MAX_DIST = 40
 
+# Monedas del piso (no hace falta que esten en data/items.json)
+COIN_IDS = ("moneda", "moneda_5", "moneda_10")
+
 # Cada item sale un poquito despues del anterior
 DROP_DELAY = 0.07
 
@@ -456,7 +459,10 @@ class ChestManager:
 
         for n, item_id in enumerate(self.roll_ids()):
 
-            if item_id != "moneda" and item_id not in item_defs:
+            if (
+                item_id not in COIN_IDS
+                and item_id not in item_defs
+            ):
 
                 print(f"[cofres] '{item_id}' no esta en data/items.json")
 
