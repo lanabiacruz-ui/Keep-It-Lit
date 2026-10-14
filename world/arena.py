@@ -136,7 +136,7 @@ GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 #  destellos, golems). Ninguna pasa de ~32 enemigos para que no se
 # trabe el juego.
 LEFT_WAVE_COMPOSITION = {
-    1: (1,1,3,1,1,0,1,0),
+    1: (1,1,3,1,1,0,0,0),
     2: (2,1,5,1,1,0,0,0), 
     3: (3,1,7,1,1,1,0,0), 
     4: (4,1,8,1,1,1,0,0), 
