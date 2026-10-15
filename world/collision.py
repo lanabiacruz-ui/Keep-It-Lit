@@ -25,6 +25,11 @@ class CollisionMap:
             # Sala superior derecha
             pygame.Rect(1248, 56, 280, 164),
 
+            # Pasillo de salida de la sala superior derecha (donde esta la
+            # puerta final): primero horizontal y despues sube
+            pygame.Rect(1524, 108, 180, 56),
+            pygame.Rect(1644, 0, 60, 164),
+
             # Sala grande izquierda
             pygame.Rect(148, 336, 500, 408),
 
@@ -61,6 +66,9 @@ class CollisionMap:
        
 
         self.obstacles = [
+            # ---- Sala superior derecha: los 2 altares de piedra ----
+            pygame.Rect(1465, 70, 40, 36),
+            pygame.Rect(1466, 174, 40, 36),
 
             # Biblioteca (sala superior central)
             pygame.Rect(865, 34, 41, 67),

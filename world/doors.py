@@ -451,7 +451,7 @@ class Door:
 
 class DoorManager:
 
-    def __init__(self, broken_ids=None):
+    def __init__(self, broken_ids=None, final_slots=None):
 
         broken_ids = set(broken_ids or [])
 
@@ -462,6 +462,17 @@ class DoorManager:
         ]
 
         self.broken_ids = broken_ids
+
+        # Puerta final de las 2 gemas (world/final_door.py). Si ya la
+        # rompiste (esta en broken_ids) no vuelve a aparecer.
+        self.final_door = None
+
+        if "puerta_final" not in broken_ids:
+
+            from world.final_door import FinalDoor
+
+            self.final_door = FinalDoor(slots=final_slots)
+            self.doors.append(self.final_door)
 
     @property
     def blocking_rects(self):

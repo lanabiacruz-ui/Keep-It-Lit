@@ -30,6 +30,7 @@ from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
+from world.final_door import MapSwitcher, enter_map
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker
 from world.shop import Shopkeeper, load_catalog, price_table
@@ -39,7 +40,7 @@ from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
-from ui.Zone_banner import ZoneBanner
+from ui.zone_banner import ZoneBanner
 from ui.objectives import Objectives
 from states.pause_menu import PauseMenu
 from states.enemy_enciclopedia import EnemyEncyclopedia
@@ -231,7 +232,13 @@ class NewGame:
         self.collision_map = CollisionMap()
 
         # Puertas: las rotas (guardadas) no vuelven a aparecer
-        self.doors = DoorManager(self.save_data.get("broken_doors", []))
+        self.doors = DoorManager(
+            self.save_data.get("broken_doors", []),
+            self.save_data.get("final_door_slots"),
+        )
+
+        if self.doors.final_door is not None:
+            self.doors.final_door.game = self
         self.collision_map.doors = self.doors
 
         # Cofres: la espera de cada uno se guarda en la partida
@@ -288,6 +295,8 @@ class NewGame:
         # posicion guardada directo corria al personaje 18 px hacia
         # abajo en cada "Continuar" (hasta quedar dentro de una pared,
         # sin poder moverse). Por eso se coloca el hitbox directamente.
+        saved_pos = None
+
         if "x" in self.save_data and "y" in self.save_data:
 
             try:
@@ -308,7 +317,9 @@ class NewGame:
                 )
 
         # Partidas que ya quedaron guardadas dentro de una pared
-        self._unstick_player(spawn_center)
+        # (no en mapa2: ahi las coordenadas son de otro mapa)
+        if self.save_data.get("current_map") != "mapa2":
+            self._unstick_player(spawn_center)
 
         self.camera = Camera(
             self.width,
@@ -316,6 +327,9 @@ class NewGame:
             self.collision_map.world_width,
             self.collision_map.world_height,
         )
+
+        self.current_map = "mapa1"
+        self.map_switch = MapSwitcher()
 
         self.camera.update(self.player)
 
@@ -550,6 +564,12 @@ class NewGame:
             self.item_seed,
             self.collected
         )
+
+        # Partida guardada dentro de mapa2: se vuelve a entrar ahi
+        # (mapa1 queda guardado para poder volver)
+        if self.save_data.get("current_map") == "mapa2":
+
+            enter_map(self, "mapa2", saved_pos)
 
         print(
             f"[items] {len(self.item_defs)} tipos de item, "
@@ -1860,9 +1880,14 @@ class NewGame:
                 target.resist()
                 audio.play("door_resist")
 
-                self.show_message(
-                    "Esta puerta no es posible de romper"
-                )
+                if getattr(target, "is_final", False):
+                    self.show_message(
+                        "Esta puerta se abre poniendo las 2 gemas en los altares (F)"
+                    )
+                else:
+                    self.show_message(
+                        "Esta puerta no es posible de romper"
+                    )
 
             elif target.kind not in light["rompe"]:
 
@@ -2349,6 +2374,11 @@ class NewGame:
             "arena_left_completed": self.arena_left.completed,
 
             "broken_doors": sorted(self.doors.broken_ids),
+            "final_door_slots": (
+                self.doors.final_door.slots_for_save()
+                if self.doors.final_door is not None else {}
+            ),
+            "current_map": getattr(self, "current_map", "mapa1"),
 
             "chests": self.chests.save_data(),
 
@@ -2829,6 +2859,12 @@ class NewGame:
 
             elif event.key == pygame.K_f:
 
+                # Gemas en los altares de la puerta final
+                fd = self.doors.final_door
+
+                if fd is not None and fd.try_interact(self):
+                    return None
+
                 # Hablar con el vendedor (abre la tienda)
                 if self.shopkeeper.can_talk(
                     self.player
@@ -2879,6 +2915,28 @@ class NewGame:
 
             self.fx.hitstop = max(0.0, self.fx.hitstop - dt)
             self.fx.update(dt * 0.25)
+
+            return None
+
+        # Secuencia de la puerta final: el mundo queda congelado
+        fd = self.doors.final_door
+
+        if self.state == "playing" and self.map_switch.active:
+
+            # Fundido entre mapas: todo quieto
+            self.map_switch.update(dt, self)
+            self._update_fx(dt)
+
+            return None
+
+        if (
+            fd is not None
+            and fd.sequence_active
+            and self.state == "playing"
+        ):
+
+            self._update_fx(dt)
+            self.doors.update(dt)
 
             return None
 
@@ -3256,6 +3314,18 @@ class NewGame:
         self.doors.update(
             dt
         )
+
+        if (
+            self.doors.final_door is not None
+            and self.current_map == "mapa1"
+        ):
+            self.doors.final_door.set_player_near(
+                self.doors.final_door.player_near(self.player.rect)
+            )
+
+        # Salidas entre mapas (pasillo de la puerta final <-> mapa2)
+        if self.state == "playing":
+            self.map_switch.check(self)
 
         # ---------------------------------------------------------
         # ARENA / ENEMIGOS
@@ -3879,6 +3949,13 @@ class NewGame:
         # Chispas, aros y "+N" de monedas
         self.fx.draw(self.screen, self.camera)
 
+        # Efectos de la puerta final (brillan encima de la oscuridad)
+        if (
+            self.doors.final_door is not None
+            and self.current_map == "mapa1"
+        ):
+            self.doors.final_door.draw_fx(self.screen, self.camera)
+
         # El golpe va encima de la oscuridad, para que brille
         self.melee.draw(
             self.screen,
@@ -3974,6 +4051,14 @@ class NewGame:
 
         # Destello de pantalla, vineta y titulo de oleada
         self.fx.draw_overlay(self.screen)
+
+        if (
+            self.doors.final_door is not None
+            and self.current_map == "mapa1"
+        ):
+            self.doors.final_door.draw_overlay(self.screen)
+
+        self.map_switch.draw(self.screen)
 
         # Transicion de entrada: sale de la oscuridad
         if self.intro_t is not None:
