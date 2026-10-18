@@ -1,78 +1,3 @@
-"""Sala de combate (la sala grande de la derecha).
-
-Al entrar aparece un menu transparente: Salir / Jugar con escape /
-Jugar sin escape (premio X2). Despues vienen las oleadas:
-
-  - Con escape: podes irte caminando de la sala (cancela la oleada).
-  - Sin escape: la entrada se bloquea mientras pelean. El premio vale
-    el doble.
-  - En los dos modos, si te quedas sin vida perdes la partida de verdad.
-
-Al matar al ultimo enemigo aparece un cofre que brilla y explota,
-tirando las monedas del premio. Cuando las juntas vuelve el menu para
-la siguiente oleada.
-
-Al terminar la oleada LAST_WAVE (10) el mapa queda completado: el cofre
-tambien tira una gema, aparece el cartel de 'Mapa completado', te sacan
-de la sala y la entrada se cierra para siempre (se guarda en la partida).
-La sala de la derecha tira la gema normal; la de la IZQUIERDA (Sala del
-Guardian) tira la GEMA VERDE OSCURO (ver gem_id en ArenaConfig).
-
-Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo):
-  assets/maps/combate/enemigo.png            56x56
-  assets/maps/combate/enemigo_anim.png       224x56 (4 frames)
-  assets/maps/combate/enemigo_golpe.png      56x56
-  assets/maps/combate/panel_sala_combate.png 420x300
-  assets/maps/combate/btn_salir.png          260x56  (+ _hover)
-  assets/maps/combate/btn_jugar_escape.png   260x56  (+ _hover)
-  assets/maps/combate/btn_jugar_sin_escape.png 260x56 (+ _hover)
-  assets/maps/combate/hud_oleada.png         180x40
-  assets/maps/combate/pantalla_oleada_completa.png 420x200
-  assets/maps/combate/pantalla_mapa_completado.png 420x200 (oleada 10)
-  assets/maps/combate/sala_sellada.png       40x160 (entrada cerrada)
-  assets/maps/hud/icon_gema.png              64x64
-  assets/maps/hud/icon_gema_verde.png        64x64 (gema verde oscuro, sala izquierda)
-  assets/maps/combate/hongun_anim.png        224x56 (4 frames, caminar)
-  assets/maps/combate/hongun_carga.png       112x56 (2 frames, recargando)
-  assets/maps/combate/hongun.png             56x56  (opcional, 1 solo cuadro)
-  assets/maps/combate/hongun_golpe.png       56x56  (opcional)
-
-La sala grande de la IZQUIERDA tambien es una sala de oleadas (ver
-LEFT_ARENA): 10 oleadas, cada vez mas dificiles, con Guardianes en todas. Imagenes del Guardian (opcionales, ver GuardianArt):
-  assets/maps/combate/guardian.png           256x320 (4x4: caminar)
-  assets/maps/combate/guardian_ataque.png    128x320 (2x4: aviso y golpe)
-  assets/maps/combate/guardian_arma.png      el arma, apuntando hacia arriba
-  assets/maps/combate/guardian_icono.png     56x56 (enciclopedia)
-
-Destello (hongun flashbang: tranquilo e ilumina, cuando te ve corre muy
-rapido, te choca, explota y te deja la pantalla blanca ~5 s). Imagenes
-(todas opcionales, ver DestelloArt):
-  assets/maps/combate/destello_anim.png      224x56 (4 cuadros, caminar tranquilo)
-  assets/maps/combate/destello_correr.png    224x56 (4 cuadros, corriendo)
-  assets/maps/combate/destello_alerta.png    112x56 (2 cuadros, aviso antes de correr)
-  assets/maps/combate/destello.png           56x56  (1 cuadro, tambien es el icono de la enciclopedia)
-  assets/maps/combate/destello_golpe.png     56x56  (cuando le pegas)
-
-Golem (enorme y MUY lento: pasea tranquilo, si te ve va directo hacia vos
-y si te toca te agarra: una animacion lo muestra apretandote y te saca
-TODO el escudo; si no tenias escudo te saca TODA la vida de la luz). Ver
-GolemArt. Imagenes opcionales (si falta alguna se dibuja un reemplazo):
-  assets/maps/combate/golem_anim.png         448x112 (4 cuadros de 112x112, caminar tranquilo)
-  assets/maps/combate/golem_perseguir.png    448x112 (4 cuadros, persiguiendote; opcional)
-  assets/maps/combate/golem_alerta.png       224x112 (2 cuadros, aviso al verte)
-  assets/maps/combate/golem_agarre.png       672x112 (6 cuadros, la animacion del agarre)
-  assets/maps/combate/golem.png              112x112 (1 cuadro, por si falta golem_anim)
-  assets/maps/combate/golem_golpe.png        112x112 (cuando le pegas; opcional)
-  assets/maps/combate/golem_icono.png        128x128 (enciclopedia)
-
-Guardian Tirador (igual al Guardian pero dispara bolas, ver
-GuardianShooterArt). Imagenes opcionales:
-  assets/maps/combate/guardian_tirador.png          256x320 (4x4: caminar)
-  assets/maps/combate/guardian_tirador_disparo.png  128x320 (2x4: apuntar y disparar)
-  assets/maps/combate/guardian_tirador_icono.png    128x128 (enciclopedia)
-  assets/maps/combate/bola_guardian.png             32x32 (la bola, mirando a la derecha)
-"""
-
 import math
 import random
 from pathlib import Path
@@ -96,382 +21,263 @@ CHEST_DIR = BASE_DIR / "assets" / "maps" / "cofre"
 HUD_DIR = BASE_DIR / "assets" / "maps" / "hud"
 
 
-# ---------------------------------------------------------------
-# Lugar (unidades del mundo)
-# ---------------------------------------------------------------
-
-# La sala grande de la derecha (igual que en world/collision.py)
 ROOM = pygame.Rect(1244, 388, 436, 284)
 
-# El menu aparece cuando el jugador pisa esta zona (un poco adentro)
 TRIGGER = pygame.Rect(1262, 400, 400, 260)
 
-# Donde te deja "Salir": en el pasillo, afuera de la sala
 EXIT_POS = (1190, 520)
 
-# Barrera que cierra la entrada en "sin escape" / mapa completado.
-# Llena el hueco del pasillo de pared a pared (el hueco dibujado en
-# mapa.png mide 41 px de alto: y 499 a 540), dentro del tramo con
-# paredes y pegada a la sala, sin pisar la puerta gris (x 1206-1222).
 GATE = pygame.Rect(1224, 498, 14, 44)
 
 
-# La sala grande de la IZQUIERDA (igual que en world/collision.py).
-# Se entra por el pasillo de la derecha (el que sale del hub).
 ROOM_LEFT = pygame.Rect(148, 336, 500, 408)
 TRIGGER_LEFT = pygame.Rect(166, 348, 464, 384)
 EXIT_POS_LEFT = (700, 518)
-# El hueco dibujado mide 42 px de alto (y 497 a 539) y las paredes
-# empiezan en x=658: la barrera va dentro del tramo con paredes.
 GATE_LEFT = pygame.Rect(660, 495, 14, 46)
 
 
-# ---------------------------------------------------------------
-# Oleadas (para balancear, se cambia todo aca)
-# ---------------------------------------------------------------
-# (pinos, troncos, mosquitos, hongunes, guardianes, guardianes tiradores,
-#  destellos, golems)  <- las tablas pueden traer de 4 a 8 numeros
-# Sala IZQUIERDA: 10 oleadas, de menos a mas. Cada fila es
-# (pinos, troncos, mosquitos, hongunes, guardianes, tiradores,
-#  destellos, golems). Ninguna pasa de ~32 enemigos para que no se
-# trabe el juego.
 LEFT_WAVE_COMPOSITION = {
     1: (1,1,3,1,1,0,0,0),
     2: (2,1,5,1,1,0,0,0), 
     3: (3,1,7,1,1,1,0,0), 
     4: (4,1,8,1,1,1,0,0), 
-    5:  (5,2,9,2,2,1,1,0),    # 23  aparece el 1er destello
-    6:  (6,3,10,3,3,1,1,0),    # 28
-    7:  (7,4,12,4,4,2,1,0),    # 31  aparece el 1er golem
-    8:  (8,5,13,5,5,3,2,1),    # 32
-    9:  (9,6,14,6,6,4,3,2),    # 32
-    10: (9,6,20,6,5,3,4,3),    # 32  oleada final
+    5:  (5,2,9,2,2,1,1,0),
+    6:  (6,3,10,3,3,1,1,0),
+    7:  (7,4,12,4,4,2,1,0),
+    8:  (8,5,13,5,5,3,2,1),
+    9:  (9,6,14,6,6,4,3,2),
+    10: (9,6,20,6,5,3,4,3),
 }
-# Que trae cada oleada: (pinos, troncos, mosquitos, hongunes). Los pinos rebotan y te
-# pegan al chocarte; los troncos te siguen de lejos y disparan 3 bolas que rebotan;
-# los hongunes caminan tranquilos, te persiguen cuando te detectan y explotan.
-# Despues de la ultima definida sube PINOS_STEP pinos y TRONCOS_STEP
-# troncos por oleada, sin pasar de ENEMIES_MAX en total.
 WAVE_COMPOSITION = {
-    # Oleada 1: un pino y el primer destello (el 7mo numero)
     1: (1, 0, 0, 0),
     2: (4, 0, 0, 0),
     3: (5, 1, 0, 0),
     4: (5, 2, 0, 0),
     5: (4, 4, 0, 0),
 
-    # Oleada 6
     6: (4, 7, 3, 0),
 
-    # Oleada 7
     7: (10, 5, 6, 0),
 
-    # Oleadas 8, 9 y 10: aparecen los hongunes
     8: (10, 5, 8, 1),
-    # El 7mo numero son los destellos (hongun flashbang)
     9: (4, 6, 10, 3,),
-    # El 8vo numero son los golems (lentos, te agarran y te sacan el escudo)
     10: (5, 6, 7, 8,),
 }
-# Ultima oleada del mapa: al pasarla el mapa queda completado, el cofre
-# tira una gema y la sala se cierra para siempre.
 LAST_WAVE = 10
 
 PINOS_STEP = 1
 TRONCOS_STEP = 1
 TRONCOS_MAX = 8
 ENEMIES_MAX = 32
-MOSQUITOS_STEP = 1   # mosquitos que se suman por oleada despues de la ultima definida
+MOSQUITOS_STEP = 1
 MOSQUITOS_MAX = 20
-HONGUNS_STEP = 0     # hongunes que se suman por oleada despues de la ultima definida (0 = se quedan igual)
+HONGUNS_STEP = 0
 HONGUNS_MAX = 8
-DESTELLOS_STEP = 0   # destellos que se suman por oleada despues de la ultima definida
+DESTELLOS_STEP = 0
 DESTELLOS_MAX = 8
-GOLEMS_STEP = 0      # golems que se suman por oleada despues de la ultima definida
+GOLEMS_STEP = 0
 GOLEMS_MAX = 4
 
-# Oleada de PRUEBA (solo mosquitos). La usa la partida "Prueba mosquitos".
-# Para cambiar cuantos salen, cambia el 3. Se puede borrar cuando termines.
 MOSQUITO_TEST_WAVE = 99
 MOSQUITO_TEST_COUNT = 3
 
-# Oleada de PRUEBA (solo destellos), igual que la de los mosquitos: poner
-# la oleada 98 en una partida de prueba. Se puede borrar cuando termines.
 DESTELLO_TEST_WAVE = 98
 DESTELLO_TEST_COUNT = 3
 
-# Oleada de PRUEBA (solo golems): poner la oleada 97 en una partida de
-# prueba. Se puede borrar cuando termines.
 GOLEM_TEST_WAVE = 97
 GOLEM_TEST_COUNT = 2
 
-# Monedas de premio por oleada (la 1 vale 100). Despues de la ultima
-# definida sube REWARD_STEP por oleada. "Sin escape" lo multiplica.
 WAVE_REWARDS = {1: 100, 2: 200, 3: 300}
 REWARD_STEP = 100
 NO_ESCAPE_MULT = 2
 
-# Vida y velocidad de los enemigos segun la oleada
-ENEMY_HP_BASE = 2          # vida = BASE + oleada
+ENEMY_HP_BASE = 2
 ENEMY_HP_MAX = 10
-ENEMY_SPEED_BASE = 58      # unidades del mundo por segundo
+ENEMY_SPEED_BASE = 58
 ENEMY_SPEED_STEP = 4
 ENEMY_SPEED_MAX = 90
 
-# Cuanta vida de la llama le saca cada choque (1.0 = toda la llama)
 ENEMY_DAMAGE = 0.08
 ENEMY_DAMAGE_STEP = 0.01
 ENEMY_DAMAGE_MAX = 0.15
 
-# Si te quedas sin vida en "con escape", te dejan con esta llama
 ESCAPE_REVIVE_LIFE = 0.15
 
-# Con escape: segundos que podes estar afuera de la sala (en la puerta o
-# el pasillo) antes de que se cancele la oleada. Si volves a entrar antes,
-# la oleada sigue como si nada. 0 = se cancela apenas pisas afuera.
 ESCAPE_GRACE = 2.5
 
 
-# ---------------------------------------------------------------
-# Piña
-# ---------------------------------------------------------------
+ENEMY_DRAW_SIZE = 14
+ENEMY_HITBOX = (12, 10)
 
-ENEMY_DRAW_SIZE = 14       # tamano dibujado (unidades del mundo)
-ENEMY_HITBOX = (12, 10)    # lo que choca y lo que golpea el fosforo
-
-ENEMY_BALL_MULT = 1.8      # velocidad de la bola = velocidad de la oleada x esto
-ENEMY_ACCEL = 320.0        # que tan rapido vuelve a su velocidad tras un empujon
-ENEMY_BOUNCE_AIM = 0.85    # 0 = rebota normal, 1 = sale derecho hacia el jugador
-ENEMY_BOUNCE_JITTER = 6.0  # grados al azar en cada rebote (para que no sea predecible)
-ENEMY_DRAG = 1.6           # frenado del empujon cuando le pegas
-ENEMY_HIT_BOUNCE = 1.2     # velocidad con la que sale rebotado tras chocarte (x bola)
+ENEMY_BALL_MULT = 1.8
+ENEMY_ACCEL = 320.0
+ENEMY_BOUNCE_AIM = 0.85
+ENEMY_BOUNCE_JITTER = 6.0
+ENEMY_DRAG = 1.6
+ENEMY_HIT_BOUNCE = 1.2
 ENEMY_TOUCH_COOLDOWN = 0.6
-WALL_BOUNCE = 1.0          # cuanta velocidad conserva al rebotar (1 = toda)
-ENEMY_KNOCKBACK = 150.0    # empujon cuando le pegas
+WALL_BOUNCE = 1.0
+ENEMY_KNOCKBACK = 150.0
 ENEMY_STUN_TIME = 0.25
 ENEMY_FLASH_TIME = 0.12
-ENEMY_SPAWN_TIME = 0.8     # aparece transparente y no hace daño
+ENEMY_SPAWN_TIME = 0.8
 ENEMY_ANIM_FRAME = 0.15
-ENEMY_SPIN_RATE = 2.0      # cuanto gira mientras rueda (grados por unidad recorrida)
-ENEMY_HOP_DIST = 38.0      # cada cuantas unidades recorridas da un saltito
-ENEMY_HOP_HEIGHT = 3.0     # altura del saltito (unidades del mundo)
+ENEMY_SPIN_RATE = 2.0
+ENEMY_HOP_DIST = 38.0
+ENEMY_HOP_HEIGHT = 3.0
 
-# ---------------------------------------------------------------
-# Tronco (dispara 3 bolas que rebotan)
-# ---------------------------------------------------------------
 
 TRONCO_HITBOX = (14, 12)
-TRONCO_DRAW_SIZE = 16      # tamano dibujado (unidades del mundo)
-TRONCO_HP_EXTRA = 0        # vida = la del pino + esto
-TRONCO_FIRST_DELAY = (2.0, 3.0)  # primera espera (al azar, para que no disparen todos juntos)
-TRONCO_WINDUP = 1.0        # cuanto tarda quieto apuntandote antes de soltar las bolas
-TRONCO_SHOOT_TIME = 0.45   # duracion de la animacion de disparo
-TRONCO_COOLDOWN = 8.0      # segundos entre un disparo y el siguiente
-TRONCO_HIT_PAUSE = 1.5     # si le pegas mientras carga, se le corta y espera esto
-TRONCO_SHOTS = 3           # bolas por disparo
-TRONCO_SPREAD = 24.0       # grados entre una bola y la siguiente
-TRONCO_LEAD = 0.45         # cuanto adelanta la punteria hacia donde te estas moviendo (seg)
+TRONCO_DRAW_SIZE = 16
+TRONCO_HP_EXTRA = 0
+TRONCO_FIRST_DELAY = (2.0, 3.0)
+TRONCO_WINDUP = 1.0
+TRONCO_SHOOT_TIME = 0.45
+TRONCO_COOLDOWN = 8.0
+TRONCO_HIT_PAUSE = 1.5
+TRONCO_SHOTS = 3
+TRONCO_SPREAD = 24.0
+TRONCO_LEAD = 0.45
 TRONCO_ANIM_FRAME = 0.12
 
-# Movimiento del tronco: te sigue pero manteniendo distancia y sin
-# meterse en tu luz (asi no lo ves ni lo alcanzas a pegar).
-TRONCO_SPEED = 70.0        # unidades del mundo por segundo (el jugador va a 95)
-TRONCO_KEEP_DIST = 60.0    # distancia minima que intenta mantener
-TRONCO_MAX_DIST = 120.0    # distancia maxima a la que se queda (si tu luz es enorme)
-TRONCO_LIGHT_MARGIN = 14.0 # cuanto afuera del borde de tu luz se queda
-TRONCO_BAND = 8.0          # tolerancia: dentro de esta franja no se mueve
-TRONCO_FIRE_EXTRA = 10.0   # puede empezar a cargar si esta a ideal + BAND + esto
+TRONCO_SPEED = 70.0
+TRONCO_KEEP_DIST = 60.0
+TRONCO_MAX_DIST = 120.0
+TRONCO_LIGHT_MARGIN = 14.0
+TRONCO_BAND = 8.0
+TRONCO_FIRE_EXTRA = 10.0
 
-SHOT_SPEED = 95.0          # unidades del mundo por segundo
+SHOT_SPEED = 95.0
 SHOT_HITBOX = 6
 SHOT_DRAW_SIZE = 8
-SHOT_BOUNCES = 2           # cuantas veces rebota (al tercer choque desaparece)
-SHOT_LIFE = 7.0            # maximo de segundos en el aire
-SHOT_DAMAGE_MULT = 4.5     # x el dano de un choque de pino
+SHOT_BOUNCES = 2
+SHOT_LIFE = 7.0
+SHOT_DAMAGE_MULT = 4.5
 
-# ---------------------------------------------------------------
-# Mosquito
-# ---------------------------------------------------------------
 
-MOSQUITO_HP = 2   # golpes que aguanta (el fosforo y la vela pegan 1 por golpe)
+MOSQUITO_HP = 2
 MOSQUITO_HITBOX = (9, 7)
 MOSQUITO_DRAW_SIZE = 13
 
-# Vuelo libre por la sala
-MOSQUITO_WANDER_SPEED = 45.0     # velocidad volando libre
-MOSQUITO_TURN_TIME = (0.8, 2.2)  # cada cuanto cambia un poco de rumbo
+MOSQUITO_WANDER_SPEED = 45.0
+MOSQUITO_TURN_TIME = (0.8, 2.2)
 
-# Alerta en el HUD: aparece cuando esta a esta distancia EXTRA del borde
-# de tu luz (o sea, antes de que lo toque tu luz)
 MOSQUITO_ALERT_MARGIN = 90.0
 
-# Ataque: cuando tu luz lo toca va directo hacia vos y se pega
 MOSQUITO_ATTACK_SPEED = 280.0
 MOSQUITO_ATTACK_ACCEL = 900.0
 MOSQUITO_ATTACH_DIST = 10.0
 
-# Ciclo (segundos)
-MOSQUITO_ATTACH_TIME = 60.0      # pegado: te chupa 1 minuto y se suelta
-MOSQUITO_REST_TIME = 60.0        # despues de soltarte, a este tiempo vuelve a atacar
-MOSQUITO_FLEE_TIME = 8.0         # apenas te suelta, intenta irse (se aleja rapido)
+MOSQUITO_ATTACH_TIME = 60.0
+MOSQUITO_REST_TIME = 60.0
+MOSQUITO_FLEE_TIME = 8.0
 MOSQUITO_FLEE_SPEED = 85.0
 
-# Repelente: despues de espantarlo, el mosquito no vuelve a intentar
-# atacar antes de este tiempo (s) y huye al menos este tiempo (s)
 MOSQUITO_REPEL_REST = 4.0
 MOSQUITO_REPEL_FLEE = 0.8
 
-# Daño
-# 0.02 = 2% de la vida de la luz
 MOSQUITO_DAMAGE = 0.02
 MOSQUITO_DAMAGE_INTERVAL = 1.0
 
-# Animación
 MOSQUITO_ANIM_FRAME = 0.10
 MOSQUITO_FLASH_TIME = 0.10
 MOSQUITO_SPAWN_TIME = 0.8
 
-# ---------------------------------------------------------------
-# Hongun (el creeper: camina tranquilo, te persigue y explota)
-# ---------------------------------------------------------------
 
-HONGUN_HP = 6                  # golpes que aguanta (si lo matas a golpes NO explota)
+HONGUN_HP = 6
 HONGUN_HITBOX = (10, 12)
-HONGUN_DRAW_SIZE = 18          # tamano dibujado (unidades del mundo)
+HONGUN_DRAW_SIZE = 18
 
-# Movimiento (unidades del mundo por segundo; el jugador va a 95)
-HONGUN_WANDER_SPEED = 22.0     # paseando tranquilo
-HONGUN_CHASE_SPEED = 70.0      # persiguiendote (el jugador va a 95)
-HONGUN_TURN_TIME = (1.0, 2.6)  # cada cuanto cambia de rumbo paseando
+HONGUN_WANDER_SPEED = 22.0
+HONGUN_CHASE_SPEED = 70.0
+HONGUN_TURN_TIME = (1.0, 2.6)
 
-# Deteccion
-HONGUN_DETECT_RADIUS = 85.0    # si entras en este radio te empieza a perseguir
-HONGUN_LOSE_RADIUS = 140.0     # si te alejas mas que esto te deja de perseguir
+HONGUN_DETECT_RADIUS = 85.0
+HONGUN_LOSE_RADIUS = 140.0
 
-# Recarga y explosion
-HONGUN_FUSE_DIST = 34.0        # a esta distancia empieza a recargar
-HONGUN_FUSE_CANCEL_DIST = 90.0 # si te alejas mas que esto durante la recarga, se cancela
-HONGUN_FUSE_WALK_SPEED = 48.0  # mientras recarga te sigue de a poquito (asi no lo esquivas dando un paso)
-HONGUN_FUSE_DECAY = 0.6        # si se cancela, la carga baja despacio (antes 2.0: perdia todo enseguida)
-HONGUN_FUSE_TIME = 1.1         # segundos recargando hasta explotar
-HONGUN_BLAST_RADIUS = 48.0     # radio de la explosion (unidades del mundo)
-HONGUN_DAMAGE = 0.75           # 0.75 = 75% de la vida de la luz
-HONGUN_KNOCKBACK = 340.0       # empujon al jugador (el golpe normal de un pino es 120)
-HONGUN_LIGHT_MIN = 24          # luz que da al empezar a recargar (px de pantalla)
-HONGUN_LIGHT_MAX = 80          # luz que da justo antes de explotar
-HONGUN_BLAST_TIME = 0.65       # duracion del aro y de la luz de la explosion
+HONGUN_FUSE_DIST = 34.0
+HONGUN_FUSE_CANCEL_DIST = 90.0
+HONGUN_FUSE_WALK_SPEED = 48.0
+HONGUN_FUSE_DECAY = 0.6
+HONGUN_FUSE_TIME = 1.1
+HONGUN_BLAST_RADIUS = 48.0
+HONGUN_DAMAGE = 0.75
+HONGUN_KNOCKBACK = 340.0
+HONGUN_LIGHT_MIN = 24
+HONGUN_LIGHT_MAX = 80
+HONGUN_BLAST_TIME = 0.65
 
 HONGUN_ANIM_FRAME = 0.15
 HONGUN_CHARGE_FRAME = 0.12
 
-# ---------------------------------------------------------------
-# Destello (un hongun mas veloz: flashbang)
-# Pasea tranquilo y da un poco de luz con el cuerpo. Cuando te ve se
-# frena un instante (aviso), sale corriendo muy rapido hacia vos, te
-# choca, te saca vida, te deja la pantalla en blanco unos 5 segundos y
-# muere. El tiempo del blanco se cambia en states/new_game.py (FLASH_*).
-# ---------------------------------------------------------------
 
-DESTELLO_HP = 3                 # golpes que aguanta (si lo matas a golpes NO explota)
+DESTELLO_HP = 3
 DESTELLO_HITBOX = (10, 12)
-DESTELLO_DRAW_SIZE = 17         # tamano dibujado (unidades del mundo)
+DESTELLO_DRAW_SIZE = 17
 
-# Movimiento (unidades del mundo por segundo; el jugador va a 95)
-DESTELLO_WANDER_SPEED = 20.0    # paseando tranquilo
-DESTELLO_CHARGE_SPEED = 175.0   # corriendo hacia vos (casi el doble que el jugador)
-DESTELLO_TURN_TIME = (1.0, 2.6) # cada cuanto cambia de rumbo paseando
+DESTELLO_WANDER_SPEED = 20.0
+DESTELLO_CHARGE_SPEED = 175.0
+DESTELLO_TURN_TIME = (1.0, 2.6)
 
-# Luz que da con el cuerpo, siempre prendida (px de pantalla; la luz del
-# fosforo es 100). Durante el aviso y la carrera brilla un poco mas.
 DESTELLO_LIGHT = 40
 DESTELLO_LIGHT_ALERT = 64
 
-# Deteccion: te tiene que ver (distancia y sin paredes en el medio)
 DESTELLO_DETECT_RADIUS = 120.0
-DESTELLO_LOSE_RADIUS = 220.0    # si corriendo te alejas mas que esto, te pierde
-DESTELLO_ALERT_TIME = 0.35      # aviso quieto (parpadea blanco) antes de salir corriendo
-# Primeras oleadas: el aviso dura mas, asi el primer encuentro es justo
-# (te da tiempo a verlo parpadear y a reaccionar). Para volver a como
-# era, poner DESTELLO_EARLY_WAVES = 0.
+DESTELLO_LOSE_RADIUS = 220.0
+DESTELLO_ALERT_TIME = 0.35
 DESTELLO_EARLY_WAVES = 2
 DESTELLO_ALERT_TIME_EARLY = 0.60
 
-# Choque
-DESTELLO_DAMAGE = 0.15          # 0.15 = 15% de la vida de la luz
-DESTELLO_KNOCKBACK = 200.0      # empujon al jugador
+DESTELLO_DAMAGE = 0.15
+DESTELLO_KNOCKBACK = 200.0
 
 DESTELLO_ANIM_FRAME = 0.15
 DESTELLO_RUN_FRAME = 0.06
 DESTELLO_ALERT_FRAME = 0.10
 
-# ---------------------------------------------------------------
-# Golem (enorme y muy lento)
-# Pasea tranquilo. Si te ve (distancia y sin paredes en el medio) ruge un
-# instante (aviso) y va DIRECTO hacia vos, despacito pero sin parar. Si te
-# toca UNA sola vez te agarra: una animacion lo muestra levantandote y
-# apretandote. Al apretar te saca TODO el escudo; si no tenias escudo, te
-# saca TODA la vida de la luz. Despues te suelta, te empuja y queda
-# cansado unos segundos.
-# ---------------------------------------------------------------
 
-GOLEM_HP = 50                  # golpes que aguanta
-GOLEM_HITBOX = (16, 18)         # lo que choca y lo que golpea el jugador
-# Tamano dibujado (unidades del mundo). Con zoom x4 son 112 x 112 px,
-# que es el tamano de cada cuadro de las imagenes.
+GOLEM_HP = 50
+GOLEM_HITBOX = (16, 18)
 GOLEM_DRAW_SIZE = 28
 
-# Movimiento (unidades del mundo por segundo; el jugador va a 95)
-GOLEM_WANDER_SPEED = 12.0       # paseando tranquilo
-GOLEM_CHASE_SPEED = 30.0        # persiguiendote (muy lento)
-GOLEM_TURN_TIME = (1.8, 4.0)    # cada cuanto cambia de rumbo paseando
+GOLEM_WANDER_SPEED = 12.0
+GOLEM_CHASE_SPEED = 30.0
+GOLEM_TURN_TIME = (1.8, 4.0)
 
-# Deteccion: te tiene que ver (distancia y sin paredes en el medio)
 GOLEM_DETECT_RADIUS = 110.0
-GOLEM_LOSE_RADIUS = 200.0       # si te alejas mas que esto, te pierde
-GOLEM_CHASE_FOREVER = True      # True: una vez que te ve te persigue toda la partida (nunca te pierde)
-GOLEM_ALERT_TIME = 0.9          # aviso quieto (ruge) antes de empezar a perseguirte
+GOLEM_LOSE_RADIUS = 200.0
+GOLEM_CHASE_FOREVER = True
+GOLEM_ALERT_TIME = 0.9
 
-# Agarre
-GOLEM_GRAB_REACH = 3            # cuanto "alcanza" mas alla de su cuerpo (unidades)
-GOLEM_GRAB_TIME = 1.8           # duracion de la animacion completa
-GOLEM_SQUEEZE_AT = 0.8          # segundo del agarre en que aprieta (ahi se saca el escudo / la vida)
-GOLEM_GRAB_LIFT = 5.0           # cuanto te levanta (unidades del mundo)
-GOLEM_HOLD_DY = 2               # donde te sostiene: pies del jugador = base del golem + esto
-GOLEM_HOLD_PULL = 120.0         # que tan rapido te acomoda en sus manos (unidades/s)
-GOLEM_KNOCKBACK = 230.0         # empujon al soltarte
-GOLEM_POST_INVULN = 1.5         # segundos que no te puede agarrar nadie despues de soltarte
-GOLEM_REST_TIME = 3.0           # cansado (quieto) despues de agarrarte
+GOLEM_GRAB_REACH = 3
+GOLEM_GRAB_TIME = 1.8
+GOLEM_SQUEEZE_AT = 0.8
+GOLEM_GRAB_LIFT = 5.0
+GOLEM_HOLD_DY = 2
+GOLEM_HOLD_PULL = 120.0
+GOLEM_KNOCKBACK = 230.0
+GOLEM_POST_INVULN = 1.5
+GOLEM_REST_TIME = 3.0
 
-GOLEM_HIT_PUSH = 14.0           # cuanto lo mueve un golpe tuyo (casi nada: es pesado)
-GOLEM_ANIM_FRAME = 0.28         # caminar tranquilo (lento)
-GOLEM_CHASE_FRAME = 0.20        # persiguiendote
+GOLEM_HIT_PUSH = 14.0
+GOLEM_ANIM_FRAME = 0.28
+GOLEM_CHASE_FRAME = 0.20
 GOLEM_ALERT_FRAME = 0.12
 GOLEM_FLASH_TIME = 0.10
 GOLEM_SPAWN_TIME = 1.0
 
-# ---------------------------------------------------------------
-# Tiempos
-# ---------------------------------------------------------------
 
-BANNER_TIME = 3.0          # cuanto se ve "Oleada completada"
-BANNER_TIME_FINAL = 5.0    # cuanto se ve "Mapa completado"
-# El menu de la siguiente oleada NO sale hasta que juntes todas las
-# recompensas. Este tiempo es solo un seguro por si una quedo
-# inalcanzable (si no, el jugador se quedaria trabado).
+BANNER_TIME = 3.0
+BANNER_TIME_FINAL = 5.0
 COLLECT_TIMEOUT = 60.0
-MAX_COIN_ITEMS = 30        # monedas dibujadas (cada una vale mas)
+MAX_COIN_ITEMS = 30
 
-
-# ---------------------------------------------------------------
-# Utilidades
-# ---------------------------------------------------------------
 
 _images = {}
 _fonts = {}
 
 
 def load_image(path, size=None):
-    """Carga un PNG (cacheado). None si no existe."""
 
     key = (str(path), size)
 
@@ -506,7 +312,6 @@ def get_font(size):
 
 
 def draw_text(screen, text, size, color, **anchor):
-    """Texto con sombra. anchor: center=, midtop=, topleft=, midleft="""
 
     font = get_font(size)
 
@@ -525,9 +330,6 @@ _SHADOWS = {}
 
 
 def get_shadow(size, alpha=90):
-    """Sombra ovalada ya dibujada (se arma una vez por tamano y se
-    reutiliza: antes se creaba una superficie nueva por enemigo y por
-    frame)."""
 
     w = max(1, int(size[0]))
     h = max(1, int(size[1]))
@@ -551,23 +353,13 @@ def get_shadow(size, alpha=90):
 
 
 def quantize_radius(radius):
-    """Radio de luz en pasos de 8 px (minimo 8): la luz se cachea por
-    radio, asi no se crea una superficie nueva en cada frame."""
 
     return max(8, int(round(radius / 8.0)) * 8)
 
 
 def wave_composition(wave, table=None):
-    """(pinos, troncos, mosquitos, hongunes, guardianes, tiradores,
-    destellos, golems) de una oleada.
-
-    `table` es la tabla de la sala (por defecto la de la sala derecha).
-    Las tablas pueden tener de 4 a 8 numeros (los que faltan valen 0)."""
     if table is None:
         table = WAVE_COMPOSITION
-    # Oleadas de prueba (solo en la sala de la derecha). Antes estaban
-    # adentro del "if table is None" y como la arena siempre pasa su
-    # tabla nunca se activaban.
     if table is WAVE_COMPOSITION:
         if wave == MOSQUITO_TEST_WAVE:
             return 0, 0, MOSQUITO_TEST_COUNT, 0, 0, 0, 0, 0
@@ -595,7 +387,6 @@ def wave_composition(wave, table=None):
 
 
 def enemies_for_wave(wave, table=None):
-    """Cuantos enemigos trae la oleada en total."""
 
     return sum(wave_composition(wave, table))
 
@@ -612,9 +403,6 @@ def base_reward(wave, table=None):
 
     return table[last] + REWARD_STEP * (wave - last)
 
-# ---------------------------------------------------------------
-# Mosquito - sprites
-# ---------------------------------------------------------------
 
 class MosquitoArt:
 
@@ -666,21 +454,18 @@ class MosquitoArt:
             pygame.SRCALPHA
         )
 
-        # cuerpo
         pygame.draw.ellipse(
             surf,
             (45, 35, 40),
             (23, 19, 14, 25)
         )
 
-        # abdomen
         pygame.draw.ellipse(
             surf,
             (180, 45, 55),
             (25, 31, 10, 13)
         )
 
-        # alas
         pygame.draw.ellipse(
             surf,
             (205, 220, 225, 190),
@@ -693,7 +478,6 @@ class MosquitoArt:
             (24, 10, 24, 12)
         )
 
-        # ojos
         pygame.draw.circle(
             surf,
             (240, 80, 90),
@@ -708,7 +492,6 @@ class MosquitoArt:
             3
         )
 
-        # aguijón
         pygame.draw.line(
             surf,
             (220, 220, 220),
@@ -797,9 +580,6 @@ class MosquitoArt:
             self._scaled,
             self._warning_scaled
         )
-# ---------------------------------------------------------------
-# Imagenes del enemigo (se cargan una sola vez para todos)
-# ---------------------------------------------------------------
 
 class EnemyArt:
 
@@ -852,7 +632,6 @@ class EnemyArt:
         return surf
 
     def get(self, zoom):
-        """Frames y sprite de golpe ya escalados al zoom actual."""
 
         if self._zoom != zoom:
 
@@ -870,16 +649,10 @@ class EnemyArt:
 
 
 class Enemy:
-    """Persigue al jugador, le pega al chocarlo y rebota por toda la
-    sala (paredes y obstaculos). Es un objetivo mas de los golpes del
-    fosforo (tiene .rect y .take_damage)."""
 
-    # fixed: no se mueve solo (los otros rebotan contra el)
-    # contact_damage: te saca vida al tocarte
     fixed = False
     contact_damage = True
 
-    # La sala donde vive (la arena se la cambia segun la sala)
     room = ROOM
 
     def __init__(self, x, y, hp, max_speed, spawn_delay=0.0):
@@ -894,21 +667,17 @@ class Enemy:
         self.max_hp = hp
         self.max_speed = max_speed
 
-        # Velocidad de "bola": rebota siempre a este ritmo
         self.ball_speed = max_speed * ENEMY_BALL_MULT
 
         self.flash = 0.0
         self.stun = 0.0
         self.touch_cd = 0.0
 
-        # Mientras es > 0 el enemigo esta apareciendo: no se mueve,
-        # no hace dano y tampoco se lo puede golpear
         self.spawn_t = ENEMY_SPAWN_TIME + spawn_delay
 
         self.anim_t = random.uniform(0, 1)
         self.last_target = pygame.Vector2(x, y)
 
-        # Para dibujarlo rodando y saltando como una pelota
         self.spin = random.uniform(0, 360)
         self.hop_t = random.uniform(0, 1)
 
@@ -922,7 +691,6 @@ class Enemy:
 
         return self.spawn_t > 0
 
-    # ---------- golpes ----------
 
     def take_damage(self, amount):
 
@@ -933,7 +701,6 @@ class Enemy:
         self.flash = ENEMY_FLASH_TIME
         self.stun = ENEMY_STUN_TIME
 
-        # Empujon hacia atras, lejos del jugador
         away = self.pos - self.last_target
 
         if away.length_squared() > 0.01:
@@ -942,7 +709,6 @@ class Enemy:
         return amount
 
     def bounce_from(self, point):
-        """Sale rebotado despues de chocar al jugador."""
 
         away = self.pos - pygame.Vector2(point)
 
@@ -952,14 +718,8 @@ class Enemy:
         self.vel = away.normalize() * self.ball_speed * ENEMY_HIT_BOUNCE
         self.touch_cd = ENEMY_TOUCH_COOLDOWN
 
-    # ---------- movimiento ----------
 
     def update(self, dt, target, collision_map, others=None):
-        """Es una pelota: NO camina ni gira hacia el jugador. Va en
-        linea recta y solo cambia de direccion al rebotar (contra las
-        paredes, los bloques del mapa o otro enemigo). En cada rebote
-        sale apuntando hacia donde esta el jugador, asi siempre rebota
-        cerca suyo para pegarle."""
 
         self.last_target = pygame.Vector2(target)
         self.anim_t += dt
@@ -980,7 +740,6 @@ class Enemy:
 
         if self.stun > 0:
 
-            # Empujon del golpe: se frena solo, sin controlarse
             self.stun = max(0.0, self.stun - dt)
             self.vel *= max(0.0, 1.0 - ENEMY_DRAG * dt)
 
@@ -995,11 +754,9 @@ class Enemy:
         if hit_x or hit_y:
             self.aim_after_bounce(to_target, hit_x, hit_y)
 
-        # Si quedo incrustado en una pared (spawn o empujon), lo saca
         if not self._free(self.rect, collision_map):
             self._rescue(collision_map)
 
-        # Rueda y salta segun lo que recorrio (no camina)
         moved = self.pos.distance_to(before)
         side = 1.0 if self.vel.x >= 0 else -1.0
 
@@ -1007,12 +764,9 @@ class Enemy:
         self.hop_t = (self.hop_t + moved / ENEMY_HOP_DIST) % 1.0
 
     def _keep_speed(self, dt, to_target):
-        """Mantiene la velocidad de bola SIN cambiar la direccion."""
 
         speed = self.vel.length()
 
-        # Recien aparecido (o frenado del todo): sale disparado hacia
-        # el jugador, y de ahi en adelante solo rebota
         if speed < 1.0:
 
             if to_target.length_squared() > 0.01:
@@ -1036,9 +790,6 @@ class Enemy:
         self.vel.scale_to_length(speed)
 
     def aim_after_bounce(self, to_target, hit_x, hit_y, away=None):
-        """Despues de rebotar, la direccion del rebote se acerca a la
-        direccion hacia el jugador (sin volver a meterse en la pared
-        que acaba de tocar)."""
 
         speed = self.vel.length()
 
@@ -1057,14 +808,12 @@ class Enemy:
             random.uniform(-ENEMY_BOUNCE_JITTER, ENEMY_BOUNCE_JITTER)
         )
 
-        # Nunca apuntar de nuevo contra la pared que acaba de tocar
         if hit_x and mix.x * current.x < 0:
             mix.x = current.x * 0.3
 
         if hit_y and mix.y * current.y < 0:
             mix.y = current.y * 0.3
 
-        # Ni contra el enemigo con el que acaba de chocar
         if away is not None and mix.dot(away) < 0:
             mix = mix - away * mix.dot(away) + away * 0.3
 
@@ -1074,19 +823,14 @@ class Enemy:
         self.vel = mix.normalize() * speed
 
     def _free(self, rect, collision_map):
-        """True si el enemigo puede estar en `rect`: dentro de la sala
-        (no se escapa por el pasillo) y sin tocar paredes ni bloques."""
 
         return self.room.contains(rect) and collision_map.can_move(rect)
 
     def _move(self, dt, collision_map):
-        """Mueve al enemigo y rebota contra paredes y bloques del mapa.
-        Devuelve (choco_en_x, choco_en_y)."""
 
         hit_x = False
         hit_y = False
 
-        # Eje X
         nx = self.pos.x + self.vel.x * dt
         test = self.rect.copy()
         test.centerx = round(nx)
@@ -1101,7 +845,6 @@ class Enemy:
             hit_x = True
             self.vel.x = -self.vel.x * WALL_BOUNCE
 
-        # Eje Y
         ny = self.pos.y + self.vel.y * dt
         test = self.rect.copy()
         test.centery = round(ny)
@@ -1119,8 +862,6 @@ class Enemy:
         return hit_x, hit_y
 
     def push(self, offset, collision_map):
-        """Mueve al enemigo `offset` (para separarlo de otro), solo si
-        hay lugar. Prueba cada eje por separado."""
 
         nx = self.pos.x + offset.x
         test = self.rect.copy()
@@ -1139,22 +880,17 @@ class Enemy:
             self.rect.centery = test.centery
 
 
-    # ---------- navegacion y anti-atasco ----------
-
-    NAV_REPLAN = 0.35        # cada cuanto recalcula el camino (seg)
-    STUCK_CHECK = 0.25       # cada cuanto mide si avanzo (seg)
-    STUCK_MIN_MOVE = 1.2     # menos que esto en STUCK_CHECK = no avanza
+    NAV_REPLAN = 0.35
+    STUCK_CHECK = 0.25
+    STUCK_MIN_MOVE = 1.2
 
     def _nav_init(self):
-        """Prepara el estado de navegacion la primera vez que se usa."""
 
         if getattr(self, "_nav_ready", False):
             return
 
         self._nav_ready = True
         self._nav_path = []
-        # Cada enemigo recalcula en un momento distinto (si todos
-        # arrancan juntos, el primer frame de la oleada se tranca)
         self._nav_t = random.uniform(0.0, self.NAV_REPLAN)
         self._nav_force = 0.0
 
@@ -1169,7 +905,6 @@ class Enemy:
         self.last_good = self.pos.copy()
 
     def _body_line_free(self, a, b, collision_map):
-        """True si el cuerpo del enemigo puede ir en linea recta de a a b."""
 
         a = pygame.Vector2(a)
         b = pygame.Vector2(b)
@@ -1190,9 +925,6 @@ class Enemy:
         return True
 
     def nav_dir(self, goal, collision_map, dt):
-        """Direccion (unitaria) para ir hacia `goal` rodeando paredes.
-        Si el camino esta libre va derecho; si no, sigue un camino A*
-        que se recalcula cada NAV_REPLAN segundos."""
 
         self._nav_init()
 
@@ -1213,8 +945,6 @@ class Enemy:
 
             elif not pathing.take_budget():
 
-                # Ya se calcularon varios caminos en este frame: este
-                # espera al siguiente (sigue con el camino que tenia)
                 self._nav_t = 0.03
 
             else:
@@ -1225,11 +955,9 @@ class Enemy:
 
                 self._nav_path = path or []
 
-        # Ya llego a los puntos de adelante: se descartan
         while self._nav_path and self.pos.distance_to(self._nav_path[0]) < 4.0:
             self._nav_path.pop(0)
 
-        # Atajo: si ve el siguiente punto en linea recta, saltea el actual
         if len(self._nav_path) > 1 and self._body_line_free(
             self.pos, self._nav_path[1], collision_map
         ):
@@ -1248,7 +976,6 @@ class Enemy:
         return d.normalize()
 
     def _nudge(self, dt, direction, speed, collision_map):
-        """Empuja al enemigo un poco hacia `direction` (si hay lugar)."""
 
         step = speed * dt
 
@@ -1274,7 +1001,6 @@ class Enemy:
         return False
 
     def _random_open_dir(self, collision_map):
-        """Una direccion con lugar libre adelante (la prueba al azar)."""
 
         angles = list(range(0, 360, 45))
         random.shuffle(angles)
@@ -1304,7 +1030,6 @@ class Enemy:
         self._nav_t = 0.0
 
     def _rescue(self, collision_map):
-        """Lo saca al lugar libre mas cercano (incrustado o atascado)."""
 
         self._nav_init()
 
@@ -1312,8 +1037,6 @@ class Enemy:
             self.last_good, self.rect.size, self.room, collision_map
         )
 
-        # Si el ultimo lugar bueno es justo donde esta atascado, busca
-        # desde donde esta ahora
         if spot is None or self.pos.distance_to(spot) < 3.0:
 
             spot = pathing.nearest_free(
@@ -1328,26 +1051,15 @@ class Enemy:
         self._stk_pos = self.pos.copy()
 
     def anti_stuck(self, dt, collision_map, goal=None, speed=40.0):
-        """Llamar CADA frame mientras el enemigo esta tratando de
-        caminar. Si no avanza, lo destraba en etapas:
-
-          0.5 s -> fuerza recalcular el camino y se desliza de costado
-          1.5 s -> prueba otra direccion libre
-          3.0 s -> lo saca al lugar libre mas cercano
-
-        Devuelve True cuando acaba de detectar un atasco (asi quien
-        lo llama puede cambiar de rumbo)."""
 
         self._nav_init()
 
-        # Incrustado en una pared: afuera ya
         if not self._free(self.rect, collision_map):
 
             self._rescue(collision_map)
 
             return True
 
-        # Se esta deslizando para salir del atasco
         if self._esc_t > 0:
 
             self._esc_t -= dt
@@ -1363,7 +1075,6 @@ class Enemy:
         moved = self.pos.distance_to(self._stk_pos)
         self._stk_pos = self.pos.copy()
 
-        # Ya esta encima del objetivo: no es un atasco
         if goal is not None and self.pos.distance_to(goal) < 14.0:
 
             self._stk_time = 0.0
@@ -1409,7 +1120,6 @@ class Enemy:
 
         return False
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, camera, art):
 
@@ -1421,11 +1131,8 @@ class Enemy:
 
         else:
 
-            # Sin animacion de caminar: es una pelota, usa un solo
-            # cuadro y se lo hace rodar
             img = frames[0]
 
-            # Herido = mas oscuro (asi se nota sin barras de vida)
             if self.hp < self.max_hp:
 
                 shade = int(255 * (0.55 + 0.45 * self.hp / self.max_hp))
@@ -1448,7 +1155,6 @@ class Enemy:
 
         dest = camera.apply(self.rect)
 
-        # Saltito (la sombra se queda en el piso)
         hop = 0
         if not self.spawning:
             hop = int(
@@ -1456,7 +1162,6 @@ class Enemy:
                 * ENEMY_HOP_HEIGHT * camera.zoom
             )
 
-        # Sombra
         shadow = get_shadow((int(dest.width * 1.3), int(dest.height * 0.6)), 90)
 
         screen.blit(
@@ -1473,7 +1178,6 @@ class Enemy:
 
 
 def _overlap_depth(a, b):
-    """Cuanto se pisan dos rects (para separarlos)."""
 
     overlap_x = min(a.rect.right, b.rect.right) - max(a.rect.left, b.rect.left)
     overlap_y = min(a.rect.bottom, b.rect.bottom) - max(a.rect.top, b.rect.top)
@@ -1482,11 +1186,6 @@ def _overlap_depth(a, b):
 
 
 def bounce_enemies(enemies, collision_map, target=None):
-    """Choque entre enemigos: si se tocan, rebotan hacia otro lado y
-    se separan para no quedar pegados. Los troncos no se mueven: el
-    pino rebota contra ellos como contra una pared. Si se pasa `target`
-    (posicion del jugador) cada uno se reorienta hacia el despues del
-    choque."""
 
     live = [e for e in enemies if not e.spawning and not e.dead and not getattr(e, "attached", False)]
 
@@ -1504,7 +1203,6 @@ def bounce_enemies(enemies, collision_map, target=None):
 
             normal = normal.normalize()
 
-            # Dos troncos: solo se separan
             if a.fixed and b.fixed:
 
                 depth = _overlap_depth(a, b) / 2.0 + 1.0
@@ -1514,7 +1212,6 @@ def bounce_enemies(enemies, collision_map, target=None):
 
                 continue
 
-            # Un tronco y un pino: el pino rebota contra el tronco
             if a.fixed or b.fixed:
 
                 mobile, wall = (b, a) if a.fixed else (a, b)
@@ -1543,8 +1240,6 @@ def bounce_enemies(enemies, collision_map, target=None):
 
                 continue
 
-            # Dos pinos: choque elastico entre iguales (intercambian la
-            # velocidad que llevaban uno contra el otro)
             closing = (a.vel - b.vel).dot(normal)
 
             if closing > 0:
@@ -1552,7 +1247,6 @@ def bounce_enemies(enemies, collision_map, target=None):
                 a.vel -= normal * closing
                 b.vel += normal * closing
 
-                # Si quedaron casi quietos, se empujan igual
                 for e, sign in ((a, -1), (b, 1)):
 
                     if e.vel.length() < 40:
@@ -1567,21 +1261,13 @@ def bounce_enemies(enemies, collision_map, target=None):
                         pygame.Vector2(target) - b.pos, False, False, normal
                     )
 
-            # Separarlos para que no queden uno dentro del otro
             depth = _overlap_depth(a, b) / 2.0 + 1.0
 
             a.push(-normal * depth, collision_map)
             b.push(normal * depth, collision_map)
 
 
-# ---------------------------------------------------------------
-# Imagenes del tronco y de la bola (opcionales: si falta alguna se
-# dibuja un reemplazo)
-# ---------------------------------------------------------------
-
 def load_strip(path):
-    """Tira horizontal de cuadros cuadrados (ancho de cuadro = alto).
-    Devuelve la lista de cuadros, o [] si no existe el archivo."""
 
     sheet = load_image(path)
 
@@ -1596,9 +1282,6 @@ def load_strip(path):
     ]
 
 class Mosquito(Enemy):
-    """Ciclo: vuela tranquilo -> la luz lo toca y va directo al jugador ->
-    se pega 1 minuto -> se suelta e intenta irse -> a los 60 s vuelve a
-    chuparte (sin necesitar la luz) -> y asi."""
 
     fixed = False
     contact_damage = False
@@ -1610,9 +1293,6 @@ class Mosquito(Enemy):
         self.rect = pygame.Rect(0, 0, *MOSQUITO_HITBOX)
         self.rect.center = (round(x), round(y))
 
-        # "wander" = vuela tranquilo esperando que lo toque la luz
-        # "attack" = va directo al jugador
-        # "leave"  = ya te solto: se va y descansa hasta volver
         self.phase = "wander"
 
         self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
@@ -1628,11 +1308,8 @@ class Mosquito(Enemy):
         self.rest_t = 0.0
         self.flee_t = 0.0
 
-        # True si vuelve solo (no lo toco la luz)
         self.returning = False
 
-        # True mientras esta cerca del jugador y viene a chuparlo pero
-        # todavia no se pego (el HUD muestra la advertencia)
         self.alert = False
 
         self.damage_t = random.uniform(0, MOSQUITO_DAMAGE_INTERVAL)
@@ -1650,28 +1327,21 @@ class Mosquito(Enemy):
 
     def take_damage(self, amount):
 
-        # Un mosquito pegado NO puede recibir ataques
         if self.spawning or self.dead or self.attached:
             return 0
 
         self.hp -= amount
         self.flash = MOSQUITO_FLASH_TIME
 
-        # Si todavia no te chupo y lo golpean, ataca. Si ya se estaba
-        # yendo, sigue yendose.
         if self.phase == "wander":
             self._start_attack()
 
         return amount
 
     def _repelled(self, target, light_radius, dt, collision_map):
-        """Con repelente, los mosquitos dentro del area de la luz se
-        alejan: si estaban pegados se sueltan, y si venian a atacar se
-        dan vuelta. Devuelve True si este cuadro ya se movio asi."""
 
         if self.attached:
 
-            # Pegado = esta encima tuyo, o sea adentro de la luz
             self._detach(target)
 
             self.rest_t = max(self.rest_t, MOSQUITO_REPEL_REST)
@@ -1743,16 +1413,10 @@ class Mosquito(Enemy):
             self.spawn_t -= dt
             return
 
-        # -------------------------------------------------------
-        # REPELENTE: el area de la luz los espanta (no los mata)
-        # -------------------------------------------------------
 
         if repel and self._repelled(target, light_radius, dt, collision_map):
             return
 
-        # -------------------------------------------------------
-        # PEGADO: te chupa 1 minuto y despues se suelta
-        # -------------------------------------------------------
 
         if self.attached:
 
@@ -1772,13 +1436,9 @@ class Mosquito(Enemy):
         dist = max(0.01, to_player.length())
         toward = to_player / dist
 
-        # -------------------------------------------------------
-        # ATAQUE: va directo al jugador y se pega
-        # -------------------------------------------------------
 
         if self.phase == "attack":
 
-            # Si vuelve solo, avisa en el HUD hasta que se pega
             self.alert = self.returning
 
             desired = toward * MOSQUITO_ATTACK_SPEED
@@ -1812,10 +1472,6 @@ class Mosquito(Enemy):
 
             return
 
-        # -------------------------------------------------------
-        # SE FUE: se aleja y despues vuela tranquilo hasta que
-        # pasa el minuto y vuelve a chuparte
-        # -------------------------------------------------------
 
         if self.phase == "leave":
 
@@ -1833,7 +1489,6 @@ class Mosquito(Enemy):
 
                 self.flee_t -= dt
 
-                # Se aleja del jugador
                 self.heading = -toward
 
                 self._wander(dt, collision_map, MOSQUITO_FLEE_SPEED, turn=False)
@@ -1844,11 +1499,7 @@ class Mosquito(Enemy):
 
             return
 
-        # -------------------------------------------------------
-        # VUELO LIBRE: tranquilo por el mapa (no huye de la luz)
-        # -------------------------------------------------------
 
-        # Lo toca tu luz -> va directo hacia vos
         if light_on and dist <= light_radius:
 
             self.alert = False
@@ -1856,7 +1507,6 @@ class Mosquito(Enemy):
 
             return
 
-        # Advertencia en el HUD: esta cerca pero todavia no lo toca la luz
         self.alert = light_on and dist <= light_radius + MOSQUITO_ALERT_MARGIN
 
         self._wander(dt, collision_map, MOSQUITO_WANDER_SPEED)
@@ -1874,7 +1524,6 @@ class Mosquito(Enemy):
 
         step = speed * dt
 
-        # Si choca con algo, prueba otros rumbos hasta encontrar uno libre
         for angle in (0, 40, -40, 90, -90, 140, -140, 180):
 
             d = self.heading.rotate(angle)
@@ -1923,14 +1572,6 @@ class Mosquito(Enemy):
         screen.blit(frame, frame.get_rect(center=dest.center))
 
 class TroncoArt:
-    """Imagenes del tronco y de sus bolas (se cargan una sola vez).
-
-      assets/maps/combate/tronco.png          56x56   (reposo)
-      assets/maps/combate/tronco_carga.png    56x56 o tira de cuadros 56x56
-      assets/maps/combate/tronco_disparo.png  tira de cuadros 56x56 (4)
-      assets/maps/combate/tronco_golpe.png    56x56   (cuando le pegas)
-      assets/maps/combate/bola_enemiga.png    24x24   (la bola)
-    """
 
     def __init__(self):
 
@@ -1964,17 +1605,14 @@ class TroncoArt:
 
         surf = pygame.Surface((56, 56), pygame.SRCALPHA)
 
-        # cuerpo del tronco
         pygame.draw.rect(surf, (118, 78, 44), (12, 8, 32, 44), border_radius=6)
         pygame.draw.rect(surf, (60, 36, 18), (12, 8, 32, 44), 3, border_radius=6)
         pygame.draw.line(surf, (80, 50, 26), (20, 14), (20, 46), 2)
         pygame.draw.line(surf, (80, 50, 26), (36, 14), (36, 46), 2)
 
-        # ojos
         pygame.draw.circle(surf, (20, 10, 10), (22, 20), 3)
         pygame.draw.circle(surf, (20, 10, 10), (34, 20), 3)
 
-        # boca: se abre y se pone naranja cuando carga o dispara
         mouth_h = 4 + int(10 * k) if mode != "idle" else 3
         color = (20, 10, 10) if mode == "idle" else (
             255, int(140 - 80 * k), 40
@@ -1998,7 +1636,6 @@ class TroncoArt:
         return surf
 
     def get(self, zoom):
-        """Todo ya escalado al zoom actual."""
 
         if self._zoom != zoom:
 
@@ -2021,14 +1658,7 @@ class TroncoArt:
         return self._scaled
 
 
-# ---------------------------------------------------------------
-# Bola que dispara el tronco
-# ---------------------------------------------------------------
-
 class Shot:
-    """Bola que rebota SHOT_BOUNCES veces contra las paredes y los
-    bloques del mapa; al siguiente choque desaparece. Si te toca, te
-    saca vida y desaparece."""
 
     room = ROOM
 
@@ -2062,7 +1692,6 @@ class Shot:
 
         hit = False
 
-        # Eje X
         nx = self.pos.x + self.vel.x * dt
         test = self.rect.copy()
         test.centerx = round(nx)
@@ -2077,7 +1706,6 @@ class Shot:
             hit = True
             self.vel.x = -self.vel.x
 
-        # Eje Y
         ny = self.pos.y + self.vel.y * dt
         test = self.rect.copy()
         test.centery = round(ny)
@@ -2094,7 +1722,6 @@ class Shot:
 
         if hit:
 
-            # Los dos primeros choques rebotan, el tercero la rompe
             if self.bounces_left <= 0:
                 self.dead = True
             else:
@@ -2104,7 +1731,6 @@ class Shot:
 
         img = art.get(camera.zoom)["shot"]
 
-        # Late un poco para que se note en la oscuridad
         pulse = 0.85 + 0.15 * math.sin(self.t * 14)
 
         size = max(1, int(img.get_width() * pulse))
@@ -2117,21 +1743,8 @@ class Shot:
         screen.blit(img, img.get_rect(center=center))
 
 
-# ---------------------------------------------------------------
-# Tronco
-# ---------------------------------------------------------------
-
 class Tronco(Enemy):
-    """Te sigue por la sala pero manteniendo distancia: si te acercas
-    retrocede, y se queda siempre afuera del borde de tu luz para que
-    no lo veas. Cuando le toca disparar (cada TRONCO_COOLDOWN segundos)
-    se queda quieto apuntandote y suelta 3 bolas abiertas en abanico
-    hacia donde te podrias mover. Despues hace la animacion de disparo
-    y vuelve a seguirte.
-    Si le pegas mientras carga se le corta el disparo.
-    No te hace dano al tocarlo."""
 
-    # fixed: es el tipo que dispara (los pinos rebotan contra el)
     fixed = True
     contact_damage = False
 
@@ -2149,23 +1762,18 @@ class Tronco(Enemy):
         self.phase = self.IDLE
         self.phase_t = random.uniform(*TRONCO_FIRST_DELAY)
 
-        # Radio de la luz del jugador en unidades del mundo (lo setea
-        # la arena en cada frame)
         self.light_radius = 0.0
 
-        # Velocidad del jugador (para adelantar la punteria)
         self.target_vel = pygame.Vector2()
         self._prev_target = None
 
         self._shots = []
 
-    # ---------- golpes ----------
 
     def take_damage(self, amount):
 
         result = super().take_damage(amount)
 
-        # Le pegaste mientras cargaba: se le corta el disparo
         if result and self.phase == self.WINDUP:
 
             self.phase = self.IDLE
@@ -2173,10 +1781,8 @@ class Tronco(Enemy):
 
         return result
 
-    # ---------- disparo ----------
 
     def take_shots(self):
-        """Las bolas que acaba de soltar (y se vacia la lista)."""
 
         shots, self._shots = self._shots, []
 
@@ -2184,8 +1790,6 @@ class Tronco(Enemy):
 
     def _fire(self, target):
 
-        # Hacia donde vas a estar: la posicion de ahora mas lo que te
-        # moves en TRONCO_LEAD segundos (sin salirse de la sala)
         aim = pygame.Vector2(target) + self.target_vel * TRONCO_LEAD
 
         aim.x = max(self.room.left + 4, min(self.room.right - 4, aim.x))
@@ -2206,11 +1810,8 @@ class Tronco(Enemy):
             shot.room = self.room
             self._shots.append(shot)
 
-    # ---------- movimiento / estado ----------
 
     def _ideal_distance(self):
-        """A que distancia del jugador quiere estar: afuera de su luz
-        (para que no lo vea) y nunca mas cerca que TRONCO_KEEP_DIST."""
 
         want = max(
             TRONCO_KEEP_DIST, self.light_radius + TRONCO_LIGHT_MARGIN
@@ -2219,8 +1820,6 @@ class Tronco(Enemy):
         return min(TRONCO_MAX_DIST, want)
 
     def _walk(self, dt, direction, collision_map):
-        """Camina hacia `direction`. Si hay una pared o un bloque
-        adelante, prueba rodearlo en diagonal o de costado."""
 
         step = TRONCO_SPEED * dt
 
@@ -2263,7 +1862,6 @@ class Tronco(Enemy):
 
             return
 
-        # Velocidad del jugador, suavizada
         if self._prev_target is not None and dt > 0:
 
             raw = (target - self._prev_target) / dt
@@ -2272,7 +1870,6 @@ class Tronco(Enemy):
 
         self._prev_target = target
 
-        # Empujon del golpe: se desliza un poco y se frena
         if self.stun > 0:
 
             self.stun = max(0.0, self.stun - dt)
@@ -2287,7 +1884,6 @@ class Tronco(Enemy):
 
         self.vel = pygame.Vector2()
 
-        # ---- apuntando: quieto, mirandote hasta soltar las bolas ----
         if self.phase == self.WINDUP:
 
             self.phase_t -= dt
@@ -2301,7 +1897,6 @@ class Tronco(Enemy):
 
             return
 
-        # ---- animacion de disparo: tambien quieto ----
         if self.phase == self.SHOOT:
 
             self.phase_t -= dt
@@ -2313,7 +1908,6 @@ class Tronco(Enemy):
 
             return
 
-        # ---- siguiendote (esperando el proximo disparo) ----
         self.phase_t = max(0.0, self.phase_t - dt)
 
         to_player = target - self.pos
@@ -2337,11 +1931,8 @@ class Tronco(Enemy):
 
         elif dist < ideal - TRONCO_BAND:
 
-            # Muy cerca o adentro de la luz: se aleja
             self._walk(dt, -toward, collision_map)
 
-        # Le toca disparar: cuando ya esta a buena distancia, frena
-        # y empieza a apuntar
         if (
             self.phase_t <= 0
             and dist <= ideal + TRONCO_BAND + TRONCO_FIRE_EXTRA
@@ -2350,7 +1941,6 @@ class Tronco(Enemy):
             self.phase = self.WINDUP
             self.phase_t = TRONCO_WINDUP
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, camera, art):
 
@@ -2369,7 +1959,6 @@ class Tronco(Enemy):
                 frames = sprites["charge"]
                 index = int(self.anim_t / TRONCO_ANIM_FRAME) % len(frames)
 
-                # Tiembla cada vez mas fuerte hasta soltar las bolas
                 k = 1.0 - max(0.0, self.phase_t) / TRONCO_WINDUP
                 shake = int(math.sin(self.anim_t * 55) * 1.5 * k * camera.zoom)
 
@@ -2386,7 +1975,6 @@ class Tronco(Enemy):
 
             img = frames[index]
 
-            # Herido = mas oscuro
             if self.hp < self.max_hp:
 
                 shade = int(255 * (0.55 + 0.45 * self.hp / self.max_hp))
@@ -2406,7 +1994,6 @@ class Tronco(Enemy):
 
         dest = camera.apply(self.rect)
 
-        # Sombra
         shadow = get_shadow((int(dest.width * 1.3), int(dest.height * 0.6)), 90)
 
         screen.blit(
@@ -2425,21 +2012,7 @@ class Tronco(Enemy):
         )
 
 
-# ---------------------------------------------------------------
-# Hongun
-# ---------------------------------------------------------------
-
 class HongunArt:
-    """Imagenes del hongun (se cargan una sola vez).
-
-      assets/maps/combate/hongun_anim.png   224x56  (4 cuadros de 56x56, caminar)
-      assets/maps/combate/hongun_carga.png  112x56  (2 cuadros de 56x56, recargando)
-      assets/maps/combate/hongun.png        56x56   (opcional: un solo cuadro de caminar)
-      assets/maps/combate/hongun_golpe.png  56x56   (opcional: cuando le pegas)
-
-    Lo blanco de la recarga lo hace el codigo (parpadea hacia blanco), asi
-    que hongun_carga.png se dibuja con los colores normales (hinchado).
-    """
 
     def __init__(self):
 
@@ -2470,21 +2043,17 @@ class HongunArt:
         mid = (80, 175, 80)
         light = (120, 205, 110)
 
-        # cuerpo
         pygame.draw.rect(surf, mid, (14, 6, 28, 30))
         pygame.draw.rect(surf, dark, (14, 6, 28, 30), 2)
 
-        # manchas
         for x, y in ((18, 10), (32, 12), (22, 28), (34, 26)):
             pygame.draw.rect(surf, light, (x, y, 6, 6))
 
-        # patas (se alternan para que parezca que camina)
         off = 2 if step % 2 == 0 else -2
 
         pygame.draw.rect(surf, dark, (14 + off, 36, 12, 14))
         pygame.draw.rect(surf, dark, (30 - off, 36, 12, 14))
 
-        # cara
         pygame.draw.rect(surf, (15, 40, 20), (19, 14, 6, 6))
         pygame.draw.rect(surf, (15, 40, 20), (31, 14, 6, 6))
         pygame.draw.rect(surf, (15, 40, 20), (25, 20, 6, 10))
@@ -2514,15 +2083,6 @@ class HongunArt:
 
 
 class Hongun(Enemy):
-    """Un creeper: pasea tranquilo -> si entras en su area te persigue
-    caminando normal -> cuando se acerca se frena y recarga (parpadea
-    en blanco, se hincha y da un poco de luz) -> explota: empuja al
-    jugador y le saca HONGUN_DAMAGE de vida. Muere al explotar.
-
-    Los golpes le sacan vida pero NO lo empujan ni lo frenan ni le
-    cortan la recarga: sigue persiguiendote para explotar. Si te
-    alejas mientras recarga, se cancela. Si lo matas a golpes antes
-    de que explote, simplemente muere (no explota)."""
 
     fixed = False
     contact_damage = False
@@ -2543,20 +2103,17 @@ class Hongun(Enemy):
         self.heading = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
         self.turn_t = random.uniform(*HONGUN_TURN_TIME)
 
-        self.fuse_t = 0.0      # 0 .. HONGUN_FUSE_TIME
-        self.boom = False      # True = acaba de explotar (la arena hace el efecto)
+        self.fuse_t = 0.0
+        self.boom = False
         self.boomed = False
 
-    # ---------- estado ----------
 
     @property
     def fuse_k(self):
-        """0 a 1: cuanto falta para que explote."""
 
         return max(0.0, min(1.0, self.fuse_t / HONGUN_FUSE_TIME))
 
     def light(self):
-        """(x, y, radio) de la luz que da al recargar, o None."""
 
         if self.fuse_t <= 0.0 or self.spawning or self.dead:
             return None
@@ -2570,11 +2127,8 @@ class Hongun(Enemy):
             )
         )
 
-    # ---------- golpes ----------
 
     def take_damage(self, amount):
-        """Recibe el dano pero NO retrocede, no se atonta y no se le
-        corta la recarga: su mision es explotar mientras te persigue."""
 
         if self.spawning or self.dead:
             return 0
@@ -2582,18 +2136,14 @@ class Hongun(Enemy):
         self.hp -= amount
         self.flash = ENEMY_FLASH_TIME
 
-        # Si lo golpean paseando, ya sabe donde estas: te persigue
         if self.phase == self.WANDER:
             self.phase = self.CHASE
 
         return amount
 
-    # ---------- movimiento ----------
 
     def _walk(self, dt, direction, speed, collision_map,
               angles=(0, 45, -45, 90, -90)):
-        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
-        Devuelve la direccion que uso o None si no pudo moverse."""
 
         step = speed * dt
 
@@ -2647,12 +2197,10 @@ class Hongun(Enemy):
 
         toward = to_player / dist
 
-        # ---- recargando: quieto, brillando hasta explotar ----
         if self.phase == self.FUSE:
 
             if dist > HONGUN_FUSE_CANCEL_DIST:
 
-                # Te alejaste: se cancela y vuelve a perseguirte
                 self.phase = self.CHASE
 
             else:
@@ -2666,8 +2214,6 @@ class Hongun(Enemy):
 
                     return
 
-                # Mientras recarga te sigue de a poquito: si das un
-                # paso para atras no se queda atras y explota igual
                 if dist > 14.0:
 
                     self._walk(
@@ -2676,11 +2222,9 @@ class Hongun(Enemy):
 
                 return
 
-        # La luz de la recarga se apaga de a poco si no esta recargando
         if self.fuse_t > 0:
             self.fuse_t = max(0.0, self.fuse_t - dt * HONGUN_FUSE_DECAY)
 
-        # ---- persiguiendote ----
         if self.phase == self.CHASE:
 
             if dist > HONGUN_LOSE_RADIUS:
@@ -2708,7 +2252,6 @@ class Hongun(Enemy):
 
             return
 
-        # ---- paseando tranquilo ----
         if dist <= HONGUN_DETECT_RADIUS:
 
             self.phase = self.CHASE
@@ -2733,7 +2276,6 @@ class Hongun(Enemy):
         if self.anti_stuck(dt, collision_map, None, HONGUN_WANDER_SPEED):
             self.heading = self._random_open_dir(collision_map)
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, camera, art):
 
@@ -2766,7 +2308,6 @@ class Hongun(Enemy):
 
             img = frames[index]
 
-            # Herido = mas oscuro (no mientras recarga, ahi se ve blanco)
             if self.hp < self.max_hp and not fusing:
 
                 shade = int(255 * (0.55 + 0.45 * self.hp / self.max_hp))
@@ -2779,7 +2320,6 @@ class Hongun(Enemy):
 
             if fusing:
 
-                # Parpadea a blanco cada vez mas rapido y se hincha
                 blink_on = math.sin(self.anim_t * (14 + 36 * k)) > 0
 
                 white = 255 if blink_on else int(70 * k)
@@ -2807,7 +2347,6 @@ class Hongun(Enemy):
 
         dest = camera.apply(self.rect)
 
-        # Sombra
         shadow = get_shadow((int(dest.width * 1.4), int(dest.height * 0.6)), 90)
 
         screen.blit(
@@ -2826,23 +2365,7 @@ class Hongun(Enemy):
         )
 
 
-# ---------------------------------------------------------------
-# Destello - imagenes y enemigo
-# ---------------------------------------------------------------
-
 class DestelloArt:
-    """Imagenes del destello (se cargan una sola vez). Todas opcionales:
-
-      assets/maps/combate/destello_anim.png    224x56  (4 cuadros de 56x56, caminar tranquilo)
-      assets/maps/combate/destello_correr.png  224x56  (4 cuadros de 56x56, corriendo)
-      assets/maps/combate/destello_alerta.png  112x56  (2 cuadros de 56x56, aviso antes de correr)
-      assets/maps/combate/destello.png         56x56   (1 cuadro: caminar si falta destello_anim)
-      assets/maps/combate/destello_golpe.png   56x56   (cuando le pegas)
-
-    Si falta destello_correr usa los de caminar (mas rapido). Si falta
-    destello_alerta usa el primer cuadro de caminar. El parpadeo blanco
-    del aviso lo hace el codigo.
-    """
 
     def __init__(self):
 
@@ -2875,21 +2398,17 @@ class DestelloArt:
         mid = (240, 220, 110)
         light = (255, 250, 200)
 
-        # cuerpo
         pygame.draw.rect(surf, mid, (14, 6, 28, 30))
         pygame.draw.rect(surf, dark, (14, 6, 28, 30), 2)
 
-        # brillos
         for x, y in ((18, 10), (32, 12), (22, 28), (34, 26)):
             pygame.draw.rect(surf, light, (x, y, 6, 6))
 
-        # patas (se alternan para que parezca que camina)
         off = 2 if step % 2 == 0 else -2
 
         pygame.draw.rect(surf, dark, (14 + off, 36, 12, 14))
         pygame.draw.rect(surf, dark, (30 - off, 36, 12, 14))
 
-        # cara (ojos grandes)
         pygame.draw.rect(surf, (40, 30, 10), (19, 14, 6, 8))
         pygame.draw.rect(surf, (40, 30, 10), (31, 14, 6, 8))
         pygame.draw.rect(surf, (40, 30, 10), (24, 26, 8, 3))
@@ -2918,16 +2437,6 @@ class DestelloArt:
 
 
 class Destello(Enemy):
-    """Un hongun flashbang: pasea tranquilo dando un poco de luz -> si te
-    ve (distancia y sin paredes en el medio) se frena un instante
-    parpadeando en blanco -> sale corriendo muy rapido hacia vos -> al
-    chocarte explota: te saca DESTELLO_DAMAGE de vida, te empuja y te
-    deja la pantalla en blanco unos 5 segundos (flashbang). Muere al
-    explotar.
-
-    Los golpes le sacan vida pero no lo frenan ni lo empujan: sigue
-    corriendo. Si lo matas a golpes antes de que te choque, muere sin
-    explotar (sin flash)."""
 
     fixed = False
     contact_damage = False
@@ -2949,15 +2458,13 @@ class Destello(Enemy):
         self.turn_t = random.uniform(*DESTELLO_TURN_TIME)
 
         self.alert_t = 0.0
-        self.alert_time = DESTELLO_ALERT_TIME   # lo cambia la arena segun la oleada
-        self.boom = False      # True = exploto contra el jugador
+        self.alert_time = DESTELLO_ALERT_TIME
+        self.boom = False
         self.boomed = False
 
-    # ---------- estado ----------
 
     @property
     def can_explode(self):
-        """Solo explota si ya salio corriendo (no paseando ni apareciendo)."""
 
         return (
             self.phase == self.CHARGE
@@ -2967,7 +2474,6 @@ class Destello(Enemy):
         )
 
     def light(self):
-        """(x, y, radio) de la luz de su cuerpo (siempre prendida)."""
 
         if self.spawning or self.dead:
             return None
@@ -2979,10 +2485,8 @@ class Destello(Enemy):
 
         return (self.pos.x, self.pos.y, quantize_radius(radius))
 
-    # ---------- golpes ----------
 
     def take_damage(self, amount):
-        """Recibe el dano pero NO retrocede ni se atonta."""
 
         if self.spawning or self.dead:
             return 0
@@ -2990,7 +2494,6 @@ class Destello(Enemy):
         self.hp -= amount
         self.flash = ENEMY_FLASH_TIME
 
-        # Si lo golpean paseando, ya te vio: se pone en alerta
         if self.phase == self.WANDER and not self.dead:
 
             self.phase = self.ALERT
@@ -2998,10 +2501,8 @@ class Destello(Enemy):
 
         return amount
 
-    # ---------- movimiento ----------
 
     def _line_clear(self, a, b, collision_map):
-        """True si no hay paredes ni bloques entre `a` y `b`."""
 
         a = pygame.Vector2(a)
         b = pygame.Vector2(b)
@@ -3023,8 +2524,6 @@ class Destello(Enemy):
 
     def _walk(self, dt, direction, speed, collision_map,
               angles=(0, 45, -45, 90, -90)):
-        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
-        Devuelve la direccion que uso o None si no pudo moverse."""
 
         step = speed * dt
 
@@ -3049,8 +2548,6 @@ class Destello(Enemy):
         return None
 
     def _run(self, dt, direction, collision_map):
-        """Corre hacia `direction` en pasos cortos (a esta velocidad un
-        solo paso por frame se saltaria paredes finas)."""
 
         pieces = max(1, math.ceil(DESTELLO_CHARGE_SPEED * dt / 3.0))
 
@@ -3099,7 +2596,6 @@ class Destello(Enemy):
 
         toward = to_player / dist
 
-        # ---- aviso: quieto, parpadeando, mirandote ----
         if self.phase == self.ALERT:
 
             self.alert_t -= dt
@@ -3109,7 +2605,6 @@ class Destello(Enemy):
 
             return
 
-        # ---- corriendo hacia vos ----
         if self.phase == self.CHARGE:
 
             if dist > DESTELLO_LOSE_RADIUS:
@@ -3129,7 +2624,6 @@ class Destello(Enemy):
 
             return
 
-        # ---- paseando tranquilo ----
         if (
             dist <= DESTELLO_DETECT_RADIUS
             and self._line_clear(self.pos, target, collision_map)
@@ -3155,11 +2649,9 @@ class Destello(Enemy):
         if d is not None:
             self.heading = d
 
-        # Atascado paseando: cambia de rumbo
         if self.anti_stuck(dt, collision_map, None, DESTELLO_WANDER_SPEED):
             self.heading = self._random_open_dir(collision_map)
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, camera, art):
 
@@ -3197,7 +2689,6 @@ class Destello(Enemy):
 
             img = frames[index]
 
-            # Herido = mas oscuro (no durante el aviso, ahi parpadea blanco)
             if self.hp < self.max_hp and not alerting:
 
                 shade = int(255 * (0.55 + 0.45 * max(0, self.hp) / self.max_hp))
@@ -3210,7 +2701,6 @@ class Destello(Enemy):
 
             if alerting:
 
-                # Parpadea a blanco y tiembla: esta por salir corriendo
                 blink_on = math.sin(self.anim_t * 40) > 0
 
                 white = 255 if blink_on else 60
@@ -3229,7 +2719,6 @@ class Destello(Enemy):
 
         dest = camera.apply(self.rect)
 
-        # Sombra
         shadow = get_shadow((int(dest.width * 1.4), int(dest.height * 0.6)), 90)
 
         screen.blit(
@@ -3237,7 +2726,6 @@ class Destello(Enemy):
             shadow.get_rect(center=(dest.centerx, dest.bottom))
         )
 
-        # Estela de velocidad: dos copias transparentes detras
         if charging and self.vel.length_squared() > 1.0 and not self.spawning:
 
             back = -self.vel.normalize()
@@ -3269,37 +2757,7 @@ class Destello(Enemy):
         )
 
 
-# ---------------------------------------------------------------
-# Golem (enorme y muy lento: te agarra y te saca el escudo / la luz)
-# ---------------------------------------------------------------
-
 class GolemArt:
-    """Imagenes del golem (se cargan una sola vez). Todas opcionales:
-
-      assets/maps/combate/golem_anim.png       448x112 (4 cuadros de 112x112, caminar tranquilo)
-      assets/maps/combate/golem_perseguir.png  448x112 (4 cuadros de 112x112, persiguiendote)
-      assets/maps/combate/golem_alerta.png     224x112 (2 cuadros de 112x112, aviso al verte)
-      assets/maps/combate/golem_agarre.png     672x112 (6 cuadros de 112x112, el agarre)
-      assets/maps/combate/golem.png            112x112 (1 cuadro: caminar si falta golem_anim)
-      assets/maps/combate/golem_golpe.png      112x112 (cuando le pegas)
-
-    Cada cuadro es cuadrado de 112x112 y se dibuja de 28x28 unidades del
-    mundo (zoom x4). El golem mira de frente (no hay una hoja por
-    direccion), con los pies pegados al borde de abajo del cuadro.
-
-    El AGARRE (golem_agarre.png) son 6 cuadros seguidos:
-      cuadros 1-2: estira los brazos hacia vos y te levanta
-      cuadros 3-4: aprieta (el cuadro 3 es cuando se saca el escudo / vida)
-      cuadros 5-6: te suelta / te tira para atras
-    Mientras dura, el jugador se dibuja ENCIMA del golem, centrado abajo:
-    con zoom x4 sus pies quedan ~20 px por debajo del borde de abajo del
-    cuadro, y lo levanta 20 px. Dibuja las manos del golem alrededor de
-    esa zona (aprox. x 30 a 82, y 60 a 105).
-
-    Si falta golem_perseguir usa los de caminar (mas rapido). Si falta
-    golem_alerta usa el primer cuadro de caminar. El temblor del aviso
-    lo hace el codigo.
-    """
 
     FRAME = 112
 
@@ -3335,8 +2793,6 @@ class GolemArt:
 
     @classmethod
     def _placeholder(cls, mode="walk", step=0):
-        """Golem de piedra dibujado con rectangulos (por si faltan las
-        imagenes)."""
 
         s = cls.FRAME
         surf = pygame.Surface((s, s), pygame.SRCALPHA)
@@ -3348,7 +2804,6 @@ class GolemArt:
 
         bob = 2 if (step % 2 == 1 and mode == "walk") else 0
 
-        # patas
         off = 4 if step % 2 == 0 else -4
 
         if mode == "walk":
@@ -3358,22 +2813,18 @@ class GolemArt:
             pygame.draw.rect(surf, dark, (32, 82, 20, 28))
             pygame.draw.rect(surf, dark, (60, 82, 20, 28))
 
-        # torso
         pygame.draw.rect(surf, stone, (24, 32 - bob, 64, 54))
         pygame.draw.rect(surf, dark, (24, 32 - bob, 64, 54), 3)
 
-        # grietas y musgo
         pygame.draw.line(surf, dark, (40, 44 - bob), (52, 62 - bob), 2)
         pygame.draw.line(surf, dark, (52, 62 - bob), (46, 76 - bob), 2)
         pygame.draw.rect(surf, (80, 120, 74), (66, 38 - bob, 14, 8))
 
-        # cabeza
         pygame.draw.rect(surf, stone, (38, 8 - bob, 36, 28))
         pygame.draw.rect(surf, dark, (38, 8 - bob, 36, 28), 3)
         pygame.draw.rect(surf, eye, (45, 18 - bob, 8, 7))
         pygame.draw.rect(surf, eye, (59, 18 - bob, 8, 7))
 
-        # brazos
         if mode == "walk":
 
             sw = 5 if step % 2 == 0 else -5
@@ -3385,7 +2836,6 @@ class GolemArt:
 
         elif mode == "alert":
 
-            # brazos arriba (ruge)
             up = 0 if step % 2 == 0 else 6
 
             pygame.draw.rect(surf, stone, (4, 6 + up, 20, 44))
@@ -3393,13 +2843,12 @@ class GolemArt:
             pygame.draw.rect(surf, stone, (88, 6 + up, 20, 44))
             pygame.draw.rect(surf, dark, (88, 6 + up, 20, 44), 3)
 
-        else:   # grab: 6 cuadros
+        else:
 
-            # (x de cada mano, y de las manos): se abren, aprietan y sueltan
             hands = [
-                (14, 70), (26, 84), (38, 90),   # estira y levanta
-                (44, 86), (40, 86),            # aprieta
-                (6, 54),                       # suelta
+                (14, 70), (26, 84), (38, 90),
+                (44, 86), (40, 86),
+                (6, 54),
             ][min(step, 5)]
 
             hx, hy = hands
@@ -3443,16 +2892,6 @@ class GolemArt:
 
 
 class Golem(Enemy):
-    """Enorme y MUY lento. Pasea tranquilo -> si te ve (distancia y sin
-    paredes en el medio) se frena y ruge (aviso) -> va directo hacia
-    vos, despacito pero sin parar -> si te toca UNA vez te agarra: te
-    levanta y te aprieta (animacion). Al apretar te saca TODO el escudo;
-    si no tenias escudo, te saca TODA la vida de la luz. Despues te
-    suelta, te empuja y queda cansado unos segundos.
-
-    Los golpes le sacan vida pero casi no lo mueven ni lo frenan, y
-    mientras te tiene agarrado no se lo puede lastimar. Lo de pegarle al
-    jugador (escudo / vida) lo hace la arena (Arena._golem_step)."""
 
     fixed = False
     contact_damage = False
@@ -3480,23 +2919,19 @@ class Golem(Enemy):
         self.phase_t = 0.0
         self.moving = False
 
-        self.grab_dir = pygame.Vector2(0, 1)   # hacia donde tira al jugador al soltarlo
-        self._squeeze_pending = False   # apreto y la arena todavia no lo aplico
-        self._release_pending = False   # solto y la arena todavia no lo aplico
-        self._squeezed = False          # ya apreto en este agarre
+        self.grab_dir = pygame.Vector2(0, 1)
+        self._squeeze_pending = False
+        self._release_pending = False
+        self._squeezed = False
 
-    # ---------- estado ----------
 
     @property
     def holding(self):
-        """True mientras tiene agarrado al jugador."""
 
         return self.phase == self.GRAB
 
     @property
     def lift(self):
-        """Cuanto levanta al jugador ahora mismo (unidades del mundo):
-        sube al empezar el agarre y baja al soltarlo."""
 
         if self.phase != self.GRAB:
             return 0.0
@@ -3507,7 +2942,6 @@ class Golem(Enemy):
         return GOLEM_GRAB_LIFT * ease_out(min(up, down))
 
     def can_grab(self, body):
-        """True si esta persiguiendo y toca el cuerpo del jugador."""
 
         if self.phase != self.CHASE or self.spawning or self.dead:
             return False
@@ -3517,8 +2951,6 @@ class Golem(Enemy):
         return reach.colliderect(body)
 
     def start_grab(self, direction=None):
-        """`direction`: de que lado vino el jugador (para tirarlo para
-        ese mismo lado al soltarlo)."""
 
         if direction is not None and pygame.Vector2(direction).length_squared() > 0.01:
             self.grab_dir = pygame.Vector2(direction).normalize()
@@ -3533,7 +2965,6 @@ class Golem(Enemy):
         self._squeezed = False
 
     def take_squeeze(self):
-        """True UNA vez por agarre: cuando aprieta."""
 
         if self._squeeze_pending:
 
@@ -3544,7 +2975,6 @@ class Golem(Enemy):
         return False
 
     def take_release(self):
-        """True UNA vez por agarre: cuando suelta al jugador."""
 
         if self._release_pending:
 
@@ -3554,12 +2984,8 @@ class Golem(Enemy):
 
         return False
 
-    # ---------- golpes que recibe ----------
 
     def take_damage(self, amount):
-        """Pierde vida, parpadea y se da cuenta de que lo atacan. Casi no
-        retrocede y no se atonta: es pesado. Mientras te agarra no se le
-        puede hacer dano."""
 
         if self.spawning or self.dead or self.phase == self.GRAB:
             return 0
@@ -3573,7 +2999,6 @@ class Golem(Enemy):
             self.pos += away.normalize() * GOLEM_HIT_PUSH * 0.05
             self.rect.center = (round(self.pos.x), round(self.pos.y))
 
-        # Si lo golpean paseando, ya te vio
         if self.phase == self.WANDER:
 
             self.phase = self.ALERT
@@ -3581,10 +3006,8 @@ class Golem(Enemy):
 
         return amount
 
-    # ---------- movimiento ----------
 
     def _line_clear(self, a, b, collision_map):
-        """True si no hay paredes ni bloques entre `a` y `b`."""
 
         a = pygame.Vector2(a)
         b = pygame.Vector2(b)
@@ -3606,8 +3029,6 @@ class Golem(Enemy):
 
     def _walk(self, dt, direction, speed, collision_map,
               angles=(0, 45, -45, 90, -90)):
-        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
-        Devuelve la direccion que uso o None si no pudo moverse."""
 
         step = speed * dt
 
@@ -3656,7 +3077,6 @@ class Golem(Enemy):
         to_player = target - self.pos
         dist = to_player.length()
 
-        # ---- agarrando: no se mueve, la animacion manda ----
         if self.phase == self.GRAB:
 
             self.phase_t += dt
@@ -3674,7 +3094,6 @@ class Golem(Enemy):
 
             return
 
-        # ---- cansado despues de agarrarte: quieto ----
         if self.phase == self.REST:
 
             self.phase_t += dt
@@ -3690,7 +3109,6 @@ class Golem(Enemy):
 
             return
 
-        # ---- aviso: quieto, ruge, mirandote ----
         if self.phase == self.ALERT:
 
             self.phase_t += dt
@@ -3702,7 +3120,6 @@ class Golem(Enemy):
 
             return
 
-        # ---- persiguiendote, directo, despacito pero sin parar ----
         if self.phase == self.CHASE:
 
             if not GOLEM_CHASE_FOREVER and dist > GOLEM_LOSE_RADIUS:
@@ -3726,7 +3143,6 @@ class Golem(Enemy):
 
             return
 
-        # ---- paseando tranquilo ----
         if (
             dist <= GOLEM_DETECT_RADIUS
             and self._line_clear(self.pos, target, collision_map)
@@ -3753,11 +3169,9 @@ class Golem(Enemy):
             self.heading = d
             self.moving = True
 
-        # Atascado paseando: cambia de rumbo
         if self.anti_stuck(dt, collision_map, None, GOLEM_WANDER_SPEED):
             self.heading = self._random_open_dir(collision_map)
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, camera, art):
 
@@ -3803,7 +3217,6 @@ class Golem(Enemy):
 
             img = frames[index]
 
-            # Herido = mas oscuro
             if self.hp < self.max_hp:
 
                 shade = int(255 * (0.55 + 0.45 * max(0, self.hp) / self.max_hp))
@@ -3816,7 +3229,6 @@ class Golem(Enemy):
 
             if alerting:
 
-                # Tiembla y se tiñe de rojo: te vio
                 blink_on = math.sin(self.anim_t * 30) > 0
 
                 img = img.copy()
@@ -3829,13 +3241,11 @@ class Golem(Enemy):
 
             elif self.phase == self.GRAB:
 
-                # Tiembla de la fuerza cuando aprieta
                 if abs(self.phase_t - GOLEM_SQUEEZE_AT) < 0.3:
                     shake = int(math.sin(self.anim_t * 80) * 1.2 * camera.zoom)
 
             elif self.phase == self.REST:
 
-                # Cansado: se ve un poco mas apagado
                 img = img.copy()
                 img.fill(
                     (200, 200, 215, 255),
@@ -3851,7 +3261,6 @@ class Golem(Enemy):
 
         dest = camera.apply(self.rect)
 
-        # Sombra (mas grande: es enorme)
         shadow = get_shadow((int(img.get_width() * 0.7), int(img.get_height() * 0.22)), 100)
 
         screen.blit(
@@ -3870,36 +3279,26 @@ class Golem(Enemy):
         )
 
 
-# ---------------------------------------------------------------
-# Guardian (del tamano del jugador, pega con un golpe en arco igual
-# que el jugador, tiene mucha vida)
-# ---------------------------------------------------------------
-
-GUARDIAN_HP = 30                  # golpes que aguanta
-GUARDIAN_HITBOX = (10, 16)        # lo que choca y lo que golpea el jugador
-# Tamano dibujado en unidades del mundo: el mismo que el personaje
-# (54x74 px en pantalla con el zoom x4)
+GUARDIAN_HP = 30
+GUARDIAN_HITBOX = (10, 16)
 GUARDIAN_DRAW_SIZE = (14.5, 18.5)
 
-# Movimiento (unidades del mundo por segundo; el jugador va a 95)
-GUARDIAN_WANDER_SPEED = 35.0      # paseando tranquilo
-GUARDIAN_CHASE_SPEED = 70.0       # yendo directo hacia el jugador
-GUARDIAN_TURN_TIME = (1.2, 3.0)   # cada cuanto cambia de rumbo paseando
+GUARDIAN_WANDER_SPEED = 35.0
+GUARDIAN_CHASE_SPEED = 70.0
+GUARDIAN_TURN_TIME = (1.2, 3.0)
 
-# Su golpe es EL MISMO que el del jugador (world/melee.py): mismo arco,
-# mismo alcance y misma duracion. Si cambias esos numeros alla, cambian aca.
 GUARDIAN_INNER = INNER_RADIUS
 GUARDIAN_OUTER = OUTER_RADIUS
 GUARDIAN_ARC = ARC_DEGREES
 GUARDIAN_SWING_TIME = SWING_TIME
 
-GUARDIAN_ATTACK_DIST = 22.0       # a esta distancia del jugador empieza a pegar
-GUARDIAN_WINDUP = 0.15            # aviso cortito: levanta el arma y se ve la zona roja
-GUARDIAN_COOLDOWN = COOLDOWN      # espera despues del golpe: la misma que el jugador
-GUARDIAN_DAMAGE = 0.45            # 0.10 = 10% de la vida de la luz
-GUARDIAN_KNOCKBACK = 150.0        # empujon al jugador (el de un pino es 120)
-GUARDIAN_HIT_PUSH = 28.0          # cuanto lo mueve un golpe tuyo (casi nada: es pesado)
-GUARDIAN_WEAPON_LENGTH = 21.0     # largo del arma dibujada (unidades del mundo)
+GUARDIAN_ATTACK_DIST = 22.0
+GUARDIAN_WINDUP = 0.15
+GUARDIAN_COOLDOWN = COOLDOWN
+GUARDIAN_DAMAGE = 0.45
+GUARDIAN_KNOCKBACK = 150.0
+GUARDIAN_HIT_PUSH = 28.0
+GUARDIAN_WEAPON_LENGTH = 21.0
 
 GUARDIAN_ANIM_FRAME = 0.14
 GUARDIAN_FLASH_TIME = 0.10
@@ -3907,24 +3306,10 @@ GUARDIAN_SPAWN_TIME = 1.0
 
 
 class GuardianArt:
-    """Imagenes del guardian (todas opcionales: si falta alguna se
-    dibuja un reemplazo).
-
-      guardian.png         hoja de caminar: 4 columnas x 4 filas
-                           (filas: arriba, abajo, izquierda, derecha,
-                           igual que el personaje)
-      guardian_ataque.png  hoja de golpe: 2 columnas x 4 filas (mismas
-                           filas). Columna 1 = arma levantada (aviso),
-                           columna 2 = golpe
-      guardian_arma.png    el arma sola, apuntando hacia ARRIBA, con el
-                           mango abajo (se la hace girar en el golpe)
-      guardian_icono.png   dibujo para la enciclopedia (56x56)
-    """
 
     DIRS = ("up", "down", "left", "right")
     CELL = (64, 80)
 
-    # Archivos (el Guardian Tirador usa otros) y colores del reemplazo
     WALK_FILE = "guardian.png"
     ATTACK_FILE = "guardian_ataque.png"
     WEAPON_FILE = "guardian_arma.png"
@@ -3948,11 +3333,9 @@ class GuardianArt:
         self._weapon_zoom = None
         self._weapon_scaled = None
 
-    # ---------- carga ----------
 
     @classmethod
     def _cut(cls, sheet, cols):
-        """Corta una hoja de `cols` columnas x 4 filas. None si no hay."""
 
         if sheet is None:
             return None
@@ -3971,11 +3354,9 @@ class GuardianArt:
             for r, d in enumerate(cls.DIRS)
         }
 
-    # ---------- reemplazos dibujados con codigo ----------
 
     @classmethod
     def _body(cls, direction, step, raised):
-        """Un muneco simple (mientras no haya imagenes)."""
 
         w, h = cls.CELL
         surf = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -3987,15 +3368,12 @@ class GuardianArt:
 
         off = (0, 3, 0, -3)[step % 4]
 
-        # piernas
         pygame.draw.rect(surf, dark, (w // 2 - 12, 52 + off, 10, 22))
         pygame.draw.rect(surf, dark, (w // 2 + 2, 52 - off, 10, 22))
 
-        # cuerpo
         pygame.draw.rect(surf, cloth, (w // 2 - 15, 24, 30, 32), border_radius=4)
         pygame.draw.rect(surf, dark, (w // 2 - 15, 24, 30, 32), 2, border_radius=4)
 
-        # brazos
         arm_y = 14 if raised else 28
         if direction in ("down", "up"):
             pygame.draw.rect(surf, cloth, (w // 2 - 22, arm_y, 8, 22))
@@ -4005,11 +3383,9 @@ class GuardianArt:
         else:
             pygame.draw.rect(surf, cloth, (w // 2 + 12, arm_y, 8, 22))
 
-        # cabeza
         pygame.draw.circle(surf, skin, (w // 2, 14), 12)
         pygame.draw.circle(surf, dark, (w // 2, 14), 12, 2)
 
-        # ojos (de espaldas no se ven)
         if direction == "down":
             pygame.draw.rect(surf, eye, (w // 2 - 7, 11, 4, 4))
             pygame.draw.rect(surf, eye, (w // 2 + 3, 11, 4, 4))
@@ -4038,10 +3414,8 @@ class GuardianArt:
             for d in cls.DIRS
         }
 
-    # ---------- escalado ----------
 
     def get(self, zoom):
-        """Hojas ya escaladas al tamano del personaje en pantalla."""
 
         if self._zoom != zoom:
 
@@ -4062,7 +3436,6 @@ class GuardianArt:
         return self._scaled
 
     def get_weapon(self, zoom):
-        """El arma escalada (None si no hay imagen: se dibuja con codigo)."""
 
         if self.weapon is None:
             return None
@@ -4079,11 +3452,6 @@ class GuardianArt:
 
 
 class Guardian(Enemy):
-    """Del tamano del jugador. Pasea tranquilo por la sala; cuando tu luz
-    lo toca (o le pegas) se despierta y va DIRECTO hacia vos, sin parar
-    hasta que muere. Cuando llega a tu alcance levanta el arma (aviso) y
-    pega con el mismo golpe en arco que el jugador. Tiene mucha vida y
-    casi no retrocede cuando lo golpeas."""
 
     fixed = False
     contact_damage = False
@@ -4110,12 +3478,11 @@ class Guardian(Enemy):
         self.facing = "down"
         self.moving = False
 
-        self.phase_t = 0.0       # tiempo dentro de WINDUP / SWING
+        self.phase_t = 0.0
         self.cooldown = 0.0
-        self.aim = 0.0           # angulo (radianes) hacia donde pega
-        self.hit_done = False    # ya le pego al jugador en este golpe
+        self.aim = 0.0
+        self.hit_done = False
 
-    # ---------- estado ----------
 
     @property
     def awake(self):
@@ -4129,12 +3496,10 @@ class Guardian(Enemy):
 
     @property
     def swing_k(self):
-        """0 a 1: cuanto avanzo el golpe (solo en SWING)."""
 
         return max(0.0, min(1.0, self.phase_t / GUARDIAN_SWING_TIME))
 
     def weapon_angle(self):
-        """Angulo (radianes) del arma ahora mismo."""
 
         half = math.radians(GUARDIAN_ARC) / 2
 
@@ -4146,11 +3511,8 @@ class Guardian(Enemy):
 
         return self.aim
 
-    # ---------- golpes que recibe ----------
 
     def take_damage(self, amount):
-        """Pierde vida, parpadea y se despierta. Casi no retrocede y no
-        se le corta el golpe: es pesado."""
 
         if self.spawning or self.dead:
             return 0
@@ -4169,12 +3531,9 @@ class Guardian(Enemy):
 
         return amount
 
-    # ---------- movimiento ----------
 
     def _walk(self, dt, direction, speed, collision_map,
               angles=(0, 45, -45, 90, -90)):
-        """Camina hacia `direction`; si hay algo adelante prueba rodearlo.
-        Devuelve la direccion que uso o None si no pudo moverse."""
 
         step = speed * dt
 
@@ -4199,7 +3558,6 @@ class Guardian(Enemy):
         return None
 
     def _face(self, direction):
-        """Hacia donde mira (el eje que mas pesa)."""
 
         if abs(direction.x) > abs(direction.y):
             self.facing = "right" if direction.x > 0 else "left"
@@ -4207,9 +3565,6 @@ class Guardian(Enemy):
             self.facing = "down" if direction.y > 0 else "up"
 
     def swing_hits(self, point):
-        """True UNA vez por golpe si el arma toca `point` (centro del
-        cuerpo del jugador). Mismo arco y alcance que el golpe del
-        jugador: un sector entre INNER y OUTER, barrido hasta ahora."""
 
         if self.phase != self.SWING or self.hit_done:
             return False
@@ -4217,21 +3572,18 @@ class Guardian(Enemy):
         offset = pygame.Vector2(point) - self.pos
         dist = offset.length()
 
-        # El jugador tiene cuerpo: se le perdona un poco de alcance
         if dist < GUARDIAN_INNER - 8 or dist > GUARDIAN_OUTER + 5:
             return False
 
         half = math.radians(GUARDIAN_ARC) / 2
         angle = math.atan2(offset.y, offset.x)
 
-        # Barrido: desde donde empezo el golpe hasta donde esta ahora
         start = self.aim - half
         now = self.weapon_angle()
 
         delta = (angle - start + math.pi) % math.tau - math.pi
         reach = now - start
 
-        # un poco de margen para el ancho del cuerpo
         if -0.15 <= delta <= reach + 0.15:
 
             self.hit_done = True
@@ -4262,7 +3614,6 @@ class Guardian(Enemy):
         dist = to_player.length()
         toward = to_player / dist if dist > 0.01 else pygame.Vector2(1, 0)
 
-        # ---- paseando tranquilo: la luz lo despierta ----
         if self.phase == self.WANDER:
 
             if light_on and dist <= light_radius:
@@ -4290,12 +3641,10 @@ class Guardian(Enemy):
 
                 return
 
-        # ---- levanta el arma: aviso, quieto, apuntandote ----
         if self.phase == self.WINDUP:
 
             self.phase_t += dt
 
-            # Sigue apuntando mientras carga (con un poco de demora)
             want = math.atan2(toward.y, toward.x)
             diff = (want - self.aim + math.pi) % math.tau - math.pi
             self.aim += diff * min(1.0, 6.0 * dt)
@@ -4310,7 +3659,6 @@ class Guardian(Enemy):
 
             return
 
-        # ---- el golpe ----
         if self.phase == self.SWING:
 
             self.phase_t += dt
@@ -4322,7 +3670,6 @@ class Guardian(Enemy):
 
             return
 
-        # ---- persiguiendo, directo al jugador, hasta morir ----
         if dist <= GUARDIAN_ATTACK_DIST and self.cooldown <= 0:
 
             self.phase = self.WINDUP
@@ -4331,8 +3678,6 @@ class Guardian(Enemy):
 
             return
 
-        # Si esta en su alcance (esperando el cooldown) se queda pegado
-        # a vos sin empujarte
         if dist > GUARDIAN_ATTACK_DIST * 0.7:
 
             d = self._walk(
@@ -4352,7 +3697,6 @@ class Guardian(Enemy):
 
             self._face(toward)
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, camera, art):
 
@@ -4388,7 +3732,6 @@ class Guardian(Enemy):
 
         dest = camera.apply(self.rect)
 
-        # Sombra
         shadow = get_shadow((int(dest.width * 1.5), int(dest.height * 0.35)), 90)
 
         screen.blit(
@@ -4409,14 +3752,12 @@ class Guardian(Enemy):
             self._draw_attack(screen, camera, dest, art)
 
     def _draw_attack(self, screen, camera, dest, art):
-        """Solo se dibuja el arma girando (sin zona roja de aviso)."""
 
         zoom = camera.zoom
         cx, cy = dest.center
 
         r_in = GUARDIAN_INNER * zoom
 
-        # Arma
         angle = self.weapon_angle()
         direction = pygame.Vector2(math.cos(angle), math.sin(angle))
         length = GUARDIAN_WEAPON_LENGTH * zoom
@@ -4427,7 +3768,6 @@ class Guardian(Enemy):
 
         if weapon is not None:
 
-            # La imagen mira hacia arriba: se gira hasta apuntar al angulo
             img = pygame.transform.rotate(weapon, -(math.degrees(angle) + 90))
             center = start + direction * (weapon.get_height() / 2)
 
@@ -4442,48 +3782,35 @@ class Guardian(Enemy):
         pygame.draw.circle(screen, (255, 160, 60), (int(end.x), int(end.y)), max(2, int(zoom * 0.9)))
 
 
-# ---------------------------------------------------------------
-# Guardian Tirador (igual al Guardian, pero en vez de pegar dispara
-# bolas como las del jugador, apunta muy bien y toma distancia)
-# ---------------------------------------------------------------
+GSHOOT_HP = 28
 
-GSHOOT_HP = 28                     # golpes que aguanta (el Guardian: 48)
+GSHOOT_WANDER_SPEED = GUARDIAN_WANDER_SPEED
+GSHOOT_MOVE_SPEED = 70.0
+GSHOOT_RETREAT_SPEED = 80.0
+GSHOOT_STRAFE_TIME = (1.0, 2.2)
 
-# Movimiento (unidades del mundo por segundo; el jugador va a 95)
-GSHOOT_WANDER_SPEED = GUARDIAN_WANDER_SPEED   # paseando tranquilo
-GSHOOT_MOVE_SPEED = 70.0           # acercandose / dando vueltas
-GSHOOT_RETREAT_SPEED = 80.0        # alejandose de vos
-GSHOOT_STRAFE_TIME = (1.0, 2.2)    # cada cuanto cambia el lado al dar vueltas
-
-# Distancias: busca quedarse entre MIN y MAX. Mas cerca que MIN retrocede,
-# mas lejos que MAX se acerca, y en el medio da vueltas a tu alrededor.
 GSHOOT_MIN_DIST = 70.0
 GSHOOT_MAX_DIST = 120.0
 
-# La bola: MISMA velocidad que la bola de fuego del jugador
 GSHOOT_BOLT_SPEED = FIRE_SPEED
-GSHOOT_BOLT_RANGE = 190.0          # hasta donde llega antes de apagarse
+GSHOOT_BOLT_RANGE = 190.0
 GSHOOT_BOLT_HITBOX = 5
-GSHOOT_BOLT_DRAW_SIZE = 7.0        # tamano dibujado (mundo)
-GSHOOT_MUZZLE = 8.0                # a que distancia del cuerpo nace
+GSHOOT_BOLT_DRAW_SIZE = 7.0
+GSHOOT_MUZZLE = 8.0
 
-# Disparo
-GSHOOT_AIM_TIME = 0.35             # aviso: queda quieto apuntandote y carga
-GSHOOT_RECOVER = 0.18              # quieto un ratito despues de disparar
-GSHOOT_COOLDOWN = 1.2              # espera entre un disparo y el otro
-                                   # (la del jugador es 0.45: con esta punteria seria imposible)
-GSHOOT_AIM_TURN = 14.0             # que tan rapido gira la punteria mientras carga
-GSHOOT_LEAD_MAX = 0.8              # lo maximo (seg) que adelanta la punteria
-GSHOOT_DAMAGE = 0.15               # 0.10 = 10% de la vida de la luz
-GSHOOT_KNOCKBACK = 90.0            # empujon al jugador si lo toca la bola
+GSHOOT_AIM_TIME = 0.35
+GSHOOT_RECOVER = 0.18
+GSHOOT_COOLDOWN = 1.2
+GSHOOT_AIM_TURN = 14.0
+GSHOOT_LEAD_MAX = 0.8
+GSHOOT_DAMAGE = 0.15
+GSHOOT_KNOCKBACK = 90.0
 
 
 _gshoot_bolt_cache = {}
 
 
 def _gshoot_bolt_base():
-    """Imagen de la bola (32x32, mirando a la DERECHA). Si no hay
-    imagen se dibuja una violeta, para no confundirla con las tuyas."""
 
     img = load_image(COMBAT_DIR / "bola_guardian.png")
 
@@ -4499,7 +3826,6 @@ def _gshoot_bolt_base():
 
 
 def _gshoot_bolt_sprite(zoom, angle_deg):
-    """Bola ya escalada al zoom y girada hacia donde vuela."""
 
     deg = round(-angle_deg / 10) * 10
 
@@ -4517,32 +3843,16 @@ def _gshoot_bolt_sprite(zoom, angle_deg):
 
 
 class GuardianShooterArt(GuardianArt):
-    """Imagenes del Guardian Tirador (todas opcionales: si falta alguna
-    se dibuja un reemplazo).
-
-      guardian_tirador.png          256x320  hoja de caminar: 4 columnas x
-                                    4 filas (arriba, abajo, izquierda,
-                                    derecha), igual que el Guardian
-      guardian_tirador_disparo.png  128x320  2 columnas x 4 filas (mismas
-                                    filas). Columna 1 = apuntando/cargando,
-                                    columna 2 = disparando
-      guardian_tirador_icono.png    128x128  enciclopedia
-      bola_guardian.png             32x32    la bola, mirando a la DERECHA
-    """
 
     WALK_FILE = "guardian_tirador.png"
     ATTACK_FILE = "guardian_tirador_disparo.png"
     WEAPON_FILE = None
 
-    # Colores del muneco de reemplazo
     CLOTH = (40, 96, 112)
     DARK = (20, 52, 66)
 
 
 class GuardianBolt(Shot):
-    """Bola del Guardian Tirador: vuela derecho (no rebota), a la misma
-    velocidad que la bola de fuego del jugador. Se apaga al tocar una
-    pared o al llegar a su alcance."""
 
     damage = GSHOOT_DAMAGE
     knockback = GSHOOT_KNOCKBACK
@@ -4568,7 +3878,6 @@ class GuardianBolt(Shot):
 
         dist = self.vel.length() * dt
 
-        # De a pasitos para no atravesar paredes finas si un frame tarda
         steps = max(1, math.ceil(dist / 3.0))
         step = dist / steps
 
@@ -4601,12 +3910,6 @@ class GuardianBolt(Shot):
 
 
 class GuardianShooter(Guardian):
-    """Del tamano del jugador. Pasea tranquilo; cuando tu luz lo toca (o
-    le pegas) se despierta y NO se acerca a pegarte: toma distancia (se
-    aleja si te acercas, se acerca si te alejas y da vueltas a tu
-    alrededor) y te dispara bolas como las tuyas. Antes de disparar queda
-    quieto un instante cargando (aviso). Apunta adelantandose a donde vas
-    a estar, y solo dispara cuando te ve (sin paredes en el medio)."""
 
     def __init__(self, x, y, spawn_delay=0.0):
 
@@ -4622,22 +3925,18 @@ class GuardianShooter(Guardian):
         self.strafe_dir = random.choice((-1, 1))
         self.strafe_t = random.uniform(*GSHOOT_STRAFE_TIME)
 
-        # Que no disparen todos juntos apenas se despiertan
         self.cooldown = random.uniform(0.3, 0.9)
 
         self._shots = []
 
-    # ---------- disparo ----------
 
     def take_shots(self):
-        """Las bolas que acaba de soltar (y se vacia la lista)."""
 
         shots, self._shots = self._shots, []
 
         return shots
 
     def _line_clear(self, a, b, collision_map):
-        """True si no hay paredes ni bloques entre `a` y `b`."""
 
         a = pygame.Vector2(a)
         b = pygame.Vector2(b)
@@ -4658,16 +3957,12 @@ class GuardianShooter(Guardian):
         return True
 
     def _lead_point(self, target):
-        """Donde va a estar el jugador cuando llegue la bola (puntería
-        con intercepcion: usa la velocidad real del jugador y la de la
-        bola)."""
 
         origin = self.pos
         d = target - origin
         v = self.target_vel
         speed = GSHOOT_BOLT_SPEED
 
-        # |d + v*t| = speed*t  ->  a*t^2 + b*t + c = 0
         a = v.dot(v) - speed * speed
         b = 2.0 * d.dot(v)
         c = d.dot(d)
@@ -4702,14 +3997,12 @@ class GuardianShooter(Guardian):
 
         point = pygame.Vector2(target) + v * t
 
-        # Si el jugador corre contra una pared, no le apunta afuera de la sala
         point.x = max(self.room.left + 4, min(self.room.right - 4, point.x))
         point.y = max(self.room.top + 4, min(self.room.bottom - 4, point.y))
 
         return point
 
     def _aim_angle(self, target):
-        """Angulo (radianes) hacia donde hay que tirar para pegarte."""
 
         point = self._lead_point(target)
 
@@ -4734,10 +4027,8 @@ class GuardianShooter(Guardian):
 
         self._shots.append(shot)
 
-    # ---------- movimiento ----------
 
     def _keep_distance(self, dt, toward, dist, can_see, collision_map):
-        """Retrocede / se acerca / da vueltas segun la distancia."""
 
         side = self.strafe_dir
 
@@ -4752,14 +4043,12 @@ class GuardianShooter(Guardian):
 
         if dist < GSHOOT_MIN_DIST:
 
-            # Se aleja (prefiere irse de costado, asi no se encajona)
             d = self._walk(
                 dt, -toward, GSHOOT_RETREAT_SPEED, collision_map,
                 angles=(0, 40 * side, -40 * side, 80 * side, -80 * side)
             )
 
             if d is None:
-                # Arrinconado: da vueltas igual (y sigue disparando)
                 d = self._walk(
                     dt, perp, GSHOOT_MOVE_SPEED, collision_map,
                     angles=(0, 30, -30)
@@ -4780,8 +4069,6 @@ class GuardianShooter(Guardian):
 
         else:
 
-            # Dentro de su distancia: da vueltas. Si hay una pared en el
-            # medio, tambien: asi cambia de angulo hasta verte.
             d = self._walk(
                 dt, perp, GSHOOT_MOVE_SPEED, collision_map,
                 angles=(0, 25, -25)
@@ -4795,7 +4082,6 @@ class GuardianShooter(Guardian):
 
         self._face(toward)
 
-    # ---------- actualizar ----------
 
     def update(self, dt, target, collision_map, light_on, light_radius):
 
@@ -4815,7 +4101,6 @@ class GuardianShooter(Guardian):
 
             return
 
-        # Velocidad del jugador, suavizada (para adelantar la punteria)
         if self._prev_target is not None and dt > 0:
 
             raw = (target - self._prev_target) / dt
@@ -4834,7 +4119,6 @@ class GuardianShooter(Guardian):
         dist = to_player.length()
         toward = to_player / dist if dist > 0.01 else pygame.Vector2(1, 0)
 
-        # ---- paseando tranquilo: la luz lo despierta ----
         if self.phase == self.WANDER:
 
             if light_on and dist <= light_radius:
@@ -4862,7 +4146,6 @@ class GuardianShooter(Guardian):
 
                 return
 
-        # ---- cargando: quieto, apuntandote (aviso) ----
         if self.phase == self.WINDUP:
 
             self.phase_t += dt
@@ -4875,7 +4158,6 @@ class GuardianShooter(Guardian):
 
             if self.phase_t >= GSHOOT_AIM_TIME:
 
-                # Se corto la linea (te metiste detras de algo): no dispara
                 if not self._line_clear(self.pos, target, collision_map):
 
                     self.phase = self.CHASE
@@ -4883,7 +4165,6 @@ class GuardianShooter(Guardian):
 
                     return
 
-                # Justo antes de soltarla, apunta lo mas fino posible
                 self.aim = self._aim_angle(target)
 
                 self._fire()
@@ -4894,7 +4175,6 @@ class GuardianShooter(Guardian):
 
             return
 
-        # ---- recien disparo: quieto un ratito ----
         if self.phase == self.SWING:
 
             self.phase_t += dt
@@ -4904,7 +4184,6 @@ class GuardianShooter(Guardian):
 
             return
 
-        # ---- despierto: toma distancia y dispara ----
         can_see = False
 
         if self.cooldown <= 0 or dist <= GSHOOT_MAX_DIST:
@@ -4925,10 +4204,8 @@ class GuardianShooter(Guardian):
 
         self._keep_distance(dt, toward, dist, can_see, collision_map)
 
-    # ---------- dibujo ----------
 
     def _draw_attack(self, screen, camera, dest, art):
-        """Mientras carga se ve una bolita creciendo en la punta."""
 
         if self.phase != self.WINDUP:
             return
@@ -4950,17 +4227,12 @@ class GuardianShooter(Guardian):
         pygame.draw.circle(screen, (245, 230, 255), center, max(1, int(radius * 0.3)))
 
 
-# ---------------------------------------------------------------
-# Cofre del premio
-# ---------------------------------------------------------------
-
 class RewardChest:
-    """Aparece al ganar la oleada, brilla cada vez mas y explota."""
 
     APPEAR_TIME = 0.6
     GLOW_TIME = 2.4
     OPEN_TIME = 0.5
-    SIZE = 20                 # unidades del mundo (igual que los cofres)
+    SIZE = 20
 
     def __init__(self, x, y):
 
@@ -4968,15 +4240,13 @@ class RewardChest:
         self.y = y
 
         self.t = 0.0
-        self.phase = "appear"      # appear -> glow -> open
+        self.phase = "appear"
         self.done = False
 
         self._glow_cache = {}
 
-    # ---------- logica ----------
 
     def update(self, dt):
-        """Devuelve True justo el frame en que explota."""
 
         self.t += dt
 
@@ -4999,7 +4269,6 @@ class RewardChest:
 
     @property
     def glow_k(self):
-        """0 a 1: cuanto falta para que explote."""
 
         if self.phase == "appear":
             return 0.0
@@ -5010,7 +4279,6 @@ class RewardChest:
         return min(1.0, (self.t - self.APPEAR_TIME) / self.GLOW_TIME)
 
     def light(self):
-        """(x, y, radio en pixeles de pantalla) para iluminar."""
 
         if self.phase == "appear":
 
@@ -5027,7 +4295,6 @@ class RewardChest:
             self.x, self.y, quantize_radius(95 + 55 * k + 18 * pulse)
         )
 
-    # ---------- dibujo ----------
 
     def _sprite(self, name, zoom):
 
@@ -5063,7 +4330,6 @@ class RewardChest:
         )
 
     def draw(self, screen, camera):
-        """El cofre en si (va debajo de la oscuridad)."""
 
         if self.phase == "open" and self.t > 0.15:
             sprite = self._sprite("cofre_abierto.png", camera.zoom)
@@ -5080,7 +4346,6 @@ class RewardChest:
 
         if self.phase == "appear":
 
-            # Cae desde arriba con rebotito
             k = min(1.0, self.t / self.APPEAR_TIME)
             fall = (1 - k) ** 2
 
@@ -5088,7 +4353,6 @@ class RewardChest:
 
         elif self.phase == "glow":
 
-            # Tiembla cada vez mas fuerte antes de explotar
             k = self.glow_k
 
             dx = int(math.sin(self.t * 70) * (1 + 4 * k))
@@ -5107,7 +4371,6 @@ class RewardChest:
         screen.blit(sprite, sprite.get_rect(center=(cx + dx, cy + dy)))
 
     def draw_glow(self, screen, camera):
-        """El brillo (va encima de la oscuridad)."""
 
         if self.phase == "appear":
             return
@@ -5116,7 +4379,6 @@ class RewardChest:
 
         radius = (20 + 30 * k + 4 * math.sin(self.t * 10)) * camera.zoom
 
-        # Por pasos de 16 px, asi se reutilizan las superficies
         radius = max(16, int(round(radius / 16.0)) * 16)
 
         glow = self._glow_surface(radius)
@@ -5126,16 +4388,7 @@ class RewardChest:
         screen.blit(glow, glow.get_rect(center=(cx, cy)))
 
 
-# ---------------------------------------------------------------
-# La sala
-# ---------------------------------------------------------------
-
-# ---------------------------------------------------------------
-# Las salas de combate (una config por sala)
-# ---------------------------------------------------------------
-
 class ArenaConfig:
-    """Todo lo que cambia de una sala de oleadas a otra."""
 
     def __init__(self, key, title, room, trigger, exit_pos, gate,
                  table, rewards, last_wave, save_wave, save_done,
@@ -5153,30 +4406,21 @@ class ArenaConfig:
         self.table = table
         self.rewards = rewards
         self.last_wave = last_wave
-        self.save_wave = save_wave        # clave en la partida: oleada que sigue
-        self.save_done = save_done        # clave en la partida: sala completada
-        self.show_total = show_total      # "Oleada 1/2" en el cartel
+        self.save_wave = save_wave
+        self.save_done = save_done
+        self.show_total = show_total
         self.sealed_text = sealed_text
         self.done_text = done_text
-        self.gem_id = gem_id              # que gema tira el cofre final
-        self.gem_name = gem_name          # como se llama en los mensajes
+        self.gem_id = gem_id
+        self.gem_name = gem_name
 
 
-# Sala grande de la DERECHA: 10 oleadas
 RIGHT_ARENA = ArenaConfig(
     "right", "Sala de combate",
     ROOM, TRIGGER, EXIT_POS, GATE,
     WAVE_COMPOSITION, WAVE_REWARDS, LAST_WAVE,
     "arena_wave", "arena_completed",
 )
-
-# ---------------------------------------------------------------
-# Sala grande de la IZQUIERDA: 10 oleadas.
-#   Los guardianes (mismo tamano que el personaje) y los tiradores
-#   aparecen desde el principio y suben con las oleadas.
-# Cada numero: (pinos, troncos, mosquitos, hongunes, guardianes, tiradores)
-# ---------------------------------------------------------------
-
 
 
 LEFT_WAVE_REWARDS = {
@@ -5226,19 +4470,16 @@ class Arena:
 
     def __init__(self, screen_size, cfg=None):
 
-        # Que sala es (la derecha por defecto, o la de la izquierda)
         self.cfg = cfg or RIGHT_ARENA
 
         self.size = screen_size
 
         self.state = self.IDLE
 
-        # True = puede abrir el menu al pisar la sala. Se desarma al
-        # abrirlo y se arma de nuevo cuando el jugador sale.
         self.armed = True
 
         self.wave = 1
-        self.mode = None            # "escape" / "noescape"
+        self.mode = None
 
         self.enemies = []
         self.shots = []
@@ -5250,7 +4491,7 @@ class Arena:
         self.golem_art = GolemArt()
         self.guardian_art = GuardianArt()
         self.shooter_art = GuardianShooterArt()
-        self.blasts = []            # explosiones de hongunes (aro + luz)
+        self.blasts = []
         self.mosquito_alert = False
 
         self.chest = None
@@ -5262,9 +4503,8 @@ class Arena:
         self.last_death = None
         self.gate_on = False
 
-        # Mapa completado: la sala queda cerrada para siempre
         self.completed = False
-        self.final_clear = False    # True mientras se cobra la oleada final
+        self.final_clear = False
         self._sealed_msg_t = -10.0
 
         self.particles = []
@@ -5274,10 +4514,8 @@ class Arena:
 
         self._gate_time = 0.0
 
-        # Tiempo que lleva el jugador afuera de la sala durante una oleada
         self._out_t = 0.0
 
-        # ---------- imagenes ----------
 
         w, h = screen_size
 
@@ -5319,7 +4557,6 @@ class Arena:
                 load_image(COMBAT_DIR / f"{name}_hover.png", self.BUTTON_SIZE),
             )
 
-        # ---------- posiciones del menu ----------
 
         self.panel_rect = pygame.Rect(0, 0, *self.PANEL_SIZE)
         self.panel_rect.center = (w // 2, h // 2)
@@ -5337,7 +4574,6 @@ class Arena:
 
             self.button_rects[key] = rect
 
-    # ---------- estado ----------
 
     @property
     def menu_open(self):
@@ -5351,24 +4587,16 @@ class Arena:
 
     @property
     def current_reward(self):
-        """Premio de la oleada actual (con el X2 si es sin escape)."""
 
         mult = NO_ESCAPE_MULT if self.mode == "noescape" else 1
 
         return base_reward(self.wave, self.cfg.rewards) * mult
 
     def targets(self):
-        """Lo que el fosforo puede golpear."""
 
         return [e for e in self.enemies if not e.spawning and not e.dead and not getattr(e, "attached", False)]
 
     def hurt_in_radius(self, center, radius, damage):
-        """Quema a los enemigos que estan dentro de la luz (polvora).
-
-        center, radius -> en unidades del mundo.
-        Resta vida directo (sin empujon ni atontamiento: es un dano
-        que se repite varias veces por segundo) y los hace parpadear.
-        """
 
         cx, cy = center
 
@@ -5387,14 +4615,12 @@ class Arena:
                 enemy.flash = max(enemy.flash, ENEMY_FLASH_TIME)
 
     def light_sources(self):
-        """Luces extra (el cofre ilumina y la explosion tambien)."""
 
         sources = []
 
         if self.chest is not None and not self.chest.done:
             sources.append(self.chest.light())
 
-        # Cada hongun que recarga da un poco de luz, y su explosion tambien
         for enemy in self.enemies:
 
             if isinstance(enemy, (Hongun, Destello)):
@@ -5424,7 +4650,6 @@ class Arena:
 
         return sources
 
-    # ---------- menu ----------
 
     def _open_menu(self, game):
 
@@ -5435,7 +4660,6 @@ class Arena:
         game.melee.cancel()
 
     def update_menu(self, dt):
-        """El juego esta en pausa mientras el menu esta abierto."""
 
         self._gate_time += dt
 
@@ -5480,7 +4704,6 @@ class Arena:
 
         game.show_message(f"Oleada {self.wave}")
 
-    # ---------- barrera ----------
 
     def _close_gate(self, game):
 
@@ -5491,7 +4714,6 @@ class Arena:
 
     def _open_gate(self, game):
 
-        # Mapa completado: la entrada no se vuelve a abrir
         if self.completed:
             return
 
@@ -5505,9 +4727,6 @@ class Arena:
             self.gate_on = False
 
     def restore_completed(self, game):
-        """Al cargar una partida con el mapa completado: la sala queda
-        cerrada. Si el jugador quedo adentro (o pisando la entrada) se
-        lo saca afuera para que no quede atrapado."""
 
         if not self.completed:
             return
@@ -5515,7 +4734,6 @@ class Arena:
         self._seal(game)
 
     def _seal(self, game):
-        """Cierra la entrada para siempre."""
 
         p = game.player
 
@@ -5526,7 +4744,6 @@ class Arena:
 
         self._close_gate(game)
 
-    # ---------- oleadas ----------
 
     def _spawn_wave(self, game):
 
@@ -5614,17 +4831,14 @@ class Arena:
             else:
                 enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
 
-            # Clave de la enciclopedia (para marcarlo como descubierto)
             enemy.codex_key = (
                 "guardian_tirador" if kind == "tirador" else kind
             )
 
-            # Se mueve solo dentro de ESTA sala
             enemy.room = self.cfg.room
 
             self.enemies.append(enemy)
 
-        # Efecto de arranque: onda, sacudon, titulo y humo por enemigo
         fx = getattr(game, "fx", None)
 
         if fx is not None:
@@ -5644,11 +4858,9 @@ class Arena:
 
         audio.play("wave_clear")
 
-        # Ya no quedan enemigos: se puede salir
         self._open_gate(game)
 
     def _explode(self, game):
-        """El cofre explota y tira las monedas del premio."""
 
         cx, cy = self.chest.x, self.chest.y
 
@@ -5675,8 +4887,6 @@ class Arena:
                 ]),
             })
 
-        # Monedas: como mucho MAX_COIN_ITEMS dibujadas, cada una con
-        # su parte del premio (la suma da exacto el premio)
         items = max(1, min(self.reward, MAX_COIN_ITEMS))
 
         base, extra = divmod(self.reward, items)
@@ -5702,10 +4912,6 @@ class Arena:
         self.collect_t = 0.0
         self.banner_t = BANNER_TIME
 
-        # Oleada final: el cofre tambien tira una gema y el mapa queda
-        # completado. La gema se cuenta ya (asi no se pierde si cerras
-        # el juego mientras juntas las monedas); value = 0 evita
-        # contarla dos veces al agarrarla.
         if self.wave == self.cfg.last_wave:
 
             self._add_gem(game)
@@ -5726,7 +4932,6 @@ class Arena:
             self.completed = True
             self.banner_t = BANNER_TIME_FINAL
 
-        # La siguiente oleada ya queda lista
         self.wave += 1
 
     def _coin_target(self, game, cx, cy):
@@ -5749,13 +4954,11 @@ class Arena:
         return [c for c in self.reward_coins if c in game.world_items]
 
     def _credit_leftover(self, game):
-        """Las monedas que quedaron en el piso se suman solas."""
 
         for coin in self._coins_left(game):
 
             game.world_items.remove(coin)
 
-            # La gema ya se conto al explotar el cofre (value = 0)
             if coin.item_id in ("gema", "gema_verde"):
                 self._add_gem(
                     game, getattr(coin, "value", 1), coin.item_id
@@ -5765,18 +4968,14 @@ class Arena:
 
         self.reward_coins = []
 
-    # ---------- gemas ----------
 
     def _add_gem(self, game, amount=1, item_id=None):
-        """Suma gemas al contador que corresponde: la verde oscuro
-        (sala del Guardian) o la normal (sala de la derecha)."""
 
         if (item_id or self.cfg.gem_id) == "gema_verde":
             game.gems_green += amount
         else:
             game.gems += amount
 
-    # ---------- salir / terminar ----------
 
     def _teleport_out(self, game):
 
@@ -5791,8 +4990,6 @@ class Arena:
         game.melee.cancel()
 
     def _release_player(self, game):
-        """Por si el jugador quedo agarrado por un golem (termina la
-        oleada, sale de la sala, muere...): lo deja libre."""
 
         p = game.player
 
@@ -5815,13 +5012,10 @@ class Arena:
         self._out_t = 0.0
         self.state = self.IDLE
 
-        # Mapa completado: la entrada queda cerrada para siempre
         if self.completed:
             self._seal(game)
 
     def _finish_map(self, game):
-        """Termino de cobrarse la oleada final: se saca al jugador de la
-        sala, la entrada se cierra para siempre y se guarda."""
 
         self._end_run(game)
         self._teleport_out(game)
@@ -5830,21 +5024,17 @@ class Arena:
         game.save_progress()
 
     def _leave(self, game):
-        """Boton Salir (o ESC en el menu)."""
 
         self._end_run(game)
         self._teleport_out(game)
 
     def _player_died(self, game):
-        """Morir en la sala (con o sin escape) es perder de verdad:
-        termina la partida."""
 
         self._end_run(game)
 
         game.state = "dying"
         game.fade_alpha = 0
 
-    # ---------- update ----------
 
     def _update_fx(self, dt):
 
@@ -5880,11 +5070,9 @@ class Arena:
         self._gate_time += dt
 
     def update(self, game, dt):
-        """Se llama una vez por frame con el juego en marcha."""
 
         self._update_fx(dt)
 
-        # La alerta del mosquito solo vale durante la oleada
         if self.state != self.WAVE:
             self.mosquito_alert = False
 
@@ -5892,8 +5080,6 @@ class Arena:
 
         if self.state == self.IDLE:
 
-            # Mapa completado: no se abre mas el menu. Si te acercas a
-            # la entrada cerrada te avisa.
             if self.completed:
 
                 if (
@@ -5923,9 +5109,6 @@ class Arena:
         if self.banner_t > 0:
             self.banner_t = max(0.0, self.banner_t - dt)
 
-        # Con escape podes irte caminando, pero solo se cancela si te
-        # quedas afuera ESCAPE_GRACE segundos (si solo rozas la puerta
-        # y volves a entrar, la oleada sigue)
         outside = not self.cfg.room.collidepoint(p.rect.center)
 
         if outside:
@@ -5935,7 +5118,6 @@ class Arena:
 
         if outside and self._out_t < ESCAPE_GRACE:
 
-            # Todavia hay margen: se avisa una sola vez y sigue el juego
             if self._out_t - dt <= 0.0 and self.state == self.WAVE:
                 game.show_message("Volve a la sala o se cancela la oleada")
 
@@ -5949,13 +5131,10 @@ class Arena:
 
             elif self.state == self.CLEAR:
 
-                # Se va antes de la explosion: el premio se cobra igual
                 game.add_coins(self.reward)
 
                 game.show_message(f"+{self.reward} monedas")
 
-                # Oleada final: tambien se lleva la gema y el mapa queda
-                # completado (si no, podria repetir la oleada 10)
                 if self.wave == self.cfg.last_wave:
 
                     self._add_gem(game)
@@ -5990,11 +5169,8 @@ class Arena:
 
     def _update_wave(self, game, dt):
 
-        # Renueva el cupo de caminos A* de este frame
         pathing.begin_frame()
 
-        # Enciclopedia: cada enemigo que ya aparecio en la sala queda
-        # descubierto en esta partida
         for e in self.enemies:
 
             key = getattr(e, "codex_key", None)
@@ -6008,7 +5184,6 @@ class Arena:
         body.midbottom = (p.rect.centerx, p.rect.bottom)
         light_on = bool(game.has_match)
         light_world = game._light_radius() / game.camera.zoom if light_on else 0.0
-        # Repelente: la luz espanta a los mosquitos mientras dura
         repel = light_on and game.repel_timer > 0
 
         for enemy in self.enemies:
@@ -6018,7 +5193,6 @@ class Arena:
                     game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
             elif isinstance(enemy, GuardianShooter):
-                # No pega: dispara bolas (se mueven y pegan con self.shots)
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
                 new_shots = enemy.take_shots()
                 if new_shots:
@@ -6030,7 +5204,6 @@ class Arena:
             elif isinstance(enemy, Guardian):
                 enemy.update(dt, target, game.collision_map, light_on, light_world)
                 if enemy.swing_hits(body.center):
-                    # Su golpe es como el tuyo: si te toca, te saca vida
                     if p.hurt(enemy.pos):
                         game.take_damage(GUARDIAN_DAMAGE)
                         away = pygame.Vector2(body.center) - enemy.pos
@@ -6046,8 +5219,6 @@ class Arena:
                         audio.play("shot")
                     self.shots.extend(new_shots)
 
-        # Si el golem que te tenia murio (polvora, bola de fuego...) o ya
-        # no hay ninguno agarrandote, quedas libre
         if p.grabbed and not any(
             isinstance(e, Golem) and e.holding and not e.dead
             for e in self.enemies
@@ -6085,7 +5256,6 @@ class Arena:
                 continue
             if shot.rect.colliderect(body):
                 if p.hurt(shot.pos):
-                    # Las bolas del Guardian Tirador traen su propio dano
                     amount = getattr(shot, "damage", None)
                     game.take_damage(
                         amount if amount is not None
@@ -6099,13 +5269,11 @@ class Arena:
 
         self.shots = [s for s in self.shots if not s.dead]
 
-        # Hongunes que terminaron de recargar: explotan
         for enemy in self.enemies:
             if isinstance(enemy, Hongun) and enemy.boom and not enemy.boomed:
                 enemy.boomed = True
                 self._hongun_explode(game, enemy)
 
-        # Destellos que te alcanzaron corriendo: explotan (flashbang)
         for enemy in self.enemies:
             if (
                 isinstance(enemy, Destello)
@@ -6121,7 +5289,6 @@ class Arena:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
                 game.count_stat("kills")
-                # El hongun que explota ya tiene su propio efecto
                 if not getattr(enemy, "boom", False):
                     self._death_puff(enemy.pos)
 
@@ -6131,22 +5298,15 @@ class Arena:
             self._player_died(game)
             return
 
-        # La oleada termina solo cuando no queda NINGUN enemigo (los
-        # mosquitos pegados tambien cuentan: aunque te chupen todos, la
-        # partida sigue)
         if not self.enemies:
             self.shots = []
             self._wave_cleared(game)
 
-    # ---------- golem ----------
 
     def _golem_step(self, game, enemy, body, dt):
-        """Todo lo que pasa entre un golem y el jugador: agarrarlo,
-        sostenerlo, apretar (escudo / vida) y soltarlo."""
 
         p = game.player
 
-        # ---- empieza el agarre: lo tocó una vez y listo ----
         if (
             enemy.can_grab(body)
             and not p.grabbed
@@ -6158,28 +5318,22 @@ class Arena:
             p.kb_vel = pygame.Vector2()
             game.melee.cancel()
 
-        # ---- lo tiene agarrado: lo acomoda en sus manos y lo levanta ----
         if enemy.holding:
 
             self._golem_hold(game, enemy, dt)
 
-            # El apreton: se saca el escudo (o toda la vida de la luz)
             if enemy.take_squeeze():
                 self._golem_squeeze(game, enemy)
 
-        # ---- lo suelta: empujon e invulnerabilidad ----
         if enemy.take_release():
 
             p.grabbed = False
             p.grab_lift = 0.0
 
-            # Te tira para el lado de donde viniste
             p.kb_vel = enemy.grab_dir * GOLEM_KNOCKBACK
             p.invuln_timer = max(p.invuln_timer, GOLEM_POST_INVULN)
 
     def _golem_hold(self, game, enemy, dt):
-        """Mientras dura el agarre el jugador no se mueve ni pega: el
-        golem lo va acomodando adelante de sus manos y lo levanta."""
 
         p = game.player
 
@@ -6209,13 +5363,11 @@ class Arena:
         game.melee.cancel()
 
     def _golem_squeeze(self, game, enemy):
-        """El golem aprieta: te saca TODO el escudo; si no tenias
-        escudo, te saca TODA la vida de la luz."""
 
         p = game.player
         pos = pygame.Vector2(p.rect.center)
 
-        p.hurt_timer = p.HURT_TIME   # se pone rojo
+        p.hurt_timer = p.HURT_TIME
 
         if game.escudo > 0:
 
@@ -6229,7 +5381,6 @@ class Arena:
 
             game.show_message("El Golem te aplasto: se apago tu luz!")
 
-        # Polvo de piedra
         for _ in range(34):
 
             angle = random.uniform(0, math.tau)
@@ -6250,26 +5401,20 @@ class Arena:
             })
 
     def _hongun_fx(self, game, pos, player_dist):
-        """Efectos de la explosion del hongun: nucleo de luz, ondas de
-        choque, chispas, nube de esporas, trozos del sombrero, humo, y
-        temblor de pantalla (mas fuerte cuanto mas cerca estes)."""
 
         fx = game.fx
 
         x, y = pos.x, pos.y
         R = HONGUN_BLAST_RADIUS
 
-        # --- Nucleo: un fogonazo blanco y un halo verde grande ---
         fx._spark(x, y, 0, 0, 0.12, (255, 255, 255), size=44, drag=0)
         fx._spark(x, y, 0, 0, 0.22, (255, 250, 200), size=34, drag=0)
         fx._spark(x, y, 0, 0, 0.45, (130, 235, 120), size=R * 0.75, drag=0)
 
-        # --- Ondas de choque (la blanca llega justo al radio del dano) ---
         fx._ring(x, y, 4, R, 0.32, (255, 255, 255), 6)
         fx._ring(x, y, 2, R * 1.2, 0.5, (150, 255, 140), 4, delay=0.05)
         fx._ring(x, y, 2, R * 0.65, 0.28, (255, 236, 150), 3, delay=0.09)
 
-        # --- Chispas con estela, salen en todas direcciones ---
         for _ in range(38):
 
             fx._spark(
@@ -6282,7 +5427,6 @@ class Arena:
                 size=random.uniform(1.6, 3.2), drag=3.2, streak=True
             )
 
-        # --- Nube de esporas: verde, lenta, sube de a poco ---
         for _ in range(28):
 
             fx._spark(
@@ -6295,7 +5439,6 @@ class Arena:
                 size=random.uniform(2.5, 5.0), drag=1.7, grav=-22
             )
 
-        # --- Trozos del sombrero: caen con gravedad ---
         for _ in range(14):
 
             fx._spark(
@@ -6307,7 +5450,6 @@ class Arena:
                 size=random.uniform(2.0, 3.6), drag=1.6, grav=340
             )
 
-        # --- Humo que se queda un ratito ---
         for _ in range(10):
 
             fx._spark(
@@ -6319,7 +5461,6 @@ class Arena:
                 delay=0.08
             )
 
-        # --- Temblor y freeze: se sienten mas cerca de la explosion ---
         near = max(0.0, min(1.0, 1.0 - player_dist / (R * 2.4)))
 
         fx.shake(2.5 + 8.0 * near, 0.3 + 0.3 * near)
@@ -6331,7 +5472,6 @@ class Arena:
             fx.flash(0.2, (225, 255, 215), 0.45)
 
     def _hongun_explode(self, game, enemy):
-        """Explota el hongun: efecto, dano y empujon al jugador."""
 
         p = game.player
         pos = pygame.Vector2(enemy.pos)
@@ -6349,8 +5489,6 @@ class Arena:
         if body.distance_to(pos) > HONGUN_BLAST_RADIUS:
             return
 
-        # La explosion pega siempre, aunque el jugador estuviera en su
-        # ratito de invulnerabilidad
         p.invuln_timer = 0.0
         p.hurt(pos)
 
@@ -6364,14 +5502,11 @@ class Arena:
         p.kb_vel = away.normalize() * HONGUN_KNOCKBACK
 
     def _destello_explode(self, game, enemy):
-        """Explota el destello: dano, empujon y pantalla en blanco."""
 
         p = game.player
         pos = pygame.Vector2(enemy.pos)
         body = pygame.Vector2(p.rect.center)
 
-        # Pega siempre, aunque el jugador estuviera en su ratito de
-        # invulnerabilidad
         p.invuln_timer = 0.0
         p.hurt(pos)
 
@@ -6384,7 +5519,6 @@ class Arena:
 
         p.kb_vel = away.normalize() * DESTELLO_KNOCKBACK
 
-        # El "pum": la pantalla se pone blanca (lo dibuja el juego)
         game.flashbang(pos.x, pos.y)
 
     def _death_puff(self, pos):
@@ -6416,7 +5550,6 @@ class Arena:
 
         done = not left and self.collect_t > 1.0
 
-        # Oleada final: se espera a que se vea el cartel de mapa completado
         if self.final_clear:
             done = done and self.banner_t <= 0
 
@@ -6429,13 +5562,9 @@ class Arena:
             else:
                 self._open_menu(game)
 
-    # ---------- dibujo ----------
 
     def draw_world(self, screen, camera):
-        """Enemigos, cofre y barrera (debajo de la oscuridad)."""
 
-        # Solo se dibujan los enemigos que se ven en pantalla (con 40
-        # enemigos en la sala, dibujar los de afuera era tiempo perdido)
         view = screen.get_rect().inflate(320, 320)
 
         for enemy in self.enemies:
@@ -6462,7 +5591,6 @@ class Arena:
         if self.chest is not None and not self.chest.done:
             self.chest.draw(screen, camera)
 
-        # Mapa completado: entrada sellada (fija, no parpadea)
         if self.gate_on and self.completed:
 
             rect = camera.apply(self.cfg.gate)
@@ -6493,22 +5621,18 @@ class Arena:
             screen.blit(bar, rect)
 
     def draw_fx(self, screen, camera):
-        """Brillo, explosion y chispas (encima de la oscuridad)."""
 
         if self.chest is not None and not self.chest.done:
             self.chest.draw_glow(screen, camera)
 
-        # Las bolas se ven siempre, aunque no las alumbres
         for shot in self.shots:
             shot.draw(screen, camera, self.tronco_art)
 
-        # Brillo blanco de los hongunes que estan recargando
         for enemy in self.enemies:
 
             if isinstance(enemy, Hongun) and enemy.fuse_t > 0 and not enemy.dead:
                 self._draw_hongun_glow(screen, camera, enemy)
 
-        # Aro blanco de las explosiones de hongun
         for blast in self.blasts:
 
             k = blast["t"] / HONGUN_BLAST_TIME
@@ -6566,7 +5690,6 @@ class Arena:
             pygame.draw.circle(screen, part["color"], (sx, sy), size)
 
     def _draw_hongun_glow(self, screen, camera, enemy):
-        """Resplandor blanco alrededor del hongun mientras recarga."""
 
         k = enemy.fuse_k
 
@@ -6591,12 +5714,10 @@ class Arena:
         screen.blit(glow, glow.get_rect(center=(cx, cy)))
 
     def draw_hud(self, screen):
-        """Cartel de oleada arriba a la izquierda + aviso de victoria."""
 
         if not self.active:
             return
 
-        # ---------- cartel de oleada ----------
 
         rect = pygame.Rect(18, 18, 180, 40)
 
@@ -6609,7 +5730,6 @@ class Arena:
             pygame.draw.rect(screen, (138, 146, 158), rect, border_radius=8)
             pygame.draw.rect(screen, (84, 92, 104), rect, 3, border_radius=8)
 
-        # En CLEAR todavia no se sumo la oleada; en COLLECT ya si
         number = self.wave - 1 if self.state == self.COLLECT else self.wave
 
         label = f"Oleada {number}"
@@ -6656,10 +5776,6 @@ class Arena:
                 topleft=(text_rect.right + 8, premio_y)
             )
 
-        # (la alerta del mosquito ahora la dibuja EffectsBar, arriba junto
-        # a los cubitos de efectos: ui/effects_bar.py)
-
-        # ---------- oleada completada ----------
 
         if self.banner_t > 0:
             self._draw_banner(screen)
@@ -6698,7 +5814,6 @@ class Arena:
 
         if final:
 
-            # Monedas a la izquierda, gema a la derecha
             y = local.centery + 28
 
             if self.coin_icon is not None:
@@ -6739,8 +5854,6 @@ class Arena:
         screen.blit(layer, rect)
 
     def draw_menu(self, screen, game):
-        """Pantalla transparente con Salir / Jugar con escape / Jugar
-        sin escape."""
 
         screen.blit(self.dim, (0, 0))
 
@@ -6802,7 +5915,6 @@ class Arena:
                     center=rect.center
                 )
 
-            # Sin luz no se puede pelear
             if key != "exit" and not game.has_match:
 
                 veil = pygame.Surface(rect.size, pygame.SRCALPHA)

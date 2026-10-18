@@ -21,7 +21,6 @@ MOUTH_IMAGE = (
     / "vendedor_boca.png"
 )
 
-# Catalogo por si falta data/shop.json
 DEFAULT_CATALOG = [
     {
         "nombre": "Luces",
@@ -46,7 +45,6 @@ DEFAULT_CATALOG = [
 
 
 def load_catalog():
-    """Secciones de data/shop.json: [{nombre, items: [{id, precio}]}]"""
 
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -93,34 +91,18 @@ def price_table(catalog):
 
 
 class Shopkeeper:
-    """El vendedor rojo de la sala superior central.
 
-    Esta dibujado en el mapa (mapa.png); aca solo vive su zona de
-    interaccion, el cartelito de [F] y la animacion de escupir lo
-    que compraste. La tienda se abre tocando F (la E queda para
-    agarrar cosas).
-    """
-
-    # Boca del vendedor (coordenadas del mundo = pixeles de mapa.png)
     MOUTH = (951, 87)
 
-    # Arriba de la cabeza, para el cartel de [F]
     HEAD_TOP = 76
 
-    # Desde donde se le puede hablar: alrededor de la mesa (el
-    # jugador no puede pasar al otro lado)
     TALK_RECT = pygame.Rect(902, 100, 92, 40).inflate(44, 60)
 
-    # El cuadrado de la tienda (la salita de arriba). Adentro todo esta
-    # iluminado y la luz del jugador no se gasta.
     ZONE = pygame.Rect(840, 30, 215, 140)
 
-    # Que tanto se difumina el borde de la luz de la tienda (mundo)
     ZONE_FEATHER = 22
 
     def zone_inset(self, player):
-        """Cuanto adentro del cuadrado esta el jugador (0 = en el borde
-        o afuera). Sirve para apagar su luz de a poco al entrar."""
 
         x, y = player.rect.center
         z = self.ZONE
@@ -130,10 +112,8 @@ class Shopkeeper:
 
         return float(min(x - z.left, z.right - x, y - z.top, z.bottom - y))
 
-    # Donde caen los items escupidos: el piso al frente de la mesa
     LAND_RECT = pygame.Rect(878, 146, 140, 30)
 
-    # Tiempos de la escupida (segundos)
     FIRST_DELAY = 0.25
     ITEM_DELAY = 0.14
     MAX_SPIT_TIME = 4.0
@@ -142,11 +122,8 @@ class Shopkeeper:
 
     def __init__(self):
 
-        # Cartelito [F] (assets/maps/hud/F.png, 32x32, igual que E.png).
-        # Si falta el archivo se dibuja una F simple como reemplazo.
         self.f_icon = self._load_f_icon()
 
-        # Boca abierta (vendedor_boca.png); None si falta el archivo
         try:
             self.mouth_img = pygame.image.load(
                 str(MOUTH_IMAGE)
@@ -156,7 +133,6 @@ class Shopkeeper:
 
         self._mouth_cache = {}
 
-        # Segundos que le quedan escupiendo (0 = quieto)
         self.spit_time = 0.0
 
         self._clock = 0.0
@@ -187,7 +163,6 @@ class Shopkeeper:
 
         return surf
 
-    # ---------- interaccion ----------
 
     @property
     def busy(self):
@@ -195,7 +170,6 @@ class Shopkeeper:
         return self.spit_time > 0
 
     def in_zone(self, player):
-        """True si el jugador esta adentro del cuadrado de la tienda."""
 
         return self.ZONE.collidepoint(player.rect.center)
 
@@ -203,7 +177,6 @@ class Shopkeeper:
 
         return (not self.busy) and player.rect.colliderect(self.TALK_RECT)
 
-    # ---------- escupir ----------
 
     def _landing_point(self, collision_map):
 
@@ -218,15 +191,12 @@ class Shopkeeper:
         return self.LAND_RECT.center
 
     def spit(self, item_ids, collision_map):
-        """Escupe un item por cada id de la lista, uno atras del otro.
-        Devuelve los WorldItem para agregar al mundo."""
 
         count = len(item_ids)
 
         if count == 0:
             return []
 
-        # Con muchos items salen mas rapido para que no dure una eternidad
         gap = min(self.ITEM_DELAY, self.MAX_SPIT_TIME / count)
 
         items = []
@@ -248,12 +218,10 @@ class Shopkeeper:
 
             items.append(item)
 
-        # Tiene la boca abierta hasta que sale el ultimo
         self.spit_time = self.FIRST_DELAY + count * gap + 0.2
 
         return items
 
-    # ---------- update / dibujo ----------
 
     def update(self, dt):
 
@@ -263,7 +231,6 @@ class Shopkeeper:
             self.spit_time = max(0.0, self.spit_time - dt)
 
     def draw(self, screen, camera):
-        """Boca abierta mientras escupe (el resto esta en el mapa)."""
 
         if self.spit_time <= 0:
             return
@@ -272,7 +239,6 @@ class Shopkeeper:
 
         center = camera.apply(pygame.Rect(mx - 1, my - 1, 2, 2)).center
 
-        # La boca se abre y se cierra con cada item
         wave = abs(math.sin(self._clock * 16))
 
         rx = int((2.2 + 1.2 * wave) * camera.zoom)
@@ -302,7 +268,6 @@ class Shopkeeper:
         )
 
     def draw_prompt(self, screen, camera):
-        """Cartelito de [F] arriba de la cabeza."""
 
         mx = self.MOUTH[0]
 

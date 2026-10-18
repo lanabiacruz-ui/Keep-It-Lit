@@ -4,7 +4,7 @@ import pygame
 
 
 class Camera:
-  
+
 
     def __init__(
         self,
@@ -23,28 +23,27 @@ class Camera:
 
         self.zoom = zoom
 
-        
+
         self.smoothing = smoothing
 
         self.scaled_width = int(world_width * zoom)
         self.scaled_height = int(world_height * zoom)
 
-       
+
         self.x = 0
         self.y = 0
 
-        
+
         self._fx = 0.0
         self._fy = 0.0
 
     def update(self, player, dt=None):
-    
 
-       
+
         target_x = player.rect.centerx * self.zoom - self.screen_width / 2
         target_y = player.rect.centery * self.zoom - self.screen_height / 2
 
-        
+
         max_x = max(0, self.scaled_width - self.screen_width)
         max_y = max(0, self.scaled_height - self.screen_height)
 

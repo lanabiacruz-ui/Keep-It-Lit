@@ -6,7 +6,7 @@ from core.Save_manager import name_exists
 
 class MenuCarga:
 
-    
+
     IMG_W = 1672
     IMG_H = 941
 
@@ -38,7 +38,6 @@ class MenuCarga:
         self.input_rect = self._scale_box(self.INPUT_BOX)
         self.close_rect = self._scale_box(self.CLOSE_BOX)
 
-        # Espacio libre dentro de la caja (dejamos lugar a la lupa)
         self.text_max_width = self.input_rect.width - 32
 
         self.font = pygame.font.Font(None, 24)
@@ -47,7 +46,7 @@ class MenuCarga:
         self.name = ""
         self.message = ""
 
-        
+
         pygame.key.start_text_input()
 
     def _scale_box(self, box):
@@ -79,7 +78,6 @@ class MenuCarga:
                 if not (char.isalnum() or char in " -_"):
                     continue
 
-                # No arrancar con espacios
                 if char == " " and not self.name:
                     continue
 
@@ -139,7 +137,6 @@ class MenuCarga:
             (0, 0)
         )
 
-        # Texto escrito
         text_surface = self.font.render(
             self.name,
             True,
@@ -158,7 +155,6 @@ class MenuCarga:
             text_rect
         )
 
-        # Cursor parpadeante
         if (pygame.time.get_ticks() // 500) % 2 == 0:
 
             cursor_x = text_rect.right + 2

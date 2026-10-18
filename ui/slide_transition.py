@@ -1,30 +1,15 @@
-"""Transicion de entrada al juego: la pantalla anterior (el ultimo cuadro del
-comic, de la carga o de "Perdiste") se desliza y deja ver el juego que esta
-abajo.
-
-Se usa desde main.py cuando empieza una partida nueva (despues del comic),
-cuando se continua una partida guardada y cuando volves a jugar despues de
-perder.
-
-Mientras dura, main.py NO le pasa eventos ni tiempo al juego. Asi el
-tutorial (que se abre apenas se crea la partida nueva) y los enemigos
-esperan a que termine la transicion, y los clicks no se cuelan.
-"""
-
 import pygame
 
 
-# ---------- AJUSTES ----------
+SLIDE_DURATION = 1.0
+SLIDE_DELAY = 0.15
+SLIDE_DIRECTION = "left"
 
-SLIDE_DURATION = 1.0        # cuanto tarda en deslizarse (segundos)
-SLIDE_DELAY = 0.15          # pausita antes de empezar a moverse
-SLIDE_DIRECTION = "left"    # "left", "right", "up" o "down"
-
-EDGE_COLOR = (255, 215, 140)   # lineita de luz en el borde de la pantalla
+EDGE_COLOR = (255, 215, 140)
 EDGE_WIDTH = 4
-SHADOW_SIZE = 90            # ancho de la sombra que tira la pantalla
-SHADOW_ALPHA = 150          # que tan oscura es esa sombra (0 a 255)
-DIM_ALPHA = 120             # el juego arranca un poco oscuro y se aclara
+SHADOW_SIZE = 90
+SHADOW_ALPHA = 150
+DIM_ALPHA = 120
 
 
 def _ease_in_out(k):
@@ -55,7 +40,6 @@ class SlideTransition:
         self._dim = pygame.Surface((self.w, self.h))
         self._dim.fill((0, 0, 0))
 
-    # ----- estado -----
 
     @property
     def active(self):
@@ -72,15 +56,11 @@ class SlideTransition:
         return None
 
     def progress(self):
-        """0 = pantalla anterior completa, 1 = ya se fue."""
 
         return _ease_in_out((self.t - self.delay) / max(0.001, self.duration))
 
-    # ----- dibujo -----
 
     def _make_shadow(self):
-        """Degradado oscuro que cae sobre el juego, pegado a la pantalla
-        que se va (se dibuja del lado del borde)."""
 
         horizontal = self.direction in ("left", "right")
 
@@ -103,11 +83,9 @@ class SlideTransition:
         return surf
 
     def draw(self, screen):
-        """Se llama DESPUES de dibujar el juego."""
 
         k = self.progress()
 
-        # El juego que esta abajo se va aclarando
         dim = int(DIM_ALPHA * (1 - k) ** 1.2)
 
         if dim > 0:
@@ -123,7 +101,6 @@ class SlideTransition:
 
             x, y = -int(w * k), 0
 
-            # Sombra a la derecha del borde, con el borde de luz
             screen.blit(self._shadow, (x + w, 0))
             screen.blit(self.old, (x, y))
             pygame.draw.rect(screen, EDGE_COLOR, (x + w - EDGE_WIDTH, 0, EDGE_WIDTH, h))
@@ -145,7 +122,7 @@ class SlideTransition:
             screen.blit(self.old, (x, y))
             pygame.draw.rect(screen, EDGE_COLOR, (0, y + h - EDGE_WIDTH, w, EDGE_WIDTH))
 
-        else:  # "down"
+        else:
 
             x, y = 0, int(h * k)
 

@@ -36,7 +36,6 @@ class Player:
          (847, 783, 157, 205), (1099, 783, 157, 206)],
     ]
 
-    # Hoja del personaje con la vela (assets/maps/player/player_vela.png)
     SHEET_RECTS_VELA = [
         [(343, 50, 161, 203), (596, 49, 162, 204),
          (848, 49, 164, 204), (1101, 49, 163, 204)],
@@ -48,7 +47,6 @@ class Player:
          (850, 785, 163, 202), (1102, 785, 168, 202)],
     ]
 
-    # Hoja del personaje con la antorcha (assets/maps/player/player_antorcha.png)
     SHEET_RECTS_ANTORCHA = [
         [(343, 49, 166, 204), (596, 49, 167, 204),
          (848, 49, 168, 204), (1101, 49, 168, 204)],
@@ -60,7 +58,6 @@ class Player:
          (845, 785, 172, 202), (1102, 785, 172, 202)],
     ]
 
-    # Golpe recibido: se pone rojo un ratito y queda invulnerable
     HURT_TIME = 0.30
     INVULN_TIME = 0.90
     KNOCKBACK = 120.0
@@ -77,8 +74,6 @@ class Player:
         hitbox_width = 6
         hitbox_height = 4
 
-        # Los pies quedan donde estaban con el tamano anterior (46 px),
-        # asi el personaje no aparece corrido al hacerlo mas grande.
         feet_y = y + 46 // 2
 
         self.rect = pygame.Rect(
@@ -99,14 +94,11 @@ class Player:
         self.has_torch = False
         self.torch_kind = "fosforo"
 
-        # Golpes recibidos (enemigos)
         self.hurt_timer = 0.0
         self.invuln_timer = 0.0
         self.kb_vel = pygame.Vector2()
         self._kb_rest = pygame.Vector2()
 
-        # Agarrado por un Golem: no se puede mover ni recibir otros
-        # golpes, y se dibuja levantado (grab_lift = unidades del mundo)
         self.grabbed = False
         self.grab_lift = 0.0
 
@@ -178,8 +170,6 @@ class Player:
             )
 
     def set_torch(self, value, kind="fosforo"):
-        """Con luz en la mano el personaje cambia de dibujo: el del
-        fosforo, el de la vela o el de la antorcha."""
 
         self.torch_kind = kind
 
@@ -189,11 +179,8 @@ class Player:
             or self.frames_antorcha is not None
         )
 
-    # ---------- golpes recibidos ----------
 
     def hurt(self, from_pos=None):
-        """Recibe un golpe: se pone rojo, empujon y un rato sin poder
-        recibir otro. Devuelve False si todavia era invulnerable."""
 
         if self.invuln_timer > 0 or self.grabbed:
             return False
@@ -262,7 +249,7 @@ class Player:
     @staticmethod
     def _remove_background(crop):
 
-        
+
         result = pygame.Surface(
             crop.get_size(),
             pygame.SRCALPHA
@@ -312,7 +299,7 @@ class Player:
                 max_w = max(max_w, crop.get_width())
                 max_h = max(max_h, crop.get_height())
 
-  
+
         if self.frame_scale is None:
 
             self.frame_scale = min(
@@ -363,7 +350,6 @@ class Player:
 
         if self.grabbed:
 
-            # Agarrado: no camina (el golem lo maneja)
             result = (False, None)
 
         else:
@@ -445,7 +431,6 @@ class Player:
             )
         )
 
-        # Golpe recibido: rojo (como en Minecraft) que se va apagando
         if self.hurt_timer > 0:
 
             k = self.hurt_timer / self.HURT_TIME
@@ -460,7 +445,6 @@ class Player:
                 special_flags=pygame.BLEND_RGB_ADD
             )
 
-        # Despues del rojo, parpadea un poco mientras es invulnerable
         elif (
             self.invuln_timer > 0
             and not self.grabbed
@@ -473,7 +457,6 @@ class Player:
             midbottom=camera.apply(self.image_rect).midbottom
         )
 
-        # Agarrado por un golem: lo levanta del piso
         if self.grab_lift > 0:
             dest.y -= int(self.grab_lift * camera.zoom)
 

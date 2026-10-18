@@ -1,30 +1,3 @@
-"""PUERTA FINAL (la de las 2 gemas)
-
-Puerta VERTICAL en el pasillo horizontal que sale de la sala superior
-derecha (la sala de los dos altares de piedra, detras de la puerta
-violeta). Ninguna luz la rompe: se abre poniendo las DOS gemas, cada una
-en SU altar y apretando F cerca del altar:
-
-    - altar de ARRIBA: gema verde CLARA   (la normal, icon_gema.png)
-    - altar de ABAJO:  gema verde OSCURO  (la del Guardian, icon_gema_verde)
-
-Las gemas quedan flotando sobre su altar. Con las dos puestas:
-
-    1. CARGA    rayos de cada gema hacia la puerta, la puerta tiembla y
-                se llena de grietas de luz
-    2. EXPLOSION flash blanco, ondas expansivas, la puerta estalla
-    3. PORTAL   un haz de luz corre por el pasillo
-
-La puerta SOLO se rompe. Despues, si seguis derecho por el pasillo hasta
-el final (arriba), pasas a mapa2 con un fundido. En mapa2 hay una salida
-al final de su pasillo que te devuelve a la sala de los altares.
-
-Textura (opcional): assets/maps/puertas/puerta_final.png (24 x 65 px).
-
-Es una subclase de Door: bloquea el paso, los golpes la hacen "resistir"
-y se guarda como rota en broken_doors.
-"""
-
 import math
 import random
 from pathlib import Path
@@ -36,24 +9,14 @@ from world.doors import Door, DOORS_DIR
 from world.items import get_gem_icon, get_green_gem_icon
 
 
-# ---------------------------------------------------------------
-# DONDE ESTA Y CUANTO MIDE (unidades del mundo = pixeles de mapa.png)
-# ---------------------------------------------------------------
 FINAL_DOOR_ID = "puerta_final"
 
-# Centro de la puerta. Pasillo horizontal (piso y 106..166) que sale de
-# la sala de los pedestales, en un tramo recto con pared arriba y abajo.
 FINAL_DOOR_POS = (1585, 136)
 
-# Alto = piso del pasillo (61) + 2 px de borde por lado = 65.
-# Ancho (grosor) = 24 (las otras puertas tienen 16: esta es mas imponente).
 FINAL_DOOR_SIZE = (24, 65)
 
-# A que distancia del altar (en unidades del mundo) se puede poner la gema
 INTERACT_DIST = 44
 
-# Base de cada altar (para medir la distancia) y donde flota su gema.
-# Medido sobre mapa.png: altares de piedra en x ~1484, y 66..106 y 170..210
 ALTAR_BASE = {
     "clara": (1484, 90),
     "oscura": (1485, 192),
@@ -64,13 +27,11 @@ SLOT_POS = {
     "oscura": (1485, 165),
 }
 
-# Obstaculos solidos de los altares (para que no se camine encima)
 ALTAR_OBSTACLES = [
     pygame.Rect(1465, 70, 40, 36),
     pygame.Rect(1466, 174, 40, 36),
 ]
 
-# Que contador del juego gasta cada gema
 SLOT_GEM_ATTR = {
     "clara": "gems",
     "oscura": "gems_green",
@@ -86,35 +47,23 @@ SLOT_COLORS = {
     "oscura": (40, 200, 120),
 }
 
-# Duraciones de la secuencia (segundos)
 CHARGE_TIME = 1.8
 BURST_TIME = 0.25
 PORTAL_TIME = 2.4
-FADE_OUT = 0.55            # fundido a negro al cambiar de mapa
-FADE_IN = 0.55             # y de vuelta a la imagen
+FADE_OUT = 0.55
+FADE_IN = 0.55
 
-# Zonas de salida: al pisarlas se cambia de mapa.
-# mapa1: final del pasillo (arriba), solo si la puerta ya esta rota.
 EXIT_ZONE_MAP1 = pygame.Rect(1644, 0, 60, 14)
-# mapa2: final del pasillo de entrada (abajo), vuelve a mapa1.
 EXIT_ZONE_MAP2 = pygame.Rect(92, 1586, 68, 14)
 
-# Donde apareces al volver a mapa1 (justo debajo de la salida)
 MAP1_RETURN = (1673, 40)
 
-# Donde aparece el jugador en mapa2 (entrada del pasillo, abajo a la
-# izquierda de mapa2.png) y por donde puede caminar. Es PROVISORIO:
-# cuando dibujes mapa2 completo, cambia estos rects.
 MAP2_NAME = "mapa2.png"
 MAP2_SPAWN = (126, 1550)
-# Todo el mapa es caminable (por ahora esta en blanco) menos las 2 paredes
-# del pasillo de entrada, que estan dibujadas en mapa2.png.
 MAP2_WALKABLE = [pygame.Rect(8, 8, 1984, 1592)]
 MAP2_OBSTACLES = [
-    # pared izquierda del pasillo (se corre un poco hacia abajo)
     pygame.Rect(68, 1388, 24, 100),
     pygame.Rect(68, 1488, 14, 112),
-    # pared derecha del pasillo
     pygame.Rect(161, 1388, 14, 212),
 ]
 
@@ -126,17 +75,12 @@ _font_cache = {}
 _fade_cache = {}
 
 
-# ---------------------------------------------------------------
-# Utilidades de dibujo
-# ---------------------------------------------------------------
-
 def _clamp01(k):
 
     return max(0.0, min(1.0, k))
 
 
 def _glow(radius, color):
-    """Disco de luz suave (se suma sobre la pantalla con BLEND_RGB_ADD)."""
 
     radius = max(2, int(radius) // 2 * 2)
     key = (radius, color)
@@ -164,7 +108,6 @@ def _glow(radius, color):
 
         _glow_cache[key] = surf.convert()
 
-        # No dejar crecer la cache sin limite
         if len(_glow_cache) > 160:
             _glow_cache.pop(next(iter(_glow_cache)))
 
@@ -172,7 +115,6 @@ def _glow(radius, color):
 
 
 def _pillar(width, height, level):
-    """Pilar de luz vertical: brillante abajo y en el centro."""
 
     width = max(8, int(width) // 8 * 8)
     height = max(16, int(height) // 8 * 8)
@@ -230,15 +172,10 @@ def _fade_surface(size):
     return _fade_cache[size]
 
 
-# ---------------------------------------------------------------
-# Textura de la puerta (por codigo, o el PNG si lo dibujaste vos)
-# ---------------------------------------------------------------
-
 def _build_sprite():
-    """Se dibuja acostada (65 x 24) y al final se gira a vertical."""
 
-    W, H = FINAL_DOOR_SIZE          # 24 x 65 (vertical)
-    w, h = H, W                     # 65 x 24 (acostada, para dibujar)
+    W, H = FINAL_DOOR_SIZE
+    w, h = H, W
 
     path = DOORS_DIR / "puerta_final.png"
 
@@ -263,13 +200,11 @@ def _build_sprite():
     pygame.draw.rect(surf, outline, (0, 0, w, h), border_radius=4)
     pygame.draw.rect(surf, base, (1, 1, w - 2, h - 2), border_radius=3)
 
-    # bisel
     pygame.draw.line(surf, light, (3, 2), (w - 4, 2))
     pygame.draw.line(surf, dark, (3, h - 3), (w - 4, h - 3))
     pygame.draw.line(surf, light, (2, 3), (2, h - 4))
     pygame.draw.line(surf, dark, (w - 3, 3), (w - 3, h - 4))
 
-    # bloques de piedra
     rng = random.Random("puerta-final")
 
     for y in (h // 2 - 1,):
@@ -287,18 +222,15 @@ def _build_sprite():
         y = rng.randint(4, h - 5)
         pygame.draw.line(surf, dark, (x, y), (x + rng.randint(1, 3), y))
 
-    # fajas de hierro a los costados
     for x in (4, w - 7):
         pygame.draw.rect(surf, metal, (x, 2, 3, h - 4))
         pygame.draw.line(surf, metal_l, (x, 2), (x, h - 4))
 
-    # runa del medio (entre los dos huecos)
     cx, cy = w // 2, h // 2
     pygame.draw.line(surf, (120, 200, 150), (cx, cy - 4), (cx, cy + 4))
     pygame.draw.line(surf, (120, 200, 150), (cx - 2, cy - 2), (cx + 2, cy - 2))
     pygame.draw.line(surf, (120, 200, 150), (cx - 2, cy + 2), (cx + 2, cy + 2))
 
-    # -90: lo de la izquierda queda ARRIBA
     return pygame.transform.rotate(surf, -90)
 
 
@@ -313,23 +245,17 @@ def _get_sprite():
     return _sprite_cache["base"]
 
 
-# ---------------------------------------------------------------
-# La puerta
-# ---------------------------------------------------------------
-
 class FinalDoor(Door):
 
     is_final = True
 
     def __init__(self, game=None, slots=None):
 
-        # No se llama a Door.__init__: esta puerta no esta en DOOR_TYPES
         self.id = FINAL_DOOR_ID
         self.kind = "final"
         self.orient = "v"
         self.length = FINAL_DOOR_SIZE[1]
 
-        # Ninguna luz la rompe (max_hits None = no se rompe a golpes)
         self.max_hits = None
         self.hits_left = None
         self.hit_cost = 0.0
@@ -351,7 +277,6 @@ class FinalDoor(Door):
         slots = slots or {}
         self.slots = {k: bool(slots.get(k, False)) for k in SLOT_POS}
 
-        # locked | charge | burst | portal | fade | done
         self.state = "locked"
         self.t = 0.0
         self.clock = 0.0
@@ -360,7 +285,7 @@ class FinalDoor(Door):
         self.shards = []
         self.rings = []
         self.sock_pulse = {k: 0.0 for k in SLOT_POS}
-        self.flying = []          # gemas que vuelan hacia su hueco
+        self.flying = []
         self.cracks = self._make_cracks()
         self._shake_off = (0, 0)
         self._hint_alpha = 0.0
@@ -368,12 +293,9 @@ class FinalDoor(Door):
         self._near_key = None
         self._entered = False
 
-        # Si la partida se guardo con las dos gemas ya puestas pero sin
-        # haber terminado, la secuencia arranca de nuevo.
         if all(self.slots.values()):
             self._start_charge(silent=True)
 
-    # ---------- estado ----------
 
     @property
     def breakable(self):
@@ -382,7 +304,6 @@ class FinalDoor(Door):
 
     @property
     def sequence_active(self):
-        """True mientras dura la secuencia: el juego se congela."""
 
         return self.state in ("charge", "burst")
 
@@ -404,7 +325,6 @@ class FinalDoor(Door):
         return SLOT_POS[key]
 
     def _make_cracks(self):
-        """Grietas de luz (puntos relativos al centro de la puerta)."""
 
         rng = random.Random("grietas-final")
         w, h = FINAL_DOOR_SIZE
@@ -426,10 +346,8 @@ class FinalDoor(Door):
 
         return out
 
-    # ---------- interaccion ----------
 
     def nearest_altar(self, player_rect):
-        """Altar vacio que tenes al lado (o None)."""
 
         px, py = player_rect.center
         best, best_d = None, INTERACT_DIST
@@ -453,8 +371,6 @@ class FinalDoor(Door):
         return self._near_key is not None and self.state == "locked"
 
     def try_interact(self, game):
-        """Se llama al apretar F. Devuelve True si la tecla se uso aca
-        (asi no se abre la tienda ni se agarra otra cosa)."""
 
         if self.state != "locked":
             return False
@@ -488,7 +404,6 @@ class FinalDoor(Door):
         return True
 
     def resist(self):
-        """Un golpe de luz: solo destella."""
 
         self.flash = 0.12
 
@@ -514,7 +429,6 @@ class FinalDoor(Door):
         if all(self.slots.values()):
             self._start_charge()
 
-    # ---------- secuencia ----------
 
     def _start_charge(self, silent=False):
 
@@ -537,7 +451,6 @@ class FinalDoor(Door):
             game.fx.flash(0.8, (235, 255, 235), 1.0)
             game.fx.shake(18.0, 1.0)
 
-        # Pedazos de la puerta
         w, h = FINAL_DOOR_SIZE
         cell = 8
 
@@ -565,14 +478,11 @@ class FinalDoor(Door):
                     "max": 2.0,
                 })
 
-        # Ondas expansivas
         for i, color in enumerate((GLOW_WHITE, SLOT_COLORS["clara"], SLOT_COLORS["oscura"])):
             self.rings.append([cx, cy, 4.0, 150.0 + 30 * i, -0.08 * i, 0.9 + 0.1 * i, color, 8 - 2 * i])
 
-        # La puerta ya no bloquea el paso (se mueve su rect afuera del mapa)
         self.rect = pygame.Rect(-500, -500, 1, 1)
 
-        # Chispas de las dos gemas
         for i in range(120):
 
             color = SLOT_COLORS["clara"] if i % 2 else SLOT_COLORS["oscura"]
@@ -601,7 +511,6 @@ class FinalDoor(Door):
         self.shards = []
         self.rings = []
 
-    # ---------- particulas ----------
 
     def _spark(self, x, y, color, smin, smax, lmin, lmax, size, angle=None):
 
@@ -621,7 +530,6 @@ class FinalDoor(Door):
         })
 
     def _rise(self, x, y, color):
-        """Particula que sube (portal)."""
 
         self.particles.append({
             "x": x, "y": y,
@@ -635,7 +543,6 @@ class FinalDoor(Door):
             "ay": 0.0,
         })
 
-    # ---------- update ----------
 
     def update(self, dt):
 
@@ -651,7 +558,6 @@ class FinalDoor(Door):
 
         self._update_fx_lists(dt)
 
-        # cartelito "E"
         want = 1.0 if self._near and self.state == "locked" else 0.0
         self._hint_alpha += (want - self._hint_alpha) * min(1.0, dt * 10)
 
@@ -659,7 +565,6 @@ class FinalDoor(Door):
 
         if self.state == "locked":
 
-            # Los huecos llenos largan chispitas
             for key, filled in self.slots.items():
                 if filled and random.random() < dt * 5:
                     x, y = self.slot_pos(key)
@@ -670,7 +575,6 @@ class FinalDoor(Door):
 
             k = _clamp01(self.t / CHARGE_TIME)
 
-            # Temblor cada vez mas fuerte
             amp = 0.6 + 1.6 * k
             self._shake_off = (
                 random.uniform(-amp, amp),
@@ -680,7 +584,6 @@ class FinalDoor(Door):
             if self.game is not None:
                 self.game.fx.shake(1.0 + 7.0 * k, 0.12)
 
-            # Particulas que se meten hacia el centro
             for _ in range(int(2 + 8 * k)):
 
                 key = random.choice(list(SLOT_POS))
@@ -718,7 +621,6 @@ class FinalDoor(Door):
 
         elif self.state == "portal":
 
-            # El haz de luz corre por el pasillo (ya podes moverte)
             if self.t < PORTAL_TIME - 1.7:
 
                 for _ in range(3):
@@ -791,7 +693,6 @@ class FinalDoor(Door):
 
         self._near = bool(near)
 
-    # ---------- dibujo ----------
 
     def _w2s(self, camera, x, y):
 
@@ -827,12 +728,10 @@ class FinalDoor(Door):
         screen.blit(g, (sx - r, sy - r), special_flags=pygame.BLEND_RGB_ADD)
 
     def draw(self, screen, camera):
-        """Dibuja la puerta y todos sus efectos (en el mundo)."""
 
         zoom = camera.zoom
         cx, cy = self.center()
 
-        # --- puerta entera (hasta que explota) ---
         if self.state in ("locked", "charge"):
 
             scaled = self._get_scaled(zoom)
@@ -853,7 +752,6 @@ class FinalDoor(Door):
             self._draw_slots(screen, camera, dest)
 
     def draw_fx(self, screen, camera):
-        """Efectos de luz: se dibujan ENCIMA de la oscuridad."""
 
         zoom = camera.zoom
 
@@ -863,11 +761,9 @@ class FinalDoor(Door):
         if self.state == "charge":
             self._draw_charge(screen, camera)
 
-        # --- pilar de luz ---
         if self.state in ("burst", "portal"):
             self._draw_portal(screen, camera)
 
-        # --- pedazos ---
         for s in self.shards:
 
             img = pygame.transform.rotozoom(s["img"], s["rot"], zoom)
@@ -879,7 +775,6 @@ class FinalDoor(Door):
 
             screen.blit(img, img.get_rect(center=(int(sx), int(sy))))
 
-        # --- ondas ---
         for x, y, r0, r1, t, dur, color, width in self.rings:
 
             if t < 0:
@@ -900,7 +795,6 @@ class FinalDoor(Door):
                 screen, c, (int(sx), int(sy)), max(1, int(r * zoom)), w
             )
 
-        # --- particulas (sumando luz) ---
         for p in self.particles:
 
             k = _clamp01(p["life"] / p["max"])
@@ -927,7 +821,6 @@ class FinalDoor(Door):
                 )
 
     def _slot_float(self, key):
-        """Posicion de la gema flotando (sube y baja)."""
 
         x, y = SLOT_POS[key]
 
@@ -936,7 +829,6 @@ class FinalDoor(Door):
         return x, y + bob
 
     def _draw_slots(self, screen, camera, dest=None):
-        """Gemas flotando sobre los altares (debajo de la oscuridad)."""
 
         zoom = camera.zoom
 
@@ -955,7 +847,6 @@ class FinalDoor(Door):
 
             else:
 
-                # Altar vacio: aro que late suave, para marcar donde va
                 beat = 0.5 + 0.5 * math.sin(self.clock * 2.4 + (0 if key == "clara" else 1.7))
                 rc = tuple(int(c * (0.25 + 0.5 * beat)) for c in SLOT_COLORS[key])
 
@@ -964,7 +855,6 @@ class FinalDoor(Door):
                 )
 
     def _draw_slot_glows(self, screen, camera):
-        """Resplandor de las gemas puestas (encima de la oscuridad)."""
 
         for key in SLOT_POS:
 
@@ -989,7 +879,6 @@ class FinalDoor(Door):
         cx += self._shake_off[0]
         cy += self._shake_off[1]
 
-        # rayos de cada gema al centro
         for key in SLOT_POS:
 
             x, y = self.slot_pos(key)
@@ -1006,10 +895,8 @@ class FinalDoor(Door):
             pygame.draw.line(screen, color, a, b, width)
             pygame.draw.line(screen, (255, 255, 255), a, b, max(1, width // 3))
 
-        # luz del centro creciendo
         self._add_glow(screen, camera, cx, cy, 10 + 40 * k, GLOW_WHITE)
 
-        # grietas de luz que se van abriendo
         total = len(self.cracks)
         shown = int(total * _clamp01((k - 0.15) / 0.8)) + (1 if k > 0.15 else 0)
 
@@ -1033,15 +920,12 @@ class FinalDoor(Door):
             out = _clamp01((PORTAL_TIME - self.t) / 0.9)
             k = (0.5 + 0.5 * _clamp01(self.t / 0.8)) * out
 
-        # destello grande en el hueco
         self._add_glow(screen, camera, cx, cy, 30 + 30 * k, GLOW_WHITE)
 
-        # pilar que sube por el pasillo (parpadea un poco)
         flick = 1.0 + 0.12 * math.sin(self.clock * 18)
 
         level = int(8 * k * flick)
 
-        # el haz de luz corre por el pasillo, hacia la derecha
         thick = FINAL_DOOR_SIZE[1] * zoom * (0.6 + 0.5 * k)
         length = 220 * zoom * k + 40
 
@@ -1056,7 +940,6 @@ class FinalDoor(Door):
             special_flags=pygame.BLEND_RGB_ADD,
         )
 
-        # aro que gira alrededor de la boca del portal
         ring_n = 16
 
         for i in range(ring_n):
@@ -1071,11 +954,9 @@ class FinalDoor(Door):
             self._add_glow(screen, camera, x, y, 5, color)
 
     def draw_overlay(self, screen):
-        """Cosas de pantalla: cartelito E y el fundido final."""
 
         sw, sh = screen.get_size()
 
-        # cartelito "E: poner gema"
         if self._hint_alpha > 0.05 and self.state == "locked":
 
             key = self._near_key
@@ -1101,12 +982,7 @@ class FinalDoor(Door):
                 screen.blit(box, (sw // 2 - box.get_width() // 2, int(sh * 0.12)))
 
 
-# ---------------------------------------------------------------
-# Cambio de mapa (ida y vuelta)
-# ---------------------------------------------------------------
-
 def _capture(game):
-    """Foto del mapa en el que estas (para poder volver)."""
 
     wm = game.world_map
     col = game.collision_map
@@ -1149,7 +1025,6 @@ def _apply(game, st):
 
 
 def enter_map(game, target, pos=None):
-    """Pasa a 'mapa1' o 'mapa2' (guarda el que dejas, carga el otro)."""
 
     cur = getattr(game, "current_map", "mapa1")
 
@@ -1165,7 +1040,6 @@ def enter_map(game, target, pos=None):
 
     if st is None:
 
-        # Primera vez en mapa2
         base = Path(__file__).resolve().parent.parent
         img = pygame.image.load(
             str(base / "assets" / "maps" / "region_01" / MAP2_NAME)
@@ -1194,7 +1068,6 @@ def enter_map(game, target, pos=None):
         game.player.rect.bottom + 3,
     )
 
-    # la camara salta directo (sin deslizarse desde el otro mapa)
     game.camera.update(game.player)
 
 
@@ -1204,12 +1077,11 @@ def enter_map2(game, pos=None):
 
 
 class MapSwitcher:
-    """Detecta las zonas de salida y hace el fundido entre mapas."""
 
     def __init__(self):
 
         self.target = None
-        self.phase = None     # None | "out" | "in"
+        self.phase = None
         self.t = 0.0
 
     @property
@@ -1218,7 +1090,6 @@ class MapSwitcher:
         return self.phase is not None
 
     def check(self, game):
-        """Llamar cada cuadro (cuando el juego corre normal)."""
 
         if self.active:
             return

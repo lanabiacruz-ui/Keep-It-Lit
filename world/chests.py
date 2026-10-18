@@ -13,38 +13,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CHEST_DIR = BASE_DIR / "assets" / "maps" / "cofre"
 DATA_FILE = BASE_DIR / "data" / "chests.json"
 
-# El PNG de 128x128 se dibuja a 20x20 unidades (80 px en pantalla)
 CHEST_SIZE = 20
 
-# Parte del cofre que bloquea el paso (los pies del cofre)
 BLOCK_W = 18
 BLOCK_H = 12
 
-# Relojito que aparece mientras el cofre esta en espera
 CLOCK_SIZE = 10
 
 FLASH_TIME = 0.12
 SHAKE_TIME = 0.18
 
-# Cuanto se ve el cofre abierto despues de cada apertura (cuando todavia
-# le quedan usos y no entra en espera)
 OPEN_SHOW_TIME = 0.7
 
-# Los items caen a esta distancia del cofre (unidades del mundo)
 DROP_MIN_DIST = 16
 DROP_MAX_DIST = 40
 
-# Monedas del piso (no hace falta que esten en data/items.json)
 COIN_IDS = ("moneda", "moneda_5", "moneda_10")
 
-# Cada item sale un poquito despues del anterior
 DROP_DELAY = 0.07
 
 DEFAULTS = {
     "espera_segundos": 180,
-    # Cuantas veces se puede abrir un cofre antes de quedar en espera
     "aperturas_por_cofre": [10, 15],
-    # Probabilidad (peso) de que una apertura suelte N objetos
     "items_por_apertura": {"4": 35, "5": 40, "6": 25},
     "pesos": {"moneda": 1},
     "cofres": [],
@@ -70,7 +60,6 @@ def load_config():
 
 
 def format_time(seconds):
-    """150.2 -> '2:31'"""
 
     total = max(0, int(math.ceil(seconds)))
 
@@ -92,8 +81,6 @@ def _load(name):
 
 
 class Chest:
-    """Un cofre del mapa. Es un objetivo mas de los golpes del fosforo
-    (tiene .rect y .take_damage)."""
 
     def __init__(self, chest_id, x, y, cooldown=0.0, uses_left=None):
 
@@ -102,24 +89,18 @@ class Chest:
         self.rect = pygame.Rect(0, 0, CHEST_SIZE, CHEST_SIZE)
         self.rect.center = (x, y)
 
-        # Lo que bloquea el paso del jugador
         self.block = pygame.Rect(0, 0, BLOCK_W, BLOCK_H)
         self.block.center = (x, y + 4)
 
-        # Segundos que faltan para poder abrirlo de nuevo (0 = listo)
         self.cooldown = float(cooldown)
 
-        # Aperturas que le quedan antes de quedar en espera
-        # (None = todavia no se sorteo, se sortea en la primera apertura)
         self.uses_left = uses_left
 
-        # True mientras el minijuego de este cofre esta abierto
         self.busy = False
 
         self.flash = 0.0
         self.shake = 0.0
 
-        # Segundos que se muestra abierto tras una apertura
         self.open_time = 0.0
 
         self._zoom = None
@@ -133,12 +114,8 @@ class Chest:
 
         return self.cooldown <= 0 and not self.busy
 
-    # ---------- golpes ----------
 
     def take_damage(self, amount):
-        """El golpe no lo rompe: solo lo hace brillar y temblar. Quien
-        decide que pasa (abrir el minijuego, avisar que esta vacio) es
-        el juego."""
 
         self.flash = FLASH_TIME
         self.shake = SHAKE_TIME
@@ -164,11 +141,9 @@ class Chest:
             self.open_time = max(0.0, self.open_time - dt)
 
     def show_open(self, seconds=OPEN_SHOW_TIME):
-        """Lo muestra abierto un ratito (cofre_abierto.png)."""
 
         self.open_time = float(seconds)
 
-    # ---------- dibujo ----------
 
     def _prepare(self, zoom):
 
@@ -212,7 +187,6 @@ class Chest:
         else:
             sprite = self._closed
 
-        # Temblor corto al recibir un golpe
         dx = 0
 
         if self.shake > 0:
@@ -223,7 +197,6 @@ class Chest:
 
         screen.blit(sprite, (dest.x + dx, dest.y))
 
-        # Reloj y cuenta regresiva mientras esta en espera
         if self.cooldown > 0:
 
             clock_rect = self._clock.get_rect(
@@ -257,7 +230,6 @@ class ChestManager:
         self.min_uses = max(1, int(low))
         self.max_uses = max(self.min_uses, int(high))
 
-        # {cantidad de objetos: peso}
         self.count_weights = {}
 
         for key, weight in dict(config["items_por_apertura"]).items():
@@ -296,8 +268,6 @@ class ChestManager:
 
     @staticmethod
     def _read_saved(value):
-        """Lee lo guardado de un cofre. Acepta el formato viejo (solo los
-        segundos de espera) y el nuevo ({"espera": s, "usos": n})."""
 
         if isinstance(value, dict):
 
@@ -320,7 +290,6 @@ class ChestManager:
 
     @property
     def blocking_rects(self):
-        """Rects que bloquean el paso (para la colision)."""
 
         return [c.block for c in self.chests]
 
@@ -335,8 +304,6 @@ class ChestManager:
             chest.draw(screen, camera, self.font)
 
     def save_data(self):
-        """{id: {"espera": segundos que faltan, "usos": aperturas que le
-        quedan}} solo de los cofres en espera o ya empezados."""
 
         data = {}
 
@@ -358,8 +325,6 @@ class ChestManager:
         return data
 
     def nearest_ready(self, pos, max_dist):
-        """El cofre listo mas cercano a `pos` (None si no hay ninguno
-        a menos de `max_dist`)."""
 
         best = None
         best_dist = max_dist
@@ -377,11 +342,8 @@ class ChestManager:
 
         return best
 
-    # ---------- drops ----------
 
     def roll_count(self):
-        """Cuantos objetos salen en esta apertura (4 a 6), segun las
-        probabilidades de data/chests.json."""
 
         counts = list(self.count_weights)
         weights = [self.count_weights[n] for n in counts]
@@ -389,9 +351,6 @@ class ChestManager:
         return random.choices(counts, weights=weights, k=1)[0]
 
     def consume_use(self, chest):
-        """Gasta una apertura del cofre. La primera vez sortea cuantas
-        aperturas tiene (10 a 15). Cuando se acaban queda en espera.
-        Devuelve True si el cofre se quedo sin aperturas."""
 
         if chest.uses_left is None:
 
@@ -409,8 +368,6 @@ class ChestManager:
         return False
 
     def roll_ids(self):
-        """Que sale en esta apertura: 4 a 6 objetos al azar, segun los
-        pesos de data/chests.json."""
 
         count = self.roll_count()
 
@@ -437,7 +394,6 @@ class ChestManager:
             if not collision_map.point_is_walkable(x, y):
                 continue
 
-            # No caer encima de un cofre
             if any(
                 c.block.inflate(6, 6).collidepoint(x, y)
                 for c in self.chests
@@ -446,12 +402,9 @@ class ChestManager:
 
             return (x, y)
 
-        # Sin lugar libre: queda justo abajo del cofre
         return (cx, cy + DROP_MIN_DIST)
 
     def spawn_drops(self, chest, collision_map, item_defs):
-        """Crea los items que salen disparados del cofre. Devuelve la
-        lista de WorldItem para agregar al mundo."""
 
         drops = []
 

@@ -38,7 +38,6 @@ def load_settings():
 
 
 def window_is_fullscreen():
-    """True si la ventana esta de verdad en pantalla completa."""
 
     try:
         return bool(pygame.display.is_fullscreen())
@@ -67,10 +66,8 @@ class Settings:
     IMG_W = 1672
     IMG_H = 941
 
-    # Boton X de la ventana (mismo que en Continuar partida)
     CLOSE_BOX = (1179, 219, 1204, 246)
 
-    # Centro vertical de cada fila (en coordenadas de la imagen 1672x941)
     ROW_Y = [335, 400, 465]
 
     LABEL_X = 520
@@ -81,7 +78,6 @@ class Settings:
     TOGGLE_SIZE = (80, 40)
     HANDLE_SIZE = 34
 
-    # Margen interno del riel para que la carita no se salga
     TRACK_PAD = 14
 
     ROWS = [
@@ -105,8 +101,6 @@ class Settings:
             / "ui"
         )
 
-        # Fondo de la pantalla (otro archivo = otra pantalla). Si el
-        # archivo todavia no existe se usa el de siempre.
         background_path = ui_dir / background
 
         if not background_path.exists():
@@ -153,9 +147,6 @@ class Settings:
 
         self.values = load_settings()
 
-        # El interruptor muestra lo que la ventana ES, no lo que quedo
-        # guardado en el archivo (si no, podia decir "activado" con la
-        # ventana en modo ventana).
         self.values["fullscreen"] = window_is_fullscreen()
 
         self.selected = 0
@@ -180,7 +171,6 @@ class Settings:
                 self._scale_rect(rect)
             )
 
-    # ---------- utilidades ----------
 
     def _load(self, path, size):
 
@@ -220,7 +210,6 @@ class Settings:
 
         return rect.left + pad, rect.right - pad
 
-    # ---------- cambios de valor ----------
 
     def _apply(self, key):
 
@@ -237,13 +226,11 @@ class Settings:
 
             before = window_is_fullscreen()
 
-            # Solo se cambia la ventana si hace falta
             if before != bool(self.values[key]):
 
                 try:
                     pygame.display.toggle_fullscreen()
                 except pygame.error:
-                    # No se pudo: el interruptor vuelve a como estaba
                     self.values[key] = before
 
     def _set_slider_from_mouse(self, index, mouse_x):
@@ -282,7 +269,6 @@ class Settings:
 
         save_settings(self.values)
 
-    # ---------- eventos ----------
 
     def handle_event(self, event):
 
@@ -373,7 +359,6 @@ class Settings:
     def update(self, dt):
         pass
 
-    # ---------- dibujo ----------
 
     def draw(self):
 

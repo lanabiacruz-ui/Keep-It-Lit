@@ -1,32 +1,3 @@
-"""Efectos activos como cubitos arriba al centro de la pantalla.
-
-Cada efecto (aceite, cera, polvora, resina, furia de la vela y la antorcha) aparece
-como un cubito. El contenido del cubito se va vaciando de arriba hacia
-abajo mientras pasa el tiempo; cuando se acaba, el cubito se desvanece.
-Los ultimos segundos parpadea para avisar.
-
-Imagenes (todas opcionales: si falta alguna se dibuja un reemplazo).
-TODAS comparten el mismo lienzo de 96x96 px:
-
-  assets/maps/hud/efecto_cubo.png              96x96  (el marco; adentro TRANSPARENTE)
-  assets/maps/hud/efecto_relleno_aceite.png    96x96  (lo que se vacia)
-  assets/maps/hud/efecto_relleno_cera.png      96x96
-  assets/maps/hud/efecto_relleno_polvora.png   96x96
-  assets/maps/hud/efecto_relleno_resina.png    96x96
-  assets/maps/hud/efecto_relleno_furia.png     96x96
-  assets/maps/hud/efecto_relleno_repelente.png 96x96
-  assets/maps/hud/efecto_relleno_iman.png      96x96
-  assets/maps/hud/efecto_relleno_esfera.png    96x96
-
-El relleno se dibuja DEBAJO del marco y se recorta desde arriba, asi
-que tiene que llenar todo el interior del marco (el codigo muestra
-solo la parte de abajo que todavia "queda").
-
-La alerta del mosquito tambien va en esta fila: usa la imagen que ya
-existe (assets/maps/combate/mosquito_advertencia.png, 96x96), parpadea
-mientras haya un mosquito cerca y no se vacia ni lleva marco.
-"""
-
 import math
 import time
 from pathlib import Path
@@ -41,9 +12,8 @@ HUD_DIR = (
     / "hud"
 )
 
-CANVAS = 96            # lado de los PNG (px)
+CANVAS = 96
 
-# Orden en el que se asignan lugares (el primero en aparecer va a la izquierda)
 EFFECTS = {
     "aceite":  {"label": "Aceite",  "color": (235, 190, 60)},
     "cera":    {"label": "Cera",    "color": (255, 225, 140)},
@@ -53,15 +23,14 @@ EFFECTS = {
     "repelente": {"label": "Repelente", "color": (80, 190, 96)},
     "iman":      {"label": "Iman",      "color": (226, 76, 88)},
     "esfera":    {"label": "Esfera",    "color": (96, 190, 240)},
-    # Alerta (no es un efecto con tiempo: parpadea mientras dure el peligro)
     "mosquito": {"label": "Mosquito cerca!", "color": (255, 120, 110),
                  "alert": True},
 }
 
-FADE_TIME = 0.35       # cuanto tarda en desvanecerse al terminar
-POP_TIME = 0.18        # cuanto tarda en aparecer
-SLIDE_SPEED = 12.0     # que tan rapido se acomodan los cubitos
-BLINK_BELOW = 0.25     # parpadea cuando queda menos de este % del tiempo
+FADE_TIME = 0.35
+POP_TIME = 0.18
+SLIDE_SPEED = 12.0
+BLINK_BELOW = 0.25
 BLINK_RATE = 14.0
 
 
@@ -150,7 +119,6 @@ class EffectsBar:
 
             self.fills[key] = fit(img)
 
-        # Fondo oscuro translucido: lo que se ve en la parte ya vaciada
         self.back = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
 
         pygame.draw.rect(
@@ -159,16 +127,13 @@ class EffectsBar:
             border_radius=max(4, self.size // 6)
         )
 
-        # Imagen de la alerta del mosquito (la pasa el juego con
-        # set_alert_image; si no se pasa, se dibuja un triangulo)
         self.alert_img = self._fit_alert(None)
         self.alert_font = None
 
-        self._cubes = {}     # key -> estado de cada cubito
-        self._order = []     # orden de aparicion
+        self._cubes = {}
+        self._order = []
         self._last = None
 
-    # ---------- alerta del mosquito ----------
 
     def _fit_alert(self, img):
 
@@ -184,15 +149,11 @@ class EffectsBar:
         return pygame.transform.smoothscale(img, (self.size, self.size))
 
     def set_alert_image(self, img):
-        """Imagen de la alerta del mosquito (la misma de siempre)."""
 
         self.alert_img = self._fit_alert(img)
 
-    # ---------- dibujo ----------
 
     def draw(self, screen, active):
-        """active: {clave: fraccion que queda (0.0 a 1.0)} de los efectos
-        que estan corriendo ahora. Los que ya no estan se desvanecen."""
 
         now = time.monotonic()
 
@@ -200,7 +161,6 @@ class EffectsBar:
 
         self._last = now
 
-        # --- altas y bajas ---
         for key in EFFECTS:
 
             if key in active:
@@ -230,7 +190,6 @@ class EffectsBar:
         if not self._order:
             return
 
-        # --- posiciones: centrados, de a uno al lado del otro ---
         count = len(self._order)
         total = count * self.size + (count - 1) * self.gap
         left = self.center_x - total // 2
@@ -250,7 +209,6 @@ class EffectsBar:
             self._draw_cube(screen, key, cube, now)
 
     def _draw_alert(self, screen, cube, now):
-        """La alerta del mosquito: imagen que late + el texto abajo."""
 
         pulse = 0.5 + 0.5 * math.sin(now * 8)
 
@@ -299,7 +257,6 @@ class EffectsBar:
 
         surf.blit(self.back, (0, 0))
 
-        # El relleno se recorta desde arriba: queda solo la parte de abajo
         visible = int(round(frac * size))
 
         if visible > 0:
@@ -309,7 +266,6 @@ class EffectsBar:
 
         surf.blit(self.frame, (0, 0))
 
-        # Transparencia: aparece, parpadea al final y se desvanece
         alpha = 1.0
 
         if cube["gone"] > 0:

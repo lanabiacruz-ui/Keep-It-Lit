@@ -7,38 +7,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DOORS_DIR = BASE_DIR / "assets" / "maps" / "puertas"
 
 
-# ---------------------------------------------------------------
-# Tipos de puerta
-#   hits:  golpes para romperla (None = no se rompe a golpes)
-#   cost:  cuanta vida de la luz (0.0 a 1.0) gasta CADA golpe.
-#          El fosforo dura 30 s, asi que 0.05 = 1.5 s de luz.
-#   Que luz puede romper cada tipo se define en world/lights.py
-#   ("rompe"): la gris solo la rompen la vela y la antorcha.
-# ---------------------------------------------------------------
 DOOR_TYPES = {
     "comun": {"hits": 2, "cost": 0.05},
     "verde": {"hits": 6, "cost": 0.05},
-    # Solo se rompe con la vela o la antorcha
     "gris": {"hits": 4, "cost": 0.05},
-    # La violeta/azul: solo la rompe la antorcha (ver world/lights.py)
     "azul": {"hits": 8, "cost": 0.05},
 }
 
-# ---------------------------------------------------------------
-# Donde esta cada puerta (centro, en unidades del mundo = pixeles
-# del mapa).
-#   "v" = tapa un pasillo horizontal (la puerta es alta y angosta)
-#   "h" = tapa un pasillo vertical    (la puerta es ancha y baja)
-#   largo = lo que mide la puerta a lo largo del hueco. Esta
-#           medido sobre mapa.png: piso del pasillo + 2 px de borde
-#           por lado, asi la puerta llena el hueco de pared a pared
-#           sin montarse sobre la piedra.
-#
-# Cada puerta esta en un tramo RECTO del pasillo (con pared de los
-# dos lados), nunca en la boca donde se abre a la sala.
-# ---------------------------------------------------------------
 DOOR_LAYOUT = [
-    # id,                     tipo,    orient, x,    y,   largo
     ("sup_izq_central",       "comun", "v",    838,  138, 40),
     ("sup_izq_sala",          "verde", "v",    614,  137, 39),
     ("sup_der_sala",          "azul",  "v",    1222, 136, 36),
@@ -52,15 +28,10 @@ DOOR_LAYOUT = [
     ("sala_der",              "gris",  "v",    1214, 519, 45),
 ]
 
-# Grosor de toda puerta (sentido del pasillo)
 THICKNESS = 16
 
-# Tiempo del destello blanco cuando recibe un golpe
 FLASH_TIME = 0.12
 
-# ---------------------------------------------------------------
-# Aspecto
-# ---------------------------------------------------------------
 OUTLINE = (20, 17, 15)
 
 PALETTES = {
@@ -102,7 +73,6 @@ _image_cache = {}
 
 
 def _draw_planks(surf, pal, rng, avoid):
-    """Tablones: costuras, brillo y vetas de madera."""
 
     w, h = surf.get_size()
 
@@ -122,7 +92,6 @@ def _draw_planks(surf, pal, rng, avoid):
         pygame.draw.line(surf, pal["dark"], (2, y), (w - 3, y))
         pygame.draw.line(surf, pal["light"], (3, y + 1), (w - 4, y + 1))
 
-    # vetas
     for _ in range(h // 5):
 
         x = rng.randint(3, w - 7)
@@ -142,7 +111,6 @@ def _draw_planks(surf, pal, rng, avoid):
 
 
 def _draw_slab(surf, pal, rng, avoid):
-    """Losa de piedra (puerta gris): grietas talladas."""
 
     w, h = surf.get_size()
 
@@ -158,7 +126,6 @@ def _draw_slab(surf, pal, rng, avoid):
             surf, pal["dark"], (x, y), (x + rng.randint(2, 4), y + rng.choice((-1, 0, 1)))
         )
 
-    # juntas de la losa
     for y in (h // 3, 2 * h // 3):
 
         if any(abs(y - a) < 4 for a in avoid):
@@ -169,7 +136,6 @@ def _draw_slab(surf, pal, rng, avoid):
 
 
 def _draw_band(surf, pal, y):
-    """Faja de hierro con remaches."""
 
     w = surf.get_width()
 
@@ -181,7 +147,6 @@ def _draw_band(surf, pal, y):
 
 
 def _draw_handle(surf, pal):
-    """Placa y pomo dorado."""
 
     w, h = surf.get_size()
     cy = h // 2
@@ -193,7 +158,6 @@ def _draw_handle(surf, pal):
 
 
 def _draw_lock(surf, pal):
-    """Candado brillante de la puerta azul."""
 
     w, h = surf.get_size()
     cx, cy = w // 2, h // 2
@@ -203,20 +167,16 @@ def _draw_lock(surf, pal):
     pygame.draw.circle(glow, (*pal["knob"], 40), (cx, cy), 6)
     surf.blit(glow, (0, 0))
 
-    # arco del candado
     pygame.draw.rect(surf, OUTLINE, (cx - 3, cy - 6, 7, 7))
     pygame.draw.rect(surf, pal["band"], (cx - 2, cy - 5, 5, 6))
 
-    # cuerpo
     pygame.draw.rect(surf, OUTLINE, (cx - 4, cy - 2, 9, 8))
     pygame.draw.rect(surf, pal["knob"], (cx - 3, cy - 1, 7, 6))
 
-    # ojo de la cerradura
     pygame.draw.rect(surf, OUTLINE, (cx, cy + 1, 1, 2))
 
 
 def _draw_cracks(surf, level, seed):
-    """Grietas que aparecen a medida que la puerta recibe golpes."""
 
     w, h = surf.get_size()
     rng = random.Random(seed)
@@ -239,7 +199,6 @@ def _draw_cracks(surf, level, seed):
 
 
 def _build_vertical(kind, length, cracks):
-    """Dibuja la puerta 'v' (16 de ancho x largo de alto)."""
 
     pal = PALETTES[kind]
 
@@ -249,7 +208,6 @@ def _build_vertical(kind, length, cracks):
 
     surf = pygame.Surface((w, h), pygame.SRCALPHA)
 
-    # contorno + cuerpo
     pygame.draw.rect(surf, OUTLINE, (0, 0, w, h), border_radius=4)
     pygame.draw.rect(
         surf, pal["base"], (1, 1, w - 2, h - 2), border_radius=3
@@ -262,7 +220,6 @@ def _build_vertical(kind, length, cracks):
     else:
         _draw_planks(surf, pal, rng, bands + [h // 2])
 
-    # bisel (luz a la izquierda, sombra a la derecha)
     pygame.draw.line(surf, pal["light"], (2, 4), (2, h - 5))
     pygame.draw.line(surf, pal["dark"], (w - 3, 4), (w - 3, h - 5))
 
@@ -281,8 +238,6 @@ def _build_vertical(kind, length, cracks):
 
 
 def _load_texture(kind, orient, length):
-    """Textura real de assets/maps/puertas (puerta_<tipo>_<v|h>.png),
-    estirada al largo del hueco. Si falta el archivo, devuelve None."""
 
     def _file(o):
         path = DOORS_DIR / f"puerta_{kind}_{o}.png"
@@ -293,7 +248,6 @@ def _load_texture(kind, orient, length):
     img = _file(orient)
 
     if img is None:
-        # Si no hay version horizontal, se gira la vertical (y al reves)
         other = "v" if orient == "h" else "h"
         img = _file(other)
 
@@ -305,7 +259,6 @@ def _load_texture(kind, orient, length):
 
     size = (THICKNESS, length) if orient == "v" else (length, THICKNESS)
 
-    # scale (no smoothscale) para que el pixel art no se borre
     return pygame.transform.scale(img, size)
 
 
@@ -319,7 +272,6 @@ def _get_door_image(kind, orient, length, cracks):
 
         if image is None:
 
-            # Respaldo: dibujo por codigo si falta el PNG
             image = _build_vertical(kind, length, 0)
 
             if orient == "h":
@@ -329,7 +281,6 @@ def _get_door_image(kind, orient, length, cracks):
 
             image = image.copy()
 
-            # las grietas se dibujan en vertical y se giran si hace falta
             if orient == "h":
                 image = pygame.transform.rotate(image, -90)
                 _draw_cracks(image, cracks, f"{kind}-{length}-crack")
@@ -344,7 +295,6 @@ def _get_door_image(kind, orient, length, cracks):
 
 class Door:
 
-    # Le dice a Melee que pruebe el borde real de la puerta
     precise_hit = True
 
     def __init__(self, door_id, kind, orient, x, y, length=56):
@@ -381,7 +331,6 @@ class Door:
 
     @property
     def crack_level(self):
-        """0 = intacta, 3 = a punto de romperse."""
 
         if not self.breakable or self.hits_left >= self.max_hits:
             return 0
@@ -391,12 +340,10 @@ class Door:
         return max(1, min(3, int(3 * dmg / self.max_hits)))
 
     def resist(self):
-        """La luz no puede con esta puerta: solo destella, sin dano."""
 
         self.flash = FLASH_TIME
 
     def take_damage(self, amount):
-        """Devuelve cuanta vida de la luz cuesta este golpe."""
 
         self.flash = FLASH_TIME
 
@@ -427,7 +374,6 @@ class Door:
 
             size = (base.get_width() * zoom, base.get_height() * zoom)
 
-            # scale (no smoothscale) para que el pixel art no se borre
             self._scaled = pygame.transform.scale(base, size)
 
             self._flash_scaled = self._scaled.copy()
@@ -463,8 +409,6 @@ class DoorManager:
 
         self.broken_ids = broken_ids
 
-        # Puerta final de las 2 gemas (world/final_door.py). Si ya la
-        # rompiste (esta en broken_ids) no vuelve a aparecer.
         self.final_door = None
 
         if "puerta_final" not in broken_ids:
@@ -476,7 +420,6 @@ class DoorManager:
 
     @property
     def blocking_rects(self):
-        """Rects que bloquean el paso (para la colision)."""
 
         return [d.rect for d in self.doors]
 
@@ -489,7 +432,6 @@ class DoorManager:
             if door.broken:
                 self.broken_ids.add(door.id)
 
-        # Las rotas desaparecen
         self.doors = [d for d in self.doors if not d.broken]
 
     def draw(self, screen, camera):

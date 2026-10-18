@@ -10,6 +10,7 @@ from states.comic import Comic
 from states.new_game import NewGame
 from states.startup import Startup
 from states.settings import Settings, load_settings
+from states.achievements import AchievementsMenu
 from ui.slide_transition import SlideTransition
 from ui.zoom_transition import ZoomTransition
 
@@ -22,11 +23,6 @@ audio.preload()
 ANCHO = 1280
 ALTO = 720
 
-# SCALED: el juego siempre se dibuja en 1280x720 y pygame lo estira a
-# la pantalla. Asi la pantalla completa se prende y apaga bien (y el
-# mouse sigue coincidiendo con lo que se ve).
-# Se arranca como dice Configuraciones (antes siempre arrancaba en
-# ventana, aunque el interruptor dijera "activado").
 _flags = pygame.SCALED
 
 if load_settings().get("fullscreen"):
@@ -45,6 +41,7 @@ clock = pygame.time.Clock()
 startup = Startup(screen)
 menu = MainMenu(screen)
 settings_menu = None
+achievements_menu = None
 name_menu = None
 password_menu = None
 mode_menu = None
@@ -61,11 +58,8 @@ current_save_path = None
 pending_save_data = None
 is_continue = False
 
-# Transicion de entrada al juego (la pantalla anterior se desliza). Mientras
-# esta activa el juego no avanza (ni el tutorial) y no recibe clicks.
 transition = None
 
-# Tambien hacer la transicion al volver a jugar despues de perder
 SLIDE_ON_RESPAWN = True
 
 
@@ -76,9 +70,8 @@ running = True
 
 
 def handle_menu_action(action):
-    """Lo que pasa cuando el menu principal entrega una opcion."""
 
-    global name_menu, continue_menu, settings_menu
+    global name_menu, continue_menu, settings_menu, achievements_menu
     global current_state, running
 
     if action == "new_game":
@@ -101,7 +94,9 @@ def handle_menu_action(action):
 
     elif action == "achievements":
 
-        print("Logros")
+        achievements_menu = AchievementsMenu(screen)
+
+        current_state = "achievements"
 
     elif action == "quit":
 
@@ -130,20 +125,23 @@ while running:
                 and game.state in ("dying", "lost")
             ):
 
-                # Cerrar la ventana al perder no evita la derrota
                 game.apply_loss()
 
             running = False
-        
+
         if current_state == "menu":
 
-            # La accion elegida la entrega menu.poll() cuando termina el
-            # efecto del clic (mas abajo, en la parte de update)
             menu.handle_event(event)
 
         elif current_state == "settings":
 
             if settings_menu.handle_event(event) == "back":
+
+                current_state = "menu"
+
+        elif current_state == "achievements":
+
+            if achievements_menu.handle_event(event) == "back":
 
                 current_state = "menu"
 
@@ -155,15 +153,13 @@ while running:
 
             if result == "back":
 
-              
+
                 current_state = "menu"
 
             elif result is not None:
 
                 player_name = result[1]
 
-                # Despues del nombre: contraseña, y luego el modo.
-                # La partida se crea al final.
                 password_menu = PasswordMenu(screen, mode="set")
 
                 current_state = "password_set"
@@ -176,7 +172,6 @@ while running:
 
             if result == "back":
 
-                # Vuelve al nombre (se sigue escribiendo)
                 pygame.key.start_text_input()
 
                 current_state = "name_input"
@@ -199,7 +194,6 @@ while running:
 
             if result == "back":
 
-                # Vuelve a la contraseña (se sigue escribiendo)
                 pygame.key.start_text_input()
 
                 current_state = "password_set"
@@ -218,8 +212,6 @@ while running:
 
                 if save_path is None:
 
-                    # Los 3 slots estan ocupados: no se pisa ninguna
-                    # partida, se avisa y se vuelve al nombre.
                     name_menu.message = (
                         "No hay espacio. Borrá una partida primero."
                     )
@@ -267,13 +259,12 @@ while running:
 
         elif current_state == "comic":
 
-            # Durante el zoom al monitor el comic todavia no arranca
             if transition is not None:
                 continue
 
             if comic.handle_event(event) == "done":
 
-                
+
                 game = NewGame(
                     screen,
                     player_name,
@@ -281,20 +272,14 @@ while running:
                     mode=current_mode
                 )
 
-                # Partida nueva: al terminar las instrucciones hay una
-                # transicion al juego (la luz se enciende de a poco)
                 game._intro_pending = True
 
-                # La pantalla del comic se desliza y deja ver el juego
-                # (el tutorial arranca recien cuando termina)
                 transition = SlideTransition(screen.copy())
 
                 current_state = "gameplay"
 
         elif current_state == "gameplay":
 
-            # Durante la transicion de entrada no se juega: el tutorial
-            # espera y los clicks no pasan al juego
             if transition is not None:
                 continue
 
@@ -309,9 +294,6 @@ while running:
                 menu.play_intro()
 
 
-    # La pantalla de inicio avanza sola, una vez por frame (antes se
-    # actualizaba dentro del bucle de eventos y solo avanzaba con
-    # clicks, teclas o movimiento del mouse).
     if current_state == "startup":
 
         if startup.update(dt) == "done":
@@ -341,8 +323,6 @@ while running:
                     save_data=pending_save_data
                 )
 
-                # Al continuar una partida: zoom al monitor y aparece la
-                # partida (parte del ultimo cuadro de la pantalla de carga)
                 transition = ZoomTransition(screen.copy())
 
                 current_state = "gameplay"
@@ -351,7 +331,6 @@ while running:
 
                 comic = Comic(screen)
 
-                # Zoom al monitor y aparece el comic
                 transition = ZoomTransition(screen.copy())
 
                 current_state = "comic"
@@ -363,7 +342,6 @@ while running:
 
         if transition is not None:
 
-            # Zoom de entrada: el comic espera
             if transition.update(dt) == "done":
                 transition = None
 
@@ -375,7 +353,6 @@ while running:
 
         if transition is not None:
 
-            # Transicion de entrada: el juego espera
             if transition.update(dt) == "done":
                 transition = None
 
@@ -393,7 +370,6 @@ while running:
 
         elif result == "respawn":
 
-            # Perdiste en modo normal: vuelve directo a la partida
             data = (
                 load_save(current_save_path)
                 if current_save_path else None
@@ -417,7 +393,7 @@ while running:
 
 
     screen.fill((0, 0, 0))
-    
+
     if current_state == "startup":
 
         startup.draw()
@@ -425,10 +401,14 @@ while running:
     elif current_state == "menu":
 
         menu.draw()
-        
+
     elif current_state == "settings":
 
         settings_menu.draw()
+
+    elif current_state == "achievements":
+
+        achievements_menu.draw()
 
     elif current_state == "name_input":
 

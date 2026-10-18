@@ -1,31 +1,3 @@
-"""Cartel de OBJETIVO (arriba a la derecha).
-
-Imagenes (opcionales: si falta alguna se dibuja el rectangulo de
-siempre). Las dos del MISMO tamano, PNG transparente, en assets/maps/ui/:
-
-  objetivo.png         360x160   cartel normal (con el titulo "OBJETIVO"
-                                 ya dibujado por vos)
-  objetivo_hecho.png   360x160   cartel cuando se cumple (con "LISTO")
-
-El codigo escribe SOLO el texto del objetivo, dentro de la zona de texto
-(se achica solo si es largo). Zona de texto, en pixeles de la imagen:
-  izquierda 26, arriba 62, derecha 26, abajo 24  (-> 308 x 74)
-Dejala libre de dibujos. Si queres moverla: TEXT_MARGINS.
-
-Cuando el cartel esta MINIMIZADO tambien podes dibujar las partes
-(opcionales, PNG transparente, en assets/maps/ui/). Si falta alguna
-se dibuja el rectangulo de siempre:
-
-  objetivo_min_btn.png     24x24    boton "-" del cartel abierto
-                                    (esquina sup. derecha, a 8 px del borde)
-  objetivo_pill.png        128x32   pestanita minimizada ("OBJETIVO" + "+")
-  objetivo_pill_nuevo.png  128x32   pestanita con objetivo nuevo ("NUEVO")
-  objetivo_pill_hecho.png  128x32   pestanita con objetivo cumplido ("LISTO")
-
-El hover (mouse encima) se hace solo aclarando la imagen.
-Si falta objetivo_pill_nuevo / objetivo_pill_hecho, usa objetivo_pill.
-"""
-
 import math
 from pathlib import Path
 
@@ -37,14 +9,12 @@ UI_DIR = Path(__file__).resolve().parent.parent / "assets" / "maps" / "ui"
 OBJECTIVE_IMAGE = "objetivo.png"
 DONE_IMAGE = "objetivo_hecho.png"
 
-# Partes del cartel minimizado (opcionales)
-BUTTON_IMAGE = "objetivo_min_btn.png"      # BUTTON_SIZE
-PILL_IMAGE = "objetivo_pill.png"           # PILL_SIZE
+BUTTON_IMAGE = "objetivo_min_btn.png"
+PILL_IMAGE = "objetivo_pill.png"
 PILL_NEW_IMAGE = "objetivo_pill_nuevo.png"
 PILL_DONE_IMAGE = "objetivo_pill_hecho.png"
 HOVER_BRIGHTEN = 40
 
-# Zona de texto dentro de la imagen: (izquierda, arriba, derecha, abajo)
 TEXT_MARGINS = (26, 62, 26, 24)
 IMAGE_TEXT_COLOR = (245, 245, 245)
 IMAGE_TEXT_SHADOW = (0, 0, 0)
@@ -55,12 +25,11 @@ FONT_MIN = 16
 PANEL_WIDTH = 300
 MARGIN = 18
 
-# Minimizar: la tecla y el tamano del boton "-" y de la pestanita
 MINIMIZE_KEY = pygame.K_TAB
 BUTTON_SIZE = 24
 PILL_SIZE = (128, 32)
-MINIMIZE_TIME = 0.25     # lo que tarda en guardarse / abrirse
-ALERT_TIME = 2.5         # la pestanita llama la atencion con un objetivo nuevo
+MINIMIZE_TIME = 0.25
+ALERT_TIME = 2.5
 
 
 TOP = 118
@@ -85,11 +54,9 @@ class Objectives:
         self.title_font = pygame.font.Font(None, 22)
         self.font = pygame.font.Font(None, 26)
 
-        # Carteles dibujados por vos (None = se dibuja el rectangulo)
         self.frame_normal = self._load_frame(OBJECTIVE_IMAGE)
         self.frame_done = self._load_frame(DONE_IMAGE)
 
-        # Boton "-" y pestanitas dibujadas por vos (None = rectangulo)
         self.img_button = self._load_frame(BUTTON_IMAGE)
         self.img_pill = self._load_frame(PILL_IMAGE)
         self.img_pill_new = self._load_frame(PILL_NEW_IMAGE) or self.img_pill
@@ -99,12 +66,11 @@ class Objectives:
             self.frame_normal is not None and self.frame_done is not None
         )
 
-        # Ancho del cartel (para que se deslice bien)
         self.slide_w = (
             self.frame_normal.get_width() if self.use_images else PANEL_WIDTH
         )
 
-       
+
         self.panels = [
             (
                 self._build(obj["text"], done=False),
@@ -113,7 +79,6 @@ class Objectives:
             for obj in self.objectives
         ]
 
-        # start: en que objetivo arranca (al continuar una partida)
         self.index = max(0, int(start))
         self.phase = "in"
         self.phase_time = 0.0
@@ -124,14 +89,12 @@ class Objectives:
             not self.objectives or self.index >= len(self.objectives)
         )
 
-        # Minimizar: el cartel se guarda y queda una pestanita chica.
-        # min_t: 0.0 = cartel abierto ... 1.0 = solo la pestanita
         self.minimized = bool(minimized)
         self.min_t = 1.0 if self.minimized else 0.0
         self.alert_t = 0.0
 
-        self._button_rect = None    # boton "-" del cartel (None = oculto)
-        self._pill_rect = None      # la pestanita (None = oculta)
+        self._button_rect = None
+        self._pill_rect = None
 
     @staticmethod
     def _load_frame(name):
@@ -145,7 +108,6 @@ class Objectives:
             return None
 
     def _build_framed(self, text, done):
-        """Tu cartel + el texto del objetivo escrito en la zona de texto."""
 
         surf = (self.frame_done if done else self.frame_normal).copy()
 
@@ -157,7 +119,6 @@ class Objectives:
             max(1, surf.get_height() - top - bottom),
         )
 
-        # El texto largo se achica hasta que entre
         for size in range(FONT_MAX, FONT_MIN - 1, -1):
 
             font = pygame.font.Font(None, size)
@@ -168,7 +129,6 @@ class Objectives:
 
         line_h = font.get_linesize()
 
-        # Centrado vertical dentro de la zona
         y = area.top + (area.height - line_h * len(lines)) // 2
 
         for line in lines:
@@ -252,7 +212,6 @@ class Objectives:
 
         return surf
 
-    
 
     def _go_next(self, game):
 
@@ -272,7 +231,6 @@ class Objectives:
         self.phase = "in"
         self.phase_time = 0.0
 
-        # Minimizado: la pestanita avisa que hay un objetivo nuevo
         if self.minimized:
             self.alert_t = ALERT_TIME
 
@@ -281,8 +239,6 @@ class Objectives:
         if self.finished:
             return
 
-        # Al continuar una partida: los objetivos que ya cumpliste
-        # no se vuelven a mostrar
         if not self.started:
 
             while (
@@ -300,7 +256,6 @@ class Objectives:
         self.started = True
         self.phase_time += dt
 
-        # Animacion de minimizar / abrir
         target = 1.0 if self.minimized else 0.0
 
         step = dt / MINIMIZE_TIME
@@ -347,7 +302,7 @@ class Objectives:
             if self.phase_time >= SLIDE_TIME:
                 self._go_next(game)
 
-  
+
     def _offset(self):
         distance = self.slide_w + MARGIN + 12
 
@@ -367,17 +322,13 @@ class Objectives:
 
         return 0
 
-    # ---------- minimizar ----------
 
     def toggle(self):
-        """Minimiza o abre el cartel."""
 
         self.minimized = not self.minimized
         self.alert_t = 0.0
 
     def handle_event(self, event):
-        """Devuelve True si el evento era para el cartel (asi el click
-        no cuenta como un golpe)."""
 
         if self.finished or not self.started:
             return False
@@ -416,7 +367,6 @@ class Objectives:
         return False
 
     def _draw_button(self, screen, panel_rect):
-        """Boton "-" en la esquina de arriba a la derecha del cartel."""
 
         rect = pygame.Rect(0, 0, BUTTON_SIZE, BUTTON_SIZE)
         rect.topright = (panel_rect.right - 8, panel_rect.top + 8)
@@ -459,7 +409,6 @@ class Objectives:
         self._button_rect = rect
 
     def _draw_pill(self, screen, offset):
-        """La pestanita que queda cuando minimizas el cartel."""
 
         w, h = PILL_SIZE
 
@@ -470,7 +419,6 @@ class Objectives:
 
         color = DONE_COLOR if done else BORDER_COLOR
 
-        # Con un objetivo nuevo late un ratito para que lo notes
         pulse = 0.0
 
         if self.alert_t > 0:
@@ -478,7 +426,6 @@ class Objectives:
 
         hover = rect.collidepoint(pygame.mouse.get_pos())
 
-        # Pestanita dibujada por vos
         if self.img_pill is not None:
 
             if done:
@@ -531,7 +478,6 @@ class Objectives:
 
         pill.blit(text, (12, (h - text.get_height()) // 2))
 
-        # "+" para abrirlo
         cx = w - 16
         cy = h // 2
 
@@ -550,13 +496,11 @@ class Objectives:
         if self.finished or not self.started:
             return
 
-        # Easing de minimizar (0 = abierto, 1 = guardado)
         t = self.min_t
         ease = 1 - (1 - t) ** 3
 
         panel = self.panels[self.index][1 if self.was_done else 0]
 
-        # El cartel se desliza hacia afuera al minimizar
         panel_extra = int((self.slide_w + MARGIN + 12) * ease)
 
         if ease < 1.0:
@@ -573,7 +517,6 @@ class Objectives:
             if ease == 0.0 and self.phase in ("show", "done"):
                 self._draw_button(screen, rect)
 
-        # La pestanita entra desde afuera mientras el cartel sale
         if ease > 0.0:
 
             pill_extra = int((PILL_SIZE[0] + MARGIN + 12) * (1.0 - ease))

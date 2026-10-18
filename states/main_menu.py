@@ -7,69 +7,55 @@ import pygame
 from core.audio_manager import audio
 
 
-# El fondo original mide 745x421; todas las coordenadas de abajo estan
-# en ese tamano y se escalan solas al tamano de la ventana.
 BG_W = 745
 BG_H = 421
 
-# Zona del gato dormido: (x, y, ancho, alto)
 CAT_RECT = (552, 262, 126, 76)
 
-# Ventanas por donde pasan las hojas: (x, y, ancho, alto)
 WINDOWS = [
     (257, 1, 99, 55),
     (380, 1, 110, 55),
 ]
 
-# Respiracion del gato
-BREATH_PERIOD = 3.8      # segundos por respiracion
-BREATH_Y = 0.022         # cuanto se estira hacia arriba (2.2%)
-BREATH_X = 0.010         # cuanto se ensancha (1%)
+BREATH_PERIOD = 3.8
+BREATH_Y = 0.022
+BREATH_X = 0.010
 
-# Hojas
-LEAF_MAX = 5             # maximo de hojas a la vez
-LEAF_SPAWN = (2.5, 5.5)  # segundos entre una hoja y la siguiente
+LEAF_MAX = 5
+LEAF_SPAWN = (2.5, 5.5)
 LEAF_COLORS = [
-    (28, 84, 44),     # verde oscuro
-    (46, 112, 56),    # verde bosque
-    (72, 140, 66),    # verde medio
-    (104, 168, 78),   # verde hoja
-    (146, 200, 104),  # verde clarito
-    (184, 226, 140),  # verde muy claro
+    (28, 84, 44),
+    (46, 112, 56),
+    (72, 140, 66),
+    (104, 168, 78),
+    (146, 200, 104),
+    (184, 226, 140),
 ]
 
 
-# ---------- Efectos del menu ----------
+INTRO_LINE = 0.22
+INTRO_OPEN = 0.62
+FULL_END = 1.05
+INTRO_FLASH = 170
+INTRO_SCANLINES = 85
 
-# "Prendido de pantalla" (estilo tele vieja): una linea de luz se abre a
-# lo ancho y despues hacia arriba y abajo mostrando el menu.
-INTRO_LINE = 0.22         # tramo 1: la linea se abre a lo ancho
-INTRO_OPEN = 0.62         # tramo 2: la linea se abre hacia arriba/abajo
-FULL_END = 1.05           # fin del efecto de pantalla completa
-INTRO_FLASH = 170         # brillo blanco inicial (0 a 255)
-INTRO_SCANLINES = 85      # intensidad inicial de las lineas de tele
-
-# Encendido del monitor de la computadora (la que mira el personaje).
-# Arranca apagado y se prende un poquito despues del prendido general.
-# El area de la pantalla esta en pixeles de menu.png (1669x942).
-MONITOR_BOX = (456, 201, 1235, 534)     # x0, y0, x1, y1
+MONITOR_BOX = (456, 201, 1235, 534)
 MONITOR_REF = (1669, 942)
 
-MON_DELAY = 0.85          # cuando empieza a prenderse (desde el inicio)
-MON_LINE = 0.20           # la linea de luz se abre a lo ancho del monitor
-MON_OPEN = 0.40           # se abre hacia arriba/abajo mostrando el menu
-MON_GLOW = 0.45           # el brillo y el resplandor se apagan de a poco
-MON_FLASH = 200           # brillo blanco del monitor al prenderse (0-255)
-MON_SCANLINES = 70        # lineas de tele del monitor (0-255)
-MON_SPILL = 1.0           # resplandor sobre la pared y el escritorio (0 = sin)
+MON_DELAY = 0.85
+MON_LINE = 0.20
+MON_OPEN = 0.40
+MON_GLOW = 0.45
+MON_FLASH = 200
+MON_SCANLINES = 70
+MON_SPILL = 1.0
 
-MON_ON_AT = MON_DELAY + MON_LINE + MON_OPEN   # el menu ya se ve completo
-INTRO_DURATION = MON_ON_AT + MON_GLOW         # fin de todo el efecto
-INTRO_INPUT_AT = MON_ON_AT  # recien ahi el menu acepta clicks y teclas
+MON_ON_AT = MON_DELAY + MON_LINE + MON_OPEN
+INTRO_DURATION = MON_ON_AT + MON_GLOW
+INTRO_INPUT_AT = MON_ON_AT
 
-# Al elegir una opcion
-PRESS_DURATION = 0.32     # tiempo entre el clic y el cambio de pantalla
-PRESS_PARTICLES = 30      # chispitas que salen de la opcion
+PRESS_DURATION = 0.32
+PRESS_PARTICLES = 30
 SPARK_COLORS = [
     (255, 215, 140),
     (255, 240, 190),
@@ -77,7 +63,7 @@ SPARK_COLORS = [
     (255, 190, 100),
 ]
 
-HIGHLIGHT_SPEED = 18      # que tan rapido se desliza el marco entre opciones
+HIGHLIGHT_SPEED = 18
 
 
 def _clamp01(k):
@@ -93,9 +79,6 @@ def _ease_out(k):
 
 
 def build_cat_mask(px, w, h):
-    """px[y][x] = (r, g, b). Devuelve una matriz de bool donde True es
-    un pixel del gato. El gato es gris (r, g y b casi iguales), el
-    escritorio y la pared son marrones, asi que se separan por color."""
 
     base = [[False] * w for _ in range(h)]
 
@@ -108,11 +91,10 @@ def build_cat_mask(px, w, h):
             avg = (r + g + b) / 3
 
             gray = spread <= 12 and 45 <= avg <= 200
-            blue_z = b - r > 40   # las "z" azules del sueno
+            blue_z = b - r > 40
 
             base[y][x] = gray or blue_z
 
-    # Un pixel de borde oscuro alrededor (el contorno negro del gato)
     mask = [row[:] for row in base]
 
     for y in range(h):
@@ -133,7 +115,6 @@ def build_cat_mask(px, w, h):
                         if (r + g + b) / 3 < 90:
                             mask[ny][nx] = True
 
-    # Rellenar huecos de adentro (ojos, bigotes, boca)
     outside = [[False] * w for _ in range(h)]
 
     stack = []
@@ -173,8 +154,6 @@ class Leaf:
 
         self.surface = rng.choice(surfaces)
 
-        # Entra por la derecha y cruza hacia la izquierda, bajando
-        # de a poco y balanceandose (coordenadas del fondo original).
         self.x = rng.uniform(495, 515)
         self.y = rng.uniform(0, 26)
 
@@ -261,14 +240,9 @@ class MainMenu:
 
         self._setup_effects()
 
-    # ---------- animaciones de fondo ----------
 
     def _setup_cat(self, original):
-        """Recorta el gato del fondo para poder hacerlo respirar."""
 
-        # CAT_RECT esta en coordenadas "logicas" (745x421). El fondo real
-        # puede tener otra resolucion, asi que se convierte a pixeles de
-        # la imagen original antes de recortar.
         kx = original.get_width() / BG_W
         ky = original.get_height() / BG_H
 
@@ -294,7 +268,6 @@ class MainMenu:
                 if mask[y][x]:
                     sprite.set_at((x, y), (*px[y][x], 255))
 
-        # Tamano en pantalla: lo que ocupa esa zona en la ventana
         size = (
             max(1, round(lw * self.sx)),
             max(1, round(lh * self.sy))
@@ -304,14 +277,12 @@ class MainMenu:
 
         self.cat_pos = (round(lx * self.sx), round(ly * self.sy))
 
-        # Punto fijo de la respiracion: abajo al medio del gato
         self.cat_anchor = (size[0] / 2, size[1] * 0.93)
 
     def _setup_leaves(self):
 
         self.rng = random.Random()
 
-        # Hojas chiquitas, un par de tamanos, ya a escala de pantalla
         self.leaf_surfaces = []
 
         for color in LEAF_COLORS:
@@ -364,8 +335,6 @@ class MainMenu:
 
     def _draw_cat(self, now):
 
-        # 0 -> 1 -> 0 suave. Nunca achica el gato: asi la copia siempre
-        # tapa al gato original que esta pintado en el fondo.
         breath = 0.5 * (1 - math.cos(now * math.tau / BREATH_PERIOD))
 
         fx = 1 + BREATH_X * breath
@@ -424,7 +393,6 @@ class MainMenu:
 
         now = pygame.time.get_ticks() / 1000
 
-        # Si el menu estuvo un rato sin dibujarse, no dar un salto
         dt = min(max(now - self._last_ticks, 0.0), 0.05)
 
         self._last_ticks = now
@@ -442,7 +410,6 @@ class MainMenu:
 
         self._draw_monitor(now)
 
-        # El marco de seleccion aparece cuando el monitor ya prendio
         if self._monitor_ui_visible(now):
 
             for i in range(len(self.options)):
@@ -480,11 +447,9 @@ class MainMenu:
 
         rect = self.get_option_rect(index)
 
-        # El marco se desliza suave hasta la opcion elegida
         if self._hl_y is not None:
             rect.y = round(self._hl_y)
 
-        # Brillo suave que "respira" detras del marco
         pulse = 0.5 + 0.5 * math.sin(now * 5)
 
         glow = pygame.Surface(rect.size, pygame.SRCALPHA)
@@ -506,7 +471,6 @@ class MainMenu:
             border_radius=3
         )
 
-        # La flechita se mece de a poquito
         bob = math.sin(now * 7) * 2.5
 
         arrow = self.font.render(
@@ -527,16 +491,13 @@ class MainMenu:
             arrow_rect
         )
 
-    # ---------- efectos ----------
 
     def _setup_effects(self):
 
         self._hl_y = None
 
-        # Prendido de pantalla (None = no se esta reproduciendo)
         self.intro_t0 = None
 
-        # Opcion elegida: se espera PRESS_DURATION y recien ahi se avisa
         self.pending = None
         self.press_index = 0
         self.press_t0 = 0.0
@@ -549,7 +510,6 @@ class MainMenu:
         self._white = pygame.Surface((self.width, self.height))
         self._white.fill((255, 255, 255))
 
-        # Lineas horizontales como las de una tele
         self._scanlines = pygame.Surface(
             (self.width, self.height),
             pygame.SRCALPHA
@@ -565,7 +525,6 @@ class MainMenu:
             )
 
     def _setup_monitor(self):
-        """Prepara las piezas del encendido del monitor."""
 
         kx = self.width / MONITOR_REF[0]
         ky = self.height / MONITOR_REF[1]
@@ -583,10 +542,8 @@ class MainMenu:
 
         w, h = rect.size
 
-        # Lo que muestra el monitor prendido: el pedazo del fondo
         self._mon_on = self.background.subsurface(rect).copy()
 
-        # Monitor apagado: vidrio oscuro con un par de reflejos
         off = pygame.Surface((w, h))
         off.fill((8, 12, 24))
 
@@ -622,7 +579,6 @@ class MainMenu:
                 self._mon_scan, (0, 0, 0, 255), (0, y), (w, y)
             )
 
-        # Resplandor azul que el monitor tira sobre la pared y el escritorio
         self._mon_spill = []
 
         for grow, alpha in ((72, 9), (46, 13), (26, 17), (10, 22)):
@@ -649,7 +605,6 @@ class MainMenu:
         return now - self.intro_t0 >= MON_ON_AT
 
     def _draw_monitor(self, now):
-        """Monitor apagado -> linea de luz -> se abre -> destello."""
 
         if self.intro_t0 is None:
             return
@@ -660,11 +615,10 @@ class MainMenu:
             return
 
         m = self.monitor_rect
-        ts = t - MON_DELAY          # tiempo desde que empieza a prenderse
+        ts = t - MON_DELAY
 
         line_color = (235, 245, 255)
 
-        # Resplandor: crece hasta que prende y despues se apaga
         if ts > 0 and MON_SPILL > 0:
 
             on_time = MON_LINE + MON_OPEN
@@ -682,13 +636,11 @@ class MainMenu:
 
                 self.screen.blit(ring, (m.x - grow, m.y - grow))
 
-        # Base: el vidrio apagado
         self.screen.blit(self._mon_off, m.topleft)
 
         if ts <= 0:
             return
 
-        # Tramo 1: linea de luz que se abre a lo ancho
         if ts < MON_LINE:
 
             k = _ease_out(ts / MON_LINE)
@@ -716,7 +668,6 @@ class MainMenu:
 
             return
 
-        # Tramo 2: se abre hacia arriba y abajo mostrando el menu
         k = _ease_out((ts - MON_LINE) / MON_OPEN)
 
         open_h = max(3, int(m.height * k))
@@ -727,7 +678,6 @@ class MainMenu:
 
         self.screen.blit(self._mon_on, dest, area=band)
 
-        # Brillo + parpadeo + lineas de tele, solo sobre lo ya abierto
         fade = 1 - _clamp01((ts - MON_LINE) / (MON_OPEN + MON_GLOW))
 
         flicker = 1.0
@@ -754,7 +704,6 @@ class MainMenu:
             )
 
     def play_intro(self):
-        """Dispara el efecto de prendido de pantalla."""
 
         self.intro_t0 = pygame.time.get_ticks() / 1000
         self.pending = None
@@ -795,7 +744,6 @@ class MainMenu:
             self.intro_t0 = None
             return
 
-        # Despues de FULL_END solo queda el encendido del monitor
         if t >= FULL_END:
             return
 
@@ -803,7 +751,6 @@ class MainMenu:
 
         line_color = (235, 245, 255)
 
-        # Tramo 1: pantalla negra y una linea de luz que se abre a lo ancho
         if t < INTRO_LINE:
 
             k = _ease_out(t / INTRO_LINE)
@@ -833,7 +780,6 @@ class MainMenu:
 
             return
 
-        # Tramo 2: la linea se abre hacia arriba y abajo mostrando el menu
         if t < INTRO_OPEN:
 
             k = _ease_out((t - INTRO_LINE) / (INTRO_OPEN - INTRO_LINE))
@@ -849,7 +795,6 @@ class MainMenu:
             pygame.draw.rect(self.screen, line_color, (0, top - 1, w, 3))
             pygame.draw.rect(self.screen, line_color, (0, bottom - 2, w, 3))
 
-        # Brillo que se apaga + lineas de tele que se van + parpadeo
         fade = 1 - _clamp01((t - INTRO_LINE) / (FULL_END - INTRO_LINE))
 
         flicker = 1.0
@@ -864,8 +809,6 @@ class MainMenu:
         self.screen.blit(self._scanlines, (0, 0))
 
     def _start_press(self, index):
-        """El jugador eligio una opcion: efecto y, un instante despues,
-        poll() devuelve la accion."""
 
         if self.pending is not None:
             return
@@ -901,7 +844,7 @@ class MainMenu:
 
             spark[0] += spark[2] * dt
             spark[1] += spark[3] * dt
-            spark[3] += 420 * dt     # gravedad
+            spark[3] += 420 * dt
             spark[4] += dt
 
         self.sparks = [sp for sp in self.sparks if sp[4] < sp[5]]
@@ -918,7 +861,6 @@ class MainMenu:
         if self._hl_y is not None:
             rect.y = round(self._hl_y)
 
-        # Destello blanco sobre la opcion
         flash_alpha = int(220 * (1 - k) ** 2)
 
         if flash_alpha > 0:
@@ -934,7 +876,6 @@ class MainMenu:
 
             self.screen.blit(flash, rect.topleft)
 
-        # Ondas que se agrandan y se desvanecen
         for delay in (0.0, 0.25):
 
             kk = _clamp01((k - delay) / (1 - delay))
@@ -958,7 +899,6 @@ class MainMenu:
 
             self.screen.blit(ring, ring_rect.topleft)
 
-        # Chispas
         for x, y, _vx, _vy, age, life, size, color in self.sparks:
 
             spark = pygame.Surface((size, size))
@@ -967,7 +907,6 @@ class MainMenu:
 
             self.screen.blit(spark, (round(x), round(y)))
 
-        # Al final la pantalla se oscurece, asi el cambio no es brusco
         if k > 0.65:
 
             self._fade.fill((0, 0, 0))
@@ -975,8 +914,6 @@ class MainMenu:
             self.screen.blit(self._fade, (0, 0))
 
     def poll(self):
-        """main.py lo llama en cada cuadro. Devuelve la accion elegida
-        cuando termino el efecto del clic, o None."""
 
         if self.pending is None:
             return None
@@ -1001,11 +938,7 @@ class MainMenu:
             audio.play("click")
 
     def handle_event(self, event):
-        """Ya no devuelve la accion: la devuelve poll() cuando termina el
-        efecto. (Siempre devuelve None.)"""
 
-        # Mientras se prende la pantalla o se esta eligiendo una opcion,
-        # no se aceptan mas entradas
         if self.pending is not None or self._intro_blocks_input():
             return None
 

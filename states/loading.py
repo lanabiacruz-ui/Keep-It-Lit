@@ -63,7 +63,7 @@ class Loading:
 
         progress = min(1, self.timer / self.duration)
 
-        
+
         pygame.draw.rect(
             self.screen,
             (235, 242, 255),
@@ -72,7 +72,7 @@ class Loading:
             border_radius=3
         )
 
-        
+
         fill_rect = self.bar_rect.inflate(-6, -6)
         fill_rect.width = int(fill_rect.width * progress)
 

@@ -15,14 +15,12 @@ SAVES_DIR = (
 SLOTS = ["save_01.json", "save_02.json", "save_03.json"]
 
 
-# Modos de juego (se elige al crear la partida)
 MODE_NORMAL = "normal"
 MODE_HARDCORE = "hardcore"
 MODES = (MODE_NORMAL, MODE_HARDCORE)
 
 
 def normalize_mode(mode):
-    """Cualquier cosa rara (o una partida vieja sin modo) es normal."""
 
     return mode if mode in MODES else MODE_NORMAL
 
@@ -34,7 +32,6 @@ CORRUPT = "corrupt"
 
 def _read_slot(path):
 
- 
 
     path = Path(path)
 
@@ -64,9 +61,6 @@ def _slot_is_empty(path):
     return status == EMPTY
 
 
-# ---------- contraseñas de las partidas ----------
-# Nunca se guarda la contraseña: solo un hash con sal.
-
 PASSWORD_MIN = 1
 PASSWORD_MAX = 16
 _PBKDF2_ROUNDS = 60_000
@@ -83,7 +77,6 @@ def _hash_password(password, salt_hex):
 
 
 def make_password_fields(password):
-    """Campos para guardar en la partida ({} si no hay contraseña)."""
 
     if not password:
         return {}
@@ -102,8 +95,6 @@ def has_password(data):
 
 
 def check_password(data, password):
-    """True si la contraseña es correcta. Una partida vieja, sin
-    contraseña, deja pasar siempre."""
 
     if not has_password(data):
         return True
@@ -118,7 +109,6 @@ def check_password(data, password):
 
 def list_slots():
 
-   
 
     slots = []
 
@@ -145,13 +135,6 @@ def list_slots():
 
 
 def name_exists(player_name):
-    """True si ya hay una partida guardada con ese nombre.
-
-    Ignora mayusculas y espacios de los costados ("Juan" y " juan "
-    son el mismo nombre). Los slots vacios (partidas borradas) no
-    cuentan, asi que un nombre se puede volver a usar despues de
-    borrar su partida.
-    """
 
     wanted = str(player_name).strip().casefold()
 
@@ -172,7 +155,6 @@ def name_exists(player_name):
 def get_free_slot():
 
 
-
     for slot in SLOTS:
 
         candidate = SAVES_DIR / slot
@@ -185,7 +167,6 @@ def get_free_slot():
 
 def create_new_save(player_name, mode=MODE_NORMAL, password=""):
 
- 
 
     SAVES_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -220,7 +201,6 @@ def create_new_save(player_name, mode=MODE_NORMAL, password=""):
 def load_save(path):
 
 
-
     status, data = _read_slot(path)
 
     if status != OK:
@@ -230,7 +210,6 @@ def load_save(path):
 
 
 def save_progress(path, **fields):
-
 
 
     if path is None:

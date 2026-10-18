@@ -1,14 +1,3 @@
-"""Bolas de fuego de la antorcha (se activan con la tecla G).
-
-Todo en unidades del mundo, igual que el resto de coordenadas. Para
-balancear se cambian los numeros de aca abajo (el dano y lo que gasta
-de luz estan en states/new_game.py: FIRE_DAMAGE, FIRE_COST...).
-
-Imagen (opcional: si falta se dibuja una bolita naranja):
-
-  assets/maps/hud/bola_fuego.png   32x32  (mira hacia la derecha)
-"""
-
 import math
 from pathlib import Path
 
@@ -22,39 +11,25 @@ HUD_DIR = (
     / "hud"
 )
 
-# Que tan rapido vuela (unidades del mundo por segundo) y hasta donde
-# llega antes de apagarse.
 FIRE_SPEED = 240.0
 FIRE_RANGE = 150.0
 
-# Radio con el que toca a los enemigos / puertas / cofres.
 FIRE_HIT_RADIUS = 3.0
 
-# Tamano dibujado (unidades del mundo) y cuanta luz tira alrededor
-# (radio en pixeles de pantalla).
 FIRE_SIZE = 7.0
 FIRE_LIGHT_RADIUS = 80
 
-# Cada cuanto se revisan choques mientras vuela (para no atravesar
-# enemigos finitos cuando el frame tarda).
 STEP = 3.0
 
-# Cuanto dura el estallido al chocar.
 BURST_TIME = 0.22
 
-# La bola fuerte (la 3ra del combo): cuantas veces mas grande es, cuanta
-# mas luz tira y con que radio toca. El dano x2 esta en states/new_game.py
-# (FIRE_HEAVY_MULT).
 HEAVY_SIZE_MULT = 1.7
 
-# Colores de la bola fuerte (azul-blanco, como fuego muy caliente).
-# La imagen de la bola se repinta: lo oscuro queda en HEAVY_DARK y lo
-# mas claro (el centro) se acerca a HEAVY_LIGHT. Cambialos a gusto.
 HEAVY_DARK = (30, 70, 255)
 HEAVY_LIGHT = (225, 245, 255)
-HEAVY_AURA = (70, 150, 255)       # aura de afuera
-HEAVY_AURA_CORE = (200, 235, 255) # aura de adentro
-HEAVY_BURST = (80, 160, 255)      # anillo del estallido
+HEAVY_AURA = (70, 150, 255)
+HEAVY_AURA_CORE = (200, 235, 255)
+HEAVY_BURST = (80, 160, 255)
 HEAVY_BURST_CORE = (210, 240, 255)
 HEAVY_LIGHT_RADIUS = 130
 HEAVY_HIT_RADIUS = 5.0
@@ -65,7 +40,6 @@ _sprite_cache = {}
 
 
 def _load_base():
-    """Imagen original de la bola (se carga una sola vez)."""
 
     global _base_sprite
 
@@ -89,11 +63,6 @@ def _load_base():
 
 
 def _load_heavy_base():
-    """La imagen de la bola repintada de azul para la bola fuerte.
-
-    Se calcula una sola vez: usa el brillo de cada pixel para mezclar
-    entre HEAVY_DARK y HEAVY_LIGHT, asi conserva la forma de tu dibujo.
-    """
 
     global _heavy_base
 
@@ -111,7 +80,6 @@ def _load_heavy_base():
                 if a == 0:
                     continue
 
-                # Brillo del pixel (0 a 1), un poco realzado
                 k = min(1.0, (0.3 * r + 0.59 * g + 0.11 * b) / 200)
 
                 tinted.set_at((x, y), (
@@ -127,7 +95,6 @@ def _load_heavy_base():
 
 
 def _get_sprite(zoom, angle, heavy=False):
-    """Sprite ya escalado al zoom y girado hacia donde vuela."""
 
     deg = round(-math.degrees(angle) / 10) * 10
 
@@ -158,7 +125,6 @@ class Fireball:
         self.angle = angle
         self.damage = damage
 
-        # La bola fuerte del combo: mas grande, mas luz, mas dano
         self.heavy = heavy
 
         self.vx = math.cos(angle) * FIRE_SPEED
@@ -168,11 +134,6 @@ class Fireball:
         self.dead = False
 
     def update(self, dt, targets, walkable):
-        """Avanza. Devuelve el objetivo que toco (o None).
-
-        targets  -> cosas con .rect en coordenadas del mundo
-        walkable -> funcion (x, y) -> True si ahi no hay pared
-        """
 
         if self.dead:
             return None
@@ -217,7 +178,6 @@ class Fireball:
         return None
 
     def light_source(self):
-        """(x, y, radio) para el sistema de luces."""
 
         radius = HEAVY_LIGHT_RADIUS if self.heavy else FIRE_LIGHT_RADIUS
 
@@ -232,7 +192,6 @@ class Fireball:
 
         if self.heavy:
 
-            # Aura para que se note que es la fuerte
             r = int(FIRE_SIZE * HEAVY_SIZE_MULT * camera.zoom * 0.9)
 
             halo = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
@@ -246,7 +205,6 @@ class Fireball:
 
 
 class FireBurst:
-    """Estallido corto donde la bola choco."""
 
     def __init__(self, x, y, heavy=False):
 

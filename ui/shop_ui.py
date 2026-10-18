@@ -1,31 +1,3 @@
-"""Tienda (ventana de compra) del vendedor.
-
-IMAGENES (carpeta assets/maps/tienda/). Todas son opcionales: si falta
-alguna, la tienda la dibuja por codigo.
-
-  tienda_panel.png          900 x 520   fondo de la tienda
-  tienda_carrito.png        258 x 388   columna del carrito
-  tienda_tarjeta.png        182 x 104   tarjeta de un producto
-  tienda_tarjeta_hover.png  182 x 104   tarjeta con el mouse encima
-  tienda_icono_fondo.png     46 x 46    fondo del icono del producto
-  tienda_badge.png           26 x 20    globito con la cantidad
-  tienda_fila.png           242 x 42    fila del carrito
-  tienda_mas.png.png         20 x 20    boton +
-  tienda_menos.png           20 x 20    boton -
-  tienda_boton_comprar.png (+ _hover, .off)  178 x 40   boton comprar
-  tienda_boton_tacho.png     40 x 40    vaciar carrito
-  tienda_flecha.png          34 x 34    flecha
-  tienda_monedas.png        112 x 40    cartelito de monedas
-  2026_10_04_05p_Kleki.png   36 x 36    boton cerrar
-
-  NUEVA  tienda_info_panel.png   460 x 360 (recomendado)
-         Fondo de la ventanita de info (click en la rueda sobre un
-         producto). Si existe, se usa con SU tamano (podes dibujarla
-         mas grande o mas chica) y el texto se acomoda solo adentro:
-         si es largo, la letra se achica hasta que entre. Los margenes
-         donde va el texto se cambian en las constantes INFO_PAD_*.
-         Si no existe, se dibuja el cuadro de siempre.
-"""
 import math
 from pathlib import Path
 
@@ -42,8 +14,6 @@ TIENDA_DIR = (
     / "tienda"
 )
 
-# Nombre de cada imagen de la tienda (los nombres son los de los PNG
-# tal cual estan en assets/maps/tienda/)
 IMAGES = {
     "panel": "tienda_panel.png",
     "cart": "tienda_carrito.png",
@@ -64,23 +34,18 @@ IMAGES = {
     "info": "tienda_info_panel.png",
 }
 
-# Imagenes que no hace falta tener (no avisa si faltan)
 OPTIONAL_IMAGES = ("info",)
 
-# Ventanita de info (click en la rueda). Margenes del TEXTO dentro de tu
-# imagen tienda_info_panel.png, en pixeles
-INFO_PAD_X = 28        # izquierda y derecha
-INFO_PAD_TOP = 24      # de arriba del cuadro al icono + nombre
-INFO_HEADER_H = 44     # alto de la fila del icono + nombre
-INFO_PAD_BOTTOM = 34   # espacio de abajo (para "Click para cerrar")
-INFO_FONT_SIZES = (23, 21, 19, 17, 15)   # el texto achica hasta entrar
+INFO_PAD_X = 28
+INFO_PAD_TOP = 24
+INFO_HEADER_H = 44
+INFO_PAD_BOTTOM = 34
+INFO_FONT_SIZES = (23, 21, 19, 17, 15)
 
 _raw_cache = {}
 
 
 def _load_raw(key):
-    """Imagen original de la tienda (None si el archivo no esta, asi la
-    tienda cae al dibujo hecho con codigo)."""
 
     if key not in _raw_cache:
 
@@ -96,7 +61,6 @@ def _load_raw(key):
     return _raw_cache[key]
 
 
-# Colores (oscuro, como en el diseno de la tienda)
 C_PANEL = (24, 24, 27)
 C_CARD = (30, 30, 34)
 C_CARD_HOVER = (42, 42, 48)
@@ -106,7 +70,6 @@ C_MUTED = (161, 161, 170)
 C_RED = (248, 113, 113)
 C_BADGE = (251, 146, 60)
 
-# Color del cuadradito de fondo de cada icono
 TILE_COLORS = {
     "fosforo": (66, 36, 10),
     "vela": (16, 40, 86),
@@ -123,14 +86,6 @@ MAX_PER_ITEM = 99
 
 
 class ShopUI:
-    """Ventana de la tienda: productos a la izquierda, carrito a la
-    derecha.
-
-    handle_event devuelve:
-      None                  -> no paso nada importante
-      "close"               -> cerrar la tienda
-      ("buy", {id: cant})   -> el jugador confirmo la compra
-    """
 
     PANEL_W = 900
     PANEL_H = 520
@@ -156,7 +111,6 @@ class ShopUI:
         self.coins = int(coins)
         self.match_duration = float(match_duration)
 
-        # Producto del que se esta mostrando la info (click con la rueda)
         self.info_id = None
 
         self.prices = {
@@ -165,9 +119,6 @@ class ShopUI:
             for it in sec["items"]
         }
 
-        # {id: cantidad}, en el orden en que se fueron agregando.
-        # Si se cerro la tienda sin comprar, vuelve con lo que habias
-        # puesto (new_game se lo pasa en `cart`).
         self.cart = {
             item_id: min(MAX_PER_ITEM, int(qty))
             for item_id, qty in (cart or {}).items()
@@ -233,7 +184,6 @@ class ShopUI:
             40
         )
 
-        # Cabecera: [X] y monedas arriba a la derecha
         self.coin_pill = pygame.Rect(
             self.panel.right - self.PAD - 112,
             self.panel.y + self.PAD,
@@ -261,7 +211,6 @@ class ShopUI:
 
         self._layout()
 
-    # ---------- datos ----------
 
     def item_name(self, item_id):
 
@@ -270,8 +219,6 @@ class ShopUI:
         return data.get("nombre", item_id.capitalize())
 
     def info_lines(self, item_id):
-        """Texto de la ventanita de info: que hace el objeto o, si es
-        una luz, sus numeros (radio, duracion y furia)."""
 
         data = self.defs.get(item_id, {})
 
@@ -322,8 +269,6 @@ class ShopUI:
 
         if key not in self._icons:
 
-            # El fosforo usa el dibujo del fosforo (item_fosforo.png) y
-            # no icon_fosforo.png, que es el casillero del HUD
             if item_id == "fosforo":
 
                 path = HUD_DIR / "item_fosforo.png"
@@ -346,11 +291,6 @@ class ShopUI:
         return self._icons[key]
 
     def _img(self, key, size=None, shade=0):
-        """Imagen de la tienda lista para dibujar.
-
-        size  -> si se pasa y es distinta a la original, se reescala
-        shade -> > 0 aclara (hover), < 0 oscurece (apagado)
-        Devuelve None si la imagen no esta (se usa el dibujo viejo)."""
 
         cache_key = (key, size, shade)
 
@@ -388,11 +328,8 @@ class ShopUI:
         self.message = text
         self.message_timer = 2.0
 
-    # ---------- layout ----------
 
     def _layout(self):
-        """Posiciones de secciones y tarjetas dentro del area scrolleable
-        (coordenadas relativas al tope del area)."""
 
         self.labels = []
         self.cards = []
@@ -428,7 +365,6 @@ class ShopUI:
         self.max_scroll = max(0, self.content_h - self.list_rect.height)
 
     def _cart_rows(self):
-        """[(id, cant, rect_fila, rect_menos, rect_mas)] en pantalla."""
 
         rows = []
 
@@ -453,7 +389,6 @@ class ShopUI:
             0, len(self.cart) * self.ROW_H - self.rows_rect.height
         )
 
-    # ---------- carrito ----------
 
     def add(self, item_id, amount=1):
 
@@ -478,7 +413,6 @@ class ShopUI:
         self.cart.clear()
         self.cart_scroll = 0.0
 
-    # ---------- eventos ----------
 
     def _card_at(self, pos):
 
@@ -499,14 +433,12 @@ class ShopUI:
 
         if event.type == pygame.KEYDOWN:
 
-            # Con la info abierta, cualquier tecla solo la cierra
             if self.info_id is not None:
 
                 self.info_id = None
 
                 return None
 
-            # Esc / F cierran la tienda (F es la misma tecla que la abre)
             if event.key in (pygame.K_ESCAPE, pygame.K_f):
                 return "close"
 
@@ -543,24 +475,20 @@ class ShopUI:
 
         pos = event.pos
 
-        # ---- info con la rueda del mouse (click del medio) ----
         if event.button == 2:
 
             card = self._card_at(pos)
 
-            # Tocar el mismo producto otra vez la cierra
             self.info_id = None if card == self.info_id else card
 
             return None
 
-        # Con la info abierta, el primer click solo la cierra
         if self.info_id is not None:
 
             self.info_id = None
 
             return None
 
-        # ---- tarjetas ----
         card = self._card_at(pos)
 
         if card is not None:
@@ -575,11 +503,9 @@ class ShopUI:
         if event.button != 1:
             return None
 
-        # ---- cerrar ----
         if self.close_rect.collidepoint(pos):
             return "close"
 
-        # ---- flechita de scroll ----
         if (
             self.scroll < self.max_scroll - 1
             and math.dist(pos, self.arrow_center) <= 17
@@ -589,7 +515,6 @@ class ShopUI:
 
             return None
 
-        # ---- filas del carrito (+ y -) ----
         if self.rows_rect.collidepoint(pos):
 
             for item_id, _, _, minus, plus in self._cart_rows():
@@ -604,14 +529,12 @@ class ShopUI:
 
             return None
 
-        # ---- tacho ----
         if self.trash_rect.collidepoint(pos):
 
             self.clear()
 
             return None
 
-        # ---- comprar ----
         if self.buy_rect.collidepoint(pos):
 
             total = self.total()
@@ -634,7 +557,6 @@ class ShopUI:
         if self.message_timer > 0:
             self.message_timer -= dt
 
-    # ---------- dibujo ----------
 
     def _text(self, screen, font, text, color, **anchor):
 
@@ -645,8 +567,6 @@ class ShopUI:
         return img
 
     def _font_for(self, size):
-        """Fuente por defecto del tamano pedido (se guarda para no
-        crearla en cada cuadro)."""
 
         font = self._font_cache.get(size)
 
@@ -657,8 +577,6 @@ class ShopUI:
         return font
 
     def _fit_font(self, text, max_w, size, min_size=14):
-        """Fuente del tamano `size`, o mas chica si hace falta, para que
-        `text` entre en `max_w` pixeles en una sola linea."""
 
         while size > min_size:
 
@@ -673,15 +591,12 @@ class ShopUI:
 
     @staticmethod
     def _wrap(font, text, max_width):
-        """Parte `text` en lineas de hasta `max_width` pixeles. Una
-        palabra que sola es mas ancha que la linea tambien se corta."""
 
         lines = []
         line = ""
 
         for word in text.split():
 
-            # Palabra gigante: se corta en pedazos que entren
             while font.size(word)[0] > max_width and len(word) > 1:
 
                 n = len(word) - 1
@@ -712,8 +627,6 @@ class ShopUI:
     def _draw_coin_amount(
         self, screen, amount, color, midright, max_w=90
     ):
-        """Moneda + numero, alineado a la derecha en `midright`. Si el
-        numero es muy ancho se achica para que entre en `max_w`."""
 
         text = self.name_font.render(str(amount), True, color)
 
@@ -761,7 +674,6 @@ class ShopUI:
                 screen, C_BORDER, rect, width=1, border_radius=10
             )
 
-        # Cuadradito con el icono
         tile = pygame.Rect(0, 0, 46, 46)
         tile.midtop = (rect.centerx, rect.y + 10)
 
@@ -798,7 +710,6 @@ class ShopUI:
             midtop=(rect.centerx, tile.bottom + 28)
         )
 
-        # Cuantas hay en el carrito
         qty = self.cart.get(item_id, 0)
 
         if qty > 0:
@@ -851,7 +762,6 @@ class ShopUI:
 
         screen.set_clip(None)
 
-        # Flechita "hay mas abajo"
         if self.scroll < self.max_scroll - 1:
 
             arrow_img = self._img("arrow", (34, 34))
@@ -885,7 +795,6 @@ class ShopUI:
                 )
 
     def _draw_cart_icon(self, screen, x, y):
-        """Carrito de compras chiquito (lineas)."""
 
         pygame.draw.lines(
             screen, C_TEXT, False,
@@ -940,7 +849,6 @@ class ShopUI:
                 screen, C_BORDER, self.cart_rect, width=1, border_radius=12
             )
 
-        # Cabecera
         self._draw_cart_icon(
             screen, self.cart_rect.x + 16, self.cart_rect.y + 14
         )
@@ -950,7 +858,6 @@ class ShopUI:
             midleft=(self.cart_rect.x + 46, self.cart_rect.y + 25)
         )
 
-        # Filas
         if not self.cart:
 
             lines = self._wrap(
@@ -1038,7 +945,6 @@ class ShopUI:
 
             screen.set_clip(None)
 
-        # Pie: total, aviso y botones
         foot_top = self.cart_rect.bottom - self.FOOT_H
 
         pygame.draw.line(
@@ -1068,7 +974,6 @@ class ShopUI:
                 midtop=(self.cart_rect.centerx, self.total_pos_y + 32)
             )
 
-        # Comprar
         enabled = total > 0
 
         hover = enabled and self.buy_rect.collidepoint(mouse)
@@ -1109,7 +1014,6 @@ class ShopUI:
             center=self.buy_rect.center
         )
 
-        # Tacho
         hover = self.trash_rect.collidepoint(mouse)
 
         if not self.cart:
@@ -1145,8 +1049,6 @@ class ShopUI:
             )
 
     def _info_body(self, item_id, max_w, max_h=None):
-        """Texto de la info ya partido en lineas. Si se pasa `max_h`,
-        prueba letras cada vez mas chicas hasta que todo entre."""
 
         raws = self.info_lines(item_id)
 
@@ -1171,11 +1073,6 @@ class ShopUI:
         return font, body, line_h
 
     def _draw_info(self, screen, item_id):
-        """Ventanita con lo que hace el producto (o los numeros de la
-        luz). Se cierra con cualquier click o tecla.
-
-        Si existe assets/maps/tienda/tienda_info_panel.png se usa de
-        fondo (con su propio tamano); si no, el cuadro dibujado."""
 
         info_img = _load_raw("info")
 
@@ -1279,13 +1176,11 @@ class ShopUI:
                 screen, C_BORDER, self.panel, width=1, border_radius=16
             )
 
-        # Cabecera
         self._text(
             screen, self.title_font, "Tienda", C_TEXT,
             midleft=(self.panel.x + self.PAD, self.coin_pill.centery)
         )
 
-        # Cerrar
         hover = self.close_rect.collidepoint(mouse)
 
         close_img = self._img(
@@ -1319,7 +1214,6 @@ class ShopUI:
                 screen, C_TEXT, (cx - 6, cy + 6), (cx + 6, cy - 6), 2
             )
 
-        # Monedas que tenes
         coins_img = self._img("coins", self.coin_pill.size)
 
         if coins_img is not None:
@@ -1351,7 +1245,6 @@ class ShopUI:
         if self.info_id is not None:
             self._draw_info(screen, self.info_id)
 
-        # Ayuda abajo
         help_text = (
             "Click: agregar  ·  Click derecho: quitar  ·  "
             "Click en la rueda: info  ·  Rueda: bajar  ·  E / Esc: cerrar"

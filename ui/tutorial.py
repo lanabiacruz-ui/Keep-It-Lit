@@ -8,23 +8,15 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 UI_DIR = ROOT_DIR / "assets" / "maps" / "ui"
 
 
-# ---------- IMAGENES DEL TUTORIAL ----------
-# Nombre de cada imagen (se busca dentro de assets/maps/ui/ y, si no
-# esta ahi, en cualquier otra carpeta de assets).
-CHARACTER_IMAGE = "botayuda.png"   # el personaje que ayuda
-FRAME_IMAGE = "texto.png"          # el cuadro donde va el texto
+CHARACTER_IMAGE = "botayuda.png"
+FRAME_IMAGE = "texto.png"
 
-# Recorte de cada imagen (x, y, ancho, alto). Los valores de abajo son
-# para las imagenes actuales, que tienen cosas de sobra alrededor.
-# Si tu imagen nueva ya viene limpia, poné None: usa la imagen entera
-# sin los bordes transparentes.
 CHARACTER_CROP = pygame.Rect(490, 214, 194, 319)
-FRAME_CROP = None   # texto.png nuevo (800x285): se usa entero
+FRAME_CROP = None
 
 
 TUTORIAL_PAGES = [
 
-    # ---------- LO BASICO ----------
     "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
     "MOVERTE: usá W A S D. Buscá en esta cabaña objetos para alimentar tu llama antes de que se apague.",
     "ATACAR: click izquierdo (o ESPACIO) para pegar con tu luz. Mantené el click para seguir pegando. Cada golpe le baja vida a tu luz.",
@@ -35,12 +27,10 @@ TUTORIAL_PAGES = [
 
     "OBJETIVOS: arriba a la derecha ves tu objetivo actual. Apretá TAB o el botón con el signo menos para minimizarlo, y TAB o la pestañita para abrirlo.",
 
-    # ---------- LUCES ----------
     "LUCES: el fósforo dura 30 segundos, la vela 60 y la antorcha 120. Al agarrar una se equipa sola en el casillero de la luz. Solo podés llevar una.",
     "VELA Y ANTORCHA: alumbran más y cada tanto entran en FURIA: pegan rapidísimo. Son las únicas que rompen las puertas grises. Cada TERCER golpe seguido es más fuerte: la luz brilla de otro color.",
     "ANTORCHA: apretá G para cambiar entre golpe común y bola de fuego, que sale disparada hacia el mouse. Solo la antorcha lanza fuego.",
 
-    # ---------- OBJETOS ----------
     "RECUPERAR LUZ: la madera suma 25% a tu luz, la resina la recupera de a poco y el aceite la deja en 75% y te da velocidad un rato.",
     "ESCUDO: el hongo azul te da 25% de escudo. El escudo se gasta antes que tu vida y no se consume con el tiempo.",
     "MÁS OBJETOS: la cera hace que tu luz dure casi 3 veces más, la pólvora hace que tu luz queme a los enemigos y la esfera de vidrio amplía tu luz.",
@@ -48,7 +38,6 @@ TUTORIAL_PAGES = [
     "IMÁN: una vez usado, atrae solo las monedas, gemas e items cercanos durante 7 minutos. Apretá O para prenderlo o apagarlo (apagado no gasta tiempo).",
     "FARO Y FOGATA: elegí cerca de ellos (en la hotbar) la CERA para la linterna antigua o la MADERA para la fogata y apretá F o click derecho. Mantené click izquierdo sobre ellos para ver cuánta luz les queda y cómo alimentarlos.",
 
-    # ---------- MAPA ----------
     "PUERTAS: pegales con la luz para romperlas (cada golpe gasta un poco de luz). Las marrones aguantan 2 golpes y las verdes 6. Una puerta rota no vuelve.",
     "PUERTAS GRISES: solo las rompen la vela y la antorcha. Las violetas (azules) solo las rompe la antorcha.",
     "COFRES: pegale a un cofre con la luz para abrirlo. Sale un minijuego: frená el marcador dentro de la zona con click, ESPACIO o E. Hay que acertar 3 veces.",
@@ -56,7 +45,6 @@ TUTORIAL_PAGES = [
     "MONEDAS Y GEMAS: las monedas amarillas valen 1, las azules 5 y las rojas 10, y se juntan solas al acercarte. Las gemas son el premio por completar una sala.",
     "TIENDA: el vendedor está en la sala de arriba, en el centro. Acercate y apretá F para comprar luces y objetos con tus monedas.",
 
-    # ---------- COMBATE ----------
     "SALAS DE COMBATE: las dos salas grandes (izquierda y derecha) tienen oleadas de enemigos. Al entrar aparece un menú: Salir, Jugar con escape o Jugar sin escape.",
     "CON ESCAPE podés irte caminando de la sala (cancela la oleada). SIN ESCAPE la entrada se bloquea mientras peleás, pero el premio vale el doble.",
     "OLEADAS: al derrotar al último enemigo aparece un cofre que explota y tira monedas. Juntalas y vuelve el menú para la siguiente oleada.",
@@ -69,18 +57,14 @@ TUTORIAL_PAGES = [
     "ENCICLOPEDIA: en el menú de pausa. Cada enemigo se descubre cuando te lo encontrás en una oleada, y se empieza de cero en cada partida.",
     "SALA IZQUIERDA: los bloques de la cruz de piedra abren y cierran los pasos solos. Si el hueco parpadea en rojo, salí rápido: te aplastan y te sacan mucha luz.",
 
-    # ---------- PERDER / AYUDA ----------
     "PERDER: en modo Normal perdés todos tus objetos y te quedás con un fósforo en la cabaña. En modo Hardcore se borra toda la partida.",
     "AYUDA: podés volver a ver estas instrucciones cuando quieras apretando F1. ¡Mucha suerte y que tu luz nunca se apague!",
 ]
 
-# Letras azules (oscuras para que se lean sobre el cuadro gris)
 TEXT_COLOR = (25, 60, 150)
 SHADOW_COLOR = (225, 230, 240)
 HINT_COLOR = (60, 95, 170)
 
-# El interior de texto.png es semitransparente: se rellena con este
-# color para que el cuadro no deje ver el mapa por detras.
 FRAME_BACKING = (255, 255, 255)
 
 
@@ -92,7 +76,6 @@ class Tutorial:
 
     INPUT_DELAY = 0.6
 
-    # Letra mas chica a la que se llega para que el texto entre
     MIN_FONT = 17
 
     def __init__(
@@ -226,8 +209,6 @@ class Tutorial:
 
     @staticmethod
     def _solidify(surf, color):
-        """Pone un fondo solido detras de la silueta del cuadro, asi lo
-        semitransparente del interior no deja ver lo que hay detras."""
 
         mask = pygame.mask.from_surface(surf, 40)
 
@@ -308,14 +289,11 @@ class Tutorial:
         return font
 
     def _lines(self, index):
-        """Devuelve (fuente, lineas) de la pagina. Si el texto no entra
-        en el cuadro, se achica la letra hasta que entre."""
 
         if index not in self._lines_cache:
 
             max_w = self.frame_rect.width - self.pad_x * 2
 
-            # Alto libre: sin el contador (arriba) ni el aviso (abajo)
             max_h = self.frame_rect.height - 52
 
             size = 28
@@ -354,7 +332,6 @@ class Tutorial:
         if event.key == pygame.K_ESCAPE:
             return False
 
-        # ENTER: saltar todas las instrucciones
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
 
             self.phase = "out"
@@ -362,7 +339,6 @@ class Tutorial:
 
             return True
 
-        # Solo la barra espaciadora avanza el tutorial
         if event.key != pygame.K_SPACE:
             return False
 

@@ -13,78 +13,48 @@ HUD_DIR = (
     / "hud"
 )
 
-# ---------------------------------------------------------------
-# Area de ataque (la zona naranja del dibujo)
-# Todo en unidades del mundo, igual que el resto de coordenadas.
-# ---------------------------------------------------------------
 
-# Donde empieza el area (el borde del cuerpo) y hasta donde llega.
-# Ojo: el personaje se dibuja chico (74 px de alto en pantalla) aunque
-# el mundo tenga zoom x4, asi que estos numeros son bastante menores
-# que el tamano del sprite en unidades del mundo.
-# 11 -> 44 px en pantalla, 26 -> 104 px (casi lo que alumbra la luz).
 INNER_RADIUS = 11
 OUTER_RADIUS = 26
 
-# Que tan ancha es el area, en grados (centrada en el mouse)
 ARC_DEGREES = 100
 
-# Cuanto dura el golpe (el fosforo pasa de un borde al otro)
 SWING_TIME = 0.20
 
-# Espera despues del golpe antes de poder volver a pegar
 COOLDOWN = 0.25
 
-# Cuanto sacan los golpes
 DAMAGE = 1
 
-# Largo del fosforo dibujado, en unidades del mundo
 STICK_LENGTH = 14
 
-# Cuanto de la estela (en grados) queda atras del fosforo
 TRAIL_DEGREES = 55
 
-# Cuanto tarda en apagarse la estela cuando termina el golpe
 GLOW_TIME = 0.12
 
-# ---------------------------------------------------------------
-# Combo (solo vela y antorcha): el TERCER golpe seguido es fuerte.
-# Si pasa mas de COMBO_WINDOW segundos sin pegar, el combo se pierde.
-# ---------------------------------------------------------------
 COMBO_KINDS = ("vela", "antorcha")
 COMBO_HITS = 3
 COMBO_WINDOW = 0.9
-HEAVY_DAMAGE_MULT = 2          # el golpe fuerte saca el doble
+HEAVY_DAMAGE_MULT = 2
 
-# Como se ve el golpe fuerte (violeta + mas grande + chispazo)
 HEAVY_COLOR = (200, 100, 255)
 HEAVY_CORE = (255, 235, 255)
 HEAVY_RADIUS_MULT = 1.35
 GLOW_TIME_HEAVY = 0.30
 IMPACT_TIME = 0.35
 
-# El sprite item_fosforo.png (32x32) tiene la cabeza hacia arriba a la
-# derecha (-45 grados en pantalla) y el palito mide unos 23 px.
 SPRITE_HEAD_ANGLE = -45
 SPRITE_STICK_PX = 23
 
-# La vela (icon_vela.png, 64x64): la llama apunta hacia arriba (-90
-# grados en pantalla) y la vela entera mide unos 60 px de alto. Se
-# dibuja de VELA_LENGTH unidades del mundo.
 VELA_HEAD_ANGLE = -90
 VELA_SPRITE_PX = 60
 VELA_LENGTH = 15
 
-# La antorcha (icon_antorcha.png, 96x96): la llama apunta arriba a la
-# derecha (unos -50 grados en pantalla) y la antorcha mide unos 74 px
-# en diagonal. Se dibuja de ANTORCHA_LENGTH unidades del mundo.
 ANTORCHA_HEAD_ANGLE = -50
 ANTORCHA_SPRITE_PX = 74
 ANTORCHA_LENGTH = 21
 
 
 def arc_points(cx, cy, radius, a0, a1, steps=14):
-    """Puntos de un arco de circulo de a0 a a1 (radianes)."""
 
     return [
         (
@@ -96,8 +66,6 @@ def arc_points(cx, cy, radius, a0, a1, steps=14):
 
 
 def sector_outline(cx, cy, r_in, r_out, a0, a1):
-    """Contorno del area: arco de afuera de a0 a a1 y arco de adentro
-    de vuelta (los dos bordes rectos quedan unidos solos)."""
 
     return (
         arc_points(cx, cy, r_out, a0, a1)
@@ -106,7 +74,6 @@ def sector_outline(cx, cy, r_in, r_out, a0, a1):
 
 
 def ease_out(t):
-    """Arranca rapido y frena al final: un golpe con fuerza."""
 
     return 1 - (1 - t) ** 3
 
@@ -115,41 +82,33 @@ class Melee:
 
     def __init__(self):
 
-        self.aim = 0.0            # angulo hacia el mouse (radianes)
+        self.aim = 0.0
         self.swinging = False
-        self.t = 0.0              # progreso del golpe, 0 a 1
+        self.t = 0.0
         self.cooldown = 0.0
         self.glow = 0.0
         self.glow_angle = 0.0
         self.glow_total = GLOW_TIME
         self.glow_heavy = False
 
-        # Combo: golpes seguidos, tiempo que queda para seguir el
-        # combo, y si el golpe actual es el fuerte
         self.combo = 0
         self.combo_t = 0.0
         self.heavy = False
 
-        # Chispazos del golpe fuerte: [x, y, tiempo]
         self.impacts = []
 
-        # Que luz se esta usando para pegar y cuanto espera entre golpes
         self.kind = "fosforo"
         self.cooldown_time = COOLDOWN
 
-        # Furia (vela): cuantas veces mas rapido pega. 1.0 = normal
         self.fury_speed = 1.0
 
         self._hit_ids = set()
 
-        # El golpe termino en este frame, pero todavia hay que revisar
-        # lo que barrio hasta el final (ver new_hits)
         self.final_pass = False
 
         self._sprite_zoom = None
         self._sprite = None
 
-    # ---------- estado ----------
 
     @property
     def half_arc(self):
@@ -168,7 +127,6 @@ class Melee:
 
     @property
     def current_angle(self):
-        """Donde esta el fosforo ahora mismo."""
 
         return self.start_angle + (
             self.end_angle - self.start_angle
@@ -182,13 +140,10 @@ class Melee:
         return base * HEAVY_DAMAGE_MULT if self.heavy else base
 
     def add_impact(self, pos):
-        """Chispazo violeta donde pego el golpe fuerte."""
 
         self.impacts.append([pos[0], pos[1], IMPACT_TIME])
 
     def set_light(self, kind):
-        """Cambia la luz con la que se pega (fosforo, vela...): cambia
-        el sprite del golpe y la espera entre golpes."""
 
         self.kind = kind
         self.cooldown_time = light_stats(kind)["cooldown"]
@@ -197,11 +152,9 @@ class Melee:
         self.combo_t = 0.0
         self.heavy = False
 
-        # Obliga a rearmar el sprite en el proximo dibujo
         self._sprite_zoom = None
 
     def set_fury(self, speed):
-        """Pega `speed` veces mas rapido (1.0 = velocidad normal)."""
 
         self.fury_speed = max(1.0, float(speed))
 
@@ -211,7 +164,6 @@ class Melee:
         return self.fury_speed > 1.0
 
     def _head_angle(self):
-        """Hacia donde mira la punta (la llama) en el PNG."""
 
         if self.kind == "vela":
             return VELA_HEAD_ANGLE
@@ -226,12 +178,10 @@ class Melee:
         return not self.swinging and self.cooldown <= 0
 
     def start(self):
-        """Empieza un golpe. El area queda fija hacia donde apuntabas."""
 
         if not self.can_attack():
             return False
 
-        # Combo: si todavia estas dentro de la ventana, suma un golpe
         if self.kind in COMBO_KINDS:
 
             self.combo = self.combo + 1 if self.combo_t > 0 else 1
@@ -251,7 +201,6 @@ class Melee:
         return True
 
     def cancel(self):
-        """Corta el golpe (por ejemplo si se apaga el fosforo)."""
 
         self.swinging = False
         self.final_pass = False
@@ -261,7 +210,6 @@ class Melee:
         self.combo_t = 0.0
 
     def update(self, dt, pivot, mouse_world):
-        """pivot y mouse_world en coordenadas del mundo."""
 
         self.final_pass = False
 
@@ -271,13 +219,11 @@ class Melee:
         if self.glow > 0:
             self.glow = max(0.0, self.glow - dt)
 
-        # Chispazos del golpe fuerte
         if self.impacts:
             for imp in self.impacts:
                 imp[2] -= dt
             self.impacts = [i for i in self.impacts if i[2] > 0]
 
-        # Tiempo para encadenar el siguiente golpe del combo
         if not self.swinging and self.combo_t > 0:
 
             self.combo_t = max(0.0, self.combo_t - dt)
@@ -287,7 +233,6 @@ class Melee:
 
         if not self.swinging:
 
-            # El area sigue al mouse mientras no estas pegando
             self.aim = math.atan2(
                 mouse_world[1] - pivot[1],
                 mouse_world[0] - pivot[0]
@@ -302,10 +247,6 @@ class Melee:
             self.t = 1.0
             self.swinging = False
 
-            # Con furia el golpe dura unos 25 ms: si el frame tarda mas,
-            # el golpe entero termina adentro de este update. Sin esto
-            # new_hits ya no corria y la luz no pegaba a nada (ni a las
-            # puertas) mientras duraba la furia.
             self.final_pass = True
 
             self.cooldown = self.cooldown_time / self.fury_speed
@@ -316,17 +257,13 @@ class Melee:
             self.glow_angle = self.end_angle
 
             if self.heavy:
-                # El fuerte cierra el combo: el proximo arranca de cero
                 self.combo = 0
                 self.combo_t = 0.0
             else:
                 self.combo_t = COMBO_WINDOW
 
-    # ---------- golpes ----------
 
     def _rect_touched(self, rect, pivot, swept, arc):
-        """True si algun punto del rect cae dentro de la parte del
-        area que el fosforo ya barrio."""
 
         step = 3
 
@@ -354,9 +291,6 @@ class Melee:
         return False
 
     def new_hits(self, targets, pivot):
-        """Objetivos (con .rect en coordenadas del mundo) que el
-        fosforo acaba de tocar. Cada uno se golpea una sola vez por
-        golpe: cuenta lo que ya barrio el fosforo, no todo el area."""
 
         if not self.swinging and not self.final_pass:
             return []
@@ -371,8 +305,6 @@ class Melee:
             if id(target) in self._hit_ids:
                 continue
 
-            # Objetos grandes y alargados (puertas): se prueba el
-            # borde real y no solo el centro.
             if getattr(target, "precise_hit", False):
 
                 if self._rect_touched(target.rect, pivot, swept, arc):
@@ -394,7 +326,6 @@ class Melee:
             if dist < INNER_RADIUS - size or dist > OUTER_RADIUS + size:
                 continue
 
-            # Angulo medido desde el borde donde empezo el golpe
             rel = (
                 math.atan2(dy, dx) - self.start_angle + math.pi
             ) % math.tau - math.pi
@@ -408,7 +339,6 @@ class Melee:
 
         return hits
 
-    # ---------- dibujo ----------
 
     def _get_sprite(self, zoom):
 
@@ -458,7 +388,6 @@ class Melee:
 
     def _draw_trail(self, screen, camera, pivot, angle, strength,
                     heavy=False):
-        """Estela: franja que se va apagando detras del fosforo."""
 
         zoom = camera.zoom
 
@@ -473,13 +402,11 @@ class Melee:
 
         back = max(self.start_angle, angle - trail)
 
-        # Con furia el golpe se repite muy rapido: menos segmentos
         segments = 20 if self.fury else 24
 
         r_in = (INNER_RADIUS + 2) * zoom
         r_out = outer * zoom
 
-        # Con furia siempre naranja (aunque toque el golpe fuerte)
         if self.fury:
             heavy = False
             color = (255, 110, 45)
@@ -505,7 +432,6 @@ class Melee:
             if alpha <= 0:
                 continue
 
-            # Media luna: fina atras, gruesa en la punta
             thick = 0.30 + 0.70 * t
             seg_in = r_out - (r_out - r_in) * thick
 
@@ -516,7 +442,6 @@ class Melee:
 
             pygame.draw.polygon(layer, (*color, alpha), pts)
 
-            # Nucleo caliente (mas claro y mas angosto, pegado al borde)
             core_in = r_out - (r_out - seg_in) * 0.45
 
             pts = (
@@ -528,7 +453,6 @@ class Melee:
                 layer, (*core, int(alpha * 0.85)), pts
             )
 
-        # Filo exterior brillante a lo largo de toda la estela
         edge = [
             (center + math.cos(back + (angle - back) * k / 20) * r_out,
              center + math.sin(back + (angle - back) * k / 20) * r_out)
@@ -541,7 +465,6 @@ class Melee:
                 max(1, round(zoom * 0.5))
             )
 
-        # Destello en la punta del tajo
         tip_x = center + math.cos(angle) * r_out * 0.92
         tip_y = center + math.sin(angle) * r_out * 0.92
 
@@ -553,7 +476,6 @@ class Melee:
                 max(2, round(rad * zoom * 0.5))
             )
 
-        # El golpe fuerte tiene un filo blanco-violeta en la punta
         if heavy:
 
             tip_a = int(255 * strength)
@@ -573,8 +495,6 @@ class Melee:
         screen.blit(layer, layer.get_rect(center=(round(px), round(py))))
 
     def draw(self, screen, camera, pivot):
-        """Estela y fosforo girando. Se dibuja encima de la oscuridad
-        para que brille."""
 
         self._draw_impacts(screen, camera)
 
@@ -592,7 +512,6 @@ class Melee:
                 self._head_angle() - math.degrees(angle)
             )
 
-            # El palito queda un poco corrido del centro del sprite
             distance = INNER_RADIUS + STICK_LENGTH / 2 + 2
 
             px, py = self._to_screen(
@@ -603,7 +522,6 @@ class Melee:
 
             if self.heavy and not self.fury:
 
-                # Aureola violeta alrededor de la luz
                 radius = round(11 * camera.zoom)
 
                 halo = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
@@ -638,7 +556,6 @@ class Melee:
             )
 
     def _draw_impacts(self, screen, camera):
-        """Aro y chispas violetas donde pego el golpe fuerte."""
 
         for x, y, t in self.impacts:
 
@@ -676,7 +593,6 @@ class Melee:
             screen.blit(layer, layer.get_rect(center=(round(sx), round(sy))))
 
     def draw_debug(self, screen, camera, pivot):
-        """Como tu dibujo: el area en naranja y el recorrido en rojo."""
 
         zoom = camera.zoom
 
@@ -690,7 +606,6 @@ class Melee:
 
         pygame.draw.polygon(screen, (255, 130, 30), outline, 3)
 
-        # Linea hacia donde apunta el mouse
         pygame.draw.line(
             screen,
             (235, 30, 40),
@@ -717,7 +632,6 @@ class Melee:
 
 
 class TrainingDummy:
-    """Muneco para probar los golpes (F5 lo crea donde esta el mouse)."""
 
     def __init__(self, x, y, hp=5):
 
@@ -752,7 +666,6 @@ class TrainingDummy:
         pygame.draw.ellipse(screen, color, dest)
         pygame.draw.ellipse(screen, (50, 35, 25), dest, 3)
 
-        # Barrita de vida
         bar = pygame.Rect(0, 0, dest.width, 6)
         bar.midbottom = (dest.centerx, dest.top - 6)
 

@@ -18,15 +18,11 @@ class PlayerLight:
         self._glow_cache = {}
         self._base = None
 
-    LIGHT_STEP = 4        # los radios se redondean de a 4 px
-    BASE_RADIUS = 256     # luz grande que se dibuja una vez y se escala
-    MAX_CACHE = 120       # tope de luces guardadas
+    LIGHT_STEP = 4
+    BASE_RADIUS = 256
+    MAX_CACHE = 120
 
     def _get_light(self, radius):
-        """Luz para ese radio. Los radios se redondean y se guardan:
-        antes, cuando la luz parpadeaba (poca vida) el radio cambiaba
-        en cada frame y se dibujaba una luz nueva con un circulo por
-        cada 2 px de radio, a cada rato = tirones."""
 
         radius = max(
             self.LIGHT_STEP,
@@ -47,8 +43,6 @@ class PlayerLight:
 
     def _create_light_surface(self, radius):
 
-        # La luz base se dibuja una sola vez; las demas son ESA luz
-        # escalada (una operacion, en vez de ~radio/2 circulos)
         if self._base is None:
             self._base = self._draw_light(self.BASE_RADIUS)
 
@@ -69,8 +63,6 @@ class PlayerLight:
 
         center = radius + 1
 
-        # Caida suave: nucleo bien claro y borde que se funde con la
-        # oscuridad (antes era lineal y con escalones de 2 px)
         for r in range(radius, -1, -1):
 
             t = r / radius
@@ -89,8 +81,6 @@ class PlayerLight:
         return light
 
     def add_glow(self, screen, camera, wx, wy, radius, color, intensity):
-        """Resplandor calido de una luz (se suma encima de la oscuridad,
-        asi el aire cerca del fuego se ve tenido de color)."""
 
         radius = int(radius)
 
@@ -137,8 +127,6 @@ class PlayerLight:
         )
 
     def _soft_rect(self, w, h, feather, strength):
-        """Cuadrado iluminado con el borde difuminado (se arma una vez y
-        queda guardado). Lo que se resta de la oscuridad es el alfa."""
 
         strength = max(0.0, min(1.0, strength))
 
@@ -175,9 +163,6 @@ class PlayerLight:
         return self._soft_cache[key]
 
     def draw(self, screen, camera, sources, lit_rects=()):
-        """lit_rects: [(Rect del mundo, fuerza 0.0 a 1.0, borde)].
-        Adentro del rect no hay oscuridad (1.0 = todo iluminado) y el
-        borde (en unidades del mundo) se difumina hacia la oscuridad."""
 
         self._darkness.fill(
             (0, 0, 0, self.darkness_alpha)
@@ -210,7 +195,6 @@ class PlayerLight:
             sx = int(wx * camera.zoom - camera.x)
             sy = int(wy * camera.zoom - camera.y)
 
-            # Luz que queda toda fuera de la pantalla: no se dibuja
             half = light.get_width() // 2
 
             if (

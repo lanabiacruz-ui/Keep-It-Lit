@@ -1,31 +1,13 @@
-"""
-Pathfinding simple para los enemigos (A* sobre una grilla chica).
-
-Lo usa world/arena.py (clase Enemy) para dos cosas:
-  - find_path():    camino rodeando paredes / bloques / puertas hasta el
-                    jugador, en vez de ir en linea recta y quedarse pegado
-  - nearest_free(): el lugar libre mas cercano (para sacar a un enemigo
-                    que quedo incrustado en una pared)
-
-Las celdas libres se guardan en un cache que se borra solo cuando cambia
-el mapa (se rompe una puerta, el Crusher abre/cierra un hueco), asi que
-calcular un camino es barato.
-"""
-
 import heapq
 import math
 
 import pygame
 
-CELL = 8                # tamano de celda (unidades del mundo)
-MAX_EXPANSIONS = 1500   # tope de nodos por busqueda (evita tirones)
+CELL = 8
+MAX_EXPANSIONS = 1500
 
-# Maximo de caminos A* que se calculan por frame (entre todos los
-# enemigos). Los que no entran esperan al frame siguiente. Asi 40
-# enemigos no calculan todos a la vez y el juego no se tranca.
 PATHS_PER_FRAME = 2
 
-# Cada cuanto (ms) se revisa si el mapa cambio (puertas, crusher)
 KEY_CHECK_MS = 250
 
 _SQRT2 = math.sqrt(2.0)
@@ -36,14 +18,11 @@ _budget = {"left": PATHS_PER_FRAME}
 
 
 def begin_frame():
-    """Llamar una vez por frame (la arena lo hace): renueva el cupo de
-    caminos que se pueden calcular."""
 
     _budget["left"] = PATHS_PER_FRAME
 
 
 def take_budget():
-    """True si todavia se puede calcular un camino en este frame."""
 
     if _budget["left"] <= 0:
         return False
@@ -54,7 +33,6 @@ def take_budget():
 
 
 def _world_key(collision_map):
-    """Cambia cuando cambia algo que bloquea (obstaculos o puertas)."""
 
     doors = collision_map.doors
     n_doors = len(doors.doors) if doors is not None else 0
@@ -67,7 +45,6 @@ def _world_key(collision_map):
 
 
 def _cell_free(cx, cy, size, room, collision_map):
-    """True si un cuerpo de `size` centrado en la celda cabe ahi."""
 
     key = (cx, cy, size)
 
@@ -89,11 +66,6 @@ def _cell_free(cx, cy, size, room, collision_map):
 
 
 def _refresh_cache(collision_map):
-    """Borra el cache solo si cambio el mapa. Se revisa cada
-    KEY_CHECK_MS y no en cada llamada: armar la clave recorre todos
-    los obstaculos, y el crusher los cambia a cada rato (antes eso
-    vaciaba el cache en cada frame y todos los enemigos recalculaban
-    todo de cero = lag en la sala izquierda)."""
 
     now = pygame.time.get_ticks()
 
@@ -120,7 +92,6 @@ def to_world(cell):
 
 
 def nearest_free(pos, size, room, collision_map, max_radius=80):
-    """Punto libre mas cercano a `pos` (o None si no hay en `max_radius`)."""
 
     w, h = size
 
@@ -133,7 +104,6 @@ def nearest_free(pos, size, room, collision_map, max_radius=80):
         best = None
         best_d = None
 
-        # anillo cuadrado de radio `radius`
         for dx in range(-radius, radius + 1, step):
             for dy in range(-radius, radius + 1, step):
 
@@ -157,10 +127,6 @@ def nearest_free(pos, size, room, collision_map, max_radius=80):
 
 
 def find_path(start, goal, size, room, collision_map):
-    """Lista de puntos (x, y) del mundo desde `start` hasta `goal`
-    rodeando lo que bloquea, o None si no hay camino.
-
-    `size` = (ancho, alto) del cuerpo del enemigo."""
 
     _refresh_cache(collision_map)
 
@@ -169,8 +135,6 @@ def find_path(start, goal, size, room, collision_map):
     s = to_cell(start)
     g = to_cell(goal)
 
-    # El jugador puede estar pegado a una pared: se busca la celda
-    # libre mas cercana al objetivo.
     if not _cell_free(g[0], g[1], size, room, collision_map):
 
         g = _closest_free_cell(g, size, room, collision_map)
@@ -178,8 +142,6 @@ def find_path(start, goal, size, room, collision_map):
         if g is None:
             return None
 
-    # El enemigo mismo puede estar en una celda "no libre" por redondeo:
-    # igual se arranca de ahi.
     open_heap = [(0.0, 0, s)]
     came = {s: None}
     cost = {s: 0.0}
@@ -211,7 +173,6 @@ def find_path(start, goal, size, room, collision_map):
             if not _cell_free(nxt[0], nxt[1], size, room, collision_map):
                 continue
 
-            # En diagonal no se corta la esquina de una pared
             if dx != 0 and dy != 0:
 
                 if not (
@@ -229,7 +190,6 @@ def find_path(start, goal, size, room, collision_map):
                 cost[nxt] = new_cost
                 came[nxt] = cur
 
-                # heuristica octile
                 hx = abs(nxt[0] - g[0])
                 hy = abs(nxt[1] - g[1])
                 h = (hx + hy) + (_SQRT2 - 2.0) * min(hx, hy)
@@ -250,7 +210,6 @@ def find_path(start, goal, size, room, collision_map):
 
     cells.reverse()
 
-    # La primera celda es donde ya esta parado: se saltea
     points = [to_world(c) for c in cells[1:]]
 
     return points

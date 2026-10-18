@@ -13,34 +13,16 @@ UI_DIR = (
 
 
 class ModeSelect:
-    """Pantalla para elegir el modo al crear una partida.
-
-    Todas las imagenes son OPCIONALES (si falta alguna se dibuja con
-    codigo), en assets/maps/ui:
-
-      mapamodo.png            1672x941  fondo (la compu con el titulo)
-                                        Si no esta, se usa mapaajustes.png
-      btn_normal.png          320x80    boton "Normal"
-      btn_normal_hover.png    320x80    el mismo, resaltado
-      btn_hardcore.png        320x80    boton "Hardcore"
-      btn_hardcore_hover.png  320x80    el mismo, resaltado
-
-    Las medidas de las cajas estan en pixeles de la imagen de fondo
-    (1672x941) y se escalan solas a la ventana.
-    """
 
     IMG_W = 1672
     IMG_H = 941
 
-    # (x1, y1, x2, y2) en pixeles de la imagen de fondo
     BTN_NORMAL_BOX = (505, 318, 825, 398)
     BTN_HARDCORE_BOX = (857, 318, 1177, 398)
 
-    # Donde va el texto de abajo de cada boton
     DESC_NORMAL_BOX = (505, 408, 825, 500)
     DESC_HARDCORE_BOX = (857, 408, 1177, 500)
 
-    # Donde va el "Elegi el modo" (centro del texto)
     TITLE_POS = (845, 292)
 
     CLOSE_BOX = (1179, 219, 1204, 246)
@@ -86,10 +68,8 @@ class ModeSelect:
         self.desc_font = pygame.font.Font(None, max(14, int(28 * self.sy)))
         self.small_font = pygame.font.Font(None, 24)
 
-        # 0 = normal, 1 = hardcore
         self.selected = 0
 
-    # ---------- carga ----------
 
     def _load_background(self):
 
@@ -132,14 +112,12 @@ class ModeSelect:
             round((y2 - y1) * self.sy),
         )
 
-    # ---------- eventos ----------
 
     def _mode_of(self, index):
 
         return MODE_NORMAL if index == 0 else MODE_HARDCORE
 
     def handle_event(self, event):
-        """Devuelve ("mode", "normal"/"hardcore"), "back" o None."""
 
         if event.type == pygame.KEYDOWN:
 
@@ -176,7 +154,6 @@ class ModeSelect:
 
         return None
 
-    # ---------- dibujo ----------
 
     def _draw_button(self, rect, label, image, image_hover, hovered, accent):
 
@@ -193,7 +170,6 @@ class ModeSelect:
 
             return
 
-        # Sin imagen: se dibuja con codigo
         fill = (55, 80, 135) if hovered else (30, 45, 85)
 
         pygame.draw.rect(self.screen, fill, rect, border_radius=8)

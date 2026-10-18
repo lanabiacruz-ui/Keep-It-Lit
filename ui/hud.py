@@ -14,8 +14,6 @@ HUD_DIR = (
 
 
 def format_coins(amount):
-    """Monedas para el cuadro del HUD, que es chico: de 10000 para arriba
-    se abrevia (100000 -> '100k', 12500 -> '12.5k', 2000000 -> '2M')."""
 
     amount = int(amount)
 
@@ -36,17 +34,11 @@ class Hud:
 
     SLOTS = 4
 
-    # Area util (sin transparencia) de cada marco de barra, medida
-    # sobre el PNG original. El relleno comparte el mismo lienzo,
-    # asi que recortarlo con este rectangulo alcanza para "vaciarlo".
     VIDA_BBOX = (7, 7, 248, 41)
     ESCUDO_BBOX = (2, 6, 185, 34)
 
-    # Centro (x, y) del "0" dentro de hud_monedas.png (110x60 px)
     COIN_TEXT_CENTER = (78, 30)
 
-    # Ancho maximo (px del PNG original) del numero: lo que hay a la
-    # derecha de la moneda dibujada
     COIN_TEXT_MAX_W = 44
 
     def __init__(
@@ -74,12 +66,10 @@ class Hud:
                 )
             )
 
-        # Hotbar (inventario)
         self.bar = scaled(load("hud_hotbar.png"), scale)
         self.slot = scaled(load("hud_slot.png"), scale)
         self.slot_select = scaled(load("hud_slot_select.png"), scale)
 
-        # Item equipado (marco vacio + icono del item)
         self.equipped_frame = scaled(
             load("hud_item_equipado.png"),
             equipped_scale
@@ -94,7 +84,6 @@ class Hud:
             )
         }
 
-        # Versiones "seleccionado" (reemplazan al contorno dibujado)
         self.equipped_frame_select = scaled(
             load("hud_item_select.png"),
             equipped_scale
@@ -115,13 +104,10 @@ class Hud:
             )
         }
 
-        # Item que tiene el jugador en la mano (None = nada)
         self.equipped = None
 
-        # Items del inventario (por ahora vacio; el fosforo NO va aca)
         self.items = [None] * self.SLOTS
 
-        # Cuantas unidades hay en cada slot (se apilan las iguales)
         self.counts = [0] * self.SLOTS
         self.selected = None
 
@@ -129,8 +115,6 @@ class Hud:
         gap = 6
         total = self.SLOTS * slot_size + (self.SLOTS - 1) * gap
 
-        # El PNG de la hotbar esta dibujado para 5 slots: se ajusta
-        # el ancho al de los slots que hay (mismo margen que antes).
         self.bar = pygame.transform.smoothscale(
             self.bar,
             (total + 12, self.bar.get_height())
@@ -148,13 +132,10 @@ class Hud:
             for i in range(self.SLOTS)
         ]
 
-        # Item equipado: a la izquierda de la hotbar
         self.equipped_rect = self.equipped_frame.get_rect(
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
         )
 
-        # Panel "CAMBIAR GOLPE [G]" (solo con la antorcha): a la derecha
-        # de la hotbar. Una imagen por modo.
         self.attack_panels = {
             "golpe": scaled(load("hud_antorcha_golpe.png"), 0.75),
             "fuego": scaled(load("hud_antorcha_fuego.png"), 0.75),
@@ -164,7 +145,6 @@ class Hud:
             bottomleft=(self.bar_rect.right + 12, self.bar_rect.bottom)
         )
 
-        # ---------- Vida y escudo ----------
 
         self.vida_frame = scaled(load("hud_barra2.png"), bars_scale)
         self.vida_fill = scaled(load("hud_vida_relleno.png"), bars_scale)
@@ -182,9 +162,6 @@ class Hud:
 
         margin = 18
 
-        # Vida y escudo: abajo, a la izquierda del item equipado
-        # (fosforo). Apiladas, alineadas a la izquierda entre si y
-        # centradas verticalmente con el slot del fosforo.
         gap_bars = 6
         bars_h = (
             self.vida_frame.get_height()
@@ -212,7 +189,6 @@ class Hud:
 
         self.countdown_font = pygame.font.Font(None, 90)
 
-        # Textos de items (tooltip y avisos)
         self.tip_title_font = pygame.font.Font(None, 26)
         self.tip_font = pygame.font.Font(None, 22)
         self.msg_font = pygame.font.Font(None, 28)
@@ -220,13 +196,10 @@ class Hud:
 
         self._slot_icons = {}
 
-        # Monedas (arriba a la derecha)
         self.coin_scale = bar_scale
 
         self.coin_icon = scaled(load("hud_monedas.png"), bar_scale)
 
-        # Boton Menu: arriba a la derecha de todo, y las monedas quedan
-        # a su izquierda. Al tocarlo se abre el menu de pausa.
         menu_img = load("menu.png")
 
         menu_size = self.coin_icon.get_height()
@@ -236,7 +209,6 @@ class Hud:
             (menu_size, menu_size)
         )
 
-        # Version mas clara para cuando el mouse esta encima
         self.menu_icon_hover = self.menu_icon.copy()
         self.menu_icon_hover.fill(
             (45, 45, 45, 0),
@@ -247,7 +219,6 @@ class Hud:
             topright=(w - margin, margin)
         )
 
-        # new_game.py lee este nombre para detectar el click
         self.menu_button_rect = self.menu_rect
 
         self.coin_rect = self.coin_icon.get_rect(
@@ -256,11 +227,8 @@ class Hud:
 
         self.coin_font = pygame.font.Font(None, 32)
 
-        # Fuente del "+N" de debajo del contador (se crea al usarla)
         self.gain_font = None
 
-        # Centro del numero dentro de hud_monedas.png (110x60):
-        # a la derecha de la moneda dibujada.
         self.coin_text_offset = (
             round(self.COIN_TEXT_CENTER[0] * bar_scale),
             round(self.COIN_TEXT_CENTER[1] * bar_scale)
@@ -269,7 +237,6 @@ class Hud:
     def equip(self, name):
         self.equipped = name
 
-    # ---------- inventario ----------
 
     def slot_rect(self, i):
 
@@ -278,7 +245,6 @@ class Hud:
         return pygame.Rect(x, y, *self.slot.get_size())
 
     def slot_at(self, pos):
-        """Indice del slot de inventario bajo `pos` (None si no hay)."""
 
         for i in range(self.SLOTS):
             if self.slot_rect(i).collidepoint(pos):
@@ -324,7 +290,6 @@ class Hud:
         return lines
 
     def draw_overlay(self, screen, item_defs, mouse_pos, holding, message):
-        """Tooltip (manteniendo click sobre un slot) y aviso en pantalla."""
 
         if holding:
 
@@ -384,9 +349,6 @@ class Hud:
             self._draw_message(screen, message)
 
     def _draw_message(self, screen, message):
-        """Aviso de abajo (arriba de la barra). Si la frase es mas ancha
-        que la pantalla se achica la letra y, si aun asi no entra, se
-        parte en 2 lineas: nunca se sale por los costados."""
 
         max_w = screen.get_width() - 40
 
@@ -408,7 +370,6 @@ class Hud:
 
         else:
 
-            # Partir por palabras en lineas que entren
             lines = []
             cur = ""
 
@@ -475,7 +436,6 @@ class Hud:
         attack_mode=None
     ):
 
-        # Vida y escudo, arriba a la izquierda
         self._draw_bar(
             screen,
             self.vida_frame,
@@ -494,7 +454,6 @@ class Hud:
             self.escudo_bbox
         )
 
-        # Boton Menu (esquina de arriba a la derecha)
         hover = self.menu_rect.collidepoint(pygame.mouse.get_pos())
 
         screen.blit(
@@ -502,7 +461,6 @@ class Hud:
             self.menu_rect
         )
 
-        # Monedas, a la izquierda del boton Menu
         screen.blit(self.coin_icon, self.coin_rect)
 
         coin_text = self.coin_font.render(
@@ -511,7 +469,6 @@ class Hud:
             (255, 255, 255)
         )
 
-        # Si aun abreviado no entra en el cuadro, se achica
         max_w = round(self.COIN_TEXT_MAX_W * self.coin_scale)
 
         if coin_text.get_width() > max_w:
@@ -535,8 +492,6 @@ class Hud:
 
         screen.blit(coin_text, coin_text_rect)
 
-        # "+N": las monedas que conseguiste "en el momento", justo
-        # debajo del contador (se desvanece solo)
         if coin_gain > 0 and coin_gain_alpha > 0:
 
             gain_text = f"+{format_coins(coin_gain)}"
@@ -562,7 +517,6 @@ class Hud:
             screen.blit(shadow, pos.move(2, 2))
             screen.blit(label, pos)
 
-        # Contador de "sin luz" (10 -> 0), centrado arriba
         if countdown is not None:
 
             seconds_left = max(0, math.ceil(countdown))
@@ -581,7 +535,6 @@ class Hud:
 
             screen.blit(number, number_rect)
 
-        # Panel del golpe de la antorcha (G): "golpe" o "fuego"
         if attack_mode in self.attack_panels:
 
             screen.blit(
@@ -589,7 +542,6 @@ class Hud:
                 self.attack_panel_rect
             )
 
-        # Hotbar
         screen.blit(self.bar, self.bar_rect)
 
         for i, (x, y) in enumerate(self.slot_pos):
@@ -611,7 +563,6 @@ class Hud:
                     )
                 )
 
-            # Cantidad (solo si hay mas de una)
             if self.items[i] is not None and self.counts[i] > 1:
 
                 txt = str(self.counts[i])
@@ -628,7 +579,6 @@ class Hud:
                 screen.blit(shadow, pos.move(1, 1))
                 screen.blit(text, pos)
 
-        # Item equipado (con imagen de seleccion si esta elegido)
         if equipped_selected:
             screen.blit(self.equipped_frame_select, self.equipped_rect)
         else:

@@ -1,16 +1,3 @@
-"""Transicion de entrada a la partida: la camara hace zoom hacia la pantalla
-de la computadora (la que mira el personaje), la pantalla se llena de luz y
-despues aparece lo que viene (el comic o la partida).
-
-Se usa desde main.py apenas termina la pantalla de carga. Parte del ultimo
-cuadro de esa pantalla (la habitacion con el monitor), asi que el zoom
-sigue exactamente desde lo que se estaba viendo.
-
-Usa la misma interfaz que SlideTransition: update(dt) devuelve "done" al
-terminar y draw(screen) se llama DESPUES de dibujar lo que hay abajo.
-Mientras dura, main.py no le pasa eventos ni tiempo a lo de abajo.
-"""
-
 import math
 
 import pygame
@@ -18,21 +5,17 @@ import pygame
 from states.main_menu import MONITOR_BOX, MONITOR_REF
 
 
-# ---------- AJUSTES ----------
+ZOOM_DELAY = 0.15
+ZOOM_DURATION = 1.0
+REVEAL_DURATION = 0.5
 
-ZOOM_DELAY = 0.15          # pausita antes de empezar el zoom (segundos)
-ZOOM_DURATION = 1.0        # cuanto tarda en acercarse al monitor
-REVEAL_DURATION = 0.5      # cuanto tarda en aparecer lo que viene
-
-# Que parte del alto del monitor llena la pantalla al final del zoom
-# (menos de 1.0 = el zoom termina adentro del area azul del monitor)
 ZOOM_FILL = 0.90
 
-FLASH_COLOR = (215, 232, 255)   # luz que inunda la pantalla al entrar
-FLASH_MAX = 210                 # que tan fuerte llega (0 a 255)
-FLASH_START = 0.70              # desde que parte del zoom empieza a brillar
+FLASH_COLOR = (215, 232, 255)
+FLASH_MAX = 210
+FLASH_START = 0.70
 
-VIGNETTE_ALPHA = 130            # bordes oscuros al acercarse (0 = sin)
+VIGNETTE_ALPHA = 130
 
 
 def _clamp01(k):
@@ -51,7 +34,6 @@ def _ease_in_out(k):
 
 
 def _make_vignette(w, h):
-    """Oscurece los bordes. Se calcula chiquita y se agranda (rapido)."""
 
     sw, sh = 64, 36
 
@@ -87,7 +69,6 @@ class ZoomTransition:
 
         self.t = 0.0
 
-        # Monitor en pixeles de pantalla (mismo calculo que el menu)
         kx = self.w / MONITOR_REF[0]
         ky = self.h / MONITOR_REF[1]
 
@@ -100,8 +81,6 @@ class ZoomTransition:
             round((y1 - y0) * ky),
         )
 
-        # Cuadro final del zoom: centrado en el monitor, con la misma
-        # forma que la pantalla y adentro del area azul.
         end_h = mon.height * ZOOM_FILL
 
         self.end_scale = self.h / end_h
@@ -116,7 +95,6 @@ class ZoomTransition:
 
         self._vignette = _make_vignette(self.w, self.h)
 
-    # ----- estado -----
 
     @property
     def active(self):
@@ -133,26 +111,20 @@ class ZoomTransition:
         return None
 
     def zoom_progress(self):
-        """0 = habitacion completa, 1 = pantalla del monitor llena."""
 
         return _ease_in_out((self.t - self.delay) / max(0.001, self.duration))
 
     def reveal_progress(self):
-        """0 = todavia el monitor, 1 = ya se ve lo que viene."""
 
         return _clamp01(
             (self.t - self.delay - self.duration) / max(0.001, self.reveal)
         )
 
-    # ----- dibujo -----
 
     def _render_view(self, e):
-        """Dibuja en self._canvas el pedazo de la habitacion que se ve con
-        el zoom e (0..1)."""
 
         w, h = self.w, self.h
 
-        # Zoom exponencial: se siente parejo (no se acelera al final)
         scale = math.exp(e * math.log(self.end_scale))
 
         cx = self.start_center[0] + (self.end_center[0] - self.start_center[0]) * e
@@ -164,8 +136,6 @@ class ZoomTransition:
         vx = max(0.0, min(cx - vw / 2, w - vw))
         vy = max(0.0, min(cy - vh / 2, h - vh))
 
-        # Origen entero (un poco mas grande) y el sobrante se corre al
-        # dibujar: asi el movimiento es suave y no salta de a pixel.
         ix = int(math.floor(vx))
         iy = int(math.floor(vy))
 
@@ -189,7 +159,6 @@ class ZoomTransition:
         )
 
     def draw(self, screen):
-        """Se llama DESPUES de dibujar lo que hay abajo."""
 
         if not self.active:
             return
@@ -199,13 +168,11 @@ class ZoomTransition:
 
         self._render_view(e)
 
-        # Bordes oscuros: ayudan a "meterse" en la pantalla
         if VIGNETTE_ALPHA > 0:
 
             self._vignette.set_alpha(int(VIGNETTE_ALPHA * e))
             self._canvas.blit(self._vignette, (0, 0))
 
-        # La pantalla se llena de luz cerca del final del zoom
         flash = _clamp01((e - FLASH_START) / (1 - FLASH_START)) ** 2
 
         if flash > 0:
@@ -213,7 +180,6 @@ class ZoomTransition:
             self._flash.set_alpha(int(FLASH_MAX * flash))
             self._canvas.blit(self._flash, (0, 0))
 
-        # Al terminar el zoom, la imagen se disuelve y deja ver lo de abajo
         self._canvas.set_alpha(int(255 * (1 - r)))
 
         screen.blit(self._canvas, (0, 0))

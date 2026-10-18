@@ -4,12 +4,10 @@ import pygame
 
 
 class PauseMenu:
-    """Menu de pausa mostrado encima de la partida."""
 
     IMG_W = 1637
     IMG_H = 961
 
-    # Coordenadas de los botones sobre pantallaesc.png
     BUTTONS = {
         "settings": (569, 402, 1063, 480),
         "enemies": (569, 514, 1063, 592),
@@ -56,12 +54,10 @@ class PauseMenu:
 
     def handle_event(self, event):
 
-        # ESC dentro del menú = volver a jugar
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 return "resume"
 
-        # Click en los botones
         if event.type == pygame.MOUSEBUTTONDOWN:
 
             if event.button == 1:
@@ -74,7 +70,6 @@ class PauseMenu:
         return None
 
     def update(self, dt):
-        # No actualizamos la partida mientras este menú está abierto.
         return None
 
     def draw(self):

@@ -29,17 +29,11 @@ class WorldMap:
 
     def draw(self, screen, camera):
 
-        # Se agranda solo el pedazo visible del mapa (no el mapa entero).
-        # El rectangulo de origen se recorta al tamano de la imagen: con el
-        # sacudon de camara, camera.x/y pueden quedar negativos o pasarse
-        # del borde, y subsurface() falla si el Rect sale de la superficie.
         zoom = max(1, int(camera.zoom))
 
         screen_w = screen.get_width()
         screen_h = screen.get_height()
 
-        # Region visible en pixeles del mapa original (redondeada hacia
-        # afuera para cubrir toda la pantalla).
         x0 = camera.x // zoom
         y0 = camera.y // zoom
         x1 = -(-(camera.x + screen_w) // zoom)
@@ -61,8 +55,6 @@ class WorldMap:
             src.y * zoom - camera.y
         )
 
-        # Si el mapa no cubre toda la pantalla (borde + sacudon), se
-        # limpia el fondo para no dejar restos del cuadro anterior.
         covered = pygame.Rect(dest, piece.get_size())
 
         if not covered.contains(screen.get_rect()):

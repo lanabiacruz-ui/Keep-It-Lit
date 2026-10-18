@@ -11,14 +11,11 @@ ZONES = [
     Zone("cofres", "Sala de cofres", pygame.Rect(316, 44, 272, 176)),
     Zone("combate", "Sala de combate", pygame.Rect(1244, 388, 436, 284)),
 ]
-   
 
 
 class ZoneTracker:
-    """Avisa cuando el jugador ENTRA a una zona (no mientras esta
-    adentro). Al salir, y volver a entrar, avisa de nuevo."""
 
-   
+
     EXIT_MARGIN = 10
 
     def __init__(self, zones=None):
@@ -36,8 +33,6 @@ class ZoneTracker:
         return None
 
     def update(self, point):
-        """Devuelve la Zone si el jugador acaba de entrar a una (si no,
-        None). `point` es la posicion del jugador en el mundo."""
 
         if self.current is not None:
 

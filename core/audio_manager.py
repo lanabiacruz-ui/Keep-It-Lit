@@ -1,19 +1,3 @@
-"""Efectos de sonido del juego.
-
-Uso desde cualquier archivo:
-
-    from core.audio_manager import audio
-
-    audio.play("coin")
-
-Los sonidos estan en assets/sounds/*.wav (o assets/maps/sounds) (se generan con
-tools/make_sounds.py; se pueden reemplazar por cualquier .wav u .ogg con
-el mismo nombre). Si no hay placa de sonido o falta un archivo, no pasa
-nada: simplemente no suena.
-
-El volumen sale de "Efectos" en Configuraciones (sfx_volume).
-"""
-
 import json
 import time
 from pathlib import Path
@@ -21,16 +5,12 @@ from pathlib import Path
 import pygame
 
 ROOT = Path(__file__).resolve().parent.parent
-# Carpetas donde se buscan los sonidos (la primera que tenga el archivo)
 SOUND_DIRS = (
     ROOT / "assets" / "sounds",
     ROOT / "assets" / "maps" / "sounds",
 )
 SETTINGS_PATH = ROOT / "data" / "settings.json"
 
-# nombre -> (volumen propio 0..1, espera minima entre dos sonidos iguales
-# en segundos). La espera evita que 30 enemigos tapen todo con el mismo
-# sonido a la vez.
 SOUNDS = {
     "coin":        (0.55, 0.04),
     "coin_big":    (0.65, 0.06),
@@ -82,7 +62,6 @@ class AudioManager:
 
         self._init_mixer()
 
-    # ---------- arranque ----------
 
     def _init_mixer(self):
 
@@ -97,7 +76,6 @@ class AudioManager:
 
         except pygame.error:
 
-            # Sin placa de sonido: el juego sigue andando, sin audio
             self.enabled = False
 
     def _load(self, name):
@@ -133,8 +111,6 @@ class AudioManager:
         return sound
 
     def preload(self):
-        """Carga todos los sonidos de una (se llama al abrir el juego,
-        asi el primer golpe no tiene un tironcito)."""
 
         if not self.enabled:
             return
@@ -142,10 +118,8 @@ class AudioManager:
         for name in SOUNDS:
             self._load(name)
 
-    # ---------- uso ----------
 
     def play(self, name, volume=1.0):
-        """Reproduce un efecto. No hace nada si no hay audio."""
 
         if not self.enabled or self.volume <= 0.0:
             return
@@ -169,7 +143,6 @@ class AudioManager:
         sound.play()
 
     def set_sfx_volume(self, value):
-        """Cambia el volumen de los efectos (0.0 a 1.0)."""
 
         self.volume = max(0.0, min(1.0, float(value)))
 
@@ -179,5 +152,4 @@ class AudioManager:
             pygame.mixer.stop()
 
 
-# Una sola instancia para todo el juego
 audio = AudioManager()

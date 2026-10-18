@@ -6,7 +6,7 @@ class Comic:
 
     IMAGES = ["image1.png", "image2.png"]
 
-  
+
     FADE_TIME = 0.5
 
 
@@ -32,7 +32,7 @@ class Comic:
                 folder / name
             ).convert()
 
-            
+
             scale = min(
                 self.width / image.get_width(),
                 self.height / image.get_height()
@@ -64,7 +64,7 @@ class Comic:
         return None
 
     def handle_event(self, event):
-      
+
 
         if self.timer < self.INPUT_DELAY:
 

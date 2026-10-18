@@ -7,7 +7,6 @@ class PlayerMovement:
 
         self.speed = speed
 
-        # Multiplicador temporal (aceite, etc.). 1.0 = normal
         self.speed_mult = 1.0
 
         self._rest_x = 0.0
@@ -63,7 +62,6 @@ class PlayerMovement:
         self._move(player_rect, collision_map, step_x, 0)
         self._move(player_rect, collision_map, 0, step_y)
 
-        # Direccion para la animacion (en diagonal gana izquierda/derecha)
         if dx < 0:
             facing = "left"
         elif dx > 0:

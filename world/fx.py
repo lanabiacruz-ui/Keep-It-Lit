@@ -1,11 +1,3 @@
-"""Efectos visuales: chispas de golpe, monedas, inicio de oleada y auras
-(polvora, repelente, iman).
-
-Todo vive en coordenadas del MUNDO (como los enemigos) y se dibuja con
-la camara. Los brillos son aditivos (BLEND_RGB_ADD), asi se ven "de luz"
-encima de la oscuridad.
-"""
-
 import math
 import random
 
@@ -34,8 +26,8 @@ class FxManager:
         self.particles = []
         self.rings = []
         self.popups = []
-        self.pulses = []          # [t, nombre]
-        self.queue = []           # [segundos que faltan, funcion]
+        self.pulses = []
+        self.queue = []
 
         self.hitstop = 0.0
         self.hurt_t = 0.0
@@ -48,7 +40,7 @@ class FxManager:
         self.shake_dur = 0.0
         self.shake_amp = 0.0
 
-        self.title = None         # [t, texto, color]
+        self.title = None
         self.vignette_t = 0.0
 
         self._glow_cache = {}
@@ -56,9 +48,6 @@ class FxManager:
         self._fonts = {}
         self._emit_acc = {}
 
-    # ------------------------------------------------------------
-    # recursos
-    # ------------------------------------------------------------
 
     def _font(self, size):
 
@@ -71,7 +60,6 @@ class FxManager:
         return font
 
     def glow_sprite(self, radius, color):
-        """Disco de luz suave (para sumar a la pantalla)."""
 
         radius = _step(max(2, int(radius)))
         key = (radius, color)
@@ -100,7 +88,6 @@ class FxManager:
         return spr
 
     def _ring_sprite(self, radius, color):
-        """Aro con brillo hacia adentro y hacia afuera."""
 
         radius = max(8, int(round(radius / 8)) * 8)
         key = (radius, color)
@@ -120,7 +107,6 @@ class FxManager:
 
             band = int(min(radius * 0.35, 46))
 
-            # brillo hacia adentro
             for k in range(band, 0, -1):
 
                 a = int(70 * (1 - k / band) ** 2)
@@ -129,7 +115,6 @@ class FxManager:
                     spr, (*color, a), (c, c), radius - k + 1, 2
                 )
 
-            # brillo hacia afuera
             for k in range(1, pad):
 
                 a = int(150 * (1 - k / pad) ** 2)
@@ -138,7 +123,6 @@ class FxManager:
                     spr, (*color, a), (c, c), radius + k, 2
                 )
 
-            # borde
             pygame.draw.circle(spr, (*color, 235), (c, c), radius, 3)
 
             white = tuple(min(255, v + 90) for v in color)
@@ -148,9 +132,6 @@ class FxManager:
 
         return spr
 
-    # ------------------------------------------------------------
-    # crear efectos
-    # ------------------------------------------------------------
 
     def _spark(self, x, y, angle, speed, life, color, size=2.0, drag=3.0,
                grav=0.0, delay=0.0, streak=False):
@@ -176,8 +157,6 @@ class FxManager:
         })
 
     def hit(self, x, y, angle=None, heavy=False, color=None, fury=False):
-        """Golpe: lluvia de chispas, rayas de impacto, destello grande,
-        aros, escombros y un mini freeze (hit-stop)."""
 
         if color is None:
             color = (190, 110, 255) if heavy else (255, 190, 80)
@@ -187,11 +166,8 @@ class FxManager:
 
         base = angle if angle is not None else random.uniform(0, math.tau)
 
-        # Chispas con estela (salen abiertas hacia adelante)
         n = 26 if heavy else 15
 
-        # Con furia se pega muchisimas veces por segundo: efecto liviano
-        # (menos chispas, sin freeze ni temblor) para no bajar los FPS
         if fury:
             n = 14
         spread = math.pi * (1.3 if heavy else 0.85)
@@ -207,7 +183,6 @@ class FxManager:
                 size=random.uniform(1.5, 3.0), drag=3.2, streak=True,
             )
 
-        # Rayas largas del impacto (como un corte)
         for i in range(3 if fury else (7 if heavy else 4)):
 
             a = base + random.uniform(-0.6, 0.6)
@@ -217,7 +192,6 @@ class FxManager:
                 core, size=2.4, drag=6.0, streak=True,
             )
 
-        # Escombros que caen
         for _ in range(2 if fury else (8 if heavy else 4)):
 
             a = base + random.uniform(-1.4, 1.4)
@@ -227,7 +201,6 @@ class FxManager:
                 hot, size=random.uniform(1.8, 3.0), drag=2.0, grav=260,
             )
 
-        # Destello grande + aros
         self._spark(x, y, 0, 0, 0.16, core, size=22 if heavy else 15, drag=0)
         self._spark(x, y, 0, 0, 0.30, color, size=30 if heavy else 20, drag=0)
 
@@ -235,17 +208,14 @@ class FxManager:
 
         self._ring(x, y, 2, 46 if heavy else 30, 0.38, color, 2, delay=0.04)
 
-        # Con furia no hay freeze ni temblor (se pega muy seguido)
         if fury:
             return
 
-        # Freeze corto al pegar (golpe fuerte: un poco mas)
         self.hitstop = max(self.hitstop, 0.085 if heavy else 0.04)
 
         self.shake(5.0 if heavy else 2.0, 0.2 if heavy else 0.11)
 
     def swing_sparks(self, x, y, angle, heavy=False, fury=False):
-        """Brasas que suelta la punta del golpe mientras gira."""
 
         if heavy:
             colors = ((200, 110, 255), (255, 235, 255))
@@ -256,7 +226,6 @@ class FxManager:
 
         for _ in range(1 if fury else (3 if heavy else 2)):
 
-            # hacia afuera y para atras del giro
             a = angle - math.pi / 2 + random.uniform(-0.9, 0.9)
 
             self._spark(
@@ -266,7 +235,6 @@ class FxManager:
             )
 
     def player_hurt(self, x, y):
-        """Te pegan: borde rojo, sacudida leve y chispitas rojas."""
 
         self.hurt_t = 0.45
         self.shake(3.0, 0.18)
@@ -283,7 +251,6 @@ class FxManager:
         self._ring(x, y, 3, 22, 0.3, (255, 70, 60), 2)
 
     def draw_item_glow(self, screen, camera, item, t):
-        """Brillo en el piso de las monedas/gemas que salieron del cofre."""
 
         f = getattr(item, "fly", None)
 
@@ -314,7 +281,6 @@ class FxManager:
         )
 
     def coin(self, x, y, value=1):
-        """Moneda agarrada: chispas doradas hacia arriba, aro y '+N'."""
 
         value = int(value)
 
@@ -345,8 +311,6 @@ class FxManager:
         })
 
     def wave_start(self, cx, cy, wave, room=None, enemy_positions=()):
-        """Arranca una oleada: onda expansiva, sacudon, titulo y humo
-        donde aparece cada enemigo."""
 
         reach = 190
 
@@ -402,13 +366,11 @@ class FxManager:
             self.shake_dur = dur
 
     def pulse(self, name):
-        """Un 'latido' que sale del centro hasta el borde del aura."""
 
         self.pulses.append([0.0, name])
 
     def emit_aura(self, name, wx, wy, radius_world, color, dt, rate=18.0,
                   inward=False):
-        """Brasas que nacen en el borde del aura y suben / entran."""
 
         acc = self._emit_acc.get(name, 0.0) + dt * rate
 
@@ -436,9 +398,6 @@ class FxManager:
 
         self._emit_acc[name] = acc
 
-    # ------------------------------------------------------------
-    # actualizar
-    # ------------------------------------------------------------
 
     def update(self, dt):
 
@@ -493,7 +452,6 @@ class FxManager:
                 self.title = None
 
     def shake_offset(self):
-        """Desplazamiento (px) de la camara este frame."""
 
         if self.shake_t <= 0:
             return 0, 0
@@ -506,12 +464,8 @@ class FxManager:
             int(random.uniform(-a, a)),
         )
 
-    # ------------------------------------------------------------
-    # dibujar
-    # ------------------------------------------------------------
 
     def draw(self, screen, camera):
-        """Chispas, aros y '+N' (encima de la oscuridad)."""
 
         z = camera.zoom
         sw, sh = screen.get_size()
@@ -611,8 +565,6 @@ class FxManager:
 
     def draw_aura(self, screen, name, cx, cy, radius, color, phase,
                   strength=1.0):
-        """Aro de efecto alrededor del jugador (cx, cy, radius en px de
-        pantalla), con latido y los 'latidos' de cada tick."""
 
         if radius < 8:
             return
@@ -646,7 +598,6 @@ class FxManager:
             screen.blit(layer, layer.get_rect(center=(int(cx), int(cy))))
 
     def draw_overlay(self, screen):
-        """Flash de pantalla, viñeta roja y titulo de la oleada."""
 
         sw, sh = screen.get_size()
 

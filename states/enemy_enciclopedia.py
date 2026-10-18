@@ -110,21 +110,6 @@ DEFAULT_DATA = {
 
 
 class EnemyEncyclopedia:
-    """
-    Enciclopedia de enemigos (se ve en la tablet).
-
-    IMPORTANTE:
-    Las descripciones son SOLO DE LECTURA.
-    El jugador no puede modificarlas.
-
-    Imagenes (en assets/maps/ui/). Si alguna falta, se dibuja con
-    colores como antes:
-        tablet_enemigos.png      1672x941  fondo completo
-        fila_enemigo.png         520x112   fila de la lista
-        fila_enemigo_sel.png     520x112   fila seleccionada
-        btn_regresar.png         340x92    boton REGRESAR
-        btn_regresar_hover.png   340x92    boton REGRESAR resaltado
-    """
 
     ORDER = (
         "pino",
@@ -137,25 +122,20 @@ class EnemyEncyclopedia:
         "golem",
     )
 
-    # ---------- distribucion (en coordenadas de la imagen 1672x941) ----
 
     IMG_W = 1672
     IMG_H = 941
 
-    # Pantalla de la tablet
     SCREEN_BOX = (436, 170, 800, 500)
 
-    # Lista de enemigos (izquierda)
     ROW_X = 456
     ROW_Y = 260
     ROW_W = 260
-    ROW_H = 46      # 8 enemigos: tienen que entrar dentro de la pantalla de la tablet y sin tapar el boton REGRESAR
+    ROW_H = 46
     ROW_GAP = 4
 
-    # Ficha del enemigo (derecha)
     CARD_BOX = (740, 252, 480, 403)
 
-    # Boton REGRESAR (abajo a la izquierda)
     BACK_BOX = (456, 692, 170, 46)
 
     TEXT_COLOR = (235, 245, 250)
@@ -169,8 +149,6 @@ class EnemyEncyclopedia:
 
         self.screen = screen
 
-        # Enemigos que el jugador ya se encontro en esta partida. Los
-        # demas aparecen como "???" (como una coleccion por completar).
         self.discovered = set(discovered or ())
 
         self.data = self._load_data()
@@ -179,14 +157,10 @@ class EnemyEncyclopedia:
 
         self.images = {}
 
-        # Primero las imagenes, porque resize() arma los iconos
         self._load_all_images()
 
         self.resize()
 
-    # ---------------------------------------------------------
-    # Cargar informacion de los enemigos
-    # ---------------------------------------------------------
 
     def _load_data(self):
 
@@ -235,13 +209,9 @@ class EnemyEncyclopedia:
 
         return merged
 
-    # ---------------------------------------------------------
-    # Cargar imagenes
-    # ---------------------------------------------------------
 
     def _load_all_images(self):
 
-        # Dibujos de los enemigos
         for key in self.ORDER:
 
             filename = self.data[key].get(
@@ -249,8 +219,6 @@ class EnemyEncyclopedia:
                 ""
             )
 
-            # Si falta el icono (ej: golem_icono.png) se prueba con la
-            # imagen normal del enemigo (golem.png)
             candidates = [filename, f"{key}.png"]
 
             image = None
@@ -279,7 +247,6 @@ class EnemyEncyclopedia:
 
     @staticmethod
     def _load_ui(name, size=None, alpha=True):
-        """Carga una imagen de assets/maps/ui. None si no existe."""
 
         path = UI_DIR / name
 
@@ -306,12 +273,8 @@ class EnemyEncyclopedia:
 
         return image
 
-    # ---------------------------------------------------------
-    # Tamanos de pantalla
-    # ---------------------------------------------------------
 
     def _box(self, box):
-        """(x, y, ancho, alto) de la imagen 1672x941 -> Rect en pantalla."""
 
         x, y, w, h = box
 
@@ -362,7 +325,6 @@ class EnemyEncyclopedia:
         self.card_rect = self._box(self.CARD_BOX)
         self.back_rect = self._box(self.BACK_BOX)
 
-        # Lista (todo el recuadro, por si se dibuja con colores)
         rows_h = (
             len(self.ORDER) * (self.ROW_H + self.ROW_GAP)
             + self.ROW_GAP
@@ -379,7 +341,6 @@ class EnemyEncyclopedia:
 
         back_size = self.back_rect.size
 
-        # Imagenes (escaladas al tamano de la pantalla actual)
         self.bg_img = self._load_ui(
             "tablet_enemigos.png",
             (self.width, self.height),
@@ -406,7 +367,6 @@ class EnemyEncyclopedia:
             back_size
         )
 
-        # Fondo oscuro para cuando no hay imagen de la tablet
         self.dim = pygame.Surface(
             (self.width, self.height),
             pygame.SRCALPHA
@@ -414,7 +374,6 @@ class EnemyEncyclopedia:
 
         self.dim.fill((8, 14, 22, 245))
 
-        # Panel semitransparente de la ficha y pedestal del dibujo
         self.card_panel = pygame.Surface(
             self.card_rect.size,
             pygame.SRCALPHA
@@ -442,7 +401,6 @@ class EnemyEncyclopedia:
             round(120 * self.sy),
         )
 
-        # Iconos chicos para la lista
         self.icons = {}
 
         icon_size = max(
@@ -468,7 +426,6 @@ class EnemyEncyclopedia:
                 )
             )
 
-        # Siluetas oscuras para los enemigos todavia no descubiertos
         self.icons_locked = {
             key: self._silhouette(icon)
             for key, icon in self.icons.items()
@@ -482,7 +439,6 @@ class EnemyEncyclopedia:
 
     @staticmethod
     def _silhouette(image):
-        """Misma forma que la imagen pero toda de un color oscuro."""
 
         mask = pygame.mask.from_surface(image)
 
@@ -495,9 +451,6 @@ class EnemyEncyclopedia:
 
         return key in self.discovered
 
-    # ---------------------------------------------------------
-    # Rectangulo de cada enemigo
-    # ---------------------------------------------------------
 
     def _enemy_rect(self, index):
 
@@ -510,9 +463,6 @@ class EnemyEncyclopedia:
             )
         )
 
-    # ---------------------------------------------------------
-    # Dividir texto
-    # ---------------------------------------------------------
 
     @staticmethod
     def _wrap(font, text, max_width):
@@ -551,12 +501,8 @@ class EnemyEncyclopedia:
 
         return lines
 
-    # ---------------------------------------------------------
-    # Helpers de texto
-    # ---------------------------------------------------------
 
     def _font(self, size):
-        """Fuente por tamano (cache para no recrearla en cada frame)."""
 
         font = self._font_cache.get(size)
 
@@ -569,7 +515,6 @@ class EnemyEncyclopedia:
         return font
 
     def _blit_text(self, font, text, color, shadow=True, **anchor):
-        """Dibuja texto con una sombrita para que se lea mejor."""
 
         surf = font.render(text, True, color)
 
@@ -591,7 +536,6 @@ class EnemyEncyclopedia:
         return rect
 
     def _fit_description(self, text, width, height):
-        """Busca el tamano de letra mas grande donde entra todo el texto."""
 
         biggest = max(16, round(32 * self.sy))
 
@@ -611,16 +555,12 @@ class EnemyEncyclopedia:
 
         return font, self._wrap(font, text, width)
 
-    # ---------------------------------------------------------
-    # Seleccion
-    # ---------------------------------------------------------
 
     def _select(self, index):
 
         self.selected = index % len(self.ORDER)
 
     def _row_at(self, pos):
-        """Indice del enemigo bajo el mouse (o None)."""
 
         for index in range(len(self.ORDER)):
 
@@ -630,19 +570,14 @@ class EnemyEncyclopedia:
 
         return None
 
-    # ---------------------------------------------------------
-    # Eventos
-    # ---------------------------------------------------------
 
     def handle_event(self, event):
 
         if event.type == pygame.KEYDOWN:
 
-            # ESC vuelve al menu de pausa
             if event.key == pygame.K_ESCAPE:
                 return "back"
 
-            # Subir
             if event.key in (
                 pygame.K_UP,
                 pygame.K_w,
@@ -652,7 +587,6 @@ class EnemyEncyclopedia:
 
                 self._select(self.selected - 1)
 
-            # Bajar
             elif event.key in (
                 pygame.K_DOWN,
                 pygame.K_s,
@@ -662,7 +596,6 @@ class EnemyEncyclopedia:
 
                 self._select(self.selected + 1)
 
-        # El mouse al pasar por encima tambien selecciona
         elif event.type == pygame.MOUSEMOTION:
 
             index = self._row_at(event.pos)
@@ -671,21 +604,18 @@ class EnemyEncyclopedia:
 
                 self.selected = index
 
-        # Rueda del mouse
         elif event.type == pygame.MOUSEWHEEL:
 
             self._select(self.selected - event.y)
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
 
-            # Boton regresar
             if (
                 event.button == 1
                 and self.back_rect.collidepoint(event.pos)
             ):
                 return "back"
 
-            # Click en un enemigo
             if event.button == 1:
 
                 index = self._row_at(event.pos)
@@ -694,7 +624,6 @@ class EnemyEncyclopedia:
 
                     self.selected = index
 
-            # Ruedita en versiones viejas de pygame
             elif event.button == 4:
 
                 self._select(self.selected - 1)
@@ -705,20 +634,13 @@ class EnemyEncyclopedia:
 
         return None
 
-    # ---------------------------------------------------------
-    # Update
-    # ---------------------------------------------------------
 
     def update(self, dt):
 
         return None
 
-    # ---------------------------------------------------------
-    # Dibujar
-    # ---------------------------------------------------------
 
     def _draw_fallback_frames(self):
-        """Sin la imagen de la tablet: paneles de colores."""
 
         self.screen.blit(
             self.dim,
@@ -780,7 +702,6 @@ class EnemyEncyclopedia:
             max(2, round(3 * self.sy)),
         )
 
-        # Detalle de color en el centro de la linea
         half = round(60 * self.sx)
 
         pygame.draw.line(
@@ -816,7 +737,6 @@ class EnemyEncyclopedia:
 
             found = self.is_discovered(key)
 
-            # Icono del enemigo (silueta si todavia no lo descubriste)
             icon = (
                 self.icons.get(key) if found
                 else self.icons_locked.get(key)
@@ -840,11 +760,8 @@ class EnemyEncyclopedia:
                     + icon.get_width() \
                     + round(10 * self.sx)
 
-            # Sin imagen de fila, el seleccionado es claro: texto oscuro
             dark = selected and self.row_sel_img is None
 
-            # Si el nombre no entra en la fila (ej. "Guardián Tirador"),
-            # se achica la letra hasta que entre, asi no se sale.
             name = self.data[key]["nombre"] if found else "???"
 
             max_w = rect.right - text_left - round(34 * self.sx)
@@ -870,7 +787,6 @@ class EnemyEncyclopedia:
                 midleft=(text_left, rect.centery),
             )
 
-            # Flechita de seleccion
             if selected:
 
                 size = max(6, round(9 * self.sy))
@@ -901,10 +817,8 @@ class EnemyEncyclopedia:
 
         pad = round(24 * self.sx)
 
-        # Panel de fondo
         self.screen.blit(self.card_panel, card)
 
-        # Nombre
         self._blit_text(
             self.name_font,
             enemy["nombre"] if found else "???",
@@ -915,7 +829,6 @@ class EnemyEncyclopedia:
             ),
         )
 
-        # Pedestal del dibujo
         pedestal = pygame.Surface(
             self.pedestal_rect.size,
             pygame.SRCALPHA
@@ -938,7 +851,6 @@ class EnemyEncyclopedia:
 
         self.screen.blit(pedestal, self.pedestal_rect)
 
-        # Dibujo del enemigo
         image = (
             self.images.get(key) if found
             else self.images_locked.get(key)
@@ -972,7 +884,6 @@ class EnemyEncyclopedia:
                 )
             )
 
-        # Titulo de descripcion
         desc_y = self.pedestal_rect.bottom + round(16 * self.sy)
 
         title_rect = self._blit_text(
@@ -990,7 +901,6 @@ class EnemyEncyclopedia:
             2,
         )
 
-        # Descripcion SOLO LECTURA (se achica la letra para que entre)
         text_top = title_rect.bottom + round(12 * self.sy)
 
         available_h = card.bottom - round(16 * self.sy) - text_top
@@ -1017,8 +927,6 @@ class EnemyEncyclopedia:
             y += font.get_linesize() + 2
 
     def _draw_hint(self):
-        """Texto de abajo de la lista. Se achica / acomoda solo para que
-        NUNCA pise el boton REGRESAR, sin importar el tamano de pantalla."""
 
         hint_x = self._enemy_rect(0).left
         width = self._enemy_rect(0).width
@@ -1028,7 +936,6 @@ class EnemyEncyclopedia:
             + round(4 * self.sy)
         )
 
-        # Lo ultimo que puede llegar el texto: justo antes del boton
         limit = self.back_rect.top - round(4 * self.sy)
 
         total = len(self.ORDER)
@@ -1060,7 +967,6 @@ class EnemyEncyclopedia:
 
             size -= 1
 
-        # Si ni con la letra mas chica entra, se sube lo que haga falta
         y = min(top, limit - total_h)
 
         for line in lines:
@@ -1096,7 +1002,6 @@ class EnemyEncyclopedia:
                 border_radius=9,
             )
 
-        # Las imagenes del boton vienen sin texto: se escribe aca
         self._blit_text(
             self.back_font,
             "REGRESAR",
@@ -1106,7 +1011,6 @@ class EnemyEncyclopedia:
 
     def draw(self):
 
-        # ---------- fondo ----------
 
         if self.bg_img is not None:
 

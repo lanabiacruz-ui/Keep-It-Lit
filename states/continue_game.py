@@ -23,7 +23,6 @@ class ContinueGame:
     SLOT_IMG_W = 220
     SLOT_IMG_H = 200
 
-    # Cartelito del modo (Normal / Hardcore), arriba del nombre
     MODE_LOCAL = (51, 31, 172, 48)
 
     NAME_LOCAL = (51, 50, 172, 73)
@@ -137,8 +136,6 @@ class ContinueGame:
 
         self.pending_delete = None
 
-        # Contraseña: se pide antes de jugar o borrar una partida.
-        # pending_action = ("start" | "delete", numero de slot)
         self.password_menu = None
         self.pending_action = None
 
@@ -192,7 +189,6 @@ class ContinueGame:
         self.slots = list_slots()
 
     def _run_action(self, action, index):
-        """Hace lo que se pidio (ya con la contraseña aceptada)."""
 
         slot = self.slots[index]
 
@@ -205,7 +201,6 @@ class ContinueGame:
         return None
 
     def _request(self, action, index):
-        """Si la partida tiene contraseña la pide; si no, sigue directo."""
 
         slot = self.slots[index]
 
@@ -367,7 +362,6 @@ class ContinueGame:
 
                 continue
 
-            # Modo de la partida
             hardcore = slot.get("mode") == MODE_HARDCORE
 
             mode_rect = self._button_rect(i, self.MODE_LOCAL)

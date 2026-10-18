@@ -13,18 +13,6 @@ UI_DIR = (
 
 
 class PasswordMenu:
-    """Pantalla para escribir una contraseña.
-
-    mode="set"  -> al crear la partida: el jugador inventa la contraseña.
-    mode="ask"  -> al jugar o borrar una partida: se la pide.
-
-    Imagen OPCIONAL (assets/maps/ui/mapacontrasena.png, 1672x941): igual
-    que mapacarga.png pero con el cartel "Contraseña:" en vez de
-    "Nombre de la partida:". Si no esta, se usa mapacarga.png y el
-    cartel se tapa y se escribe con codigo.
-
-    handle_event devuelve ("password", texto), "back" o None.
-    """
 
     IMG_W = 1672
     IMG_H = 941
@@ -32,8 +20,6 @@ class PasswordMenu:
     INPUT_BOX = (747, 365, 1002, 391)
     CLOSE_BOX = (1025, 299, 1042, 315)
 
-    # Zona del cartel "Nombre de la partida:" (se tapa si no hay imagen
-    # propia) y donde se escribe "Contraseña:"
     LABEL_COVER_BOX = (745, 314, 1004, 346)
     LABEL_CENTER = (875, 330)
 
@@ -51,7 +37,6 @@ class PasswordMenu:
         self.input_rect = self._scale_box(self.INPUT_BOX)
         self.close_rect = self._scale_box(self.CLOSE_BOX)
 
-        # Boton de "ojo" dentro de la caja, pegado a la derecha
         eye_size = max(14, self.input_rect.height - 6)
 
         self.eye_rect = pygame.Rect(
@@ -74,7 +59,6 @@ class PasswordMenu:
 
         pygame.key.start_text_input()
 
-    # ---------- carga ----------
 
     def _scale_box(self, box):
 
@@ -114,7 +98,6 @@ class PasswordMenu:
             surface = pygame.Surface((self.width, self.height))
             surface.fill((77, 130, 195))
 
-        # Tapa "Nombre de la partida:" con el color del fondo de la ventana
         cover = self._scale_box(self.LABEL_COVER_BOX)
 
         sample = (
@@ -126,10 +109,8 @@ class PasswordMenu:
 
         return surface
 
-    # ---------- uso ----------
 
     def clear(self):
-        """Borra lo escrito (despues de una contraseña incorrecta)."""
 
         self.text = ""
 
@@ -189,7 +170,6 @@ class PasswordMenu:
 
         return None
 
-    # ---------- dibujo ----------
 
     def draw(self):
 
@@ -209,7 +189,6 @@ class PasswordMenu:
                 ),
             )
 
-        # Asteriscos, o el texto real si el ojo esta activado
         if self.show_password:
             shown = self.text
         else:
@@ -217,7 +196,6 @@ class PasswordMenu:
 
         text_surface = self.font.render(shown, True, (255, 255, 255))
 
-        # Si no entra en la caja, se muestra el final (donde se escribe)
         if text_surface.get_width() > self.text_max_width:
 
             text_surface = text_surface.subsurface(
@@ -306,7 +284,6 @@ class PasswordMenu:
             self.screen, color, (cx, cy), max(2, eye_h // 4)
         )
 
-        # Tachado cuando la contraseña esta oculta
         if not self.show_password:
 
             pygame.draw.line(

@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 from core.audio_manager import audio
+from core.achievements import achievements
 from core.Save_manager import (
     save_progress, delete_save, normalize_mode, MODE_HARDCORE
 )
@@ -40,156 +41,93 @@ from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
-from ui.zone_banner import ZoneBanner
+from ui.Zone_banner import ZoneBanner
+from ui.achievement_toast import AchievementToast
 from ui.objectives import Objectives
 from states.pause_menu import PauseMenu
 from states.enemy_enciclopedia import EnemyEncyclopedia
 from states.settings import Settings
 
 
-# Radio de luz, consumo y espera entre golpes de cada luz (fosforo,
-# vela...): se cambian en world/lights.py
-
 MATCH_POS = (818, 1002)
 
-# Cuanto dura prendido el fosforo (vida), en segundos. Corto para dar
-# tension, pero lo bastante largo para explorar y decidir que hacer.
 MATCH_DURATION = 30.0
 
-# En el cuadrado de la tienda la luz se recarga: segundos para pasar de
-# 0% a 100% de vida.
 SHOP_RECHARGE_TIME = 4.0
 
-# Al entrar a la tienda la luz del jugador se va apagando de a poco
-# (porque ya esta todo iluminado). Es la distancia (mundo) que tarda.
 SHOP_LIGHT_FADE = 24.0
 
-# A que altura del sprite esta el "centro" del personaje (0 = pies,
-# 1 = cabeza). De ahi sale el area de ataque.
 TORSO_HEIGHT = 0.5
 
-# Maximo de unidades iguales por slot (se puede cambiar por item con
-# "max_pila" en data/items.json).
 MAX_STACK = 15
 
-# Cuanto tarda en desaparecer un aviso en pantalla (segundos).
 MESSAGE_TIME = 2.2
 
-# Cuenta regresiva (en segundos) cuando no hay luz, antes de perder.
 NO_LIGHT_COUNTDOWN = 10.0
 
-# Debajo de este % de vida, la luz empieza a parpadear.
 FLICKER_THRESHOLD = 0.25
 
-# ---------- Bola de fuego de la antorcha (tecla G) ----------
-# El vuelo (velocidad, alcance, tamano) se cambia en world/fireball.py
-FIRE_DAMAGE = 2          # cuanto saca cada bola (igual que el golpe de la antorcha)
-FIRE_COST = 0.02         # vida de la luz que gasta cada bola (1.0 = toda)
-FIRE_COOLDOWN = 0.45     # espera entre bola y bola, en segundos
-FIRE_FURY_SPEED = 2.0    # en furia dispara tantas veces mas rapido (y no gasta luz)
-FIRE_MUZZLE = 8.0        # a que distancia del cuerpo nace la bola (mundo)
+FIRE_DAMAGE = 2
+FIRE_COST = 0.02
+FIRE_COOLDOWN = 0.45
+FIRE_FURY_SPEED = 2.0
+FIRE_MUZZLE = 8.0
 
-# Combo de bolas: 2 bolas normales y la 3ra es la fuerte (x2 de dano).
-FIRE_COMBO_SIZE = 3          # cada cuantas bolas sale la fuerte
-FIRE_HEAVY_MULT = 2          # la fuerte saca tantas veces mas dano
-FIRE_HEAVY_COST_MULT = 2.0   # y gasta tantas veces mas luz
-FIRE_HEAVY_COOLDOWN = 0.75   # espera despues de la fuerte (normal: FIRE_COOLDOWN)
-FIRE_COMBO_WINDOW = 1.0      # si pasa este tiempo sin tirar, el combo vuelve a 0
+FIRE_COMBO_SIZE = 3
+FIRE_HEAVY_MULT = 2
+FIRE_HEAVY_COST_MULT = 2.0
+FIRE_HEAVY_COOLDOWN = 0.75
+FIRE_COMBO_WINDOW = 1.0
 
-# ---------- Flashbang (lo provoca el enemigo Destello al explotar) ----------
-# La pantalla se pone toda blanca: primero un "pum" (un circulo blanco que
-# se expande desde el destello), se queda blanca y despues se va aclarando.
-FLASH_EXPAND = 0.18   # duracion del "pum" (el circulo que se expande)
-FLASH_HOLD = 1.5      # segundos totales con la pantalla toda blanca (incluye el pum)
-FLASH_FADE = 2.5      # segundos que tarda en irse el blanco
-FLASH_TOTAL = FLASH_HOLD + FLASH_FADE   # = 5 segundos tapado
+FLASH_EXPAND = 0.18
+FLASH_HOLD = 1.5
+FLASH_FADE = 2.5
+FLASH_TOTAL = FLASH_HOLD + FLASH_FADE
 
-# Que tan oscuro es todo lo que queda fuera de la luz (0 a 255).
-# 255 = negro total, 200 = se ve algo, 0 = sin oscuridad.
 DARKNESS_ALPHA = 248
 
-# Luz de la puerta de la cabana (radio en unidades del mundo).
-# Mas chico = ilumina menos. 0 = sin luz.
 DOOR_GLOW_RADIUS = 55
 
-# A que distancia (unidades del mundo) del cofre sirve la ganzua.
 GANZUA_DISTANCE = 48
 
-# A que distancia se juntan solas las monedas del piso.
 COIN_PICKUP_DISTANCE = 14
 
-# Cada cuanto hace dano la luz con polvora (segundos).
 POLVORA_TICK = 0.5
 
-# F8 = trampa de prueba: suma esta cantidad de monedas.
 DEBUG_COINS = 100000
 
-# Cuanto vale cada moneda del piso (la amarilla, la azul y la roja).
-# Si el objeto trae su propio "value" (monedas del cofre de la arena),
-# se usa ese.
 COIN_VALUES = {
     "moneda": 1,
     "moneda_5": 5,
     "moneda_10": 10,
 }
 
-# "+N" que aparece debajo del contador de monedas: cuanto se queda
-# en pantalla (segundos) despues de la ultima moneda que agarraste,
-# y cuanto dura el desvanecido del final.
 COIN_GAIN_TIME = 2.0
 COIN_GAIN_FADE = 0.5
 
-# ---------- Items nuevos ----------
-# (la duracion de cada uno esta en data/items.json: "repelente",
-# "iman" y "esfera")
 
-# Iman: hasta donde atrae los objetos (unidades del mundo) y que tan
-# rapido vuelan hacia vos (velocidad lejos -> velocidad cerca).
 MAGNET_RADIUS = 130
 MAGNET_SPEED_FAR = 120.0
 MAGNET_SPEED_NEAR = 360.0
 
-# Iman: a que distancia del jugador se agarra solo el objeto.
 MAGNET_PICKUP_DISTANCE = 10
 
-# Iman: True = hace falta haber usado el item "Iman" (tienda) para poder
-# prenderlo con la O. False = la O siempre lo prende y apaga (para probar).
 MAGNET_NEEDS_ITEM = True
 
-# Repelente: color del aro que marca el area que espanta mosquitos.
 REPEL_RING_COLOR = (120, 235, 130)
 
-# Cuanto tarda la pantalla en ponerse del todo negra al perder.
 FADE_DURATION = 2.4
 
-# Transicion al juego despues de las instrucciones (segundos)
 INTRO_TIME = 2.2
 
-# Cuanto se queda la pantalla de "Perdiste" antes de volver al menu.
 LOST_SCREEN_TIME = 3.0
 
-# Al perder en modo HARDCORE, borrar la partida guardada (True) o dejarla
-# como esta (False). Si queres probar sin perder tus saves, ponelo en False.
 DELETE_SAVE_ON_LOSS = True
 
-# Al perder en modo NORMAL se pierden todos los items (inventario y luces)
-# y queda solo el fosforo; las oleadas, puertas y cofres siguen igual.
-# Las monedas y las gemas: True = te las quedas, False = tambien se pierden.
 NORMAL_KEEP_COINS = True
 
-# Donde se dibuja el contador de gemas (desde la esquina de arriba a la
-# derecha). Si se pisa con el HUD, cambialo.
 GEMS_MARGIN = (110, 100)
 
-# RECONSTRUIDO: que hace cada objeto al usarlo (tecla F). Si un objeto
-# en data/items.json tiene un campo "efecto", se usa ese en vez de esto.
-# Claves posibles:
-#   vida          -> suma vida de golpe (0.0 a 1.0)
-#   regen         -> suma vida de a poco; "regen_tiempo" = segundos
-#   velocidad     -> multiplica la velocidad; "duracion" = segundos
-#   consumo       -> multiplica lo rapido que se gasta la luz; "duracion"
-#   polvora_dps   -> dano por segundo de la luz; "duracion"
-#   escudo        -> suma escudo (0.0 a 1.0)
 ITEM_EFFECTS = {
     "madera": {"vida": 0.20},
     "cera": {"consumo": 0.5, "duracion": 20.0},
@@ -222,16 +160,15 @@ class NewGame:
         self.save_path = save_path
         self.save_data = save_data or {}
 
-        # Modo de la partida: "normal" o "hardcore". Una partida guardada
-        # lo trae adentro; una vieja sin modo cuenta como normal.
         self.mode = normalize_mode(self.save_data.get("mode", mode))
         self._loss_applied = False
+        self._defeat_counted = False
         self.width, self.height = screen.get_size()
+        self.achievement_toast = AchievementToast((self.width, self.height))
 
         self.world_map = WorldMap()
         self.collision_map = CollisionMap()
 
-        # Puertas: las rotas (guardadas) no vuelven a aparecer
         self.doors = DoorManager(
             self.save_data.get("broken_doors", []),
             self.save_data.get("final_door_slots"),
@@ -241,42 +178,32 @@ class NewGame:
             self.doors.final_door.game = self
         self.collision_map.doors = self.doors
 
-        # Cofres: la espera de cada uno se guarda en la partida
         self.chests = ChestManager(self.save_data.get("chests", {}))
 
-        # Enciclopedia: enemigos que ya te encontraste en ESTA partida
         self.discovered_enemies = set(
             self.save_data.get("enemies_seen", [])
         )
         self.collision_map.obstacles.extend(self.chests.blocking_rects)
 
-        # Salas de combate: la sala grande de la derecha (10 oleadas) y la
-        # sala grande de la izquierda (10 oleadas, con Guardianes)
         self.arena = Arena((self.width, self.height), RIGHT_ARENA)
         self.arena_left = Arena((self.width, self.height), LEFT_ARENA)
         self.arenas = [self.arena, self.arena_left]
 
-        # Bloques que abren y cierran los huecos de la cruz (sala izquierda)
         self.crushers = CrusherBlocks(self.collision_map)
 
-        # La oleada que sigue (las que ya pasaste no se repiten)
         for arena in self.arenas:
             arena.wave = max(
                 1, int(self.save_data.get(arena.cfg.save_wave, 1))
             )
 
-        # Minijuego del cofre (None = cerrado)
         self.minigame = None
         self.minigame_chest = None
 
-        # Tienda: el vendedor del mapa y la ventana (None = cerrada)
         self.shopkeeper = Shopkeeper()
         self.catalog = load_catalog()
         self.shop_prices = price_table(self.catalog)
         self.shop = None
 
-        # Lo que pusiste en el carrito: se guarda al cerrar la tienda
-        # sin comprar y vuelve cuando la abris de nuevo
         self.shop_cart = {}
 
         spawn_x, spawn_y = get_spawn_point(
@@ -286,15 +213,8 @@ class NewGame:
 
         self.player = Player(spawn_x, spawn_y)
 
-        # Donde queda el hitbox al aparecer en la cabaña (por si hay
-        # que rescatar al jugador mas abajo)
         spawn_center = self.player.rect.center
 
-        # Posicion guardada. Se guarda el CENTRO DEL HITBOX (los pies),
-        # pero Player(x, y) recibe el centro del DIBUJO: pasarle la
-        # posicion guardada directo corria al personaje 18 px hacia
-        # abajo en cada "Continuar" (hasta quedar dentro de una pared,
-        # sin poder moverse). Por eso se coloca el hitbox directamente.
         saved_pos = None
 
         if "x" in self.save_data and "y" in self.save_data:
@@ -316,8 +236,6 @@ class NewGame:
                     self.player.rect.bottom + 3,
                 )
 
-        # Partidas que ya quedaron guardadas dentro de una pared
-        # (no en mapa2: ahi las coordenadas son de otro mapa)
         if self.save_data.get("current_map") != "mapa2":
             self._unstick_player(spawn_center)
 
@@ -338,37 +256,29 @@ class NewGame:
             darkness_alpha=DARKNESS_ALPHA
         )
 
-        # Efectos: chispas de golpe, monedas, oleadas, auras
         self.fx = FxManager()
         self._intro_pending = False
         self.intro_t = None
 
         self.hud = Hud((self.width, self.height))
 
-        # Menu de pausa y pantallas accesibles desde el menu de pausa.
         self.pause_menu = PauseMenu(self.screen)
         self.pause_settings = None
         self.enemy_encyclopedia = None
         self.pause_view = None
 
-        # Efectos activos (y la alerta del mosquito) como cubitos arriba
         self.effects_bar = EffectsBar((self.width, self.height))
         self.effects_bar.set_alert_image(self.arena.mosquito_art.warning)
 
-        # Tutorial: solo en partida nueva (al continuar no aparece).
-        # Mientras esta abierto el juego queda en pausa.
         self.tutorial = (
             None if self.save_data else Tutorial((self.width, self.height))
         )
 
-        # Nombre de la sala: aparece al entrar a cada zona y se desvanece
         self.zone_tracker = ZoneTracker()
         self.zone_banner = ZoneBanner((self.width, self.height))
 
-        # Cuantos objetos de inventario (no luces ni monedas) agarraste
         self.items_picked = 0
 
-        # Contadores que usan los objetivos (se guardan en la partida)
         saved_stats = self.save_data.get("stats", {})
 
         self.stats = {
@@ -384,14 +294,8 @@ class NewGame:
             for key in self.stats:
                 self.stats[key] = int(saved_stats.get(key, 0))
 
-        # Zonas a las que ya entraste (para los objetivos de explorar)
         self.zones_seen = set(self.save_data.get("zones_seen", []))
 
-        # Objetivos (arriba a la derecha). Van de a uno y los que ya
-        # estan cumplidos se saltean. Arrancan cuando termina el
-        # tutorial. En partida nueva empiezan desde el primero; al
-        # continuar, desde donde te quedaste (las partidas viejas, sin
-        # objetivos guardados, no los tienen).
         objective_list = self._build_objectives()
 
         self._objective_saved = self.save_data.get("objective_index")
@@ -420,57 +324,44 @@ class NewGame:
 
         self.coins = int(self.save_data.get("coins", 0))
 
-        # Gemas (las tira el cofre al completar el mapa)
         self.gems = int(self.save_data.get("gems", 0))
 
-        # Gemas verde oscuro (las tira el cofre de la sala del Guardian,
-        # la de la izquierda)
         self.gems_green = int(self.save_data.get("gems_green", 0))
 
-        # ---------- Fosforo / vida ----------
 
         self.has_match = bool(self.save_data.get("has_match", False))
 
-        # Vida del fosforo actual, de 0.0 a 1.0
         self.vida = max(
             0.0,
             min(1.0, float(self.save_data.get("vida", 1.0)))
         )
 
-        # Escudo: por ahora solo se muestra, arranca vacio
         self.escudo = max(
             0.0,
             min(1.0, float(self.save_data.get("escudo", 0.0)))
         )
 
-        # Que luz esta equipada: "fosforo" o "vela"
         self.light_type = self.save_data.get("light", "fosforo")
 
         if self.light_type not in LIGHTS:
             self.light_type = "fosforo"
 
-        # Que tan rapido se consume la luz de base
         self.base_burn = 1.0
 
-        # El golpe se crea antes porque equip_match() le avisa que luz hay
         self.melee = Melee()
 
-        # Golpe de la antorcha: "golpe" (normal) o "fuego" (bolas).
-        # Se cambia con la tecla G o tocando el panel al lado de la hotbar.
         self.attack_mode = "golpe"
         self.fireballs = []
         self.fire_bursts = []
         self.fire_cooldown = 0.0
-        self.fire_combo = 0           # bolas tiradas en el combo actual
-        self.fire_combo_timer = 0.0   # cuanto queda para que se corte el combo
+        self.fire_combo = 0
+        self.fire_combo_timer = 0.0
         self._fire_hold = False
 
-        # Flashbang (destello): segundos que le quedan al blanco
         self.flash_t = 0.0
         self.flash_pos = (0.0, 0.0)
         self._flash_surf = None
 
-        # Mapa completado: la sala de combate queda cerrada para siempre
         for arena in self.arenas:
 
             arena.completed = bool(
@@ -479,11 +370,9 @@ class NewGame:
 
             arena.restore_completed(self)
 
-        # Furia de la vela
         self.fury_timer = 0.0
         self.fury_left = 0.0
 
-        # Luces tiradas en el piso
         self.light_drops = []
 
         if self.has_match:
@@ -493,7 +382,6 @@ class NewGame:
                 LightItem("fosforo", *MATCH_POS)
             )
 
-        # ---------- Objetos (madera, aceite, cera) ----------
 
         self.item_defs = load_item_defs()
 
@@ -509,21 +397,16 @@ class NewGame:
             if entry is None:
                 continue
 
-            # Formato nuevo: [id, cantidad].
-            # Formato viejo: solo el id.
             if isinstance(entry, (list, tuple)) and len(entry) == 2:
                 item_id, count = entry[0], int(entry[1])
             else:
                 item_id, count = entry, 1
 
-            # Las monedas nunca van al inventario: si una partida vieja
-            # las guardo ahi (bug anterior), se pasan al contador.
             if item_id in COIN_VALUES and count > 0:
 
                 self.coins += COIN_VALUES[item_id] * count
                 continue
 
-            # Las luces nunca van al inventario
             if item_id in LIGHTS and count > 0:
 
                 for _ in range(count):
@@ -565,8 +448,6 @@ class NewGame:
             self.collected
         )
 
-        # Partida guardada dentro de mapa2: se vuelve a entrar ahi
-        # (mapa1 queda guardado para poder volver)
         if self.save_data.get("current_map") == "mapa2":
 
             enter_map(self, "mapa2", saved_pos)
@@ -576,85 +457,61 @@ class NewGame:
             f"{len(self.world_items)} objetos en el mapa"
         )
 
-        # Bolsas, cofres, faros y fogatas colocados (se guardan con la
-        # partida)
         self.placeables = PlaceableManager(
             self.save_data.get("placeables", [])
         )
 
-        # F3 = ver donde estan los objetos
         self.debug_items = False
         self._font_cache = {}
 
-        # Efectos temporales
         self.speed_timer = 0.0
         self.burn_factor = 1.0
         self.burn_timer = 0.0
 
-        # Duracion total de cada efecto
         self.speed_total = 1.0
         self.burn_total = 1.0
         self.polvora_total = 1.0
         self.regen_total = 1.0
 
-        # Polvora: la luz hace dano mientras dura
         self.polvora_timer = 0.0
         self.polvora_dps = 0.0
         self._polvora_acc = 0.0
 
-        # Resina: cura de a poco
         self.regen_left = 0.0
         self.regen_rate = 0.0
 
-        # Repelente de mosquitos: tu luz los espanta mientras dura
         self.repel_timer = 0.0
         self.repel_total = 1.0
 
-        # Iman: atrae los objetos del piso mientras dura
         self.magnet_timer = 0.0
         self.magnet_total = 1.0
 
-        # Interruptor del iman: se prende y se apaga con la tecla O.
-        # Apagado es como no tener el iman (se pueden soltar items y el
-        # tiempo del item no corre).
         self.magnet_mode = False
         self._magnet_imgs = None
 
-        # Esfera de vidrio: mas radio de luz mientras dura
         self.sphere_timer = 0.0
         self.sphere_total = 1.0
         self.sphere_mult = 1.0
 
-        # "+N" debajo del contador de monedas (lo conseguido "en el
-        # momento": se suma mientras sigas agarrando y se desvanece)
         self.coin_gain = 0
         self.coin_gain_timer = 0.0
 
-        # Radio de la luz en pantalla
         self._light_radius_px = self._light_radius()
 
-        # ---------- Combate ----------
 
         self.melee.set_light(self.light_type)
 
-        # Munecos de practica
         self.dummies = []
 
-        # F4 = ver el area de ataque
         self.debug_combat = False
 
-        # Aviso en pantalla
         self.message = ""
         self.message_timer = 0.0
 
-        # Cuenta regresiva cuando no hay luz
         self.no_light_timer = None
 
-        # Casillero seleccionado
         self.selected_slot = "equipped"
 
-        # Estados:
-        # "playing" -> "dying" -> "lost"
         self.state = "playing"
 
         self.fade_alpha = 0
@@ -678,7 +535,6 @@ class NewGame:
                 (self.width, self.height)
             )
 
-        # Hardcore: "Regresaras al menu". Normal: "Regresaras a la Cabana"
         self.pantalla_perdiste = _lost_img("pantalla_perdiste.png")
         self.pantalla_perdiste_normal = _lost_img("pantalla_perdiste2.png")
 
@@ -688,16 +544,8 @@ class NewGame:
 
         self.fade_overlay.fill((0, 0, 0))
 
-    # ---------- utilidades ----------
 
     def _unstick_player(self, fallback_center, max_radius=120):
-        """Si el jugador esta en un lugar donde no puede estar (pared,
-        fuera del mapa), lo mueve al punto caminable mas cercano. Si no
-        hay ninguno cerca, vuelve a la cabaña.
-
-        Arregla tambien las partidas viejas que ya se guardaron
-        atascadas por el bug de la posicion al continuar.
-        """
 
         rect = self.player.rect
 
@@ -708,7 +556,6 @@ class NewGame:
 
         for radius in range(1, max_radius + 1):
 
-            # Se prueba en un anillo alrededor del punto original
             for dx in range(-radius, radius + 1):
                 for dy in range(-radius, radius + 1):
 
@@ -729,7 +576,6 @@ class NewGame:
 
                         return
 
-        # Sin salida cerca: se lo manda a la cabaña
         self.player.rect.center = fallback_center
 
         self.player.image_rect.midbottom = (
@@ -747,15 +593,8 @@ class NewGame:
 
         return font
 
-    # ---------- dano ----------
 
     def take_damage(self, amount):
-        """El jugador recibe dano.
-
-        El escudo es la primera vida y se gasta primero.
-        Cuando se acaba, lo que sobra del golpe le pega
-        a la vida de la luz.
-        """
 
         if amount <= 0:
             return
@@ -772,14 +611,8 @@ class NewGame:
         if self.escudo < 1e-6:
             self.escudo = 0.0
 
-    # ---------- fosforo ----------
 
     def equip_match(self, kind=None, life=None):
-        """Equipa una luz (fosforo o vela).
-
-        kind -> cual
-        life -> con cuanta vida
-        """
 
         if kind in LIGHTS:
             self.light_type = kind
@@ -815,7 +648,6 @@ class NewGame:
         self._reset_fury()
 
     def _reset_fury(self):
-        """Apaga la furia y reinicia la espera."""
 
         self.fury_left = 0.0
 
@@ -829,7 +661,6 @@ class NewGame:
         self.melee.set_fury(1.0)
 
     def _update_fury(self, dt):
-        """Actualiza la furia de la luz."""
 
         if not self.has_match:
 
@@ -884,20 +715,17 @@ class NewGame:
                 )
 
     def _light_radius(self):
-        """Radio de la luz equipada."""
 
         radius = light_stats(
             self.light_type
         )["radio"]
 
-        # Esfera de vidrio: mas radio mientras dura
         if self.sphere_timer > 0:
             radius *= self.sphere_mult
 
         return radius
 
     def _nearest_light_drop(self):
-        """La luz del piso mas cercana."""
 
         near = [
             d
@@ -924,7 +752,6 @@ class NewGame:
 
         x, y = self.player.rect.center
 
-        # Queda en el piso con la vida que le quedaba
         self.light_drops.append(
             LightItem(
                 self.light_type,
@@ -942,7 +769,6 @@ class NewGame:
 
     def _burn_out(self):
 
-        # Se le acabo la vida al fosforo
         audio.play("light_out")
 
         self.vida = 0.0
@@ -959,18 +785,12 @@ class NewGame:
 
         self._reset_fury()
 
-    # ---------- objetos ----------
-    # RECONSTRUIDO: estos metodos no estaban en el archivo que pegaste.
 
     def count_stat(self, name, amount=1):
-        """Suma a un contador de los objetivos (kills, cofres, etc.)."""
 
         self.stats[name] = self.stats.get(name, 0) + amount
 
     def _build_objectives(self):
-        """Todos los objetivos del juego, en orden. Cada uno tiene el
-        texto y una funcion `done(juego)`; con `max_time` el cartel se
-        va solo despues de esos segundos aunque no lo cumplas."""
 
         def in_combat(g):
 
@@ -983,7 +803,6 @@ class NewGame:
 
         return [
 
-            # ---------- primeros pasos ----------
             {
                 "text": (
                     f"Encuentra algo que ilumine o en "
@@ -1016,7 +835,6 @@ class NewGame:
                 "done": lambda g: "cabana" in g.doors.broken_ids,
             },
 
-            # ---------- explorar ----------
             {
                 "text": "Seguí por el camino hasta la sala central.",
                 "done": lambda g: "central" in g.zones_seen,
@@ -1047,7 +865,6 @@ class NewGame:
                 "done": lambda g: g.stats["chests_opened"] >= 1,
             },
 
-            # ---------- mejorar la luz ----------
             {
                 "text": (
                     "Conseguí una vela: se compra en la tienda o puede "
@@ -1068,7 +885,6 @@ class NewGame:
                 ),
             },
 
-            # ---------- combate ----------
             {
                 "text": (
                     "Entrá a una sala de combate y elegí cómo jugar: "
@@ -1119,6 +935,17 @@ class NewGame:
             },
         ]
 
+    def _check_achievements(self):
+
+        if self.arena.completed:
+            achievements.unlock("zona_1")
+
+        if self.arena_left.completed:
+            achievements.unlock("zona_2")
+
+        if getattr(self, "current_map", "mapa1") == "mapa2":
+            achievements.unlock("region_1")
+
     def show_message(self, text):
 
         self.message = text
@@ -1141,7 +968,6 @@ class NewGame:
         )
 
     def _nearest_item(self):
-        """El objeto del piso mas cercano que se puede agarrar."""
 
         near = [
             it
@@ -1165,10 +991,6 @@ class NewGame:
         )
 
     def _nearest_pickup(self):
-        """Lo que se agarra con E: ("light", luz) / ("item", objeto) /
-        (None, None). Gana lo MAS CERCANO al jugador. Las luces del piso
-        solo cuentan si no tenes una luz encendida (si ya tenes una no se
-        pueden agarrar, asi que no tapan a los objetos de al lado)."""
 
         px, py = self.player.rect.center
         me = pygame.Vector2(px, py)
@@ -1197,13 +1019,11 @@ class NewGame:
         return best
 
     def pick_up_item(self, item):
-        """Agarra un objeto del piso (moneda o item de inventario)."""
 
         item_id = item.item_id
 
         if item_id in COIN_VALUES:
 
-            # Amarilla = 1, azul = 5, roja = 10 (o el "value" propio)
             value = getattr(item, "value", None)
 
             if value is None:
@@ -1215,16 +1035,12 @@ class NewGame:
 
         elif item_id == "gema":
 
-            # Las gemas no van al inventario. Las del cofre de la arena
-            # ya se contaron al explotar (value = 0).
             self.gems += int(getattr(item, "value", 1))
 
             audio.play("gem")
 
         elif item_id == "gema_verde":
 
-            # Igual que la gema normal: no va al inventario y la del
-            # cofre ya se conto al explotar (value = 0)
             self.gems_green += int(getattr(item, "value", 1))
 
             audio.play("gem")
@@ -1254,7 +1070,6 @@ class NewGame:
                 f"Agarraste {self._item_name(item_id)}"
             )
 
-        # Que no vuelva a aparecer cuando se carga la partida
         for attr in ("key", "uid", "spawn_id", "id"):
 
             value = getattr(item, attr, None)
@@ -1268,7 +1083,6 @@ class NewGame:
             self.world_items.remove(item)
 
     def add_coins(self, amount):
-        """Suma monedas al contador y al "+N" de debajo del HUD."""
 
         amount = int(amount)
 
@@ -1279,7 +1093,6 @@ class NewGame:
 
         audio.play("coin_big" if amount >= 5 else "coin")
 
-        # Si todavia se ve el "+N" anterior, se acumula
         if self.coin_gain_timer <= 0:
             self.coin_gain = 0
 
@@ -1287,7 +1100,6 @@ class NewGame:
         self.coin_gain_timer = COIN_GAIN_TIME
 
     def _free_slot_for(self, item_id):
-        """Casillero donde entra el objeto (None si no hay lugar)."""
 
         limit = self._max_stack(item_id)
 
@@ -1307,7 +1119,6 @@ class NewGame:
         return None
 
     def drop_item(self, slot):
-        """Tira una unidad del casillero al piso."""
 
         item_id = self.hud.items[slot]
 
@@ -1326,7 +1137,6 @@ class NewGame:
 
         self._take_one(slot)
 
-        # Con el iman prendido lo vuelve a agarrar enseguida
         if self._magnet_active():
 
             self.show_message(
@@ -1343,21 +1153,17 @@ class NewGame:
             self.hud.counts[slot] = 0
 
     def use_item(self, slot):
-        """Usa una unidad del casillero (efectos de data/items.json)."""
 
         item_id = self.hud.items[slot]
 
         if item_id is None:
             return
 
-        # Cofre / faro / fogata: se colocan. Cera y madera cerca de un
-        # faro / fogata: los alimentan.
         if self.placeables.try_use(self, slot):
             return
 
         item = self.item_defs.get(item_id, {})
 
-        # Las luces (fosforo, vela) se equipan solas al agarrarlas
         if item.get("tipo") == "luz":
 
             self.show_message(
@@ -1383,13 +1189,11 @@ class NewGame:
                 if self._apply_item_effect(efecto):
                     used = True
 
-            # Si no se pudo usar (ej: ganzua sin cofre) no se gasta
             if not used:
                 return
 
         else:
 
-            # Compatibilidad: formato viejo con un solo "efecto"
             legacy = (
                 item.get("efecto")
                 or ITEM_EFFECTS.get(item_id)
@@ -1419,10 +1223,6 @@ class NewGame:
             )
 
     def _apply_item_effect(self, e):
-        """
-        Aplica UN efecto de la lista "efectos" de items.json.
-        Devuelve True si se aplico (False = no se gasta el objeto).
-        """
 
         tipo = e.get("tipo")
 
@@ -1507,8 +1307,6 @@ class NewGame:
                 )
                 return False
 
-            # Abre sin minijuego: gasta una apertura y suelta los
-            # objetos (no se saltea la espera entre aperturas)
             self.minigame_chest = chest
 
             self._finish_chest(True)
@@ -1557,12 +1355,9 @@ class NewGame:
             self.escudo = min(1.0, self.escudo + e["escudo"])
 
     def _active_effects(self):
-        """Efectos activos para la barra de arriba (fraccion 0 a 1)."""
 
         active = {}
 
-        # Las claves tienen que ser las de ui/effects_bar.py (EFFECTS):
-        # aceite = velocidad, cera = consumo lento, resina = vida gradual
         if self.speed_timer > 0:
             active["aceite"] = self.speed_timer / self.speed_total
 
@@ -1575,7 +1370,6 @@ class NewGame:
         if self.regen_left > 0:
             active["resina"] = min(1.0, self.regen_left / self.regen_total)
 
-        # Furia de la vela / antorcha
         if self.fury_left > 0:
 
             fury_len = light_stats(
@@ -1594,8 +1388,6 @@ class NewGame:
         if self.sphere_timer > 0:
             active["esfera"] = self.sphere_timer / self.sphere_total
 
-        # Alerta "Mosquito cerca!" (la calcula la arena; no tiene tiempo,
-        # parpadea mientras dure el peligro)
         if self.has_match and any(
             getattr(a, "mosquito_alert", False) for a in self.arenas
         ):
@@ -1604,7 +1396,6 @@ class NewGame:
         return active
 
     def _menu_arena(self):
-        """La sala de combate que tiene el menu abierto (o None)."""
 
         for arena in self.arenas:
 
@@ -1614,10 +1405,7 @@ class NewGame:
         return None
 
     def _polvora_hit(self, damage):
-        """La polvora lastima a lo que esta dentro de la luz."""
 
-        # El radio de la luz esta en pixeles de pantalla: se pasa a
-        # unidades del mundo (como la posicion de los enemigos)
         for arena in self.arenas:
 
             arena.hurt_in_radius(
@@ -1626,26 +1414,20 @@ class NewGame:
                 damage
             )
 
-    # ---------- combate ----------
 
     def _mouse_world(self):
 
         mx, my = pygame.mouse.get_pos()
 
-        # Misma cuenta que usa el dibujo (ver el aro de polvora)
         return (
             (self.camera.x + mx) / self.camera.zoom,
             (self.camera.y + my) / self.camera.zoom
         )
 
     def _attack_pivot(self):
-        """Centro del cuerpo del jugador (de ahi sale el golpe)."""
 
         rect = self.player.image_rect
 
-        # El personaje se dibuja de rect.height px de alto en PANTALLA
-        # (no en unidades del mundo, que tienen zoom): el torso esta a
-        # esa altura sobre los pies, pasada a unidades del mundo.
         zoom = max(1, self.camera.zoom)
 
         return (
@@ -1703,11 +1485,9 @@ class NewGame:
             self.show_message("Necesitas una luz")
             return
 
-        # Agarrado por un Golem: no puede pegar
         if self.player.grabbed:
             return
 
-        # Modo bola de fuego (solo antorcha): no hay swing, sale una bola
         if self._fire_available() and self.attack_mode == "fuego":
             self._shoot_fireball()
             return
@@ -1720,7 +1500,6 @@ class NewGame:
 
         audio.play("swing")
 
-        # Cada golpe gasta un poco de la vida de la luz (en furia no)
         if not self.melee.fury:
 
             self.vida -= light_stats(
@@ -1728,8 +1507,6 @@ class NewGame:
             )["golpe_costo"]
 
     def _melee_hits(self, pivot):
-        """Reparte lo que toco el golpe: enemigos, puertas, cofres y
-        munecos."""
 
         if not self.melee.swinging and not self.melee.final_pass:
             return
@@ -1741,7 +1518,6 @@ class NewGame:
 
         for target in self.melee.new_hits(targets, pivot):
 
-            # Tercer golpe (fuerte): chispazo donde pego
             if self.melee.heavy and not self.melee.fury:
                 self.melee.add_impact(target.rect.center)
 
@@ -1752,7 +1528,6 @@ class NewGame:
             )
 
     def _update_fx(self, dt):
-        """Efectos visuales: avanza chispas y suelta brasas de las auras."""
 
         self.fx.update(dt)
 
@@ -1804,7 +1579,6 @@ class NewGame:
             )
 
     def fury_active_fx(self):
-        """La furia esta encendida ahora mismo (solo para el efecto)."""
 
         return bool(getattr(self.melee, "fury", 0) and self.melee.fury)
 
@@ -1815,14 +1589,11 @@ class NewGame:
     }
 
     def _draw_warm_glows(self, sources):
-        """Tine de calido el aire alrededor de las luces."""
 
         t = pygame.time.get_ticks() / 1000.0
 
         for i, (wx, wy, radius) in enumerate(sources):
 
-            # Las luces de la camara/luz del jugador llegan en pixeles
-            # de pantalla; el resto tambien (ver lighting.draw)
             if radius < 12:
                 continue
 
@@ -1853,15 +1624,9 @@ class NewGame:
                 )
 
     def _hit_target(self, target, damage, free=False):
-        """Aplica un golpe (o una bola) a lo que toco.
-
-        free -> True si no gasta vida de la luz (furia, o la bola que
-        ya cobro su costo al salir).
-        """
 
         light = light_stats(self.light_type)
 
-        # Chispas donde pego (para el lado contrario al jugador)
         tx, ty = target.rect.center
         px, py = self.player.rect.center
 
@@ -1876,7 +1641,6 @@ class NewGame:
 
             if not target.breakable:
 
-                # Ninguna luz la rompe (ej: la puerta azul)
                 target.resist()
                 audio.play("door_resist")
 
@@ -1938,11 +1702,8 @@ class NewGame:
 
             target.take_damage(damage)
 
-    # ---------- flashbang (destello) ----------
 
     def flashbang(self, x, y):
-        """Pantalla en blanco unos 5 segundos (x, y = donde exploto, en
-        coordenadas del mundo). Lo llama el enemigo Destello."""
 
         self.flash_t = FLASH_TOTAL
         self.flash_pos = (x, y)
@@ -1955,7 +1716,6 @@ class NewGame:
             self.flash_t = max(0.0, self.flash_t - dt)
 
     def _draw_flashbang(self):
-        """Blanco por encima de TODO (mundo y HUD)."""
 
         if self.flash_t <= 0 or self.state != "playing":
             return
@@ -1964,7 +1724,6 @@ class NewGame:
 
         elapsed = FLASH_TOTAL - self.flash_t
 
-        # El "pum": un circulo blanco que crece desde donde exploto
         if elapsed < FLASH_EXPAND:
 
             k = elapsed / FLASH_EXPAND
@@ -1986,7 +1745,6 @@ class NewGame:
             self._flash_surf = pygame.Surface((w, h))
             self._flash_surf.fill((255, 255, 255))
 
-        # Toda blanca y al final se va aclarando
         if self.flash_t > FLASH_FADE:
             alpha = 255
         else:
@@ -1996,20 +1754,16 @@ class NewGame:
 
         self.screen.blit(self._flash_surf, (0, 0))
 
-    # ---------- bola de fuego (antorcha) ----------
 
     def _fire_available(self):
-        """La bola de fuego solo existe con la antorcha encendida."""
 
         return self.has_match and self.light_type == "antorcha"
 
     def _hud_attack_mode(self):
-        """Que muestra el panel de al lado de la hotbar (None = oculto)."""
 
         return self.attack_mode if self._fire_available() else None
 
     def _toggle_attack_mode(self):
-        """G (o tocar el panel): golpe comun <-> bola de fuego."""
 
         if self.state != "playing":
             return
@@ -2037,7 +1791,6 @@ class NewGame:
             self.show_message("Golpe comun")
 
     def _shoot_fireball(self):
-        """Tira una bola hacia el mouse. False si todavia no se puede."""
 
         if self.fire_cooldown > 0:
             return False
@@ -2050,11 +1803,9 @@ class NewGame:
         x = px + math.cos(angle) * FIRE_MUZZLE
         y = py + math.sin(angle) * FIRE_MUZZLE
 
-        # Pegado a una pared: sale desde el cuerpo
         if not self.collision_map.point_is_walkable(x, y):
             x, y = px, py
 
-        # Combo: la ultima bola de cada serie es la fuerte (x2 de dano)
         self.fire_combo += 1
 
         heavy = self.fire_combo >= FIRE_COMBO_SIZE
@@ -2075,7 +1826,6 @@ class NewGame:
             FIRE_FURY_SPEED if fury else 1.0
         )
 
-        # Despues de la fuerte el combo arranca de nuevo
         if heavy:
 
             self.fire_combo = 0
@@ -2087,7 +1837,6 @@ class NewGame:
 
         self.count_stat("fireballs")
 
-        # En furia la luz no se gasta
         if not fury:
 
             self.vida -= FIRE_COST * (
@@ -2100,7 +1849,6 @@ class NewGame:
 
         self.fire_cooldown = max(0.0, self.fire_cooldown - dt)
 
-        # Si dejas de tirar un rato, el combo vuelve a empezar
         if self.fire_combo > 0:
 
             self.fire_combo_timer -= dt
@@ -2108,7 +1856,6 @@ class NewGame:
             if self.fire_combo_timer <= 0:
                 self.fire_combo = 0
 
-        # Manteniendo el click sigue tirando bolas
         if self._fire_hold:
 
             if not pygame.mouse.get_pressed()[0]:
@@ -2159,7 +1906,6 @@ class NewGame:
             b for b in self.fireballs if not b.dead
         ]
 
-    # ---------- cofres ----------
 
     def _open_chest(self, chest):
 
@@ -2188,8 +1934,6 @@ class NewGame:
 
             if success:
 
-                # Gasta una apertura (al agotarse queda en espera) y
-                # sueltan los objetos del cofre
                 self.chests.consume_use(chest)
 
                 self.count_stat("chests_opened")
@@ -2209,7 +1953,6 @@ class NewGame:
         self.minigame = None
         self.minigame_chest = None
 
-    # ---------- tienda ----------
 
     def _open_shop(self):
 
@@ -2227,17 +1970,12 @@ class NewGame:
 
     def _close_shop(self):
 
-        # Guarda el carrito para la proxima vez que se abra
         if self.shop is not None:
             self.shop_cart = dict(self.shop.cart)
 
         self.shop = None
 
     def _buy(self, cart):
-        """RECONSTRUIDO: compra lo que hay en el carrito.
-
-        cart = {id_del_item: cantidad}
-        """
 
         total = sum(
             self.shop_prices.get(item_id, 0) * qty
@@ -2253,11 +1991,9 @@ class NewGame:
 
         self.coins -= total
 
-        # La tienda muestra las monedas que le pasaron al abrirse
         if self.shop is not None:
             self.shop.coins = int(self.coins)
 
-        # El vendedor escupe todo lo comprado
         rect = getattr(self.shopkeeper, "rect", None)
 
         if rect is not None:
@@ -2265,13 +2001,10 @@ class NewGame:
         else:
             x, y = self.player.rect.center
 
-        # El vendedor los escupe por la boca, uno atras del otro
         item_ids = []
 
         for item_id, qty in cart.items():
 
-            # La bolsa no es un item de inventario: sale al piso como
-            # objeto propio (se arrastra con click izquierdo)
             if item_id == "bolsa":
 
                 for _ in range(qty):
@@ -2307,7 +2040,6 @@ class NewGame:
 
         self.count_stat("purchases")
 
-        # Compraste: el carrito queda vacio y se cierra la tienda
         if self.shop is not None:
             self.shop.clear()
 
@@ -2315,7 +2047,6 @@ class NewGame:
 
         self._close_shop()
 
-    # ---------- guardado ----------
 
     def _save(self):
 
@@ -2390,7 +2121,6 @@ class NewGame:
             "zones_seen": sorted(self.zones_seen),
         }
 
-        # En que objetivo vas (para seguir desde ahi al continuar)
         if self.objectives is not None:
             data["objective_index"] = self.objectives.index
             data["objectives_minimized"] = self.objectives.minimized
@@ -2404,28 +2134,17 @@ class NewGame:
         )
 
     def discover_enemy(self, key):
-        """Marca un enemigo como descubierto (lo llama la arena)."""
 
         if key in self.discovered_enemies:
             return
 
-        # Se guarda junto con el resto de la partida (al salir, pausar
-        # o terminar la oleada)
         self.discovered_enemies.add(key)
 
     def save_progress(self):
-        """Guarda la partida (lo usa main.py al cerrar la ventana)."""
 
         self._save()
 
     def apply_loss(self):
-        """Consecuencias de perder (una sola vez).
-
-        HARDCORE: se borra toda la partida.
-        NORMAL: se pierden todos los items (inventario, luces) y queda
-        solo el fosforo, en la cabana. Las oleadas, las puertas rotas y
-        los cofres quedan igual que antes.
-        """
 
         if self._loss_applied or not self.save_path:
             return
@@ -2460,13 +2179,9 @@ class NewGame:
 
         self._save()
 
-    # ---------- eventos ----------
 
     def handle_event(self, event):
 
-        # ---------------------------------------------------------
-        # TUTORIAL
-        # ---------------------------------------------------------
 
         if self.tutorial is not None:
 
@@ -2480,9 +2195,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # MINIJUEGO DEL COFRE
-        # ---------------------------------------------------------
 
         if self.minigame is not None:
 
@@ -2490,7 +2202,6 @@ class NewGame:
                 event
             )
 
-            # Esc = salir del minijuego
             if result == "cancel":
 
                 self._finish_chest(
@@ -2499,9 +2210,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # MENU DE PAUSA
-        # ---------------------------------------------------------
 
         if self.pause_view == "pause":
 
@@ -2539,9 +2247,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # AJUSTES DESDE PAUSA
-        # ---------------------------------------------------------
 
         if self.pause_view == "settings":
 
@@ -2556,9 +2261,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # ENCICLOPEDIA DE ENEMIGOS
-        # ---------------------------------------------------------
 
         if self.pause_view == "enemies":
 
@@ -2573,9 +2275,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # TIENDA
-        # ---------------------------------------------------------
 
         if self.shop is not None:
 
@@ -2607,17 +2306,11 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # MENU DE LA ARENA (oleadas)
-        # ---------------------------------------------------------
 
         menu_arena = self._menu_arena()
 
         if menu_arena is not None:
 
-            # Botones del menu (Jugar con escape / sin escape / Salir)
-            # y ESC para irse. Antes se buscaba "handle_menu_event", que
-            # no existe: el menu abria pero no respondia a nada.
             menu_arena.handle_event(
                 self,
                 event
@@ -2625,17 +2318,11 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # BOLSA / COFRE / FARO / FOGATA (arrastrar, abrir, cerrar)
-        # ---------------------------------------------------------
 
         if self.placeables.handle_event(self, event):
 
             return None
 
-        # ---------------------------------------------------------
-        # ESC DURANTE EL JUEGO
-        # ---------------------------------------------------------
 
         if event.type == pygame.KEYDOWN:
 
@@ -2645,9 +2332,6 @@ class NewGame:
 
                 return None
 
-        # ---------------------------------------------------------
-        # CLICK EN EL BOTON MENU DEL HUD
-        # ---------------------------------------------------------
 
         menu_button = getattr(
             self.hud,
@@ -2666,10 +2350,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # CLICK DERECHO: CONSUMIR EL OBJETO SELECCIONADO
-        # (si el mouse esta sobre un slot, usa ese)
-        # ---------------------------------------------------------
 
         if (
             event.type == pygame.MOUSEBUTTONDOWN
@@ -2690,9 +2370,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # CLICK EN EL PANEL DE LA ANTORCHA: golpe comun <-> bola de fuego
-        # ---------------------------------------------------------
 
         if (
             event.type == pygame.MOUSEBUTTONDOWN
@@ -2706,9 +2383,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # CLICK EN LA HOTBAR: SELECCIONAR SLOT
-        # ---------------------------------------------------------
 
         if (
             event.type == pygame.MOUSEBUTTONDOWN
@@ -2738,9 +2412,6 @@ class NewGame:
 
                 return None
 
-        # ---------------------------------------------------------
-        # OBJETIVOS: minimizar (TAB o el boton "-" del cartel)
-        # ---------------------------------------------------------
 
         if (
             self.objectives is not None
@@ -2750,9 +2421,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # TECLAS DEL JUEGO
-        # ---------------------------------------------------------
 
         if event.type == pygame.KEYDOWN:
 
@@ -2766,7 +2434,6 @@ class NewGame:
 
             elif event.key == pygame.K_F1:
 
-                # Ayuda: vuelve a mostrar todas las instrucciones
                 if self.state == "playing":
 
                     self.tutorial = Tutorial(
@@ -2796,9 +2463,6 @@ class NewGame:
 
             elif event.key == pygame.K_e:
 
-                # Agarrar lo que tengas mas cerca (luz del piso u objeto).
-                # Una luz que no podes agarrar (ya tenes una encendida)
-                # NO bloquea: se agarra el objeto de al lado.
                 kind, thing = self._nearest_pickup()
 
                 if kind == "light":
@@ -2822,8 +2486,6 @@ class NewGame:
 
                     return None
 
-                # Los cofres ya NO se abren con E: solo pegandoles con
-                # la luz (o usando la ganzua).
 
             elif event.key == pygame.K_q:
 
@@ -2840,7 +2502,6 @@ class NewGame:
 
             elif event.key == pygame.K_o:
 
-                # Iman: O lo prende y O lo apaga
                 if not self._magnet_available():
 
                     self.show_message(
@@ -2859,13 +2520,11 @@ class NewGame:
 
             elif event.key == pygame.K_f:
 
-                # Gemas en los altares de la puerta final
                 fd = self.doors.final_door
 
                 if fd is not None and fd.try_interact(self):
                     return None
 
-                # Hablar con el vendedor (abre la tienda)
                 if self.shopkeeper.can_talk(
                     self.player
                 ):
@@ -2888,7 +2547,6 @@ class NewGame:
 
                 self._attack()
 
-        # Click izquierdo para atacar
         if (
             event.type == pygame.MOUSEBUTTONDOWN
             and event.button == 1
@@ -2900,12 +2558,9 @@ class NewGame:
 
         return None
 
-    # ---------- update ----------
 
     def update(self, dt):
 
-        # Hit-stop: el juego se congela un instante al pegar (solo los
-        # efectos siguen, mas lentos)
         if (
             self.fx.hitstop > 0
             and self.state == "playing"
@@ -2918,12 +2573,10 @@ class NewGame:
 
             return None
 
-        # Secuencia de la puerta final: el mundo queda congelado
         fd = self.doors.final_door
 
         if self.state == "playing" and self.map_switch.active:
 
-            # Fundido entre mapas: todo quieto
             self.map_switch.update(dt, self)
             self._update_fx(dt)
 
@@ -2940,9 +2593,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # TUTORIAL
-        # ---------------------------------------------------------
 
         if self.tutorial is not None:
 
@@ -2950,13 +2600,10 @@ class NewGame:
                 dt
             )
 
-            # Cuando el tutorial termina (se desliza afuera) se libera
-            # el juego; antes quedaba congelado para siempre.
             if not self.tutorial.active:
 
                 self.tutorial = None
 
-                # Partida nueva: transicion al juego
                 if getattr(self, "_intro_pending", False):
                     self._intro_pending = False
                     self.intro_t = 0.0
@@ -2967,9 +2614,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # PAUSA / AJUSTES / ENCICLOPEDIA
-        # ---------------------------------------------------------
 
         if self.pause_view is not None:
 
@@ -2991,18 +2635,17 @@ class NewGame:
                     dt
                 )
 
-            # MUY IMPORTANTE:
-            # no se actualiza el jugador,
-            # enemigos, luz, cofres, etc.
             return None
 
-        # ---------------------------------------------------------
-        # PANTALLA DE DERROTA
-        # ---------------------------------------------------------
 
         if self.state == "dying":
 
-            # Si moris con el flashbang puesto, el blanco no te sigue
+            if not self._defeat_counted:
+
+                self._defeat_counted = True
+
+                achievements.add_defeat()
+
             self.flash_t = 0.0
 
             self.fade_alpha += (
@@ -3025,9 +2668,6 @@ class NewGame:
 
                 self.apply_loss()
 
-                # Hardcore: la partida ya no existe, vuelve al menu.
-                # Normal: vuelve directo a jugar (main.py recarga la
-                # partida ya sin los items).
                 if self.mode == MODE_HARDCORE and DELETE_SAVE_ON_LOSS:
                     return "menu"
 
@@ -3035,9 +2675,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # MENSAJES
-        # ---------------------------------------------------------
 
         if self.message_timer > 0:
 
@@ -3047,10 +2684,6 @@ class NewGame:
 
                 self.message = ""
 
-        # ---------------------------------------------------------
-        # MENU DE COMBATE: el juego queda en pausa (el personaje no se
-        # mueve, nada avanza ni se gasta la luz) hasta elegir
-        # ---------------------------------------------------------
 
         menu_arena = self._menu_arena()
 
@@ -3062,9 +2695,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # MINIJUEGO DEL COFRE (el mundo queda congelado)
-        # ---------------------------------------------------------
 
         if self.minigame is not None:
 
@@ -3090,9 +2720,6 @@ class NewGame:
 
             return None
 
-        # ---------------------------------------------------------
-        # GUIA: nombre de la sala y objetivos
-        # ---------------------------------------------------------
 
         zone = self.zone_tracker.update(
             self.player.rect.center
@@ -3120,14 +2747,10 @@ class NewGame:
 
             if self.objectives.finished:
 
-                # Se acuerda que ya los terminaste (para el guardado)
                 self._objective_saved = 10 ** 6
 
                 self.objectives = None
 
-        # ---------------------------------------------------------
-        # TIEMPO DE LUZ
-        # ---------------------------------------------------------
 
         in_shop = self.shopkeeper.zone_inset(
             self.player
@@ -3137,7 +2760,6 @@ class NewGame:
 
             if in_shop:
 
-                # En la tienda la luz se recarga
                 self.vida = min(
                     1.0,
                     self.vida + dt / SHOP_RECHARGE_TIME
@@ -3160,17 +2782,11 @@ class NewGame:
 
                     self._burn_out()
 
-        # ---------------------------------------------------------
-        # FURIA
-        # ---------------------------------------------------------
 
         self._update_fury(
             dt
         )
 
-        # ---------------------------------------------------------
-        # EFECTOS
-        # ---------------------------------------------------------
 
         if self.speed_timer > 0:
 
@@ -3254,26 +2870,17 @@ class NewGame:
                 self.regen_left = 0.0
                 self.regen_rate = 0.0
 
-        # ---------------------------------------------------------
-        # JUGADOR
-        # ---------------------------------------------------------
 
         self.player.update(
             dt,
             self.collision_map
         )
 
-        # ---------------------------------------------------------
-        # CAMARA
-        # ---------------------------------------------------------
 
         self.camera.update(
             self.player
         )
 
-        # ---------------------------------------------------------
-        # ATAQUE
-        # ---------------------------------------------------------
 
         pivot = self._attack_pivot()
 
@@ -3291,25 +2898,16 @@ class NewGame:
 
         self._update_flash(dt)
 
-        # ---------------------------------------------------------
-        # MUNECOS
-        # ---------------------------------------------------------
 
         self._update_dummies(
             dt
         )
 
-        # ---------------------------------------------------------
-        # COFRES
-        # ---------------------------------------------------------
 
         self.chests.update(
             dt
         )
 
-        # ---------------------------------------------------------
-        # PUERTAS
-        # ---------------------------------------------------------
 
         self.doors.update(
             dt
@@ -3323,13 +2921,9 @@ class NewGame:
                 self.doors.final_door.player_near(self.player.rect)
             )
 
-        # Salidas entre mapas (pasillo de la puerta final <-> mapa2)
         if self.state == "playing":
             self.map_switch.check(self)
 
-        # ---------------------------------------------------------
-        # ARENA / ENEMIGOS
-        # ---------------------------------------------------------
 
         for arena in self.arenas:
 
@@ -3338,20 +2932,15 @@ class NewGame:
                 dt
             )
 
-        # Bloques aplastadores de la sala izquierda
+        self._check_achievements()
+
         self.crushers.update(self, dt)
 
-        # Si los golpes de los enemigos te dejaron sin vida
         if self.has_match and self.vida <= 0:
 
             self._burn_out()
 
-        # ---------------------------------------------------------
-        # MONEDAS CERCANAS
-        # ---------------------------------------------------------
 
-        # El vendedor (boca abierta mientras escupe) y las luces que
-        # salen volando de su boca
         self.shopkeeper.update(dt)
 
         self.placeables.update(self, dt)
@@ -3369,7 +2958,6 @@ class NewGame:
             self.world_items
         ):
 
-            # Los que salen disparados de un cofre vuelan un ratito
             if getattr(item, "fly", None) is not None:
                 item.update_fly(dt)
                 continue
@@ -3381,9 +2969,6 @@ class NewGame:
                 iy - py
             )
 
-            # IMAN: todos los objetos cercanos vuelan hacia vos y se
-            # agarran solos (si el inventario esta lleno, los items
-            # se quedan donde estan).
             if magnet_on and self._magnet_can_take(item):
 
                 if dist <= MAGNET_PICKUP_DISTANCE:
@@ -3406,8 +2991,6 @@ class NewGame:
 
                     continue
 
-            # Las monedas (amarilla, azul y roja) se juntan solas al
-            # pasar cerca, sin apretar E
             if item.item_id not in COIN_VALUES:
                 continue
 
@@ -3417,9 +3000,6 @@ class NewGame:
                     item
                 )
 
-        # ---------------------------------------------------------
-        # TIENDA
-        # ---------------------------------------------------------
 
         if self.shop is not None:
 
@@ -3427,12 +3007,7 @@ class NewGame:
                 dt
             )
 
-        # ---------------------------------------------------------
-        # SI SE QUEDA SIN LUZ
-        # ---------------------------------------------------------
 
-        # En la tienda esta todo iluminado: sin luz en la mano no corre
-        # la cuenta regresiva (se reinicia al salir)
         in_shop_now = self.shopkeeper.zone_inset(
             self.player
         ) > 0
@@ -3464,31 +3039,25 @@ class NewGame:
 
         return None
 
-    # ---------- iman ----------
 
     def _magnet_available(self):
-        """Hay iman para prender (item usado y con tiempo, o modo prueba)."""
 
         return self.magnet_timer > 0 or not MAGNET_NEEDS_ITEM
 
     def _magnet_active(self):
-        """El iman esta atrayendo objetos ahora mismo."""
 
         return self.magnet_mode and self._magnet_available()
 
     def _magnet_can_take(self, item):
-        """El iman solo atrae lo que se puede agarrar de verdad."""
 
         item_id = item.item_id
 
         if item_id in COIN_VALUES or item_id in ("gema", "gema_verde"):
             return True
 
-        # Items de inventario: solo si hay lugar
         return self._free_slot_for(item_id) is not None
 
     def _magnet_pull(self, item, px, py, dist, dt):
-        """Mueve el objeto hacia el jugador (sin atravesar paredes)."""
 
         k = 1.0 - min(1.0, dist / MAGNET_RADIUS)
 
@@ -3499,8 +3068,6 @@ class NewGame:
 
         step = min(speed * dt, dist)
 
-        # Posicion con decimales (el rect solo guarda enteros y a
-        # poca velocidad no se movia nada)
         fx = getattr(item, "_mag_x", None)
         fy = getattr(item, "_mag_y", None)
 
@@ -3536,15 +3103,11 @@ class NewGame:
 
         item.rect.center = (round(fx), round(fy))
 
-    # ---------- luz ----------
 
     def _lit_rects(self):
-        """Zonas que siempre estan iluminadas: (rect, fuerza, borde)."""
 
         rects = []
 
-        # La zona de la tienda siempre esta iluminada (el vendedor la
-        # define como ZONE; el borde se difumina con ZONE_FEATHER)
         zone = getattr(
             self.shopkeeper,
             "ZONE",
@@ -3567,11 +3130,8 @@ class NewGame:
 
         return rects
 
-    # ---------- dibujo ----------
 
     def _load_magnet_imgs(self):
-        """Carga (una vez) los iconos del iman: prendido, apagado y la
-        tecla O. Si falta algun PNG se dibuja un reemplazo."""
 
         hud_dir = (
             Path(__file__).resolve().parent.parent
@@ -3606,7 +3166,6 @@ class NewGame:
 
         if off is None:
 
-            # Sin PNG: el mismo icono apagado + un tajo rojo
             off = on.copy()
             shade = pygame.Surface(off.get_size(), pygame.SRCALPHA)
             shade.fill((40, 40, 40, 150))
@@ -3645,8 +3204,6 @@ class NewGame:
         }
 
     def _draw_magnet_mode(self):
-        """Icono del iman a la izquierda de las monedas (prendido o
-        apagado) con la tecla O para prenderlo y apagarlo."""
 
         if self.state != "playing" or not self._magnet_available():
             return
@@ -3667,7 +3224,6 @@ class NewGame:
 
         self.screen.blit(img, rect.topleft)
 
-        # Tecla O abajo a la derecha del icono: avisa como se maneja
         key = self._magnet_imgs["key"]
 
         self.screen.blit(
@@ -3678,9 +3234,6 @@ class NewGame:
         )
 
     def _draw_gems(self):
-        """RECONSTRUIDO: contadores de gemas arriba a la derecha (la
-        gema normal y, debajo, la verde oscuro). Solo se muestra la que
-        ya tenes."""
 
         if self.gems <= 0 and self.gems_green <= 0:
             return
@@ -3728,7 +3281,6 @@ class NewGame:
             y += row_h + 4
 
     def _draw_debug_items(self):
-        """F3: marca donde estan los objetos y las luces."""
 
         for item in self.world_items:
 
@@ -3762,8 +3314,6 @@ class NewGame:
 
     def draw(self):
 
-        # Sacudon de camara (golpe fuerte / inicio de oleada). Se resta al
-        # final del dibujo, asi no mueve la camara de verdad.
         shake_x, shake_y = self.fx.shake_offset()
 
         self.camera.x += shake_x
@@ -3773,6 +3323,8 @@ class NewGame:
 
         self.camera.x -= shake_x
         self.camera.y -= shake_y
+
+        self.achievement_toast.draw(self.screen)
 
     def _draw_scene(self):
 
@@ -3810,13 +3362,11 @@ class NewGame:
 
         sources = []
 
-        # El cofre del premio y la explosion tambien iluminan
         for arena in self.arenas:
             sources.extend(arena.light_sources())
 
         for drop in self.light_drops:
 
-            # Todavia "dentro" de la boca del vendedor: no ilumina
             fly = getattr(drop, "fly", None)
 
             if fly is not None and fly["delay"] > 0:
@@ -3828,28 +3378,23 @@ class NewGame:
                 drop.light_radius
             ))
 
-        # Faros y fogatas encendidos
         sources.extend(self.placeables.light_sources())
 
         if self.has_match:
 
             radius = self._light_radius()
 
-            # Adentro de la tienda ya esta todo iluminado: la luz del
-            # jugador se apaga de a poco al entrar (y vuelve al salir)
             inset = self.shopkeeper.zone_inset(self.player)
 
             if inset > 0:
                 radius *= max(0.0, 1.0 - inset / SHOP_LIGHT_FADE)
 
-            # Transicion de entrada: la luz se enciende de a poco
             if self.intro_t is not None:
 
                 k = min(1.0, self.intro_t / INTRO_TIME)
 
                 radius *= 0.3 + 0.7 * (1 - (1 - k) ** 3)
 
-            # Al morir la luz se va apagando de a poco
             if self.state in ("dying", "lost"):
                 radius *= max(0.0, 1.0 - 1.5 * self.fade_alpha / 255)
 
@@ -3873,12 +3418,9 @@ class NewGame:
                     radius
                 ))
 
-        # Las bolas de fuego iluminan por donde pasan
         for ball in self.fireballs:
             sources.append(ball.light_source())
 
-        # La puerta de la cabana queda iluminada despues del tutorial
-        # (luz redonda y suave). Si ya se rompio, deja de iluminar.
         if self.tutorial is None and DOOR_GLOW_RADIUS > 0:
 
             for door in self.doors.doors:
@@ -3901,10 +3443,8 @@ class NewGame:
             self._lit_rects()
         )
 
-        # Resplandor calido de cada luz (el jugador, faros, fogatas...)
         self._draw_warm_glows(sources)
 
-        # Auras de efectos: el aro marca el RADIO real del efecto
         if self.has_match and self._light_radius_px >= 8:
 
             cx = self.player.rect.centerx * self.camera.zoom - self.camera.x
@@ -3931,14 +3471,11 @@ class NewGame:
                     pygame.time.get_ticks() / 1000.0 * 0.6, 0.55
                 )
 
-        # Vista previa del cofre / faro / fogata que tenes en la mano
         self.placeables.draw_ghost(self, self.screen)
 
-        # Brillo del cofre, explosion y chispas (encima de la oscuridad)
         for arena in self.arenas:
             arena.draw_fx(self.screen, self.camera)
 
-        # Brillo de las monedas que salieron del cofre
         now = pygame.time.get_ticks() / 1000.0
 
         for item in self.world_items:
@@ -3946,17 +3483,14 @@ class NewGame:
             if getattr(item, "sparkle", False):
                 self.fx.draw_item_glow(self.screen, self.camera, item, now)
 
-        # Chispas, aros y "+N" de monedas
         self.fx.draw(self.screen, self.camera)
 
-        # Efectos de la puerta final (brillan encima de la oscuridad)
         if (
             self.doors.final_door is not None
             and self.current_map == "mapa1"
         ):
             self.doors.final_door.draw_fx(self.screen, self.camera)
 
-        # El golpe va encima de la oscuridad, para que brille
         self.melee.draw(
             self.screen,
             self.camera,
@@ -3979,13 +3513,11 @@ class NewGame:
 
         if self.state == "playing":
 
-            # El cartelito [E] sale sobre lo que se va a agarrar
             _, near_thing = self._nearest_pickup()
 
             if near_thing is not None:
                 near_thing.draw_prompt(self.screen, self.camera)
 
-        # Cartelito [F] del vendedor
         if (
             self.state == "playing"
             and self.shop is None
@@ -3993,7 +3525,6 @@ class NewGame:
         ):
             self.shopkeeper.draw_prompt(self.screen, self.camera)
 
-        # El HUD dibuja el marco de seleccion con hud.selected
         self.hud.selected = (
             self.selected_slot
             if isinstance(self.selected_slot, int)
@@ -4019,7 +3550,6 @@ class NewGame:
 
         self._draw_magnet_mode()
 
-        # Cubitos de efectos arriba al centro (se vacian hasta desaparecer)
         active = {}
 
         if self.state == "playing":
@@ -4027,7 +3557,6 @@ class NewGame:
 
         self.effects_bar.draw(self.screen, active)
 
-        # Objetivos (arriba a la derecha) y nombre de la sala
         if self.state == "playing":
 
             if self.objectives is not None:
@@ -4046,10 +3575,8 @@ class NewGame:
         for arena in self.arenas:
             arena.draw_hud(self.screen)
 
-        # Contenido de la bolsa / cofre abierto
         self.placeables.draw_panel(self, self.screen)
 
-        # Destello de pantalla, vineta y titulo de oleada
         self.fx.draw_overlay(self.screen)
 
         if (
@@ -4060,7 +3587,6 @@ class NewGame:
 
         self.map_switch.draw(self.screen)
 
-        # Transicion de entrada: sale de la oscuridad
         if self.intro_t is not None:
 
             k = min(1.0, self.intro_t / INTRO_TIME)
@@ -4071,7 +3597,6 @@ class NewGame:
 
             self.screen.blit(fade, (0, 0))
 
-        # Flashbang del destello: blanco encima de todo
         self._draw_flashbang()
 
         if self.debug_items:
@@ -4116,7 +3641,6 @@ class NewGame:
             else:
                 lost_img = self.pantalla_perdiste_normal
 
-            # Aparece de a poco, no de golpe
             lost_img.set_alpha(
                 int(255 * min(1.0, (LOST_SCREEN_TIME - self.lost_timer) / 0.6))
             )

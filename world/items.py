@@ -77,17 +77,12 @@ class MatchItem:
         )
 
 
-# ---------------------------------------------------------------
-# Objetos recolectables (madera, aceite, cera, ...)
-# ---------------------------------------------------------------
-
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 _icon_cache = {}
 
 
 def load_icon(item_id):
-    """Icono de un item: assets/maps/hud/icon_<id>.png (None si falta)."""
 
     if item_id not in _icon_cache:
 
@@ -103,7 +98,6 @@ def load_icon(item_id):
 
 
 def _gem_placeholder():
-    """Gema dibujada por codigo, por si falta icon_gema.png."""
 
     surf = pygame.Surface((64, 64), pygame.SRCALPHA)
 
@@ -118,8 +112,6 @@ def _gem_placeholder():
 
 
 def _green_gem_placeholder():
-    """Gema verde oscuro dibujada por codigo, por si falta
-    icon_gema_verde.png."""
 
     surf = pygame.Surface((64, 64), pygame.SRCALPHA)
 
@@ -138,9 +130,6 @@ _green_gem_cache = None
 
 
 def get_green_gem_icon():
-    """Icono de la gema verde oscuro (la de la sala del Guardian):
-    assets/maps/hud/icon_gema_verde.png (64x64). Si no existe, una
-    dibujada por codigo."""
 
     global _green_gem_cache
 
@@ -156,8 +145,6 @@ def get_green_gem_icon():
 
 
 def get_gem_icon():
-    """Icono de la gema: assets/maps/hud/icon_gema.png (64x64). Si no
-    existe, una gema dibujada por codigo."""
 
     global _gem_cache
 
@@ -184,7 +171,6 @@ def _load_json(name):
 
 
 def load_item_defs():
-    """Definiciones de data/items.json: {id: {nombre, descripcion, ...}}"""
 
     data = _load_json("items.json")
 
@@ -192,7 +178,6 @@ def load_item_defs():
 
 
 def load_spawn_zones():
-    """Zonas de data/item_spawns.json: [{id, item, zona, cantidad}]"""
 
     data = _load_json("item_spawns.json")
 
@@ -202,7 +187,6 @@ def load_spawn_zones():
 
 
 class WorldItem(MatchItem):
-    """Item tirado en el mapa. NO ilumina (a diferencia del fosforo)."""
 
     WORLD_SIZE = 16
 
@@ -212,7 +196,6 @@ class WorldItem(MatchItem):
 
         self.item_id = item_id
 
-        # None = lo soltaste vos; si no, "<zona>#<n>" para no repetirlo
         self.spawn_id = spawn_id
 
         icon = load_icon(item_id)
@@ -226,18 +209,14 @@ class WorldItem(MatchItem):
         elif item_id == "gema_verde":
             self.original = get_green_gem_icon()
 
-        # Las monedas y las gemas se juntan solas al pasar cerca (sin
-        # apretar E)
         self.auto = item_id in (
             "moneda", "moneda_5", "moneda_10", "gema", "gema_verde"
         )
 
-        # Animacion de "salir del cofre" (None = quieto en el piso)
         self.fly = None
         self._lift = 0.0
 
     def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45):
-        """Sale disparado de `src` y cae en `dst` (como un dispenser)."""
 
         self.fly = {
             "src": src,
@@ -269,7 +248,6 @@ class WorldItem(MatchItem):
             self.fly = None
             self._lift = 0.0
 
-            # Cae al piso con un rebotecito
             if getattr(self, "sparkle", False):
                 self._land_ms = pygame.time.get_ticks()
 
@@ -282,12 +260,10 @@ class WorldItem(MatchItem):
 
         self.rect.center = (round(x), round(y))
 
-        # Arco: sube y baja (0 al principio y al final)
         self._lift = f["h"] * 4 * t * (1 - t)
 
     def is_near(self, player):
 
-        # En el aire no se puede agarrar
         if self.fly is not None:
             return False
 
@@ -297,7 +273,6 @@ class WorldItem(MatchItem):
 
         f = self.fly
 
-        # Todavia "dentro" del cofre
         if f is not None and f["delay"] > 0:
             return
 
@@ -307,7 +282,6 @@ class WorldItem(MatchItem):
 
         lift_w = self._lift
 
-        # Rebote al caer: 2 saltitos que se van achicando
         land = getattr(self, "_land_ms", None)
 
         if land is not None and f is None:
@@ -328,13 +302,9 @@ class WorldItem(MatchItem):
 
 
 class LightItem(MatchItem):
-    """Luz tirada en el piso (fosforo, vela o antorcha). Ilumina un poco y se
-    recuerda cuanta vida le quedaba, asi al agarrarla sigue igual."""
 
     def __init__(self, kind, x, y, life=1.0):
 
-        # La vela es un poco mas grande que el fosforo, y la antorcha
-        # un poco mas que la vela
         if kind == "vela":
             self.WORLD_SIZE = 16
         elif kind == "antorcha":
@@ -345,12 +315,9 @@ class LightItem(MatchItem):
         self.kind = kind
         self.life = float(life)
 
-        # Animacion de "salir disparada" (None = quieta en el piso)
         self.fly = None
         self._lift = 0.0
 
-        # El fosforo usa el sprite de MatchItem; las demas luces usan su
-        # icono (assets/maps/hud/icon_<luz>.png)
         if kind != "fosforo":
 
             icon = load_icon(kind)
@@ -358,19 +325,14 @@ class LightItem(MatchItem):
             if icon is not None:
                 self.original = icon
 
-    # Area de agarre de la luz tirada: mas chica que la de los objetos
-    # (45), asi no tapa a lo que tiene al lado (ej. la resina).
     INTERACT_DISTANCE = 24
 
-    # Misma animacion que los objetos: sale de la boca del vendedor y
-    # cae en el piso
     start_fly = WorldItem.start_fly
     update_fly = WorldItem.update_fly
     draw = WorldItem.draw
 
     def is_near(self, player):
 
-        # En el aire no se puede agarrar
         if self.fly is not None:
             return False
 
@@ -382,18 +344,10 @@ class LightItem(MatchItem):
         return light_stats(self.kind)["radio_suelo"]
 
 
-# Las monedas no estan en data/items.json (no van al inventario), pero
-# si pueden aparecer en el mapa desde data/item_spawns.json.
 COIN_SPAWN_IDS = ("moneda", "moneda_5", "moneda_10")
 
 
 def make_spawn_items(zones, defs, collision_map, seed, collected):
-    """Crea los items de cada zona en un punto caminable al azar.
-
-    La posicion depende solo de `seed` (se guarda en la partida), asi
-    que al volver a cargar quedan en el mismo lugar. Los ya agarrados
-    (`collected`) no se vuelven a crear.
-    """
 
     rng = random.Random(seed)
 
@@ -412,7 +366,6 @@ def make_spawn_items(zones, defs, collision_map, seed, collected):
 
             continue
 
-        # Posicion fija: {"id": ..., "item": ..., "pos": [x, y]}
         if "pos" in zone:
 
             spawn_id = f"{zone.get('id', item_id)}#0"
@@ -425,7 +378,6 @@ def make_spawn_items(zones, defs, collision_map, seed, collected):
 
             continue
 
-        # Zona al azar: {"id": ..., "item": ..., "zona": [x, y, w, h]}
         try:
             x, y, w, h = zone["zona"]
         except (KeyError, TypeError, ValueError):

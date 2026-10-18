@@ -21,7 +21,7 @@ class Startup:
             image_path
         ).convert_alpha()
 
-        
+
         max_width = 700
         max_height = 300
 
@@ -65,7 +65,7 @@ class Startup:
             (0, 0, 0)
         )
 
-        
+
         title_rect = self.title.get_rect(
             center=(
                 self.width // 2,
@@ -78,7 +78,7 @@ class Startup:
             title_rect
         )
 
-        
+
         loading_text = self.font.render(
             "Loading...",
             True,
@@ -97,7 +97,7 @@ class Startup:
             loading_rect
         )
 
-       
+
         bar_width = 350
         bar_height = 12
 

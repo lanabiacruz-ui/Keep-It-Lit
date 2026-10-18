@@ -1,36 +1,3 @@
-"""Objetos que se colocan / mueven por el mapa: bolsa, cofre, faro y fogata.
-
-  BOLSA   no va al inventario. Se compra en la tienda y aparece en el piso.
-          Click izquierdo MANTENIDO sobre ella = la arrastras (como en
-          R.E.P.O.). Click derecho sobre ella = ves lo que tiene adentro.
-          4 casilleros, 15 de cada cosa por casillero.
-  COFRE   item de inventario. Lo elegis en la hotbar, se ve una vista
-          previa en el mapa y con click izquierdo lo pones EXACTAMENTE
-          donde esta el mouse. Queda permanente. Click derecho = abrirlo.
-          8 casilleros, 15 de cada cosa por casillero.
-  FARO    linterna antigua. Se coloca igual que el cofre y se puede
-          arrastrar (click izquierdo mantenido). Ilumina un poco y le
-          devuelve vida a tu luz mientras estas cerca. Hay que alimentarla
-          con CERA: con la cera elegida en la hotbar, F / click derecho
-          cerca.
-  FOGATA  item de inventario. Se coloca igual (permanente). Ilumina mucho,
-          dura mucho y se alimenta con poquita MADERA (misma forma).
-
-AVISO: si mantenes click izquierdo sobre un faro / fogata (estando cerca)
-aparece un cartelito con cuanta luz le queda, con que se alimenta y como.
-Se ve solo mientras lo tenes apretado (en el codigo: FEED_HINT_*).
-
-ANIMACION (encendidos, sobre tus PNG icon_faro.png / icon_fogata.png):
-  FARO    resplandor calido que respira alrededor de la mecha y una
-          chispita que sube. Titila si le queda poco combustible.
-  FOGATA  resplandor que baila, lenguas de fuego que se mueven encima de
-          la llama del dibujo y brasas que suben. Titila y se achica con
-          poco combustible. Todo se ajusta en las constantes ANIM_* de
-          abajo (poner ANIM_ENABLED = False lo apaga).
-
-Todos los numeros para balancear estan en las constantes de abajo.
-"""
-
 import math
 from pathlib import Path
 
@@ -41,81 +8,57 @@ from world import items as _items
 from world.items import HUD_DIR, load_icon
 
 
-# ---------------------------------------------------------------
-# NUMEROS PARA BALANCEAR
-# ---------------------------------------------------------------
-
-# Cuanto se puede alejar el jugador para agarrar / abrir / alimentar
 REACH = 64
 
-# Hasta donde puede llevar la bolsa / el faro respecto del jugador
 DRAG_RANGE = 56
 
-# Cuanto "tira" hacia el mouse lo que arrastras (mas = mas pegado)
 DRAG_SPEED = 16.0
 
 BAG_SLOTS = 4
 CHEST_SLOTS = 8
 
-# Cuantas unidades entran en cada casillero de la bolsa / el cofre
 CONTAINER_STACK = 15
 
-# A que distancia del jugador (en el mundo) se puede colocar un objeto
 PLACE_RANGE = 72
 
-# Combustible, en segundos de luz
-FARO_MAX = 90.0            # lleno dura 90 s
-FARO_START = 30.0          # recien colocado trae 30 s
-FARO_PER_CERA = 25.0       # cada cera suma 25 s (3-4 ceras = lleno)
-FARO_RADIUS = 140          # radio de luz (pixeles de pantalla): poquito,
-                           # pero mas que el fosforo (100)
-FOGATA_HEAL = 0.025        # la fogata cura un poco mas que el faro
-FARO_HEAL = 0.015          # vida de tu luz que recupera POR SEGUNDO si
-                           # estas dentro de su luz (el fosforo gasta 0.033)
+FARO_MAX = 90.0
+FARO_START = 30.0
+FARO_PER_CERA = 25.0
+FARO_RADIUS = 140
+FOGATA_HEAL = 0.025
+FARO_HEAL = 0.015
 
-FOGATA_MAX = 900.0         # llena dura 15 minutos
-FOGATA_START = 300.0       # recien colocada trae 5 minutos
-FOGATA_PER_MADERA = 60.0   # cada madera suma 1 minuto (poquito)
-FOGATA_RADIUS = 300        # ilumina bastante (mas que la antorcha: 250)
+FOGATA_MAX = 900.0
+FOGATA_START = 300.0
+FOGATA_PER_MADERA = 60.0
+FOGATA_RADIUS = 300
 
-# Con poco combustible (fraccion del maximo) la luz parpadea y achica
 LOW_FUEL = 0.15
 
-# ---------------------------------------------------------------
-# ANIMACION DEL FARO Y LA FOGATA (solo visual, no cambia el juego)
-# ---------------------------------------------------------------
 ANIM_ENABLED = True
 
-# Donde esta la mecha del faro dentro de icon_faro.png (0 a 1)
 FARO_WICK = (0.51, 0.70)
 
-# Resplandor (tamano en ancho del dibujo) e intensidad. Faro: poquito
 FARO_GLOW_SIZE = 0.55
 FARO_GLOW_COLOR = (150, 100, 30)
 FARO_CORE_COLOR = (170, 105, 18)
 FARO_EMBERS = 2
 
-# Fogata: bastante mas viva
 FOGATA_GLOW_SIZE = 0.80
 FOGATA_GLOW_COLOR = (200, 110, 30)
 FOGATA_EMBERS = 7
 
-# Cartelito que aparece al mantener click izquierdo sobre el faro / fogata
 FEED_HINT_ENABLED = True
 FEED_HINT_LINE2 = "En la hotbar elegí {item} y apretá F o click derecho"
 
-# Cuanto titila el radio de la luz (0.03 = +-3%). Solo se ve, el
-# alcance para curar no cambia
 FARO_LIGHT_FLICKER = 0.02
 FOGATA_LIGHT_FLICKER = 0.035
 
-# Cuanta vida de tu luz devuelve cada uno por segundo (si estas en su luz)
 HEAL_RATE = {
     "faro": FARO_HEAL,
     "fogata": FOGATA_HEAL,
 }
 
-# Item que alimenta a cada uno
 FUEL_ITEM = {
     "faro": "cera",
     "fogata": "madera",
@@ -126,10 +69,8 @@ FUEL_PER_ITEM = {
     "fogata": FOGATA_PER_MADERA,
 }
 
-# Items de inventario que se colocan al usarlos
 PLACE_ITEMS = ("cofre", "faro", "fogata")
 
-# Tamano en el mundo (ancho, alto) de cada objeto
 WORLD_SIZE = {
     "bolsa": (16, 16),
     "cofre": (22, 18),
@@ -137,43 +78,34 @@ WORLD_SIZE = {
     "fogata": (20, 18),
 }
 
-# Tamano de los icono placeholder (inventario / tienda)
 ICON_IDS = ("bolsa", "cofre", "faro", "fogata")
 
 
 UI_DIR = HUD_DIR.parent / "ui"
 
-# Imagenes del inventario de la bolsa / el cofre (carpeta assets/maps/ui)
 PANEL_FILES = {
-    "bolsa": "panel_bolsa.png",     # 296 x 144
-    "cofre": "panel_cofre.png",     # 296 x 208
+    "bolsa": "panel_bolsa.png",
+    "cofre": "panel_cofre.png",
 }
-SLOT_FILE = "slot_contenedor.png"              # 56 x 56
-SLOT_HOVER_FILE = "slot_contenedor_hover.png"  # 56 x 56
+SLOT_FILE = "slot_contenedor.png"
+SLOT_HOVER_FILE = "slot_contenedor_hover.png"
 
-# Medidas del panel (en pixeles de pantalla)
 SLOT_PX = 56
 SLOT_GAP = 8
 PANEL_COLS = 4
-PANEL_MARGIN_X = 24       # de la izquierda del panel al primer casillero
-PANEL_TOP = 56            # de arriba del panel a la primera fila
-PANEL_BOTTOM = 32         # espacio de abajo (para el texto de ayuda)
+PANEL_MARGIN_X = 24
+PANEL_TOP = 56
+PANEL_BOTTOM = 32
 
 
 def _sprite_path(kind, suffix=""):
     return HUD_DIR / f"icon_{kind}{suffix}.png"
 
 
-# ---------------------------------------------------------------
-# EFECTOS DE LUZ (se SUMAN a lo que ya hay dibujado: brillo / brasas)
-# ---------------------------------------------------------------
-
 _GLOW_CACHE = {}
 
 
 def _glow_surface(radius, level, color):
-    """Circulo de luz suave (negro afuera, brillante al centro) listo
-    para sumarse a la pantalla. Se guarda en cache por tamano/nivel."""
 
     radius = max(4, int(radius) // 4 * 4)
     lv = max(1, min(8, int(round(level * 8))))
@@ -208,7 +140,6 @@ def _glow_surface(radius, level, color):
 
 
 def _add_glow(screen, cx, cy, radius, level, color):
-    """Suma un resplandor centrado en (cx, cy). level va de 0 a 1."""
 
     if level <= 0.05 or radius < 4:
         return
@@ -224,8 +155,6 @@ def _add_glow(screen, cx, cy, radius, level, color):
 
 def _draw_embers(screen, ox, oy, rise, spread, size, clock, phase,
                  count, level):
-    """Brasitas que suben desde (ox, oy), se achican y se apagan. No
-    guardan estado: la posicion sale del reloj."""
 
     if level <= 0.05:
         return
@@ -246,7 +175,6 @@ def _draw_embers(screen, ox, oy, rise, spread, size, clock, phase,
         if fade <= 0.05:
             continue
 
-        # Amarillo al nacer, rojizo al apagarse
         color = (
             int(255 * fade),
             int((200 - 130 * life) * fade),
@@ -260,11 +188,6 @@ def _draw_embers(screen, ox, oy, rise, spread, size, clock, phase,
             special_flags=pygame.BLEND_RGB_ADD
         )
 
-
-# ---------------------------------------------------------------
-# DIBUJOS DE RESPALDO (por codigo, por si faltan los PNG)
-# Si existe assets/maps/hud/icon_<id>.png se usa ese.
-# ---------------------------------------------------------------
 
 def _draw_bolsa(W, H):
 
@@ -321,17 +244,14 @@ def _draw_cofre(W, H):
 
 
 def _draw_faro(W, H, lit=True):
-    """Linterna antigua."""
 
     s = pygame.Surface((W, H), pygame.SRCALPHA)
 
     lw = max(1, W // 20)
     dark = (70, 52, 38)
 
-    # Aro para agarrarla
     pygame.draw.ellipse(s, dark, (int(W * .36), 0, int(W * .28), int(H * .22)), lw)
 
-    # Tapa y base
     pygame.draw.polygon(s, (120, 96, 70), [
         (W * .20, H * .30), (W * .80, H * .30), (W * .66, H * .14),
         (W * .34, H * .14),
@@ -339,13 +259,11 @@ def _draw_faro(W, H, lit=True):
     pygame.draw.rect(s, (120, 96, 70),
                      (int(W * .18), int(H * .86), int(W * .64), int(H * .10)))
 
-    # Vidrio
     glass = pygame.Rect(int(W * .24), int(H * .30), int(W * .52), int(H * .56))
 
     pygame.draw.rect(s, (255, 226, 120) if lit else (150, 146, 140), glass)
     pygame.draw.rect(s, dark, glass, lw)
 
-    # Llama
     if lit:
         pygame.draw.polygon(s, (255, 150, 40), [
             (W * .40, H * .80), (W * .50, H * .46), (W * .60, H * .80),
@@ -360,7 +278,6 @@ def _draw_fogata(W, H, flame=False):
 
     t = max(3, int(W * .11))
 
-    # Piedras
     for i in range(6):
 
         a = math.pi * (0.1 + 0.8 * i / 5)
@@ -373,7 +290,6 @@ def _draw_fogata(W, H, flame=False):
         pygame.draw.ellipse(s, (130, 130, 138), r)
         pygame.draw.ellipse(s, (70, 70, 78), r, 1)
 
-    # Troncos cruzados
     pygame.draw.line(s, (112, 70, 34),
                      (W * .20, H * .90), (W * .80, H * .62), t)
     pygame.draw.line(s, (96, 58, 28),
@@ -400,8 +316,6 @@ _DRAWERS = {
 
 
 def install_placeholder_icons():
-    """Si falta icon_<id>.png, deja un dibujo por codigo en la cache de
-    iconos, asi el inventario y la tienda igual muestran algo."""
 
     for item_id in ICON_IDS:
 
@@ -411,10 +325,6 @@ def install_placeholder_icons():
         if _items._icon_cache.get(item_id) is None:
             _items._icon_cache[item_id] = _DRAWERS[item_id](64, 64)
 
-
-# ---------------------------------------------------------------
-# CONTENEDOR (bolsa y cofre)
-# ---------------------------------------------------------------
 
 class Container:
 
@@ -428,7 +338,6 @@ class Container:
         return sum(s[1] for s in self.slots if s)
 
     def add(self, item_id, stack_limit):
-        """Mete UNA unidad. False si no entra."""
 
         for s in self.slots:
 
@@ -449,7 +358,6 @@ class Container:
         return False
 
     def take(self, index, amount=None):
-        """Saca `amount` unidades (todas si es None). Devuelve cuantas."""
 
         s = self.slots[index]
 
@@ -482,10 +390,6 @@ class Container:
             ):
                 self.slots[i] = [str(entry[0]), int(entry[1])]
 
-
-# ---------------------------------------------------------------
-# OBJETOS DEL MUNDO
-# ---------------------------------------------------------------
 
 class Placeable:
 
@@ -521,7 +425,6 @@ class Placeable:
         self.fly = None
         self._lift = 0.0
 
-    # ----- combustible -----
 
     @property
     def uses_fuel(self):
@@ -549,7 +452,6 @@ class Placeable:
             self.fuel = max(0.0, self.fuel - dt)
 
     def _flicker(self, clock):
-        """1.0 normal. Con poco combustible titila (igual que la luz)."""
 
         if self.fuel_fraction < LOW_FUEL:
             return 0.45 + 0.55 * abs(math.sin(clock * 14 + self._phase))
@@ -557,11 +459,9 @@ class Placeable:
         return 1.0
 
     def _size_k(self):
-        """Que tan grande se ve la llama (se achica con poco combustible)."""
 
         return 0.55 + 0.45 * min(1.0, self.fuel_fraction * 3)
 
-    # ----- luz -----
 
     def light_radius(self, clock):
 
@@ -572,7 +472,6 @@ class Placeable:
 
         radius = self.light_radius_px * (0.55 + 0.45 * min(1.0, frac * 3))
 
-        # Titileo suave de la llama (la luz "respira")
         if ANIM_ENABLED and self.light_flicker:
 
             ph = self._phase
@@ -589,7 +488,6 @@ class Placeable:
         return radius
 
     def heal_range(self, zoom):
-        """Hasta donde (en unidades del mundo) llega su luz."""
 
         if not self.lit:
             return 0.0
@@ -600,7 +498,6 @@ class Placeable:
             / max(1, zoom)
         )
 
-    # ----- dibujo -----
 
     def _base_sprite(self):
 
@@ -618,7 +515,6 @@ class Placeable:
 
         w, h = WORLD_SIZE[self.kind]
 
-        # Se dibuja grande y se achica (queda mas suave)
         if self.kind == "fogata":
             return _draw_fogata(w * 8, h * 8, flame=False)
 
@@ -660,7 +556,6 @@ class Placeable:
 
         lift = int(self._lift * camera.zoom)
 
-        # Apoyado en la base del rect
         r = sprite.get_rect(
             midbottom=(dest.centerx, dest.bottom - lift)
         )
@@ -692,13 +587,11 @@ class Placeable:
 
         pygame.draw.rect(screen, color, fill)
 
-    # ----- guardado -----
 
     def save(self):
 
         x, y = self.rect.center
 
-        # Si todavia vuela (recien comprada), se guarda donde va a caer
         if self.fly is not None:
             x, y = self.fly["dst"]
 
@@ -756,7 +649,6 @@ class Lighthouse(Placeable):
 
         if not self._real:
 
-            # Brillito en la lampara (dibujo de respaldo por codigo)
             pulse = 0.75 + 0.25 * math.sin(clock * 6 + self._phase)
 
             glow = pygame.Surface((r.w, r.w), pygame.SRCALPHA)
@@ -776,7 +668,6 @@ class Lighthouse(Placeable):
         if not ANIM_ENABLED:
             return
 
-        # Con tu icon_faro.png: la llama respira y se mueve un poquito
         ph = self._phase
         k = self._flicker(clock)
 
@@ -791,19 +682,16 @@ class Lighthouse(Placeable):
         )
         cy = r.top + int(r.h * FARO_WICK[1])
 
-        # Resplandor suave alrededor de la lampara
         _add_glow(
             screen, cx, cy, r.w * FARO_GLOW_SIZE,
             breath * k, FARO_GLOW_COLOR
         )
 
-        # Nucleo caliente justo en la mecha
         _add_glow(
             screen, cx, cy, r.w * 0.20,
             (0.70 + 0.30 * breath) * k, FARO_CORE_COLOR
         )
 
-        # Una chispita que se escapa por arriba
         _draw_embers(
             screen, r.centerx, r.top + r.h * 0.06, r.h * 0.30, r.w * 0.10,
             max(1, r.w // 30), clock, ph, FARO_EMBERS, 0.6 * k
@@ -824,7 +712,6 @@ class Campfire(Placeable):
 
         if not self._real:
 
-            # Llama que se mueve (dibujo de respaldo por codigo)
             s = 0.85 + 0.15 * math.sin(clock * 11 + self._phase)
             s2 = 0.85 + 0.15 * math.sin(clock * 17 + self._phase * 2)
 
@@ -854,7 +741,6 @@ class Campfire(Placeable):
         if not ANIM_ENABLED:
             return
 
-        # Con tu icon_fogata.png: llama viva por encima del dibujo
         ph = self._phase
         k = self._flicker(clock)
         size_k = self._size_k()
@@ -867,15 +753,12 @@ class Campfire(Placeable):
 
         cx = r.centerx
 
-        # Resplandor que baila alrededor de la llama
         _add_glow(
             screen, cx, r.top + int(r.h * 0.62),
             r.w * FOGATA_GLOW_SIZE * size_k * (1.0 + 0.05 * f1),
             flare * k, FOGATA_GLOW_COLOR
         )
 
-        # Lenguas de fuego: se dibujan en negro y se suman, asi solo
-        # aclaran la llama del PNG y no tapan nada
         layer = pygame.Surface((r.w, r.h))
         layer.fill((0, 0, 0))
 
@@ -896,7 +779,6 @@ class Campfire(Placeable):
 
         mid = r.w / 2
 
-        # Lenguas chicas de los costados (bailan a distinto ritmo)
         for side, off in ((-1, 1.7), (1, 4.1)):
 
             wob = math.sin(clock * 13 + off + ph)
@@ -909,13 +791,11 @@ class Campfire(Placeable):
                 (70, 32, 5)
             )
 
-        # Lengua principal y su centro mas claro
         tongue(mid, fw, fh, sway, (95, 45, 8))
         tongue(mid, fw * 0.55, fh * 0.65, sway * 0.7, (80, 72, 24))
 
         screen.blit(layer, r.topleft, special_flags=pygame.BLEND_RGB_ADD)
 
-        # Brasas que suben
         _draw_embers(
             screen, cx, r.top + r.h * 0.30, r.h * 0.60, r.w * 0.20,
             max(1, r.w // 26), clock, ph,
@@ -931,10 +811,6 @@ KINDS = {
 }
 
 
-# ---------------------------------------------------------------
-# MANAGER
-# ---------------------------------------------------------------
-
 class PlaceableManager:
 
     def __init__(self, saved=None):
@@ -945,10 +821,8 @@ class PlaceableManager:
 
         self.clock = 0.0
 
-        # Lo que se esta arrastrando
         self.dragging = None
 
-        # Contenedor abierto (bolsa o cofre)
         self.open_obj = None
 
         self._fonts = {}
@@ -970,7 +844,6 @@ class PlaceableManager:
 
             self.objects.append(obj)
 
-    # ---------- utilidades ----------
 
     def _font(self, size):
 
@@ -1016,7 +889,6 @@ class PlaceableManager:
         )
 
     def _under_mouse(self, game):
-        """El objeto del mundo bajo el mouse y a tu alcance."""
 
         wx, wy = self._mouse_world(game)
 
@@ -1035,8 +907,6 @@ class PlaceableManager:
         return best
 
     def _nearest_feedable(self, game, item_id):
-        """Faro / fogata cercano al que le sirve `item_id` (y no esta
-        lleno)."""
 
         best = None
         best_d = None
@@ -1055,7 +925,6 @@ class PlaceableManager:
 
         return best
 
-    # ---------- crear ----------
 
     def spawn_bag(self, x, y, src=None, delay=0.0, collision_map=None):
 
@@ -1087,11 +956,8 @@ class PlaceableManager:
 
         return True
 
-    # ---------- colocar (preciso, donde esta el mouse) ----------
 
     def _held(self, game):
-        """(casillero, id) si tenes elegido en la hotbar un item que se
-        coloca (cofre, faro, fogata). Si no, None."""
 
         slot = game.selected_slot
 
@@ -1107,7 +973,6 @@ class PlaceableManager:
 
     @staticmethod
     def _over_hud(game, pos):
-        """El mouse esta sobre la hotbar, el slot de luz o el boton menu."""
 
         if game.hud.slot_at(pos) is not None:
             return True
@@ -1122,7 +987,6 @@ class PlaceableManager:
         return False
 
     def _can_place(self, game, kind, wx, wy):
-        """(se puede, rect) para poner `kind` con el centro en (wx, wy)."""
 
         w, h = WORLD_SIZE[kind]
 
@@ -1137,7 +1001,6 @@ class PlaceableManager:
         return self._spot_free(game, r), r
 
     def _place(self, game, slot, item_id, wx, wy):
-        """Coloca el item en (wx, wy). True si se pudo."""
 
         ok, r = self._can_place(game, item_id, wx, wy)
 
@@ -1165,23 +1028,18 @@ class PlaceableManager:
 
         return True
 
-    # ---------- usar items del inventario ----------
 
     def try_use(self, game, slot):
-        """Lo llama use_item. Devuelve True si se encargo el (y no hay
-        que hacer el uso normal del item)."""
 
         item_id = game.hud.items[slot]
 
         if item_id is None:
             return False
 
-        # --- colocar cofre / faro / fogata (F o click derecho) ---
         if item_id in PLACE_ITEMS:
 
             mouse = pygame.mouse.get_pos()
 
-            # Si el mouse esta sobre la hotbar no hay donde ponerlo
             if self._over_hud(game, mouse):
 
                 game.show_message(
@@ -1196,7 +1054,6 @@ class PlaceableManager:
 
             return True
 
-        # --- alimentar faro / fogata ---
         obj = self._nearest_feedable(game, item_id)
 
         if obj is not None:
@@ -1216,15 +1073,12 @@ class PlaceableManager:
 
         return False
 
-    # ---------- eventos ----------
 
     def handle_event(self, game, event):
-        """True si el evento se uso aca (el juego no lo procesa mas)."""
 
         if game.state != "playing":
             return False
 
-        # ESC cierra el contenedor abierto (no abre la pausa)
         if (
             self.open_obj is not None
             and event.type == pygame.KEYDOWN
@@ -1237,7 +1091,6 @@ class PlaceableManager:
         if event.type != pygame.MOUSEBUTTONDOWN:
             return False
 
-        # ----- con el panel abierto -----
         if self.open_obj is not None:
 
             consumed = self._panel_click(game, event)
@@ -1245,7 +1098,6 @@ class PlaceableManager:
             if consumed:
                 return True
 
-        # ----- click izquierdo: arrastrar, o colocar lo que tenes en mano -----
         if event.button == 1:
 
             if self._over_hud(game, event.pos):
@@ -1271,7 +1123,6 @@ class PlaceableManager:
 
             return False
 
-        # ----- click derecho: abrir / ver combustible -----
         if event.button == 3:
 
             obj = self._under_mouse(game)
@@ -1297,9 +1148,6 @@ class PlaceableManager:
         return False
 
     def _draw_feed_hints(self, game, screen):
-        """Cartelito arriba del faro / fogata que mantenes apretado con
-        el click izquierdo: cuanta luz tiene, con que se alimenta y como.
-        Se dibuja encima de la oscuridad."""
 
         if not FEED_HINT_ENABLED:
             return
@@ -1315,7 +1163,6 @@ class PlaceableManager:
 
         sw = screen.get_width()
 
-        # Faro / fogata que tenes apretado con el click izquierdo (mantenido)
         held = None
 
         if pygame.mouse.get_pressed()[0]:
@@ -1330,7 +1177,6 @@ class PlaceableManager:
             if not obj.uses_fuel or obj.fly is not None:
                 continue
 
-            # Solo se ve mientras mantenes el click izquierdo apretado
             if obj is not held:
                 continue
 
@@ -1348,13 +1194,11 @@ class PlaceableManager:
                     FEED_HINT_LINE2.format(item=item.upper()),
                 ]
 
-            # Con el click apretado tambien se ve cuanta luz le queda
             if is_held:
                 lines.insert(
                     0, f"{name}: {int(obj.fuel)} / {int(obj.fuel_max)} s de luz"
                 )
 
-            # Misma posicion que en draw(): arriba del dibujo
             sprite = obj._sprite(game.camera.zoom)
             dest = game.camera.apply(obj.rect)
             lift = int(obj._lift * game.camera.zoom)
@@ -1363,7 +1207,6 @@ class PlaceableManager:
                 midbottom=(dest.centerx, dest.bottom - lift)
             )
 
-            # Letra que entre en la pantalla
             for size in (22, 20, 18, 16, 14):
 
                 font = self._font(size)
@@ -1403,8 +1246,6 @@ class PlaceableManager:
             screen.blit(card, box)
 
     def draw_ghost(self, game, screen):
-        """Vista previa del objeto que tenes en mano, en el mouse: verde si
-        se puede poner ahi, rojo si no."""
 
         self._draw_feed_hints(game, screen)
 
@@ -1459,7 +1300,6 @@ class PlaceableManager:
 
         pygame.draw.rect(screen, color, dest, 2)
 
-    # ---------- panel de contenido ----------
 
     def _panel_size(self, obj):
 
@@ -1510,7 +1350,6 @@ class PlaceableManager:
         return panel, slots
 
     def _ui_image(self, name, size=None):
-        """assets/maps/ui/<name> (None si no existe), escalada a `size`."""
 
         key = (name, size)
 
@@ -1539,7 +1378,6 @@ class PlaceableManager:
 
         one = event.button == 3
 
-        # Casillero del contenedor -> a tu inventario
         for i, r in enumerate(slots):
 
             if r.collidepoint(event.pos):
@@ -1548,7 +1386,6 @@ class PlaceableManager:
 
                 return True
 
-        # Casillero de tu inventario -> al contenedor
         hotbar = game.hud.slot_at(event.pos)
 
         if hotbar is not None:
@@ -1557,7 +1394,6 @@ class PlaceableManager:
 
             return True
 
-        # Click dentro del panel (aunque sea en un espacio vacio)
         if panel.collidepoint(event.pos):
             return True
 
@@ -1634,9 +1470,6 @@ class PlaceableManager:
             audio.play("pickup")
 
     def _draw_hint(self, screen, panel, text, color=(170, 176, 192)):
-        """Texto de ayuda abajo del panel. Si no entra en el ancho del
-        cartel se parte en 2 lineas (por los " . ") y, si hace falta,
-        se achica la letra: nunca sobresale del panel."""
 
         parts = [p.strip() for p in text.split("\u00b7")]
 
@@ -1692,8 +1525,6 @@ class PlaceableManager:
 
         mouse = pygame.mouse.get_pos()
 
-        # Fondo: tu imagen (panel_bolsa.png / panel_cofre.png) o, si falta,
-        # uno dibujado por codigo
         bg = self._ui_image(PANEL_FILES[obj.kind], panel.size)
 
         if bg is not None:
@@ -1781,7 +1612,6 @@ class PlaceableManager:
                 tip, tip.get_rect(midbottom=(panel.centerx, panel.y - 6))
             )
 
-    # ---------- update ----------
 
     def update(self, game, dt):
 
@@ -1799,8 +1629,6 @@ class PlaceableManager:
 
             obj.near = self._dist(game, obj) <= REACH + 24
 
-        # El faro (linterna antigua) y la fogata le devuelven vida a tu luz
-        # si estas dentro de su luz (cura el que mas cura, no se suman)
         if game.has_match and game.vida < 1.0:
 
             heal = 0.0
@@ -1819,7 +1647,6 @@ class PlaceableManager:
             if heal > 0.0:
                 game.vida = min(1.0, game.vida + heal * dt)
 
-        # Se cierra solo si te alejas del contenedor abierto
         if self.open_obj is not None:
 
             if (
@@ -1828,7 +1655,6 @@ class PlaceableManager:
             ):
                 self.open_obj = None
 
-        # Arrastre
         if self.dragging is not None:
 
             obj = self.dragging
@@ -1851,7 +1677,6 @@ class PlaceableManager:
 
         px, py = game.player.rect.center
 
-        # El objetivo no se aleja mas de DRAG_RANGE del jugador
         dx, dy = mx - px, my - py
 
         d = math.hypot(dx, dy)
@@ -1890,7 +1715,6 @@ class PlaceableManager:
 
             return True
 
-        # Si pega contra algo, se desliza por el eje que si se puede
         if ok(nx, ny):
             obj.rect.center = (int(nx), int(ny))
 
@@ -1900,7 +1724,6 @@ class PlaceableManager:
         elif ok(cx, ny):
             obj.rect.center = (cx, int(ny))
 
-    # ---------- dibujo / luz ----------
 
     def draw(self, screen, camera):
 
@@ -1908,7 +1731,6 @@ class PlaceableManager:
             obj.draw(screen, camera, self.clock)
 
     def light_sources(self):
-        """[(x, y, radio)] para PlayerLight.draw (radio en px de pantalla)."""
 
         out = []
 
@@ -1929,7 +1751,6 @@ class PlaceableManager:
 
         return out
 
-    # ---------- guardado ----------
 
     def save_data(self):
 

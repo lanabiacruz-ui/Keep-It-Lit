@@ -11,36 +11,23 @@ MG_DIR = (
     / "minijuego"
 )
 
-# ---------------------------------------------------------------
-# Dificultad
-# ---------------------------------------------------------------
 
-# Aciertos para abrir el cofre
 HITS_NEEDED = 3
 
-# Ancho de la zona (en px) segun cuantos aciertos llevas.
-# La primera es el ancho real del PNG (140).
 ZONE_WIDTHS = [140, 98, 62]
 
-# Velocidad del marcador (px por segundo) segun cuantos aciertos llevas
 SPEEDS = [300, 460, 680]
 
-# Despues de abrirse, se ignoran los golpes un ratito para que el
-# mismo click que le pego al cofre no cuente como acierto
 INPUT_GRACE = 0.4
 
-# Cuanto se queda la pestana al ganar / perder antes de cerrarse
 END_DELAY = 0.55
 
-# ---------------------------------------------------------------
-# Posiciones dentro del panel (640x200)
-# ---------------------------------------------------------------
-BARRA_POS = (40, 40)       # barra de 560x44
+BARRA_POS = (40, 40)
 BARRA_W = 560
 BARRA_H = 44
-BARRA_MARGIN = 16          # lo que sobra a los costados de la barra
+BARRA_MARGIN = 16
 
-PROGRESO_POS = (120, 122)  # barra de progreso de 400x32
+PROGRESO_POS = (120, 122)
 
 HINT_Y = 172
 
@@ -51,10 +38,6 @@ def _load(name):
 
 
 class ChestMinigame:
-    """Frena el marcador dentro de la zona. 3 aciertos = cofre abierto.
-    Si fallas una vez, se cierra.
-
-    Controles: Espacio, E o click izquierdo = golpear. Esc = salir."""
 
     def __init__(self, screen_size):
 
@@ -67,19 +50,16 @@ class ChestMinigame:
         self.progreso = _load("minijuego_progreso.png")
         self.relleno = _load("minijuego_progreso_relleno.png")
 
-        # Marcador en rojo para cuando fallas
         self.marcador_fallo = self.marcador.copy()
         self.marcador_fallo.fill(
             (150, 0, 0, 0), special_flags=pygame.BLEND_RGB_ADD
         )
 
-        # Zona con brillo verde para cuando aciertas
         self.zona_ok = self.zona.copy()
         self.zona_ok.fill(
             (0, 90, 0, 0), special_flags=pygame.BLEND_RGB_ADD
         )
 
-        # Parte del PNG de relleno que tiene dibujo (para cortarlo bien)
         self.relleno_bbox = self.relleno.get_bounding_rect()
 
         self._zone_cache = {}
@@ -95,7 +75,6 @@ class ChestMinigame:
 
         self.font = pygame.font.Font(None, 26)
 
-        # Zona donde se mueve el marcador (px dentro de la barra)
         self.length = BARRA_W - BARRA_MARGIN * 2
 
         self.pos = 0.0
@@ -105,14 +84,13 @@ class ChestMinigame:
         self.zone_x = 0.0
         self.zone_w = ZONE_WIDTHS[0]
 
-        self.state = "play"       # "play" -> "win" / "fail"
+        self.state = "play"
         self.end_timer = 0.0
         self.grace = INPUT_GRACE
         self.flash = 0.0
 
         self._new_zone()
 
-    # ---------- logica ----------
 
     def _new_zone(self):
 
@@ -120,7 +98,6 @@ class ChestMinigame:
 
         room = self.length - self.zone_w
 
-        # Que no aparezca justo debajo del marcador
         for _ in range(12):
 
             x = random.uniform(0, room)
@@ -162,7 +139,6 @@ class ChestMinigame:
             self.end_timer = END_DELAY
 
     def handle_event(self, event):
-        """Devuelve 'cancel' si el jugador sale con Esc."""
 
         if event.type == pygame.KEYDOWN:
 
@@ -179,7 +155,6 @@ class ChestMinigame:
         return None
 
     def update(self, dt):
-        """Devuelve 'win' o 'fail' cuando termina, si no None."""
 
         if self.grace > 0:
             self.grace = max(0.0, self.grace - dt)
@@ -208,7 +183,6 @@ class ChestMinigame:
 
         return None
 
-    # ---------- dibujo ----------
 
     def _zone_image(self, width):
 
@@ -243,7 +217,6 @@ class ChestMinigame:
 
         screen.blit(self.panel, self.panel_rect)
 
-        # Barra
         barra_x = ox + BARRA_POS[0]
         barra_y = oy + BARRA_POS[1]
 
@@ -251,7 +224,6 @@ class ChestMinigame:
 
         play_left = barra_x + BARRA_MARGIN
 
-        # Zona
         zone_img, zone_ok_img = self._zone_image(self.zone_w)
 
         screen.blit(
@@ -259,7 +231,6 @@ class ChestMinigame:
             (play_left + round(self.zone_x), barra_y)
         )
 
-        # Marcador (sobresale de la barra, centrado)
         marker = (
             self.marcador_fallo if self.state == "fail" else self.marcador
         )
@@ -273,7 +244,6 @@ class ChestMinigame:
 
         screen.blit(marker, marker_rect)
 
-        # Progreso: el relleno se corta segun los aciertos
         prog_x = ox + PROGRESO_POS[0]
         prog_y = oy + PROGRESO_POS[1]
 
@@ -292,7 +262,6 @@ class ChestMinigame:
 
             screen.blit(crop, (prog_x, prog_y))
 
-        # Texto de ayuda
         if self.state == "fail":
             hint = "Fallaste: el cofre se cerro"
         elif self.state == "win":
