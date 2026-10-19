@@ -1,64 +1,69 @@
 {
-    "player_name": "o",
+    "player_name": "broski",
     "mode": "normal",
-    "created_at": "2026-10-19T08:51:06",
-    "last_played": "2026-10-19T08:55:52",
-    "password_salt": "3f58bd0dd468ea7aa2541d274ed16a6b",
-    "password_hash": "1c6a24c8d47e3981d45bb38a8949fb471fd5c81f55632d95ce7d34a53bd42c5b",
-    "x": 1330,
-    "y": 643,
-    "coins": 119,
+    "created_at": "2026-10-19T09:23:14",
+    "last_played": "2026-10-19T10:00:38",
+    "password_salt": "5a96b4f0e6dd9331eca26eee682dd30e",
+    "password_hash": "41a2e4a0f6d2b1470006f2f4bda5e5eb1d48031eedc68ff776414c6900d0d4bc",
+    "x": 1190,
+    "y": 520,
+    "coins": 1469,
     "gems": 0,
     "gems_green": 0,
     "has_match": true,
-    "light": "vela",
-    "vida": 0.6575166666666755,
+    "light": "antorcha",
+    "vida": 0.7547131701781417,
     "escudo": 0.0,
     "inventory": [
         [
-            "aceite",
-            3
-        ],
-        null,
-        [
             "cera",
-            1
+            2
         ],
         [
             "resina",
-            4
+            9
+        ],
+        [
+            "aceite",
+            2
+        ],
+        [
+            "resina",
+            12
         ]
     ],
     "collected": [
-        "madera_10#0",
-        "moneda_pasillo_tienda#1",
-        "aceite_03#0",
-        "moneda_sala_cofres#0",
-        "moneda_sala_central#1",
+        "madera_07#0",
         "aceite_01#0",
+        "moneda_pasillo_tienda#1",
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_central#1",
         "madera_04#0",
+        "moneda_pasillo_cabana#0",
+        "madera_10#0",
+        "madera_06#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_der#0",
+        "madera_08#0",
+        "madera_02#0",
+        "aceite_02#0",
+        "aceite_03#0",
+        "moneda5_sala_cofres#0",
+        "cera_01#0",
+        "madera_05#0",
+        "moneda_sala_cofres#0",
+        "madera_03#0",
         "moneda_sala_central#0",
         "moneda_pasillo_tienda#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_pasillo_der#0",
-        "madera_06#0",
-        "cera_01#0",
-        "moneda_pasillo_cofres#0",
-        "madera_09#0",
-        "madera_08#0",
-        "moneda_pasillo_cabana#1",
-        "madera_02#0",
         "cera_02#0",
-        "madera_07#0",
-        "madera_03#0",
+        "moneda_pasillo_cabana#1",
         "madera_01#0",
-        "moneda_pasillo_cabana#0",
-        "madera_05#0",
-        "moneda5_sala_cofres#0",
-        "aceite_02#0"
+        "madera_09#0",
+        "madera_11#0"
     ],
-    "item_seed": 799844902,
-    "arena_wave": 2,
+    "item_seed": 950450547,
+    "arena_wave": 5,
     "arena_completed": false,
     "arena_left_wave": 1,
     "arena_left_completed": false,
@@ -67,8 +72,10 @@
         "hub_abajo",
         "hub_arriba",
         "hub_derecha",
+        "hub_izquierda",
         "sala_der",
         "sup_central_abajo",
+        "sup_der_sala",
         "sup_izq_central",
         "sup_izq_sala"
     ],
@@ -78,23 +85,69 @@
     },
     "current_map": "mapa1",
     "chests": {
-        "cofre_02": {
-            "usos": 4
+        "cofre_01": {
+            "usos": 12
         },
-        "cofre_04": {
-            "usos": 14
+        "cofre_02": {
+            "usos": 9
+        },
+        "cofre_03": {
+            "usos": 2
         }
     },
-    "placeables": [],
+    "placeables": [
+        {
+            "t": "bolsa",
+            "x": 947,
+            "y": 154,
+            "slots": [
+                [
+                    "resina",
+                    15
+                ],
+                null,
+                null,
+                null
+            ]
+        },
+        {
+            "t": "fogata",
+            "x": 918,
+            "y": 164,
+            "fuel": 125.22
+        },
+        {
+            "t": "cofre",
+            "x": 885,
+            "y": 164,
+            "slots": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            ]
+        },
+        {
+            "t": "faro",
+            "x": 988,
+            "y": 165,
+            "fuel": 0.0
+        }
+    ],
     "enemies_seen": [
-        "pino"
+        "pino",
+        "tronco"
     ],
     "stats": {
-        "items_used": 24,
-        "chests_opened": 11,
-        "purchases": 1,
+        "items_used": 51,
+        "chests_opened": 23,
+        "purchases": 4,
         "fireballs": 0,
-        "kills": 1
+        "kills": 18
     },
     "zones_seen": [
         "central",
@@ -104,5 +157,5 @@
         "tienda"
     ],
     "objective_index": 13,
-    "objectives_minimized": false
+    "objectives_minimized": true
 }

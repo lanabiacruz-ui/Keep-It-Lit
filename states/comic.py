@@ -12,6 +12,12 @@ class Comic:
 
     INPUT_DELAY = 0.25
 
+    BLUR = 24
+
+    DARKEN = 150
+
+    SHADOW = 18
+
     def __init__(self, screen):
 
         self.screen = screen
@@ -25,6 +31,7 @@ class Comic:
         )
 
         self.pages = []
+        self.backgrounds = []
 
         for name in self.IMAGES:
 
@@ -47,10 +54,54 @@ class Comic:
                 pygame.transform.smoothscale(image, size)
             )
 
+            self.backgrounds.append(
+                self._make_background(image)
+            )
+
         self.font = pygame.font.Font(None, 24)
 
         self.index = 0
         self.timer = 0
+
+    def _make_background(self, image):
+
+        cover = max(
+            self.width / image.get_width(),
+            self.height / image.get_height()
+        )
+
+        big = pygame.transform.smoothscale(
+            image,
+            (
+                round(image.get_width() * cover),
+                round(image.get_height() * cover)
+            )
+        )
+
+        bg = pygame.Surface((self.width, self.height))
+
+        bg.blit(
+            big,
+            big.get_rect(center=(self.width // 2, self.height // 2))
+        )
+
+        tiny = pygame.transform.smoothscale(
+            bg,
+            (max(1, self.width // self.BLUR), max(1, self.height // self.BLUR))
+        )
+
+        bg = pygame.transform.smoothscale(
+            tiny,
+            (self.width, self.height)
+        )
+
+        shade = pygame.Surface((self.width, self.height))
+        shade.fill((8, 8, 14))
+        shade.set_alpha(self.DARKEN)
+
+        bg.blit(shade, (0, 0))
+
+        return bg
 
     def _next(self):
 
@@ -101,23 +152,49 @@ class Comic:
 
         self.screen.fill((12, 12, 16))
 
-        page = self.pages[
-            min(self.index, len(self.pages) - 1)
-        ]
+        i = min(self.index, len(self.pages) - 1)
 
-        page.set_alpha(
-            int(255 * min(1, self.timer / self.FADE_TIME))
-        )
+        page = self.pages[i]
 
-        self.screen.blit(
-            page,
-            page.get_rect(
-                center=(
-                    self.width // 2,
-                    self.height // 2
-                )
+        fade = int(255 * min(1, self.timer / self.FADE_TIME))
+
+        background = self.backgrounds[i]
+        background.set_alpha(fade)
+
+        self.screen.blit(background, (0, 0))
+
+        rect = page.get_rect(
+            center=(
+                self.width // 2,
+                self.height // 2
             )
         )
+
+        shadow = pygame.Surface(
+            (
+                rect.width + self.SHADOW * 2,
+                rect.height + self.SHADOW * 2
+            ),
+            pygame.SRCALPHA
+        )
+
+        for step in range(self.SHADOW):
+
+            pygame.draw.rect(
+                shadow,
+                (0, 0, 0, 12),
+                shadow.get_rect().inflate(-step * 2, -step * 2),
+                border_radius=10
+            )
+
+        self.screen.blit(
+            shadow,
+            shadow.get_rect(center=rect.center).move(0, 4)
+        )
+
+        page.set_alpha(fade)
+
+        self.screen.blit(page, rect)
 
         hint = self.font.render(
             "ENTER: continuar  •  ESC: saltar",
