@@ -2,21 +2,21 @@
     "player_name": "ujuju",
     "mode": "normal",
     "created_at": "2026-10-10T22:55:15",
-    "last_played": "2026-10-14T23:41:56",
+    "last_played": "2026-10-19T08:57:42",
     "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
     "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
-    "x": 123,
-    "y": 1394,
+    "x": 957,
+    "y": 159,
     "coins": 56160,
     "gems": 1,
     "has_match": true,
     "light": "antorcha",
-    "vida": 0.4060766666666817,
+    "vida": 1.0,
     "escudo": 0.5,
     "inventory": [
         [
             "cera",
-            15
+            13
         ],
         [
             "polvora",
@@ -29,33 +29,33 @@
         null
     ],
     "collected": [
-        "madera_08#0",
-        "madera_06#0",
-        "moneda_pasillo_izq#0",
-        "moneda_pasillo_cabana#0",
-        "madera_05#0",
-        "moneda5_pasillo_cofres#0",
+        "madera_10#0",
+        "madera_04#0",
         "moneda_pasillo_der#0",
+        "moneda_pasillo_tienda#1",
+        "madera_03#0",
         "aceite_02#0",
+        "madera_09#0",
+        "madera_01#0",
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_izq#0",
         "cera_03#0",
         "moneda_sala_central#1",
-        "moneda_sala_central#0",
-        "madera_04#0",
-        "madera_12#0",
-        "madera_11#0",
-        "madera_09#0",
-        "madera_10#0",
         "aceite_01#0",
-        "madera_07#0",
-        "aceite_03#0",
-        "cera_01#0",
-        "madera_03#0",
-        "cera_02#0",
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_cofres#0",
+        "madera_05#0",
+        "moneda_sala_central#0",
         "moneda_pasillo_cabana#1",
-        "madera_01#0"
+        "madera_06#0",
+        "cera_02#0",
+        "moneda5_pasillo_cofres#0",
+        "madera_07#0",
+        "madera_08#0",
+        "aceite_03#0",
+        "madera_12#0",
+        "moneda_pasillo_tienda#0",
+        "madera_11#0",
+        "cera_01#0",
+        "moneda_pasillo_cofres#0"
     ],
     "item_seed": 162672674,
     "arena_wave": 1,
@@ -68,6 +68,7 @@
         "hub_arriba",
         "hub_derecha",
         "hub_izquierda",
+        "puerta_final",
         "sala_der",
         "sala_izq",
         "sup_central_abajo",
@@ -86,7 +87,7 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1803,
+        "items_used": 1805,
         "chests_opened": 0,
         "purchases": 105,
         "fireballs": 3383,
@@ -101,8 +102,8 @@
     "placeables": [
         {
             "t": "bolsa",
-            "x": 981,
-            "y": 486,
+            "x": 916,
+            "y": 165,
             "slots": [
                 null,
                 null,
@@ -180,9 +181,6 @@
             "fuel": 0.0
         }
     ],
-    "final_door_slots": {
-        "clara": true,
-        "oscura": true
-    },
-    "current_map": "mapa2"
+    "final_door_slots": {},
+    "current_map": "mapa1"
 }

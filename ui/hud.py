@@ -13,6 +13,11 @@ HUD_DIR = (
 )
 
 
+GIVEUP_IMAGE = "btn_rendirse.png"
+GIVEUP_IMAGE_HOVER = "btn_rendirse_hover.png"
+GIVEUP_GAP = 50
+
+
 def format_coins(amount):
 
     amount = int(amount)
@@ -189,6 +194,25 @@ class Hud:
 
         self.countdown_font = pygame.font.Font(None, 90)
 
+        giveup = self._load_optional(GIVEUP_IMAGE)
+        giveup_hover = self._load_optional(GIVEUP_IMAGE_HOVER)
+
+        if giveup is None:
+            giveup = self._fallback_giveup(False)
+            giveup_hover = self._fallback_giveup(True)
+
+        elif giveup_hover is None:
+            giveup_hover = giveup.copy()
+            giveup_hover.fill(
+                (45, 45, 45, 0),
+                special_flags=pygame.BLEND_RGB_ADD
+            )
+
+        self.giveup_img = giveup
+        self.giveup_img_hover = giveup_hover
+
+        self.giveup_rect = None
+
         self.tip_title_font = pygame.font.Font(None, 26)
         self.tip_font = pygame.font.Font(None, 22)
         self.msg_font = pygame.font.Font(None, 28)
@@ -237,6 +261,35 @@ class Hud:
     def equip(self, name):
         self.equipped = name
 
+
+    @staticmethod
+    def _load_optional(name):
+
+        path = HUD_DIR / name
+
+        if not path.exists():
+            return None
+
+        return pygame.image.load(str(path)).convert_alpha()
+
+    @staticmethod
+    def _fallback_giveup(hover):
+
+        surf = pygame.Surface((180, 64), pygame.SRCALPHA)
+
+        color = (150, 60, 50) if hover else (110, 40, 36)
+
+        pygame.draw.rect(surf, color, surf.get_rect(), border_radius=14)
+        pygame.draw.rect(
+            surf, (235, 225, 215), surf.get_rect(), 3, border_radius=14
+        )
+
+        font = pygame.font.Font(None, 34)
+        label = font.render("Terminar", True, (255, 255, 255))
+
+        surf.blit(label, label.get_rect(center=surf.get_rect().center))
+
+        return surf
 
     def slot_rect(self, i):
 
@@ -534,6 +587,24 @@ class Hud:
             )
 
             screen.blit(number, number_rect)
+
+            self.giveup_rect = self.giveup_img.get_rect(
+                midleft=(
+                    screen.get_width() // 2 + GIVEUP_GAP,
+                    number_rect.centery
+                )
+            )
+
+            hovered = self.giveup_rect.collidepoint(pygame.mouse.get_pos())
+
+            screen.blit(
+                self.giveup_img_hover if hovered else self.giveup_img,
+                self.giveup_rect
+            )
+
+        else:
+
+            self.giveup_rect = None
 
         if attack_mode in self.attack_panels:
 

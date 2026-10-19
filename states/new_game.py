@@ -84,7 +84,7 @@ FLASH_HOLD = 1.5
 FLASH_FADE = 2.5
 FLASH_TOTAL = FLASH_HOLD + FLASH_FADE
 
-DARKNESS_ALPHA = 248
+DARKNESS_ALPHA = 225
 
 DOOR_GLOW_RADIUS = 55
 
@@ -2339,6 +2339,24 @@ class NewGame:
             None
         )
 
+        giveup_button = getattr(self.hud, "giveup_rect", None)
+
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and self.state == "playing"
+            and self.no_light_timer is not None
+            and giveup_button is not None
+            and giveup_button.collidepoint(event.pos)
+        ):
+
+            self.no_light_timer = 0.0
+            self.state = "dying"
+            self.fade_alpha = 255
+            self.flash_t = 0.0
+
+            return None
+
         if (
             event.type == pygame.MOUSEBUTTONDOWN
             and event.button == 1
@@ -2347,6 +2365,26 @@ class NewGame:
         ):
 
             self.pause_view = "pause"
+
+            return None
+
+
+        if (
+            event.type == pygame.MOUSEWHEEL
+            and self.state == "playing"
+            and event.y != 0
+        ):
+
+            order = list(range(self.hud.SLOTS)) + ["equipped"]
+
+            try:
+                i = order.index(self.selected_slot)
+            except ValueError:
+                i = 0
+
+            step = -1 if event.y > 0 else 1
+
+            self.selected_slot = order[(i + step) % len(order)]
 
             return None
 

@@ -18,47 +18,14 @@ FRAME_CROP = None
 TUTORIAL_PAGES = [
 
     "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
-    "MOVERTE: usá W A S D. Buscá en esta cabaña objetos para alimentar tu llama antes de que se apague.",
-    "ATACAR: click izquierdo (o ESPACIO) para pegar con tu luz. Mantené el click para seguir pegando. Cada golpe le baja vida a tu luz.",
-    "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Con Q soltás lo que tengas seleccionado.",
-    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4). La tecla 5 elige el casillero de tu luz equipada, que está aparte.",
-    "USAR OBJETOS: elegí el casillero y apretá F o click derecho. Mantené click izquierdo sobre un casillero para ver qué hace el objeto.",
-    "MENÚ: ESC o el botón de menú abren la pausa: ajustes, enciclopedia de enemigos y volver al menú. Al volver al menú se guarda tu partida.",
-
-    "OBJETIVOS: arriba a la derecha ves tu objetivo actual. Apretá TAB o el botón con el signo menos para minimizarlo, y TAB o la pestañita para abrirlo.",
-
-    "LUCES: el fósforo dura 30 segundos, la vela 60 y la antorcha 120. Al agarrar una se equipa sola en el casillero de la luz. Solo podés llevar una.",
-    "VELA Y ANTORCHA: alumbran más y cada tanto entran en FURIA: pegan rapidísimo. Son las únicas que rompen las puertas grises. Cada TERCER golpe seguido es más fuerte: la luz brilla de otro color.",
-    "ANTORCHA: apretá G para cambiar entre golpe común y bola de fuego, que sale disparada hacia el mouse. Solo la antorcha lanza fuego.",
-
-    "RECUPERAR LUZ: la madera suma 25% a tu luz, la resina la recupera de a poco y el aceite la deja en 75% y te da velocidad un rato.",
-    "ESCUDO: el hongo azul te da 25% de escudo. El escudo se gasta antes que tu vida y no se consume con el tiempo.",
-    "MÁS OBJETOS: la cera hace que tu luz dure casi 3 veces más, la pólvora hace que tu luz queme a los enemigos y la esfera de vidrio amplía tu luz.",
-    "REPELENTE: durante casi 2 minutos tu luz espanta a los mosquitos y los que tenés pegados se sueltan.",
-    "IMÁN: una vez usado, atrae solo las monedas, gemas e items cercanos durante 7 minutos. Apretá O para prenderlo o apagarlo (apagado no gasta tiempo).",
-    "FARO Y FOGATA: elegí cerca de ellos (en la hotbar) la CERA para la linterna antigua o la MADERA para la fogata y apretá F o click derecho. Mantené click izquierdo sobre ellos para ver cuánta luz les queda y cómo alimentarlos.",
-
-    "PUERTAS: pegales con la luz para romperlas (cada golpe gasta un poco de luz). Las marrones aguantan 2 golpes y las verdes 6. Una puerta rota no vuelve.",
-    "PUERTAS GRISES: solo las rompen la vela y la antorcha. Las violetas (azules) solo las rompe la antorcha.",
-    "COFRES: pegale a un cofre con la luz para abrirlo. Sale un minijuego: frená el marcador dentro de la zona con click, ESPACIO o E. Hay que acertar 3 veces.",
-    "COFRES: si fallás, el minijuego termina; ESC lo cancela. Después tardan 3 minutos en recargarse. La ganzúa abre un cofre cercano sin minijuego.",
-    "MONEDAS Y GEMAS: las monedas amarillas valen 1, las azules 5 y las rojas 10, y se juntan solas al acercarte. Las gemas son el premio por completar una sala.",
-    "TIENDA: el vendedor está en la sala de arriba, en el centro. Acercate y apretá F para comprar luces y objetos con tus monedas.",
-
-    "SALAS DE COMBATE: las dos salas grandes (izquierda y derecha) tienen oleadas de enemigos. Al entrar aparece un menú: Salir, Jugar con escape o Jugar sin escape.",
-    "CON ESCAPE podés irte caminando de la sala (cancela la oleada). SIN ESCAPE la entrada se bloquea mientras peleás, pero el premio vale el doble.",
-    "OLEADAS: al derrotar al último enemigo aparece un cofre que explota y tira monedas. Juntalas y vuelve el menú para la siguiente oleada.",
-    "ATENCIÓN: si tu luz se apaga peleando en una sala de combate, perdés de verdad, aunque hayas elegido jugar con escape.",
-    "SALAS COMPLETAS: la sala de la derecha tiene 10 oleadas y la de la izquierda 2, con el Guardián al final. Al completarla se cierra para siempre.",
-    "ENEMIGOS: las piñas chocan y rebotan, los troncos disparan proyectiles, los mosquitos se pegan, los hongun explotan, los guardianes pelean con armas y los golems te agarran.",
-    "DESTELLOS: pasean dando un poco de luz. Si te ven, parpadean en blanco y salen corriendo: al chocarte explotan y te dejan la pantalla en blanco unos 5 segundos. Matalos a golpes antes de que te alcancen y no explotan.",
-    "GOLEMS: enormes y muy lentos. Si te ven van directo hacia vos sin parar. Si te tocan una sola vez te agarran y te aprietan: te sacan todo el escudo y, si no tenés escudo, toda la vida de tu luz. Mantené la distancia y pegales de a poco.",
-    "MOSQUITOS: si tu luz los toca van directo hacia vos y se pegan un minuto chupándote vida. Después se sueltan y vuelven a intentarlo.",
-    "ENCICLOPEDIA: en el menú de pausa. Cada enemigo se descubre cuando te lo encontrás en una oleada, y se empieza de cero en cada partida.",
-    "SALA IZQUIERDA: los bloques de la cruz de piedra abren y cierran los pasos solos. Si el hueco parpadea en rojo, salí rápido: te aplastan y te sacan mucha luz.",
-
-    "PERDER: en modo Normal perdés todos tus objetos y te quedás con un fósforo en la cabaña. En modo Hardcore se borra toda la partida.",
-    "AYUDA: podés volver a ver estas instrucciones cuando quieras apretando F1. ¡Mucha suerte y que tu luz nunca se apague!",
+    "MOVERTE: W A S D. ATACAR: click izquierdo o ESPACIO. Cada golpe gasta un poco de luz, así que no pegues de más.",
+    "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Las luces (fósforo, vela, antorcha) se equipan solas, y solo podés llevar una. Con Q soltás lo seleccionado.",
+    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
+    "USAR OBJETOS: elegí el casillero (con 1-4 o la ruedita) y apretá F o click derecho. Mantené click izquierdo sobre un casillero para ver qué hace.",
+    "RECUPERAR LUZ: la madera suma 25%, la resina recupera de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
+    "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
+    "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
+    "AYUDA: ESC abre la pausa y F1 vuelve a mostrar este tutorial. ¡Mucha suerte y que tu luz nunca se apague!",
 ]
 
 TEXT_COLOR = (25, 60, 150)

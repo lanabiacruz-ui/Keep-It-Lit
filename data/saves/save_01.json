@@ -1,58 +1,64 @@
 {
-    "player_name": "bruh",
+    "player_name": "o",
     "mode": "normal",
-    "created_at": "2026-10-14T08:42:59",
-    "last_played": "2026-10-14T09:07:35",
-    "password_salt": "341bbcd99793617827c3f36efb31730e",
-    "password_hash": "d827de9b6751c072b46decd3b7caeee8d0a462581c8db07926bcbe729c6a0d3b",
-    "x": 929,
-    "y": 144,
-    "coins": 99850,
+    "created_at": "2026-10-19T08:51:06",
+    "last_played": "2026-10-19T08:55:52",
+    "password_salt": "3f58bd0dd468ea7aa2541d274ed16a6b",
+    "password_hash": "1c6a24c8d47e3981d45bb38a8949fb471fd5c81f55632d95ce7d34a53bd42c5b",
+    "x": 1330,
+    "y": 643,
+    "coins": 119,
     "gems": 0,
     "gems_green": 0,
     "has_match": true,
-    "light": "fosforo",
-    "vida": 1.0,
-    "escudo": 0.75,
+    "light": "vela",
+    "vida": 0.6575166666666755,
+    "escudo": 0.0,
     "inventory": [
         [
-            "esfera",
-            2
-        ],
-        [
-            "hongo_azul",
+            "aceite",
             3
         ],
+        null,
         [
-            "aceite",
-            8
+            "cera",
+            1
         ],
         [
-            "madera",
-            2
+            "resina",
+            4
         ]
     ],
     "collected": [
-        "cera_02#0",
+        "madera_10#0",
+        "moneda_pasillo_tienda#1",
+        "aceite_03#0",
+        "moneda_sala_cofres#0",
+        "moneda_sala_central#1",
+        "aceite_01#0",
+        "madera_04#0",
         "moneda_sala_central#0",
+        "moneda_pasillo_tienda#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_der#0",
+        "madera_06#0",
+        "cera_01#0",
+        "moneda_pasillo_cofres#0",
+        "madera_09#0",
+        "madera_08#0",
+        "moneda_pasillo_cabana#1",
+        "madera_02#0",
+        "cera_02#0",
+        "madera_07#0",
         "madera_03#0",
         "madera_01#0",
-        "madera_08#0",
-        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#0",
-        "madera_10#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_cofres#0",
-        "moneda5_pasillo_cofres#0",
-        "aceite_02#0",
-        "moneda_pasillo_der#0",
         "madera_05#0",
-        "moneda_pasillo_tienda#0",
-        "madera_02#0",
-        "madera_04#0"
+        "moneda5_sala_cofres#0",
+        "aceite_02#0"
     ],
-    "item_seed": 39231565,
-    "arena_wave": 1,
+    "item_seed": 799844902,
+    "arena_wave": 2,
     "arena_completed": false,
     "arena_left_wave": 1,
     "arena_left_completed": false,
@@ -61,30 +67,42 @@
         "hub_abajo",
         "hub_arriba",
         "hub_derecha",
+        "sala_der",
         "sup_central_abajo",
         "sup_izq_central",
         "sup_izq_sala"
     ],
+    "final_door_slots": {
+        "clara": false,
+        "oscura": false
+    },
+    "current_map": "mapa1",
     "chests": {
         "cofre_02": {
-            "usos": 13
+            "usos": 4
+        },
+        "cofre_04": {
+            "usos": 14
         }
     },
     "placeables": [],
-    "enemies_seen": [],
+    "enemies_seen": [
+        "pino"
+    ],
     "stats": {
-        "items_used": 16,
-        "chests_opened": 1,
-        "purchases": 3,
+        "items_used": 24,
+        "chests_opened": 11,
+        "purchases": 1,
         "fireballs": 0,
-        "kills": 0
+        "kills": 1
     },
     "zones_seen": [
         "central",
         "cofres",
+        "combate",
         "inicio",
         "tienda"
     ],
-    "objective_index": 9,
+    "objective_index": 13,
     "objectives_minimized": false
 }

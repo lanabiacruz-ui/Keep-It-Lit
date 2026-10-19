@@ -3,7 +3,7 @@ import pygame
 
 class PlayerLight:
 
-    def __init__(self, screen_size, darkness_alpha=200):
+    def __init__(self, screen_size, darkness_alpha=225):
         self.screen_size = tuple(screen_size)
         self.darkness_alpha = int(darkness_alpha)
 

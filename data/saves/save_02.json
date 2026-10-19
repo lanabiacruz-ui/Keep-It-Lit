@@ -1,0 +1,96 @@
+{
+    "player_name": "ad",
+    "mode": "normal",
+    "created_at": "2026-10-19T08:08:26",
+    "last_played": "2026-10-19T08:16:00",
+    "password_salt": "bc8bd069369d6d15bf88baf6e52e1a55",
+    "password_hash": "0a0adf4ad79bbd12785fa4853ba14d0a1ebee68ea97f4844005f1d5ed6b9ba93",
+    "x": 376,
+    "y": 201,
+    "coins": 15,
+    "gems": 0,
+    "gems_green": 0,
+    "has_match": true,
+    "light": "fosforo",
+    "vida": 0.46314999999994716,
+    "escudo": 0.0,
+    "inventory": [
+        [
+            "madera",
+            1
+        ],
+        null,
+        null,
+        null
+    ],
+    "collected": [
+        "moneda_pasillo_cabana#0",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_der#0",
+        "moneda_sala_central#1",
+        "madera_01#0",
+        "madera_02#0",
+        "moneda_sala_central#0",
+        "madera_11#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cofres#0",
+        "madera_03#0",
+        "moneda_pasillo_cabana#1",
+        "madera_10#0",
+        "madera_07#0",
+        "cera_03#0",
+        "cera_01#0",
+        "aceite_01#0",
+        "moneda_pasillo_izq#0",
+        "madera_12#0",
+        "cera_02#0",
+        "madera_08#0",
+        "moneda_pasillo_tienda#1",
+        "moneda5_pasillo_cofres#0",
+        "madera_05#0",
+        "aceite_02#0",
+        "madera_04#0"
+    ],
+    "item_seed": 149418888,
+    "arena_wave": 1,
+    "arena_completed": false,
+    "arena_left_wave": 1,
+    "arena_left_completed": false,
+    "broken_doors": [
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "hub_derecha",
+        "hub_izquierda",
+        "sup_central_abajo",
+        "sup_izq_central",
+        "sup_izq_sala"
+    ],
+    "final_door_slots": {
+        "clara": false,
+        "oscura": false
+    },
+    "current_map": "mapa1",
+    "chests": {
+        "cofre_03": {
+            "usos": 13
+        }
+    },
+    "placeables": [],
+    "enemies_seen": [],
+    "stats": {
+        "items_used": 9,
+        "chests_opened": 1,
+        "purchases": 0,
+        "fireballs": 0,
+        "kills": 0
+    },
+    "zones_seen": [
+        "central",
+        "cofres",
+        "inicio",
+        "tienda"
+    ],
+    "objective_index": 7,
+    "objectives_minimized": false
+}
