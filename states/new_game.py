@@ -36,6 +36,7 @@ from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker
 from world.shop import Shopkeeper, load_catalog, price_table
 from world.placeables import PlaceableManager
+from world.dungeon_map import DungeonMapView
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
@@ -488,6 +489,9 @@ class NewGame:
 
         self.magnet_mode = False
         self._magnet_imgs = None
+
+        self.dungeon_map = DungeonMapView()
+        self._map_hold = False
 
         self.sphere_timer = 0.0
         self.sphere_total = 1.0
@@ -1157,6 +1161,13 @@ class NewGame:
         item_id = self.hud.items[slot]
 
         if item_id is None:
+            return
+
+        if item_id == "mapa":
+
+            self.show_message(
+                "Mantené click derecho para ver el mapa"
+            )
             return
 
         if self.placeables.try_use(self, slot):
@@ -2400,6 +2411,12 @@ class NewGame:
             if slot is not None:
                 self.selected_slot = slot
 
+            if self._selected_item() == "mapa":
+
+                self._map_hold = True
+
+                return None
+
             if self.selected_slot != "equipped":
 
                 self.use_item(
@@ -3078,6 +3095,42 @@ class NewGame:
         return None
 
 
+    def _selected_item(self):
+
+        if not isinstance(self.selected_slot, int):
+            return None
+
+        if not 0 <= self.selected_slot < self.hud.SLOTS:
+            return None
+
+        return self.hud.items[self.selected_slot]
+
+    def _map_held(self):
+
+        if not self._map_hold:
+            return False
+
+        if not pygame.mouse.get_pressed()[2]:
+
+            self._map_hold = False
+
+            return False
+
+        if (
+            self.state != "playing"
+            or self.pause_view is not None
+            or self.shop is not None
+            or self.minigame is not None
+            or self.tutorial is not None
+            or self._selected_item() != "mapa"
+        ):
+
+            self._map_hold = False
+
+            return False
+
+        return True
+
     def _magnet_available(self):
 
         return self.magnet_timer > 0 or not MAGNET_NEEDS_ITEM
@@ -3562,6 +3615,13 @@ class NewGame:
             and self.shopkeeper.can_talk(self.player)
         ):
             self.shopkeeper.draw_prompt(self.screen, self.camera)
+
+        self.dungeon_map.draw(
+            self.screen,
+            self.collision_map.walkable,
+            self._map_held(),
+            self._font(28),
+        )
 
         self.hud.selected = (
             self.selected_slot

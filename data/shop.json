@@ -59,6 +59,10 @@
         {
           "id": "esfera",
           "precio": 13
+        },
+        {
+          "id": "mapa",
+          "precio": 65
         }
       ]
     },

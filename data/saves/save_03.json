@@ -2,12 +2,12 @@
     "player_name": "ujuju",
     "mode": "normal",
     "created_at": "2026-10-10T22:55:15",
-    "last_played": "2026-10-19T08:57:42",
+    "last_played": "2026-10-19T10:32:39",
     "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
     "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
-    "x": 957,
-    "y": 159,
-    "coins": 56160,
+    "x": 934,
+    "y": 161,
+    "coins": 56095,
     "gems": 1,
     "has_match": true,
     "light": "antorcha",
@@ -16,7 +16,7 @@
     "inventory": [
         [
             "cera",
-            13
+            12
         ],
         [
             "polvora",
@@ -24,38 +24,41 @@
         ],
         [
             "repelente",
-            8
+            7
         ],
-        null
+        [
+            "mapa",
+            1
+        ]
     ],
     "collected": [
-        "madera_10#0",
-        "madera_04#0",
-        "moneda_pasillo_der#0",
-        "moneda_pasillo_tienda#1",
-        "madera_03#0",
-        "aceite_02#0",
-        "madera_09#0",
-        "madera_01#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_izq#0",
-        "cera_03#0",
-        "moneda_sala_central#1",
-        "aceite_01#0",
-        "madera_05#0",
-        "moneda_sala_central#0",
-        "moneda_pasillo_cabana#1",
-        "madera_06#0",
-        "cera_02#0",
-        "moneda5_pasillo_cofres#0",
         "madera_07#0",
-        "madera_08#0",
-        "aceite_03#0",
-        "madera_12#0",
+        "moneda_pasillo_cofres#0",
+        "aceite_02#0",
+        "madera_04#0",
+        "madera_03#0",
+        "moneda_pasillo_der#0",
         "moneda_pasillo_tienda#0",
-        "madera_11#0",
+        "aceite_03#0",
+        "cera_02#0",
+        "moneda_pasillo_cabana#0",
+        "madera_09#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_tienda#1",
+        "madera_10#0",
+        "moneda_sala_central#0",
+        "madera_12#0",
+        "madera_05#0",
+        "madera_01#0",
+        "moneda5_pasillo_cofres#0",
+        "aceite_01#0",
+        "moneda_pasillo_izq#0",
         "cera_01#0",
-        "moneda_pasillo_cofres#0"
+        "madera_08#0",
+        "madera_11#0",
+        "cera_03#0",
+        "madera_06#0",
+        "moneda_sala_central#1"
     ],
     "item_seed": 162672674,
     "arena_wave": 1,
@@ -87,9 +90,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1805,
+        "items_used": 1807,
         "chests_opened": 0,
-        "purchases": 105,
+        "purchases": 106,
         "fireballs": 3383,
         "kills": 1682
     },
