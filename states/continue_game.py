@@ -14,14 +14,26 @@ class ContinueGame:
 
     CLOSE_BOX = (1179, 219, 1204, 246)
 
-    SLOT_BOXES = [
-        (470, 292, 700, 501),
-        (730, 292, 960, 501),
-        (990, 292, 1220, 501),
-    ]
-
     SLOT_IMG_W = 220
     SLOT_IMG_H = 200
+
+    GRID_COLS = 4
+    GRID_ROWS = 2
+    GRID_TOP = 270
+    GRID_CELL_H = 114
+    GRID_GAP_X = 50
+    GRID_GAP_Y = 8
+    GRID_CENTER_X = 846
+
+    SLOT_BOXES = []
+
+    for _row in range(GRID_ROWS):
+        for _col in range(GRID_COLS):
+            _w = round(GRID_CELL_H * SLOT_IMG_W / SLOT_IMG_H)
+            _total = GRID_COLS * _w + (GRID_COLS - 1) * GRID_GAP_X
+            _x = GRID_CENTER_X - _total // 2 + _col * (_w + GRID_GAP_X)
+            _y = GRID_TOP + _row * (GRID_CELL_H + GRID_GAP_Y)
+            SLOT_BOXES.append((_x, _y, _x + _w, _y + GRID_CELL_H))
 
     MODE_LOCAL = (51, 31, 172, 48)
 
@@ -29,6 +41,8 @@ class ContinueGame:
     DATE_LOCAL = (75, 80, 138, 96)
     PLAY_LOCAL = (48, 100, 168, 138)
     DELETE_LOCAL = (53, 140, 162, 174)
+
+    ZOOM = 1.4
 
     CONFIRM_IMG_W = 420
     CONFIRM_IMG_H = 200
@@ -94,10 +108,40 @@ class ContinueGame:
                 pygame.transform.smoothscale(self.slot_empty_img, size)
             )
 
-        self.name_font = pygame.font.Font(None, 24)
-        self.date_font = pygame.font.Font(None, 18)
-        self.mode_font = pygame.font.Font(None, 20)
-        self.small_font = pygame.font.Font(None, 24)
+        slot_scale = self.slot_rects[0].width / self.SLOT_IMG_W
+
+        self.name_size = max(10, round(26 * slot_scale))
+        self.date_font = pygame.font.Font(
+            None, max(9, round(20 * slot_scale))
+        )
+        self.mode_font = pygame.font.Font(
+            None, max(9, round(22 * slot_scale))
+        )
+        self.name_fonts = {}
+
+        base = self.slot_rects[0]
+
+        self.zoom_size = (
+            round(base.width * self.ZOOM),
+            round(base.height * self.ZOOM)
+        )
+
+        self.zoom_img = pygame.transform.smoothscale(
+            self.slot_hover_img,
+            self.zoom_size
+        )
+
+        self.zoom_name_size = round(self.name_size * self.ZOOM)
+
+        self.zoom_date_font = pygame.font.Font(
+            None, round(max(9, round(20 * slot_scale)) * self.ZOOM)
+        )
+
+        self.zoom_mode_font = pygame.font.Font(
+            None, round(max(9, round(22 * slot_scale)) * self.ZOOM)
+        )
+
+        self.hover = None
 
         confirm_w = round(self.width * 0.32)
         confirm_h = round(
@@ -183,6 +227,75 @@ class ContinueGame:
             self.SLOT_IMG_H,
             self.slot_rects[slot_index]
         )
+
+    def _zoom_rect(self, index):
+
+        rect = pygame.Rect(0, 0, *self.zoom_size)
+
+        rect.center = self.slot_rects[index].center
+
+        rect.clamp_ip(pygame.Rect(0, 0, self.width, self.height))
+
+        return rect
+
+    def _zoom_button(self, index, local_box):
+
+        return self._scale_local(
+            local_box,
+            self.SLOT_IMG_W,
+            self.SLOT_IMG_H,
+            self._zoom_rect(index)
+        )
+
+    def _hover_at(self, pos):
+
+        if (
+            self.hover is not None
+            and not self.slots[self.hover]["empty"]
+            and self._zoom_rect(self.hover).collidepoint(pos)
+        ):
+            return
+
+        self.hover = None
+
+        for i, slot in enumerate(self.slots):
+
+            if slot["empty"]:
+                continue
+
+            if self.slot_rects[i].collidepoint(pos):
+
+                self.hover = i
+
+                return
+
+    def _name_font(self, size):
+
+        if size not in self.name_fonts:
+            self.name_fonts[size] = pygame.font.Font(None, size)
+
+        return self.name_fonts[size]
+
+    def _fit_name(self, text, max_width, size=None):
+
+        if size is None:
+            size = self.name_size
+
+        while size > 9:
+
+            font = self._name_font(size)
+
+            if font.size(text)[0] <= max_width:
+                return font.render(text, True, (25, 35, 55))
+
+            size -= 1
+
+        font = self._name_font(9)
+
+        while len(text) > 1 and font.size(text + "...")[0] > max_width:
+            text = text[:-1]
+
+        return font.render(text + "...", True, (25, 35, 55))
 
     def refresh(self):
 
@@ -271,13 +384,14 @@ class ContinueGame:
 
                 return "back"
 
-            for i, slot in enumerate(self.slots):
+            self._hover_at(event.pos)
 
-                if slot["empty"]:
-                    continue
+            if self.hover is not None:
 
-                play_rect = self._button_rect(i, self.PLAY_LOCAL)
-                delete_rect = self._button_rect(i, self.DELETE_LOCAL)
+                i = self.hover
+
+                play_rect = self._zoom_button(i, self.PLAY_LOCAL)
+                delete_rect = self._zoom_button(i, self.DELETE_LOCAL)
 
                 if play_rect.collidepoint(event.pos):
 
@@ -330,6 +444,11 @@ class ContinueGame:
 
         mouse_pos = pygame.mouse.get_pos()
 
+        if self.pending_delete is None:
+            self._hover_at(mouse_pos)
+        else:
+            self.hover = None
+
         for i, slot in enumerate(self.slots):
 
             rect = self.slot_rects[i]
@@ -338,7 +457,7 @@ class ContinueGame:
 
                 image = self.slot_empty_img_scaled[i]
 
-            elif rect.collidepoint(mouse_pos):
+            elif i == self.hover:
 
                 image = self.slot_hover_img_scaled[i]
 
@@ -349,16 +468,6 @@ class ContinueGame:
             self.screen.blit(image, rect)
 
             if slot["empty"]:
-
-                label = self.name_font.render(
-                    "Vacio",
-                    True,
-                    (235, 242, 255)
-                )
-
-                label_rect = label.get_rect(center=rect.center)
-
-                self.screen.blit(label, label_rect)
 
                 continue
 
@@ -379,10 +488,9 @@ class ContinueGame:
 
             name_rect = self._button_rect(i, self.NAME_LOCAL)
 
-            name_surface = self.name_font.render(
+            name_surface = self._fit_name(
                 slot["player_name"] or "Sin nombre",
-                True,
-                (25, 35, 55)
+                name_rect.width
             )
 
             name_pos = name_surface.get_rect(center=name_rect.center)
@@ -403,26 +511,63 @@ class ContinueGame:
 
             self.screen.blit(date_surface, date_pos)
 
-        controls = self.small_font.render(
-            "Click en Jugar para continuar  -  ESC volver",
-            True,
-            (235, 242, 255)
-        )
-
-        controls_rect = controls.get_rect(
-            bottomright=(
-                self.width - 18,
-                self.height - 15
-            )
-        )
-
-        self.screen.blit(controls, controls_rect)
+        if self.hover is not None:
+            self._draw_zoom(self.hover)
 
         if self.pending_delete is not None:
 
             self.screen.blit(self.overlay, (0, 0))
 
             self.screen.blit(self.confirm_img_scaled, self.confirm_rect)
+
+    def _draw_zoom(self, index):
+
+        slot = self.slots[index]
+
+        zoom = self._zoom_rect(index)
+
+        self.screen.blit(self.zoom_img, zoom)
+
+        hardcore = slot.get("mode") == MODE_HARDCORE
+
+        mode_rect = self._zoom_button(index, self.MODE_LOCAL)
+
+        mode_surface = self.zoom_mode_font.render(
+            "HARDCORE" if hardcore else "NORMAL",
+            True,
+            (170, 25, 25) if hardcore else (25, 35, 55)
+        )
+
+        self.screen.blit(
+            mode_surface,
+            mode_surface.get_rect(center=mode_rect.center)
+        )
+
+        name_rect = self._zoom_button(index, self.NAME_LOCAL)
+
+        name_surface = self._fit_name(
+            slot["player_name"] or "Sin nombre",
+            name_rect.width,
+            self.zoom_name_size
+        )
+
+        self.screen.blit(
+            name_surface,
+            name_surface.get_rect(center=name_rect.center)
+        )
+
+        date_rect = self._zoom_button(index, self.DATE_LOCAL)
+
+        date_surface = self.zoom_date_font.render(
+            self._format_date(slot["last_played"]),
+            True,
+            (45, 55, 75)
+        )
+
+        self.screen.blit(
+            date_surface,
+            date_surface.get_rect(center=date_rect.center)
+        )
 
     def _format_date(self, iso_text):
 

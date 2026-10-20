@@ -12,7 +12,7 @@ SAVES_DIR = (
     / "saves"
 )
 
-SLOTS = ["save_01.json", "save_02.json", "save_03.json"]
+SLOTS = [f"save_{i:02d}.json" for i in range(1, 9)]
 
 
 MODE_NORMAL = "normal"

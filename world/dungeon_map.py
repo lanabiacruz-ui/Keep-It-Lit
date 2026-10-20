@@ -1,4 +1,5 @@
 import math
+from pathlib import Path
 
 import pygame
 
@@ -8,10 +9,38 @@ SHADOW_COLOR = (14, 10, 6)
 
 DIM_ALPHA = 165
 
-FILL_RATIO = 0.80
+FILL_RATIO = 0.50
 
 FADE_IN_SPEED = 7.0
 FADE_OUT_SPEED = 12.0
+
+MAP_IMAGES = {
+    "mapa1": "mapa_contorno.png",
+    "mapa2": "mapa2_contorno.png",
+}
+
+BG_NAMES = (
+    "fondo_mapa.png",
+    "mapa_fondo.png",
+    "mapafondo.png",
+    "fondomapa.png",
+)
+
+BG_DIRS = (
+    Path(__file__).resolve().parent.parent / "assets" / "maps" / "hud",
+    Path(__file__).resolve().parent.parent / "assets" / "maps" / "ui",
+    Path(__file__).resolve().parent.parent / "assets" / "maps" / "region_01",
+)
+
+BG_RATIO = 0.62
+INNER_RATIO = 0.82
+
+MAP_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "maps"
+    / "region_01"
+)
 
 
 def _erode(mask, size, t):
@@ -103,6 +132,128 @@ class DungeonMapView:
         self._alpha = 0.0
         self._last_ms = None
 
+        self._images = {}
+        self._bg = None
+        self._bg_loaded = False
+        self._bg_scaled = None
+        self._bg_key = None
+        self._scaled_key = None
+        self._scaled = None
+        self._frame = None
+
+    def _ensure_bg(self, screen_size):
+
+        if not self._bg_loaded:
+
+            self._bg_loaded = True
+
+            for folder in BG_DIRS:
+
+                for name in BG_NAMES:
+
+                    path = folder / name
+
+                    if not path.exists():
+                        continue
+
+                    try:
+                        self._bg = pygame.image.load(
+                            str(path)
+                        ).convert_alpha()
+                    except pygame.error:
+                        self._bg = None
+
+                    if self._bg is not None:
+                        break
+
+                if self._bg is not None:
+                    break
+
+        if self._bg is None:
+            return None
+
+        key = tuple(screen_size)
+
+        if key == self._bg_key:
+            return self._bg_scaled
+
+        sw, sh = screen_size
+
+        scale = min(
+            sw * BG_RATIO / self._bg.get_width(),
+            sh * BG_RATIO / self._bg.get_height(),
+        )
+
+        size = (
+            max(1, int(self._bg.get_width() * scale)),
+            max(1, int(self._bg.get_height() * scale)),
+        )
+
+        self._bg_scaled = pygame.transform.smoothscale(self._bg, size)
+        self._bg_key = key
+
+        return self._bg_scaled
+
+    def _load_image(self, map_name):
+
+        if map_name in self._images:
+            return self._images[map_name]
+
+        image = None
+
+        file_name = MAP_IMAGES.get(map_name)
+
+        if file_name:
+
+            try:
+                image = pygame.image.load(
+                    str(MAP_DIR / file_name)
+                ).convert_alpha()
+            except (pygame.error, FileNotFoundError):
+                image = None
+
+        self._images[map_name] = image
+
+        return image
+
+    def _ensure_image(self, map_name, screen_size):
+
+        image = self._load_image(map_name)
+
+        if image is None:
+            return None
+
+        bg = self._ensure_bg(screen_size)
+
+        key = (map_name, tuple(screen_size), bg is not None)
+
+        if key == self._scaled_key:
+            return self._scaled
+
+        sw, sh = screen_size
+
+        if bg is not None:
+            box_w = bg.get_width() * INNER_RATIO
+            box_h = bg.get_height() * INNER_RATIO
+        else:
+            box_w = sw * FILL_RATIO
+            box_h = sh * FILL_RATIO
+
+        scale = min(
+            box_w / image.get_width(),
+            box_h / image.get_height(),
+        )
+
+        size = (
+            max(1, int(image.get_width() * scale)),
+            max(1, int(image.get_height() * scale)),
+        )
+
+        self._scaled = pygame.transform.smoothscale(image, size)
+        self._scaled_key = key
+
+        return self._scaled
+
     def _ensure(self, walkable, screen_size):
 
         key = (
@@ -121,7 +272,7 @@ class DungeonMapView:
             self._dim.fill((0, 0, 0, DIM_ALPHA))
             self._dim_size = tuple(screen_size)
 
-    def draw(self, screen, walkable, held, label_font=None):
+    def draw(self, screen, walkable, held, label_font=None, map_name="mapa1"):
 
         now = pygame.time.get_ticks()
 
@@ -139,28 +290,61 @@ class DungeonMapView:
         if self._alpha <= 0.0:
             return
 
-        self._ensure(walkable, screen.get_size())
+        sw, sh = screen.get_size()
 
-        if self._line is None:
-            return
+        self._ensure(walkable, (sw, sh))
 
         a = int(255 * self._alpha)
 
         self._dim.set_alpha(a)
         screen.blit(self._dim, (0, 0))
 
-        sw, sh = screen.get_size()
+        bg = self._ensure_bg((sw, sh))
 
-        pos = (
-            (sw - self._line.get_width()) // 2,
-            (sh - self._line.get_height()) // 2,
-        )
+        bg_top = None
 
-        self._shadow.set_alpha(a)
-        self._line.set_alpha(a)
+        if bg is not None:
 
-        screen.blit(self._shadow, (pos[0] + 2, pos[1] + 2))
-        screen.blit(self._line, pos)
+            bg_rect = bg.get_rect(center=(sw // 2, sh // 2))
+
+            bg.set_alpha(a)
+
+            screen.blit(bg, bg_rect)
+
+            bg_top = bg_rect.top
+
+        image = self._ensure_image(map_name, (sw, sh))
+
+        if image is not None:
+
+            rect = image.get_rect(center=(sw // 2, sh // 2))
+
+            image.set_alpha(a)
+
+            screen.blit(image, rect)
+
+            top = rect.top
+
+        else:
+
+            if self._line is None:
+                return
+
+            pos = (
+                (sw - self._line.get_width()) // 2,
+                (sh - self._line.get_height()) // 2,
+            )
+
+            self._shadow.set_alpha(a)
+            self._line.set_alpha(a)
+
+            screen.blit(self._shadow, (pos[0] + 2, pos[1] + 2))
+            screen.blit(self._line, pos)
+
+            top = pos[1]
+
+        if bg_top is not None:
+            top = bg_top
 
         if label_font is not None:
 
@@ -169,5 +353,5 @@ class DungeonMapView:
 
             screen.blit(
                 text,
-                text.get_rect(midtop=(sw // 2, max(8, pos[1] // 2 - 10))),
+                text.get_rect(midtop=(sw // 2, max(8, top // 2 - 10))),
             )
