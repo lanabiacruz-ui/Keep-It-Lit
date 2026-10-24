@@ -406,29 +406,46 @@ while running:
 
         settings_menu.draw()
 
+        menu.draw_live("mapaajustes")
+
     elif current_state == "achievements":
 
         achievements_menu.draw()
+
+        menu.draw_live("mapaajustes")
 
     elif current_state == "name_input":
 
         name_menu.draw()
 
+        menu.draw_live("mapacarga")
+
     elif current_state == "password_set":
 
         password_menu.draw()
+
+        menu.draw_live("mapacarga")
 
     elif current_state == "mode_select":
 
         mode_menu.draw()
 
+        menu.draw_live("mapamodo")
+
     elif current_state == "continue":
 
         continue_menu.draw()
 
+        menu.draw_live(
+            "mapapartidas",
+            dim=140 if continue_menu.pending_delete is not None else 0
+        )
+
     elif current_state == "loading":
 
         loading.draw()
+
+        menu.draw_live("mapaloading")
 
     elif current_state == "comic":
 

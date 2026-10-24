@@ -17,6 +17,16 @@ WINDOWS = [
     (380, 1, 110, 55),
 ]
 
+# Fondo de cada pantalla -> imagen de la que se saca el gato animado.
+# (mapaajustes, mapamodo y mapapartidas tienen el mismo gato)
+LIVE_CAT_SOURCE = {
+    "mapaajustes": "mapaajustes",
+    "mapamodo": "mapaajustes",
+    "mapapartidas": "mapaajustes",
+    "mapacarga": "mapacarga",
+    "mapaloading": "mapaloading",
+}
+
 BREATH_PERIOD = 3.8
 BREATH_Y = 0.022
 BREATH_X = 0.010
@@ -196,6 +206,7 @@ class MainMenu:
         self.screen = screen
         self.width, self.height = screen.get_size()
 
+        self._tint = None
 
         image_path = (
             Path(__file__).resolve().parent.parent
@@ -241,7 +252,7 @@ class MainMenu:
         self._setup_effects()
 
 
-    def _setup_cat(self, original):
+    def _extract_cat(self, original):
 
         kx = original.get_width() / BG_W
         ky = original.get_height() / BG_H
@@ -273,11 +284,82 @@ class MainMenu:
             max(1, round(lh * self.sy))
         )
 
-        self.cat_sprite = pygame.transform.smoothscale(sprite, size)
+        scaled = pygame.transform.smoothscale(sprite, size)
 
-        self.cat_pos = (round(lx * self.sx), round(ly * self.sy))
+        pos = (round(lx * self.sx), round(ly * self.sy))
 
-        self.cat_anchor = (size[0] / 2, size[1] * 0.93)
+        anchor = (size[0] / 2, size[1] * 0.93)
+
+        return scaled, pos, anchor
+
+    def _setup_cat(self, original):
+
+        self.cat_sprite, self.cat_pos, self.cat_anchor = (
+            self._extract_cat(original)
+        )
+
+        self._setup_live_cats()
+
+    def _setup_live_cats(self):
+
+        """Gatos de las otras pantallas (ajustes, partidas, etc.) para que
+        sigan respirando cuando se cambia de menu."""
+
+        ui_dir = (
+            Path(__file__).resolve().parent.parent
+            / "assets"
+            / "maps"
+            / "ui"
+        )
+
+        self.live_cats = {}
+
+        for name in set(LIVE_CAT_SOURCE.values()):
+
+            try:
+
+                image = pygame.image.load(
+                    str(ui_dir / f"{name}.png")
+                ).convert()
+
+            except (pygame.error, FileNotFoundError, OSError):
+
+                continue
+
+            self.live_cats[name] = self._extract_cat(image)
+
+    def draw_live(self, background, dim=0):
+
+        """Anima gato y hojas por encima de otra pantalla.
+
+        `background`: nombre de la imagen de fondo que usa esa pantalla
+        (por ejemplo "mapaajustes"). `dim`: 0-255, oscurece el gato y las
+        hojas si la pantalla tiene una capa oscura encima."""
+
+        now = pygame.time.get_ticks() / 1000
+
+        dt = min(max(now - self._last_ticks, 0.0), 0.05)
+
+        self._last_ticks = now
+
+        self._update_animation(dt)
+
+        self._tint = None
+
+        if dim:
+
+            level = max(0, 255 - int(dim))
+
+            self._tint = (level, level, level, 255)
+
+        cat = self.live_cats.get(LIVE_CAT_SOURCE.get(background))
+
+        if cat is not None:
+            self._draw_cat(now, cat)
+
+        self._draw_leaves()
+
+        self._tint = None
 
     def _setup_leaves(self):
 
@@ -333,24 +415,31 @@ class MainMenu:
 
         self._update_sparks(dt)
 
-    def _draw_cat(self, now):
+    def _draw_cat(self, now, cat=None):
+
+        cat_sprite, cat_pos, cat_anchor = cat or (
+            self.cat_sprite, self.cat_pos, self.cat_anchor
+        )
 
         breath = 0.5 * (1 - math.cos(now * math.tau / BREATH_PERIOD))
 
         fx = 1 + BREATH_X * breath
         fy = 1 + BREATH_Y * breath
 
-        bw, bh = self.cat_sprite.get_size()
+        bw, bh = cat_sprite.get_size()
 
         new_size = (round(bw * fx), round(bh * fy))
 
-        sprite = pygame.transform.smoothscale(self.cat_sprite, new_size)
+        sprite = pygame.transform.smoothscale(cat_sprite, new_size)
 
-        ax, ay = self.cat_anchor
+        if self._tint is not None:
+            sprite.fill(self._tint, special_flags=pygame.BLEND_RGBA_MULT)
+
+        ax, ay = cat_anchor
 
         pos = (
-            self.cat_pos[0] + ax - ax * (new_size[0] / bw),
-            self.cat_pos[1] + ay - ay * (new_size[1] / bh)
+            cat_pos[0] + ax - ax * (new_size[0] / bw),
+            cat_pos[1] + ay - ay * (new_size[1] / bh)
         )
 
         self.screen.blit(sprite, (round(pos[0]), round(pos[1])))
@@ -366,6 +455,11 @@ class MainMenu:
             for leaf in self.leaves:
 
                 sprite = pygame.transform.rotate(leaf.surface, leaf.angle)
+
+                if self._tint is not None:
+                    sprite.fill(
+                        self._tint, special_flags=pygame.BLEND_RGBA_MULT
+                    )
 
                 rect = sprite.get_rect(
                     center=(

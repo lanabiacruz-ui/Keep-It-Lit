@@ -816,23 +816,23 @@ class NewGame:
 
             {
                 "text": (
-                    f"Encuentra algo que ilumine o en "
-                    f"{int(NO_LIGHT_COUNTDOWN)} segundos pierdes. "
-                    f"¡Agárralo con E!"
+                    "Está oscuro: acercate a la luz del piso y "
+                    "agarrala con E. Si en "
+                    f"{int(NO_LIGHT_COUNTDOWN)} segundos no tenés luz, perdés."
                 ),
                 "done": lambda g: g.has_match,
             },
             {
                 "text": (
-                    "Encuentra objetos para mantener la luz "
-                    "del fósforo prendida."
+                    "Agarrá objetos del piso con E (madera, resina, "
+                    "aceite): sirven para que tu luz no se apague."
                 ),
                 "done": lambda g: g.items_picked > 0,
                 "max_time": 30.0,
             },
             {
                 "text": (
-                    "Usá un objeto del inventario: elegilo con 1-4 y "
+                    "Usá un objeto: elegilo con 1-4 (o la ruedita) y "
                     "apretá F o click derecho."
                 ),
                 "done": lambda g: g.stats["items_used"] >= 1,
@@ -840,46 +840,51 @@ class NewGame:
             },
             {
                 "text": (
-                    "Salí de la cabaña: pegale a la puerta con tu luz "
-                    "hasta romperla."
+                    "Salí de la cabaña: pegale a la puerta con click "
+                    "izquierdo o ESPACIO hasta romperla. Cada golpe "
+                    "gasta luz."
                 ),
                 "done": lambda g: "cabana" in g.doors.broken_ids,
             },
 
             {
-                "text": "Seguí por el camino hasta la sala central.",
+                "text": "Seguí el camino al norte hasta la sala central.",
                 "done": lambda g: "central" in g.zones_seen,
             },
             {
                 "text": (
-                    "Juntá 10 monedas. Las hay tiradas por el mapa y "
-                    "en los cofres."
+                    "Juntá 10 monedas: hay tiradas por el mapa, en los "
+                    "cofres y las sueltan los slimes."
                 ),
                 "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
             },
             {
                 "text": (
-                    "Andá a la tienda (arriba, al norte de la sala "
-                    "central) y hablale al vendedor con F."
+                    "Andá a la tienda (al norte de la sala central) y "
+                    "acercate al vendedor: apretá F para hablarle."
                 ),
                 "done": lambda g: "tienda" in g.zones_seen,
             },
             {
-                "text": "Comprale algo al vendedor con tus monedas.",
+                "text": (
+                    "Comprale algo al vendedor: elegí un objeto, la "
+                    "cantidad y apretá Comprar."
+                ),
                 "done": lambda g: g.stats["purchases"] >= 1,
             },
             {
                 "text": (
-                    "Abrí un cofre en la sala de cofres (arriba a la "
-                    "izquierda): pegale con la luz y ganá el minijuego."
+                    "Andá a la sala de cofres (arriba a la izquierda). "
+                    "Pegale a un cofre con tu luz y apretá ESPACIO en la "
+                    "zona marcada para abrirlo."
                 ),
                 "done": lambda g: g.stats["chests_opened"] >= 1,
             },
 
             {
                 "text": (
-                    "Conseguí una vela: se compra en la tienda o puede "
-                    "salir de un cofre."
+                    "Conseguí una vela, una luz mejor que el fósforo: "
+                    "comprala en la tienda o buscala en los cofres."
                 ),
                 "done": lambda g: (
                     g.has_match and g.light_type in ("vela", "antorcha")
@@ -887,8 +892,8 @@ class NewGame:
             },
             {
                 "text": (
-                    "Con la vela rompé una puerta gris: las que llevan "
-                    "a las salas de combate."
+                    "Pegale a una puerta gris con tu vela hasta romperla: "
+                    "son las que llevan a las salas de combate."
                 ),
                 "done": lambda g: (
                     "sala_izq" in g.doors.broken_ids
@@ -898,15 +903,15 @@ class NewGame:
 
             {
                 "text": (
-                    "Entrá a una sala de combate y elegí cómo jugar: "
-                    "con escape o sin escape."
+                    "Entrá a una sala de combate y elegí: con escape "
+                    "podés irte, sin escape el premio es mayor."
                 ),
                 "done": in_combat,
             },
             {
                 "text": (
-                    "Derrotá a todos los enemigos de la oleada y "
-                    "juntá las monedas del premio."
+                    "Derrotá a todos los enemigos de la oleada pegándoles "
+                    "con tu luz y juntá las monedas del premio."
                 ),
                 "done": lambda g: any(
                     a.wave >= 2 or a.completed for a in g.arenas
@@ -914,31 +919,30 @@ class NewGame:
             },
             {
                 "text": (
-                    "Conseguí la antorcha y lanzá una bola de fuego: "
-                    "apretá G para cambiar de ataque."
+                    "Conseguí la antorcha: con G cambiás de golpe y "
+                    "lanzás una bola de fuego. ¡Probala!"
                 ),
                 "done": lambda g: g.stats["fireballs"] >= 1,
             },
             {
                 "text": (
-                    "Completá la sala del Guardián (la de la "
-                    "izquierda): 10 oleadas. ¡Te espera una gema "
-                    "verde oscuro!"
+                    "Completá Orkun - Sala de combate 2 (izquierda, la "
+                    "del Guardián): 10 oleadas y una gema verde oscuro."
                 ),
                 "done": lambda g: g.arena_left.completed,
             },
             {
                 "text": (
-                    "Completá la sala de combate de la derecha: "
-                    "10 oleadas. ¡Te espera una gema!"
+                    "Completá Orkun - Sala de combate 1 (derecha): "
+                    "10 oleadas y una gema te esperan."
                 ),
                 "done": lambda g: g.arena.completed,
             },
             {
                 "text": (
-                    "Completá la enciclopedia: descubrí a los "
-                    f"{len(EnemyEncyclopedia.ORDER)} "
-                    "enemigos (se ve desde el menú de pausa)."
+                    "Completá la enciclopedia: descubrí los "
+                    f"{len(EnemyEncyclopedia.ORDER)} bichos del juego "
+                    "(la abrís desde la pausa con ESC)."
                 ),
                 "done": lambda g: len(
                     set(g.discovered_enemies) & set(EnemyEncyclopedia.ORDER)
@@ -2018,7 +2022,8 @@ class NewGame:
             self.coins,
             MATCH_DURATION,
             cart=self.shop_cart,
-            locks=self.shop_locks()
+            locks=self.shop_locks(),
+            best_wave=self.best_wave()
         )
 
     def _close_shop(self):
@@ -2834,6 +2839,14 @@ class NewGame:
 
         if zone is not None:
             self.zones_seen.add(zone.id)
+
+            if (
+                zone.id == "cofres"
+                and self.stats.get("chests_opened", 0) < 1
+            ):
+                self.show_message(
+                    "Pegale a un cofre con tu luz y se abre"
+                )
 
         self.zone_banner.update(
             dt

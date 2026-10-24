@@ -81,6 +81,16 @@ VARIANTS = {
     ),
 }
 
+# Clave de cada variante en la enciclopedia.
+CODEX_KEYS = {
+    "normal": "slime",
+    "dorado": "slime2",
+    "brillante": "slime3",
+}
+
+# Distancia (en pixeles del mundo) a la que el jugador "ve" al slime.
+DISCOVER_DISTANCE = 120
+
 COIN_DROPS = 10
 COIN_DELAY = 0.025
 SCATTER_MIN = 12
@@ -736,11 +746,23 @@ class SlimeManager:
 
                     slime.dropped = True
 
+                    game.discover_enemy(
+                        CODEX_KEYS.get(slime.variant, "slime")
+                    )
+
                     self._drop(game, slime)
 
                 continue
 
             slime.update(dt, center, game.collision_map)
+
+            if (
+                pygame.Vector2(center).distance_to(slime.pos)
+                <= DISCOVER_DISTANCE
+            ):
+                game.discover_enemy(
+                    CODEX_KEYS.get(slime.variant, "slime")
+                )
 
         self.slimes = [
             s for s in self.slimes

@@ -21,13 +21,13 @@ ACHIEVEMENTS = [
     {
         "id": "zona_1",
         "title": "Primera zona",
-        "desc": "Completá la sala de combate (derecha)",
+        "desc": "Completá Orkun - Sala de combate 1 (la de la derecha)",
         "goal": 1,
     },
     {
         "id": "zona_2",
         "title": "Segunda zona",
-        "desc": "Completá la sala del Guardián (izquierda)",
+        "desc": "Completá Orkun - Sala de combate 2 (la del Guardián, a la izquierda)",
         "goal": 1,
     },
     {

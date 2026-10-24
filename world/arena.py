@@ -4416,7 +4416,7 @@ class ArenaConfig:
 
 
 RIGHT_ARENA = ArenaConfig(
-    "right", "Sala de combate",
+    "right", "Orkun - Sala de combate 1",
     ROOM, TRIGGER, EXIT_POS, GATE,
     WAVE_COMPOSITION, WAVE_REWARDS, LAST_WAVE,
     "arena_wave", "arena_completed",
@@ -4431,7 +4431,7 @@ LEFT_WAVE_REWARDS = {
 LEFT_LAST_WAVE = 10
 
 LEFT_ARENA = ArenaConfig(
-    "left", "Sala del Guardian",
+    "left", "Orkun - Sala de combate 2",
     ROOM_LEFT, TRIGGER_LEFT, EXIT_POS_LEFT, GATE_LEFT,
     LEFT_WAVE_COMPOSITION, LEFT_WAVE_REWARDS, LEFT_LAST_WAVE,
     "arena_left_wave", "arena_left_completed",

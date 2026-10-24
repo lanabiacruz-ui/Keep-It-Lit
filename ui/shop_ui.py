@@ -102,11 +102,14 @@ class ShopUI:
 
     def __init__(
         self, screen_size, catalog, item_defs, coins, match_duration=30.0,
-        cart=None, locks=None
+        cart=None, locks=None, best_wave=1
     ):
 
         # locks: {item_id: oleada necesaria} de lo que sigue bloqueado
         self.locks = dict(locks or {})
+
+        # mejor oleada alcanzada en las salas de combate
+        self.best_wave = int(best_wave)
 
         self.sw, self.sh = screen_size
         self.catalog = catalog
@@ -222,11 +225,39 @@ class ShopUI:
 
         return data.get("nombre", item_id.capitalize())
 
+    def lock_reason(self, item_id, short=False):
+
+        need = self.locks.get(item_id)
+
+        if need is None:
+            return ""
+
+        missing = max(1, need - self.best_wave)
+
+        if short:
+            return (
+                f"Bloqueado: llegá a la oleada {need} "
+                f"(vas por la {self.best_wave})"
+            )
+
+        return (
+            f"BLOQUEADO: todavía no llegaste a la oleada {need}. "
+            f"Se desbloquea al alcanzar la oleada {need} en cualquiera "
+            "de las salas de combate. Tu mejor oleada es la "
+            f"{self.best_wave}: te "
+            f"{'falta' if missing == 1 else 'faltan'} {missing} "
+            f"{'oleada' if missing == 1 else 'oleadas'}."
+        )
+
     def info_lines(self, item_id):
 
         data = self.defs.get(item_id, {})
 
         lines = []
+
+        if item_id in self.locks:
+            lines.append(self.lock_reason(item_id))
+            lines.append("")
 
         if data.get("descripcion"):
             lines.append(data["descripcion"])
@@ -398,9 +429,7 @@ class ShopUI:
 
         if item_id in self.locks:
 
-            self._flash(
-                f"Se desbloquea en la oleada {self.locks[item_id]}"
-            )
+            self._flash(self.lock_reason(item_id, short=True))
 
             return
 
@@ -728,7 +757,7 @@ class ShopUI:
         self._text(
             screen, self.tiny_font,
             (
-                f"Oleada {locked_wave}"
+                f"Bloqueado: oleada {locked_wave}"
                 if locked_wave is not None
                 else f"{self.prices[item_id]} monedas"
             ),
@@ -996,7 +1025,11 @@ class ShopUI:
         if self.message_timer > 0:
 
             self._text(
-                screen, self.tiny_font, self.message, C_RED,
+                screen,
+                self._fit_font(
+                    self.message, self.cart_rect.w - 16, 20, min_size=12
+                ),
+                self.message, C_RED,
                 midtop=(self.cart_rect.centerx, self.total_pos_y + 32)
             )
 

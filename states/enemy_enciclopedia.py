@@ -25,6 +25,16 @@ COMBAT_DIR = (
 )
 
 
+HUD_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "maps"
+    / "hud"
+)
+
+TITLE_TEXT = "BICHOS"
+KIND_WORD = "bicho"
+
 DEFAULT_DATA = {
     "pino": {
         "nombre": "Piña",
@@ -106,6 +116,40 @@ DEFAULT_DATA = {
             "mucha vida: no te dejes alcanzar"
         ),
     },
+
+    "slime": {
+        "nombre": "Slime",
+        "imagen": "slime.png",
+        "descripcion": (
+            "Inofensivo: no ataca. Aparece de a ratos en la sala central y "
+            "en la de cofres, y cuando lo golpeas sale saltando para "
+            "escapar. Si lo derrotas suelta monedas y 2 Slimsitos, que "
+            "curan la luz al comerlos."
+        
+        ),
+    },
+
+    "slime2": {
+        "nombre": "Slime Dorado",
+        "imagen": "slime2.png",
+        "descripcion": (
+            "Variante rara del slime. No ataca, pero escapa mas rapido y "
+            "tarda mas en cansarse. Si lo atrapas suelta 18 monedas y "
+            "3 Slimsitos."
+        
+        ),
+    },
+
+    "slime3": {
+        "nombre": "Slime Brillante",
+        "imagen": "slime3.png",
+        "descripcion": (
+            "El slime mas raro. Brilla, aguanta un golpe mas y corre mas "
+            "del doble de rapido que uno comun. Si lo atrapas, el premio "
+            "es enorme: 30 monedas y 5 Slimsitos."
+        
+        ),
+    },
 }
 
 
@@ -120,7 +164,12 @@ class EnemyEncyclopedia:
         "guardian_tirador",
         "destello",
         "golem",
+        "slime",
+        "slime2",
+        "slime3",
     )
+
+    VISIBLE_ROWS = 8
 
 
     IMG_W = 1672
@@ -154,6 +203,7 @@ class EnemyEncyclopedia:
         self.data = self._load_data()
 
         self.selected = 0
+        self.scroll = 0
 
         self.images = {}
 
@@ -228,20 +278,25 @@ class EnemyEncyclopedia:
                 if not name:
                     continue
 
-                try:
+                for folder in (COMBAT_DIR, HUD_DIR):
 
-                    image = pygame.image.load(
-                        COMBAT_DIR / name
-                    ).convert_alpha()
+                    try:
 
+                        image = pygame.image.load(
+                            folder / name
+                        ).convert_alpha()
+
+                        break
+
+                    except (
+                        OSError,
+                        pygame.error
+                    ):
+
+                        image = None
+
+                if image is not None:
                     break
-
-                except (
-                    OSError,
-                    pygame.error
-                ):
-
-                    image = None
 
             self.images[key] = image
 
@@ -326,7 +381,8 @@ class EnemyEncyclopedia:
         self.back_rect = self._box(self.BACK_BOX)
 
         rows_h = (
-            len(self.ORDER) * (self.ROW_H + self.ROW_GAP)
+            min(len(self.ORDER), self.VISIBLE_ROWS)
+            * (self.ROW_H + self.ROW_GAP)
             + self.ROW_GAP
         )
 
@@ -349,12 +405,12 @@ class EnemyEncyclopedia:
 
         self.row_img = self._load_ui(
             "fila_enemigo.png",
-            self._enemy_rect(0).size
+            self._slot_rect(0).size
         )
 
         self.row_sel_img = self._load_ui(
             "fila_enemigo_sel.png",
-            self._enemy_rect(0).size
+            self._slot_rect(0).size
         )
 
         self.back_img = self._load_ui(
@@ -405,7 +461,7 @@ class EnemyEncyclopedia:
 
         icon_size = max(
             8,
-            self._enemy_rect(0).height - round(12 * self.sy)
+            self._slot_rect(0).height - round(12 * self.sy)
         )
 
         for key, image in self.images.items():
@@ -452,12 +508,23 @@ class EnemyEncyclopedia:
         return key in self.discovered
 
 
+    def _visible_range(self):
+
+        return range(
+            self.scroll,
+            min(len(self.ORDER), self.scroll + self.VISIBLE_ROWS)
+        )
+
     def _enemy_rect(self, index):
+
+        return self._slot_rect(index - self.scroll)
+
+    def _slot_rect(self, slot):
 
         return self._box(
             (
                 self.ROW_X,
-                self.ROW_Y + index * (self.ROW_H + self.ROW_GAP),
+                self.ROW_Y + slot * (self.ROW_H + self.ROW_GAP),
                 self.ROW_W,
                 self.ROW_H,
             )
@@ -560,9 +627,15 @@ class EnemyEncyclopedia:
 
         self.selected = index % len(self.ORDER)
 
+        if self.selected < self.scroll:
+            self.scroll = self.selected
+
+        elif self.selected >= self.scroll + self.VISIBLE_ROWS:
+            self.scroll = self.selected - self.VISIBLE_ROWS + 1
+
     def _row_at(self, pos):
 
-        for index in range(len(self.ORDER)):
+        for index in self._visible_range():
 
             if self._enemy_rect(index).collidepoint(pos):
 
@@ -681,7 +754,7 @@ class EnemyEncyclopedia:
 
         self._blit_text(
             self.title_font,
-            "ENEMIGOS",
+            TITLE_TEXT,
             self.TEXT_COLOR,
             midtop=(
                 self.screen_rect.centerx,
@@ -691,7 +764,7 @@ class EnemyEncyclopedia:
 
         y = round(238 * self.sy)
 
-        left = self._enemy_rect(0).left
+        left = self._slot_rect(0).left
         right = self.card_rect.right
 
         pygame.draw.line(
@@ -712,9 +785,50 @@ class EnemyEncyclopedia:
             max(2, round(3 * self.sy)),
         )
 
+    def _draw_scroll_arrows(self):
+
+        first = self._slot_rect(0)
+        last = self._slot_rect(self.VISIBLE_ROWS - 1)
+
+        cx = first.right + round(14 * self.sx)
+
+        size = max(5, round(9 * self.sy))
+
+        if self.scroll > 0:
+
+            cy = first.top + size
+
+            pygame.draw.polygon(
+                self.screen,
+                self.TITLE_COLOR,
+                [
+                    (cx - size, cy + size),
+                    (cx + size, cy + size),
+                    (cx, cy - size),
+                ],
+            )
+
+        if self.scroll + self.VISIBLE_ROWS < len(self.ORDER):
+
+            cy = last.bottom - size
+
+            pygame.draw.polygon(
+                self.screen,
+                self.TITLE_COLOR,
+                [
+                    (cx - size, cy - size),
+                    (cx + size, cy - size),
+                    (cx, cy + size),
+                ],
+            )
+
     def _draw_list(self):
 
-        for index, key in enumerate(self.ORDER):
+        self._draw_scroll_arrows()
+
+        for index in self._visible_range():
+
+            key = self.ORDER[index]
 
             rect = self._enemy_rect(index)
 
@@ -909,8 +1023,8 @@ class EnemyEncyclopedia:
             (
                 str(enemy.get("descripcion", ""))
                 if found
-                else "Todavía no te encontraste con este enemigo. "
-                     "Enfrentalo en las oleadas para descubrirlo."
+                else f"Todavía no te encontraste con este {KIND_WORD}. "
+                     "Explorá las salas y las oleadas para descubrirlo."
             ),
             card.width - pad * 2,
             available_h,
@@ -928,11 +1042,11 @@ class EnemyEncyclopedia:
 
     def _draw_hint(self):
 
-        hint_x = self._enemy_rect(0).left
-        width = self._enemy_rect(0).width
+        hint_x = self._slot_rect(0).left
+        width = self._slot_rect(0).width
 
         top = (
-            self._enemy_rect(len(self.ORDER) - 1).bottom
+            self._slot_rect(self.VISIBLE_ROWS - 1).bottom
             + round(4 * self.sy)
         )
 
