@@ -21,6 +21,16 @@ MOUTH_IMAGE = (
     / "vendedor_boca.png"
 )
 
+# Oleada que hay que alcanzar (en cualquiera de las 2 salas de combate)
+# para poder comprar cada objeto en la tienda. Para cambiarlo, editá acá.
+SHOP_UNLOCK_WAVES = {
+    "hongo_azul": 5,
+    "antorcha": 6,
+    "repelente": 8,
+    "iman": 8,
+    "esfera": 8,
+}
+
 DEFAULT_CATALOG = [
     {
         "nombre": "Luces",

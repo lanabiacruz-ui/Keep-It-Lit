@@ -245,6 +245,38 @@ def _get_sprite():
     return _sprite_cache["base"]
 
 
+def draw_placed_gems(screen, camera, clock):
+    """Gemas ya puestas en los altares, flotando y brillando.
+    Se usan cuando la puerta ya se rompio: quedan ahi de adorno y no
+    se pueden volver a sacar (los altares solo reciben gemas)."""
+
+    zoom = camera.zoom
+
+    for key in SLOT_POS:
+
+        x, y = SLOT_POS[key]
+
+        bob = math.sin(clock * 2.6 + (0 if key == "clara" else 2.1)) * 2.2
+
+        sx = x * zoom - camera.x
+        sy = (y + bob) * zoom - camera.y
+
+        r = int(24 * zoom)
+
+        if r >= 4:
+            screen.blit(
+                _glow(r, SLOT_COLORS[key]),
+                (sx - r, sy - r),
+                special_flags=pygame.BLEND_RGB_ADD,
+            )
+
+        icon = get_gem_icon() if key == "clara" else get_green_gem_icon()
+        size = max(1, int(14 * zoom))
+        icon = pygame.transform.scale(icon, (size, size))
+
+        screen.blit(icon, icon.get_rect(center=(int(sx), int(sy))))
+
+
 class FinalDoor(Door):
 
     is_final = True
@@ -760,6 +792,11 @@ class FinalDoor(Door):
 
         if self.state == "charge":
             self._draw_charge(screen, camera)
+
+        if self.state in ("burst", "portal", "done"):
+            draw_placed_gems(
+                screen, camera, pygame.time.get_ticks() / 1000.0
+            )
 
         if self.state in ("burst", "portal"):
             self._draw_portal(screen, camera)

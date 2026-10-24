@@ -31,11 +31,13 @@ from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door
 from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
-from world.final_door import MapSwitcher, enter_map
+from world.final_door import MapSwitcher, enter_map, draw_placed_gems
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker
 from world.slime import SlimeManager
-from world.shop import Shopkeeper, load_catalog, price_table
+from world.shop import (
+    Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES
+)
 from world.placeables import PlaceableManager
 from world.dungeon_map import DungeonMapView
 from ui.hud import Hud
@@ -1990,6 +1992,20 @@ class NewGame:
         self.minigame_chest = None
 
 
+    def best_wave(self):
+
+        return max(a.wave for a in self.arenas)
+
+    def shop_locks(self):
+
+        wave = self.best_wave()
+
+        return {
+            item_id: need
+            for item_id, need in SHOP_UNLOCK_WAVES.items()
+            if wave < need
+        }
+
     def _open_shop(self):
 
         if self.shop is not None:
@@ -2001,7 +2017,8 @@ class NewGame:
             self.item_defs,
             self.coins,
             MATCH_DURATION,
-            cart=self.shop_cart
+            cart=self.shop_cart,
+            locks=self.shop_locks()
         )
 
     def _close_shop(self):
@@ -2012,6 +2029,10 @@ class NewGame:
         self.shop = None
 
     def _buy(self, cart):
+
+        locks = self.shop_locks()
+
+        cart = {i: q for i, q in cart.items() if i not in locks}
 
         total = sum(
             self.shop_prices.get(item_id, 0) * qty
@@ -3610,6 +3631,16 @@ class NewGame:
             and self.current_map == "mapa1"
         ):
             self.doors.final_door.draw_fx(self.screen, self.camera)
+
+        elif (
+            self.doors.final_door is None
+            and self.current_map == "mapa1"
+            and "puerta_final" in self.doors.broken_ids
+        ):
+            draw_placed_gems(
+                self.screen, self.camera,
+                pygame.time.get_ticks() / 1000.0
+            )
 
         self.melee.draw(
             self.screen,

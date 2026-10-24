@@ -102,8 +102,11 @@ class ShopUI:
 
     def __init__(
         self, screen_size, catalog, item_defs, coins, match_duration=30.0,
-        cart=None
+        cart=None, locks=None
     ):
+
+        # locks: {item_id: oleada necesaria} de lo que sigue bloqueado
+        self.locks = dict(locks or {})
 
         self.sw, self.sh = screen_size
         self.catalog = catalog
@@ -123,6 +126,7 @@ class ShopUI:
             item_id: min(MAX_PER_ITEM, int(qty))
             for item_id, qty in (cart or {}).items()
             if item_id in self.prices and int(qty) > 0
+            and item_id not in self.locks
         }
 
         self.message = ""
@@ -391,6 +395,14 @@ class ShopUI:
 
 
     def add(self, item_id, amount=1):
+
+        if item_id in self.locks:
+
+            self._flash(
+                f"Se desbloquea en la oleada {self.locks[item_id]}"
+            )
+
+            return
 
         current = self.cart.get(item_id, 0)
 
@@ -695,6 +707,15 @@ class ShopUI:
         if icon is not None:
             screen.blit(icon, icon.get_rect(center=tile.center))
 
+        locked_wave = self.locks.get(item_id)
+
+        if locked_wave is not None:
+
+            shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+            shade.fill((0, 0, 0, 150))
+
+            screen.blit(shade, rect.topleft)
+
         card_name = self.item_name(item_id)
 
         self._text(
@@ -706,7 +727,12 @@ class ShopUI:
 
         self._text(
             screen, self.tiny_font,
-            f"{self.prices[item_id]} monedas", C_MUTED,
+            (
+                f"Oleada {locked_wave}"
+                if locked_wave is not None
+                else f"{self.prices[item_id]} monedas"
+            ),
+            C_MUTED,
             midtop=(rect.centerx, tile.bottom + 28)
         )
 

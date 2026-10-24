@@ -39,20 +39,50 @@ REST_TIME = (0.9, 2.4)
 LIFE_TIME = (120.0, 200.0)
 KEEP_DISTANCE = 160
 
-CHECK_INTERVAL = 18.0
-FIRST_CHECK = (8.0, 14.0)
+CHECK_INTERVAL = 8.0
+FIRST_CHECK = (3.0, 6.0)
 MIN_SPAWN_DIST = 90
 SPAWN_TRIES = 40
 
 ZONE_CHANCE = {
-    "central": 0.18,
-    "cofres": 0.34,
+    "central": 0.55,
+    "cofres": 0.75,
 }
 
-MAX_PER_ZONE = 1
+MAX_PER_ZONE = 3
+
+HUD_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "assets"
+    / "maps"
+    / "hud"
+)
+
+# Variantes. "art" = prefijo de los strips opcionales en assets/maps/combate
+# (<art>_idle.png, <art>_anim.png, <art>_correr.png, <art>_golpe.png).
+# Si no existen, se usa la imagen "sprite" de assets/maps/hud animada
+# con squash/stretch a partir de las animaciones del slime base.
+# flee_mult: multiplicador de velocidad al correr; chops/coins: drops.
+VARIANTS = {
+    "normal": dict(
+        art=None, sprite=None, weight=55,
+        hp=4, flee_mult=1.35, walk_mult=1.15, flee_time=4.0,
+        chops=2, coins=10,
+    ),
+    "dorado": dict(
+        art="slime2", sprite="slime2.png", weight=30,
+        hp=4, flee_mult=1.7, walk_mult=1.3, flee_time=4.5,
+        chops=3, coins=18,
+    ),
+    "brillante": dict(
+        art="slime3", sprite="slime3.png", weight=15,
+        hp=5, flee_mult=2.1, walk_mult=1.5, flee_time=5.0,
+        chops=5, coins=30,
+    ),
+}
 
 COIN_DROPS = 10
-COIN_DELAY = 0.04
+COIN_DELAY = 0.025
 SCATTER_MIN = 12
 SCATTER_MAX = 44
 
@@ -145,9 +175,43 @@ def _shadow(size):
     return _shadow_cache[size]
 
 
+def _restyle(frames, base_ref, sprite):
+    """Anima `sprite` (una sola imagen) copiando el squash/stretch de los
+    frames del slime base. Cada frame se alinea por la base del cuerpo."""
+
+    ref = base_ref.get_bounding_rect()
+    crop_rect = sprite.get_bounding_rect()
+
+    if ref.width <= 0 or ref.height <= 0 or crop_rect.width <= 0:
+        return [sprite.copy() for _ in frames]
+
+    crop = sprite.subsurface(crop_rect).copy()
+
+    out = []
+
+    for f in frames:
+
+        box = f.get_bounding_rect()
+
+        w = max(1, round(crop_rect.width * box.width / ref.width))
+        h = max(1, round(crop_rect.height * box.height / ref.height))
+
+        surf = pygame.Surface(f.get_size(), pygame.SRCALPHA)
+
+        scaled = pygame.transform.scale(crop, (w, h))
+
+        surf.blit(scaled, scaled.get_rect(midbottom=box.midbottom))
+
+        out.append(surf)
+
+    return out
+
+
 class SlimeArt:
 
-    def __init__(self):
+    def __init__(self, variant=None):
+
+        cfg = VARIANTS.get(variant or "normal", VARIANTS["normal"])
 
         single = (
             _load_strip(COMBAT_DIR / "slime_idle.png")
@@ -170,8 +234,39 @@ class SlimeArt:
 
         self.hit = hit
 
+        if cfg["art"]:
+            self._apply_variant(cfg)
+
         self._zoom = None
         self._scaled = None
+
+    def _apply_variant(self, cfg):
+
+        name = cfg["art"]
+
+        own_idle = _load_strip(COMBAT_DIR / f"{name}_idle.png")
+        own_walk = _load_strip(COMBAT_DIR / f"{name}_anim.png")
+        own_run = _load_strip(COMBAT_DIR / f"{name}_correr.png")
+        own_hit = _load_image(COMBAT_DIR / f"{name}_golpe.png")
+
+        sprite = _load_image(HUD_DIR / cfg["sprite"]) if cfg["sprite"] else None
+
+        if sprite is not None:
+
+            ref = self.idle[0]
+
+            self.idle = own_idle or _restyle(self.idle, ref, sprite)
+            self.walk = own_walk or _restyle(self.walk, ref, sprite)
+            self.run = own_run or _restyle(self.run, ref, sprite)
+
+        else:
+
+            self.idle = own_idle or self.idle
+            self.walk = own_walk or self.walk
+            self.run = own_run or self.run
+
+        if own_hit is not None:
+            self.hit = own_hit
 
     def get(self, zoom):
 
@@ -205,7 +300,16 @@ def _frame(frames, t, cycle):
 
 class Slime:
 
-    def __init__(self, x, y, zone_id=None):
+    def __init__(self, x, y, zone_id=None, variant="normal"):
+
+        cfg = VARIANTS.get(variant, VARIANTS["normal"])
+
+        self.variant = variant if variant in VARIANTS else "normal"
+        self.cfg = cfg
+
+        self.walk_speed = WALK_SPEED * cfg["walk_mult"]
+        self.flee_speed = FLEE_SPEED * cfg["flee_mult"]
+        self.flee_time = cfg["flee_time"]
 
         self.rect = pygame.Rect(0, 0, *HITBOX)
         self.rect.center = (round(x), round(y))
@@ -214,7 +318,7 @@ class Slime:
 
         self.zone = zone_id
 
-        self.hp = HP
+        self.hp = cfg["hp"]
         self.flash = 0.0
 
         self.mode = "rest"
@@ -241,6 +345,11 @@ class Slime:
         return self.hp <= 0
 
     @property
+    def _flee_cycle(self):
+
+        return FLEE_CYCLE / (1.0 + (self.cfg["flee_mult"] - 1.0) * 0.5)
+
+    @property
     def fleeing(self):
 
         return self.mode == "flee"
@@ -249,7 +358,7 @@ class Slime:
 
         self.hp -= amount
         self.flash = 0.15
-        self.flee_t = FLEE_TIME
+        self.flee_t = self.flee_time
 
     def _try_move(self, dx, dy, collision_map):
 
@@ -343,7 +452,7 @@ class Slime:
 
         if WALK_AIR[0] <= phase < WALK_AIR[1]:
 
-            speed = WALK_SPEED / (WALK_AIR[1] - WALK_AIR[0])
+            speed = self.walk_speed / (WALK_AIR[1] - WALK_AIR[0])
 
             step = self.heading * speed * dt
 
@@ -380,11 +489,13 @@ class Slime:
 
             self.flee_dir = self._pick_flee(away, collision_map)
 
-        phase = self.anim_t / FLEE_CYCLE
+        cycle = self._flee_cycle
+
+        phase = self.anim_t / cycle
 
         if FLEE_AIR[0] <= phase < FLEE_AIR[1]:
 
-            speed = FLEE_SPEED / (FLEE_AIR[1] - FLEE_AIR[0])
+            speed = self.flee_speed / (FLEE_AIR[1] - FLEE_AIR[0])
 
             step = self.flee_dir * speed * dt
 
@@ -393,9 +504,9 @@ class Slime:
                 self.side = -self.side
                 self.hop_new = True
 
-        if self.anim_t >= FLEE_CYCLE:
+        if self.anim_t >= cycle:
 
-            self.anim_t -= FLEE_CYCLE
+            self.anim_t -= cycle
 
             if self.flee_t <= 0:
                 self._to_rest()
@@ -444,7 +555,7 @@ class Slime:
             sprite = frames["hit"]
 
         elif self.mode == "flee":
-            sprite = _frame(frames["run"], self.anim_t, FLEE_CYCLE)
+            sprite = _frame(frames["run"], self.anim_t, self._flee_cycle)
 
         elif self.mode == "walk":
             sprite = _frame(frames["walk"], self.anim_t, WALK_CYCLE)
@@ -480,7 +591,7 @@ class SlimeManager:
 
         self.slimes = []
 
-        self.art = SlimeArt()
+        self.arts = {name: SlimeArt(name) for name in VARIANTS}
 
         self.zones = [z for z in ZONES if z.id in ZONE_CHANCE]
 
@@ -517,6 +628,13 @@ class SlimeManager:
 
         return None
 
+    def _pick_variant(self):
+
+        names = list(VARIANTS)
+        weights = [VARIANTS[n]["weight"] for n in names]
+
+        return random.choices(names, weights=weights, k=1)[0]
+
     def _try_spawn(self, game):
 
         px, py = game.player.rect.center
@@ -534,7 +652,9 @@ class SlimeManager:
             pos = self._spawn_point(game, zone.rect, px, py)
 
             if pos is not None:
-                self.slimes.append(Slime(pos[0], pos[1], zone.id))
+                self.slimes.append(
+                    Slime(pos[0], pos[1], zone.id, self._pick_variant())
+                )
 
     def _scatter_target(self, game, cx, cy):
 
@@ -555,17 +675,22 @@ class SlimeManager:
 
         cx, cy = slime.rect.center
 
-        chop = WorldItem("chuleta", cx, cy)
+        drops = []
 
-        chop.start_fly(
-            (cx, cy),
-            self._scatter_target(game, cx, cy),
-            height=20
-        )
+        for n in range(slime.cfg["chops"]):
 
-        drops = [chop]
+            chop = WorldItem("chuleta", cx, cy)
 
-        for n in range(COIN_DROPS):
+            chop.start_fly(
+                (cx, cy),
+                self._scatter_target(game, cx, cy),
+                delay=n * 0.05,
+                height=20
+            )
+
+            drops.append(chop)
+
+        for n in range(slime.cfg["coins"]):
 
             coin = WorldItem("moneda", cx, cy)
 
@@ -625,4 +750,4 @@ class SlimeManager:
     def draw(self, screen, camera):
 
         for slime in self.slimes:
-            slime.draw(screen, camera, self.art)
+            slime.draw(screen, camera, self.arts[slime.variant])
