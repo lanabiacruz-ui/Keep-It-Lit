@@ -183,5 +183,25 @@
         "descripcion": "Elegila y hacé click donde la querés poner: queda fija para siempre. Ilumina mucho, dura mucho y se alimenta con un poquito de madera (con la madera elegida, F o click derecho cerca).",
         "requiere_fosforo": false,
         "efectos": []
+    },
+    "chuleta": {
+        "nombre": "Slimsito",
+        "descripcion": "Al comerla cura 15%, 45% o 88% de la vida de tu luz, al azar. Las grandes curaciones son raras.",
+        "requiere_fosforo": true,
+        "efectos": [
+            {
+                "tipo": "vida_azar",
+                "opciones": [
+                    0.15,
+                    0.45,
+                    0.88
+                ],
+                "pesos": [
+                    55,
+                    33,
+                    12
+                ]
+            }
+        ]
     }
 }

@@ -34,6 +34,7 @@ from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
 from world.final_door import MapSwitcher, enter_map
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker
+from world.slime import SlimeManager
 from world.shop import Shopkeeper, load_catalog, price_table
 from world.placeables import PlaceableManager
 from world.dungeon_map import DungeonMapView
@@ -506,6 +507,10 @@ class NewGame:
         self.melee.set_light(self.light_type)
 
         self.dummies = []
+
+        self.slimes = SlimeManager()
+
+        self.last_heal = 0.0
 
         self.debug_combat = False
 
@@ -1227,6 +1232,12 @@ class NewGame:
                 "Usaste Imán: apretá O para activarlo o desactivarlo"
             )
 
+        elif item_id == "chuleta":
+
+            self.show_message(
+                f"Comiste una chuleta: curaste {round(self.last_heal * 100)}%"
+            )
+
         else:
 
             self.show_message(
@@ -1243,6 +1254,18 @@ class NewGame:
                 1.0,
                 self.vida + float(e.get("valor", 0.0))
             )
+
+        elif tipo == "vida_azar":
+
+            opciones = e.get("opciones") or [0.15, 0.45, 0.88]
+            pesos = e.get("pesos") or [1] * len(opciones)
+
+            valor = float(
+                random.choices(opciones, weights=pesos, k=1)[0]
+            )
+
+            self.vida = min(1.0, self.vida + valor)
+            self.last_heal = valor
 
         elif tipo == "vida_fijar":
 
@@ -1526,6 +1549,7 @@ class NewGame:
         targets += list(self.doors.doors)
         targets += list(self.chests.chests)
         targets += [d for d in self.dummies if not d.dead]
+        targets += self.slimes.targets()
 
         for target in self.melee.new_hits(targets, pivot):
 
@@ -1896,6 +1920,7 @@ class NewGame:
         targets += list(self.doors.doors)
         targets += list(self.chests.chests)
         targets += [d for d in self.dummies if not d.dead]
+        targets += self.slimes.targets()
 
         walkable = self.collision_map.point_is_walkable
 
@@ -2958,6 +2983,8 @@ class NewGame:
             dt
         )
 
+        self.slimes.update(dt, self)
+
 
         self.chests.update(
             dt
@@ -3440,6 +3467,8 @@ class NewGame:
 
         for dummy in self.dummies:
             dummy.draw(self.screen, self.camera)
+
+        self.slimes.draw(self.screen, self.camera)
 
         self.crushers.draw(self.screen, self.camera)
 
