@@ -51,8 +51,12 @@ class Tutorial:
         pages=None,
         char_height=150,
         frame_width=400,
-        margin=16
+        margin=16,
+        can_skip=False
     ):
+
+        self.can_skip = can_skip
+        self.skip_all = False
 
         self.width, self.height = screen_size
         self.pages = list(pages or TUTORIAL_PAGES)
@@ -299,6 +303,14 @@ class Tutorial:
         if event.key == pygame.K_ESCAPE:
             return False
 
+        if self.can_skip and event.key == pygame.K_k:
+
+            self.skip_all = True
+            self.phase = "out"
+            self.phase_time = 0.0
+
+            return True
+
         if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
 
             self.phase = "out"
@@ -443,3 +455,19 @@ class Tutorial:
                         )
                     )
                 )
+
+        if self.can_skip and self.phase == "show":
+
+            skip = self._text(
+                self.hint_font, "K: sacar tutorial", HINT_COLOR
+            )
+
+            screen.blit(
+                skip,
+                skip.get_rect(
+                    bottomleft=(
+                        frame_pos.left + self.pad_x,
+                        frame_pos.bottom - 8
+                    )
+                )
+            )

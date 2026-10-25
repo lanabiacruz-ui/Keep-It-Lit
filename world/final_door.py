@@ -1082,13 +1082,18 @@ def enter_map(game, target, pos=None):
             str(base / "assets" / "maps" / "region_01" / MAP2_NAME)
         ).convert()
 
+        extra_items, extra_drops = [], []
+
+        if hasattr(game, "materialize_drops"):
+            extra_items, extra_drops = game.materialize_drops(target)
+
         st = {
             "image": img,
             "walkable": [r.copy() for r in MAP2_WALKABLE],
             "obstacles": [r.copy() for r in MAP2_OBSTACLES],
             "doors": [],
-            "items": [],
-            "drops": [],
+            "items": extra_items,
+            "drops": extra_drops,
         }
 
     _apply(game, st)

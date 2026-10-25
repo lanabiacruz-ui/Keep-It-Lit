@@ -25,13 +25,13 @@ FARO_MAX = 90.0
 FARO_START = 30.0
 FARO_PER_CERA = 25.0
 FARO_RADIUS = 140
-FOGATA_HEAL = 0.025
+FOGATA_HEAL = 0.06
 FARO_HEAL = 0.015
 
 FOGATA_MAX = 900.0
 FOGATA_START = 300.0
 FOGATA_PER_MADERA = 60.0
-FOGATA_RADIUS = 300
+FOGATA_RADIUS = 440
 
 LOW_FUEL = 0.15
 
@@ -44,7 +44,7 @@ FARO_GLOW_COLOR = (150, 100, 30)
 FARO_CORE_COLOR = (170, 105, 18)
 FARO_EMBERS = 2
 
-FOGATA_GLOW_SIZE = 0.80
+FOGATA_GLOW_SIZE = 1.10
 FOGATA_GLOW_COLOR = (200, 110, 30)
 FOGATA_EMBERS = 7
 
@@ -1054,24 +1054,19 @@ class PlaceableManager:
 
             return True
 
-        obj = self._nearest_feedable(game, item_id)
-
-        if obj is not None:
-
-            obj.add_fuel(FUEL_PER_ITEM[obj.kind])
-
-            game._take_one(slot)
-
-            audio.play("pickup")
-
-            game.show_message(
-                f"{game._item_name(obj.kind)}: "
-                f"{int(obj.fuel)} s de luz"
-            )
-
-            return True
-
         return False
+
+    def feed_target(self, game, item_id):
+
+        return self._nearest_feedable(game, item_id)
+
+    def feed(self, game, obj, item_id):
+
+        obj.add_fuel(FUEL_PER_ITEM[obj.kind])
+
+        audio.play("pickup")
+
+        return obj
 
 
     def handle_event(self, game, event):

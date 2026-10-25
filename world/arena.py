@@ -5812,42 +5812,41 @@ class Arena:
                 center=(local.centerx, 56)
             )
 
-        if final:
+        # el premio va abajo, para no tapar el texto de felicitaciones del cartel
+        y = local.h - 44
 
-            y = local.centery + 28
+        if final:
 
             if self.coin_icon is not None:
 
-                coin = pygame.transform.smoothscale(self.coin_icon, (40, 40))
-
-                layer.blit(coin, coin.get_rect(center=(local.centerx - 130, y)))
+                coin = pygame.transform.smoothscale(self.coin_icon, (32, 32))
+                layer.blit(coin, coin.get_rect(center=(local.centerx - 120, y)))
 
             draw_text(
-                layer, f"+{self.reward}", 56, (255, 225, 120),
-                midleft=(local.centerx - 104, y)
+                layer, f"+{self.reward}", 44, (255, 225, 120),
+                midleft=(local.centerx - 98, y)
             )
 
-            gem = pygame.transform.smoothscale(self.gem_icon, (40, 40))
+            gem = pygame.transform.smoothscale(self.gem_icon, (32, 32))
 
             layer.blit(gem, gem.get_rect(center=(local.centerx + 50, y)))
 
             draw_text(
-                layer, "+1", 56, (190, 235, 255),
-                midleft=(local.centerx + 76, y)
+                layer, "+1", 44, (190, 235, 255),
+                midleft=(local.centerx + 74, y)
             )
 
         else:
 
             draw_text(
-                layer, f"+{self.reward}", 64, (255, 225, 120),
-                center=(local.centerx + 14, local.centery + 28)
+                layer, f"+{self.reward}", 48, (255, 225, 120),
+                center=(local.centerx + 14, y)
             )
 
             if self.coin_icon is not None:
 
-                coin = pygame.transform.smoothscale(self.coin_icon, (40, 40))
-
-                layer.blit(coin, coin.get_rect(center=(local.centerx - 62, local.centery + 28)))
+                coin = pygame.transform.smoothscale(self.coin_icon, (32, 32))
+                layer.blit(coin, coin.get_rect(center=(local.centerx - 52, y)))
 
         layer.set_alpha(alpha)
 

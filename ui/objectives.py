@@ -26,6 +26,8 @@ PANEL_WIDTH = 300
 MARGIN = 18
 
 MINIMIZE_KEY = pygame.K_TAB
+SKIP_KEY = pygame.K_k
+SKIP_HINT = "K: sacar tutorial"
 BUTTON_SIZE = 24
 PILL_SIZE = (128, 32)
 MINIMIZE_TIME = 0.25
@@ -52,6 +54,8 @@ class Objectives:
         self.objectives = list(objectives)
 
         self.title_font = pygame.font.Font(None, 22)
+        self.hint_font = pygame.font.Font(None, 20)
+        self.skip_requested = False
         self.font = pygame.font.Font(None, 26)
 
         self.frame_normal = self._load_frame(OBJECTIVE_IMAGE)
@@ -333,6 +337,12 @@ class Objectives:
         if self.finished or not self.started:
             return False
 
+        if event.type == pygame.KEYDOWN and event.key == SKIP_KEY:
+
+            self.skip_requested = True
+
+            return True
+
         if event.type == pygame.KEYDOWN and event.key == MINIMIZE_KEY:
 
             self.toggle()
@@ -516,6 +526,13 @@ class Objectives:
 
             if ease == 0.0 and self.phase in ("show", "done"):
                 self._draw_button(screen, rect)
+
+                hint = self.hint_font.render(SKIP_HINT, True, (230, 230, 230))
+                shadow = self.hint_font.render(SKIP_HINT, True, (0, 0, 0))
+                pos = hint.get_rect(topright=(rect.right - 6, rect.bottom + 4))
+
+                screen.blit(shadow, pos.move(1, 1))
+                screen.blit(hint, pos)
 
         if ease > 0.0:
 

@@ -376,7 +376,8 @@ class NewGame:
 
             self.tutorial = Tutorial(
                 (self.width, self.height),
-                pages=objective_list[0]["tuto"]
+                pages=objective_list[0]["tuto"],
+                can_skip=True
             )
 
         self.coins = int(self.save_data.get("coins", 0))
@@ -504,6 +505,23 @@ class NewGame:
             self.item_seed,
             self.collected
         )
+
+        # items que se soltaron al morir: quedan guardados en el mapa
+        self._death_dropped = False
+        self._force_home = False
+        self.pending_drops = {}
+
+        for entry in self.save_data.get("death_drops", []):
+
+            if isinstance(entry, dict):
+                self.pending_drops.setdefault(
+                    entry.get("map", "mapa1"), []
+                ).append(entry)
+
+        drop_items, drop_lights = self.materialize_drops("mapa1")
+
+        self.world_items.extend(drop_items)
+        self.light_drops.extend(drop_lights)
 
         if self.save_data.get("current_map") == "mapa2":
 
@@ -885,6 +903,19 @@ class NewGame:
 
             self.tuto_flags.add("wheel")
 
+    def _skip_tutorial(self):
+
+        self.tutorial = None
+        self.objectives = None
+        self._objective_saved = 10 ** 6
+        self.tuto_flags = set()
+
+        self.tuto_seen = set(range(200))
+
+        self.show_message("Tutorial sacado. Con F1 volvés a ver la ayuda")
+
+        self._save()
+
     def _tuto_step_check(self):
 
         obj = self.objectives
@@ -910,7 +941,7 @@ class NewGame:
         if pages and self.tutorial is None:
 
             self.tutorial = Tutorial(
-                (self.width, self.height), pages=pages
+                (self.width, self.height), pages=pages, can_skip=True
             )
 
     def _draw_guidance(self):
@@ -1560,11 +1591,19 @@ class NewGame:
             )
             return
 
+        fed_obj = self.placeables.feed_target(self, item_id)
+
+        vida_antes = self.vida
+
         efectos = item.get("efectos")
 
         if efectos:
 
-            if item.get("requiere_fosforo") and not self.has_match:
+            can_effect = not (
+                item.get("requiere_fosforo") and not self.has_match
+            )
+
+            if not can_effect and fed_obj is None:
 
                 self.show_message(
                     "Necesitas una luz encendida"
@@ -1573,12 +1612,14 @@ class NewGame:
 
             used = False
 
-            for efecto in efectos:
+            if can_effect:
 
-                if self._apply_item_effect(efecto):
-                    used = True
+                for efecto in efectos:
 
-            if not used:
+                    if self._apply_item_effect(efecto):
+                        used = True
+
+            if not used and fed_obj is None:
                 return
 
         else:
@@ -1588,12 +1629,13 @@ class NewGame:
                 or ITEM_EFFECTS.get(item_id)
             )
 
-            if not legacy:
+            if not legacy and fed_obj is None:
 
                 self.show_message("Eso no se puede usar")
                 return
 
-            self._apply_effect(legacy)
+            if legacy:
+                self._apply_effect(legacy)
 
         self._take_one(slot)
 
@@ -1601,7 +1643,23 @@ class NewGame:
 
         self.tuto_flags.add("used")
 
-        if item_id == "iman":
+        if fed_obj is not None:
+
+            self.placeables.feed(self, fed_obj, item_id)
+
+            curado = round((self.vida - vida_antes) * 100)
+
+            texto = (
+                f"{self._item_name(fed_obj.kind)}: "
+                f"{int(fed_obj.fuel)} s de luz"
+            )
+
+            if curado > 0:
+                texto += f"  (+{curado}% de luz)"
+
+            self.show_message(texto)
+
+        elif item_id == "iman":
 
             self.show_message(
                 "Usaste Imán: apretá O para activarlo o desactivarlo"
@@ -2659,7 +2717,10 @@ class NewGame:
                 self.doors.final_door.slots_for_save()
                 if self.doors.final_door is not None else {}
             ),
-            "current_map": getattr(self, "current_map", "mapa1"),
+            "current_map": (
+                "mapa1" if self._force_home
+                else getattr(self, "current_map", "mapa1")
+            ),
 
             "chests": self.chests.save_data(),
 
@@ -2670,6 +2731,7 @@ class NewGame:
             "stats": dict(self.stats),
             "zones_seen": sorted(self.zones_seen),
             "tuto_seen": sorted(self.tuto_seen),
+            "death_drops": self._collect_drops_for_save(),
         }
 
         if self.objectives is not None:
@@ -2697,6 +2759,141 @@ class NewGame:
 
         self._save()
 
+    def materialize_drops(self, map_name):
+
+        items = []
+        lights = []
+
+        for e in self.pending_drops.pop(map_name, []):
+
+            try:
+
+                if e.get("k") == "light":
+
+                    it = LightItem(
+                        e["id"], e["x"], e["y"], e.get("life", 0.5)
+                    )
+                    lights.append(it)
+
+                else:
+
+                    it = WorldItem(e["id"], e["x"], e["y"])
+                    items.append(it)
+
+                it.death_drop = True
+
+            except Exception as error:
+
+                print(f"[drops] No se pudo cargar un item: {error}")
+
+        return items, lights
+
+    @staticmethod
+    def _drop_entries(map_name, items, lights):
+
+        out = []
+
+        for it in list(items) + list(lights):
+
+            if not getattr(it, "death_drop", False):
+                continue
+
+            fly = getattr(it, "fly", None)
+
+            x, y = fly["dst"] if fly is not None else it.rect.center
+
+            if isinstance(it, LightItem):
+
+                out.append({
+                    "k": "light", "id": it.kind, "life": float(it.life),
+                    "x": int(x), "y": int(y), "map": map_name,
+                })
+
+            else:
+
+                out.append({
+                    "k": "item", "id": it.item_id,
+                    "x": int(x), "y": int(y), "map": map_name,
+                })
+
+        return out
+
+    def _collect_drops_for_save(self):
+
+        cur = getattr(self, "current_map", "mapa1")
+
+        out = self._drop_entries(cur, self.world_items, self.light_drops)
+
+        for name, st in getattr(self, "_map_states", {}).items():
+
+            if name != cur:
+                out.extend(
+                    self._drop_entries(
+                        name, st.get("items", []), st.get("drops", [])
+                    )
+                )
+
+        for entries in self.pending_drops.values():
+            out.extend(entries)
+
+        return out
+
+    def _death_landing(self, cx, cy):
+
+        for _ in range(25):
+
+            angle = random.uniform(0, math.tau)
+            dist = random.uniform(18, 72)
+
+            x = cx + math.cos(angle) * dist
+            y = cy + math.sin(angle) * dist
+
+            if self.collision_map.point_is_walkable(int(x), int(y)):
+                return (x, y)
+
+        return (cx, cy)
+
+    def _drop_death_items(self):
+
+        if self._death_dropped or self.mode == MODE_HARDCORE:
+            return
+
+        self._death_dropped = True
+
+        cx, cy = self.player.rect.center
+
+        def launch(it, lst):
+
+            it.death_drop = True
+
+            it.start_fly(
+                (cx, cy),
+                self._death_landing(cx, cy),
+                delay=random.uniform(0.0, 0.35),
+                height=random.uniform(24, 44),
+                duration=random.uniform(0.5, 0.8),
+            )
+
+            lst.append(it)
+
+        for i in range(self.hud.SLOTS):
+
+            item_id = self.hud.items[i]
+            count = self.hud.counts[i]
+
+            if item_id is None or count <= 0:
+                continue
+
+            for _ in range(count):
+                launch(WorldItem(item_id, cx, cy), self.world_items)
+
+        if self.has_match and self.light_type != "fosforo":
+
+            launch(
+                LightItem(self.light_type, cx, cy, 0.5),
+                self.light_drops
+            )
+
     def apply_loss(self):
 
         if self._loss_applied or not self.save_path:
@@ -2712,6 +2909,10 @@ class NewGame:
                 self._save()
 
             return
+
+        self._drop_death_items()
+
+        self._force_home = True
 
         for i in range(self.hud.SLOTS):
             self.hud.items[i] = None
@@ -2744,6 +2945,12 @@ class NewGame:
             result = self.tutorial.handle_event(
                 event
             )
+
+            if getattr(self.tutorial, "skip_all", False):
+
+                self._skip_tutorial()
+
+                return None
 
             if result == "close" or not self.tutorial.active:
 
@@ -3047,7 +3254,8 @@ class NewGame:
                 if self.state == "playing":
 
                     self.tutorial = Tutorial(
-                        (self.width, self.height)
+                        (self.width, self.height),
+                        can_skip=self.objectives is not None
                     )
 
                     return None
@@ -3252,6 +3460,13 @@ class NewGame:
 
                 achievements.add_defeat()
 
+            self._drop_death_items()
+
+            for it in self.world_items + self.light_drops:
+
+                if getattr(it, "fly", None) is not None:
+                    it.update_fly(dt)
+
             self.flash_t = 0.0
 
             self.fade_alpha += (
@@ -3359,11 +3574,17 @@ class NewGame:
                 self
             )
 
-            self._tuto_step_check()
+            if self.objectives.skip_requested:
 
-            self.guide.update(dt)
+                self._skip_tutorial()
 
-            if self.objectives.finished:
+            else:
+
+                self._tuto_step_check()
+
+                self.guide.update(dt)
+
+            if self.objectives is not None and self.objectives.finished:
 
                 self._objective_saved = 10 ** 6
 
