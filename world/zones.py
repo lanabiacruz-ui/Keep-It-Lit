@@ -5,12 +5,12 @@ import pygame
 Zone = namedtuple("Zone", "id name rect")
 
 ZONES = [
-    Zone("inicio", "Sala de inicio", pygame.Rect(820, 900, 240, 144)),
-    Zone("central", "Sala central", pygame.Rect(836, 400, 216, 220)),
+    Zone("inicio", "Cabaña", pygame.Rect(820, 900, 240, 144)),
+    Zone("central", "Centro", pygame.Rect(836, 400, 216, 220)),
     Zone("tienda", "Tienda", pygame.Rect(856, 36, 184, 142)),
-    Zone("cofres", "Sala de cofres", pygame.Rect(316, 44, 272, 176)),
-    Zone("combate", "Orkun - Sala de combate 1", pygame.Rect(1244, 388, 436, 284)),
-    Zone("combate_izq", "Orkun - Sala de combate 2", pygame.Rect(148, 336, 500, 408)),
+    Zone("cofres", "Sala De Cofres", pygame.Rect(316, 44, 272, 176)),
+    Zone("combate", "Orkun", pygame.Rect(1244, 388, 436, 284)),
+    Zone("combate_izq", "Stonun", pygame.Rect(148, 336, 500, 408)),
 ]
 
 

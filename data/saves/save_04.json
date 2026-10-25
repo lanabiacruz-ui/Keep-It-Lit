@@ -1,0 +1,114 @@
+{
+    "player_name": "123",
+    "mode": "normal",
+    "created_at": "2026-10-25T03:00:00-03:00",
+    "last_played": "2026-10-25T03:03:28",
+    "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
+    "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
+    "x": 949,
+    "y": 154,
+    "coins": 101505,
+    "gems": 0,
+    "gems_green": 0,
+    "has_match": true,
+    "light": "fosforo",
+    "vida": 1.0,
+    "escudo": 0.0,
+    "inventory": [
+        null,
+        null,
+        null,
+        null
+    ],
+    "collected": [
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cabana#1",
+        "madera_10#0",
+        "madera_05#0",
+        "moneda_pasillo_cabana#0"
+    ],
+    "item_seed": 757481128,
+    "arena_wave": 11,
+    "arena_completed": true,
+    "arena_left_wave": 10,
+    "arena_left_completed": false,
+    "broken_doors": [
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "hub_derecha",
+        "hub_izquierda",
+        "sala_der",
+        "sala_izq",
+        "sup_central_abajo",
+        "sup_der_sala",
+        "sup_izq_central",
+        "sup_izq_sala"
+    ],
+    "final_door_slots": {
+        "clara": true,
+        "oscura": false
+    },
+    "current_map": "mapa1",
+    "chests": {
+        "cofre_01": {
+            "usos": 9
+        },
+        "cofre_02": {
+            "usos": 12
+        },
+        "cofre_03": {
+            "usos": 12
+        },
+        "cofre_04": {
+            "usos": 11
+        }
+    },
+    "placeables": [],
+    "enemies_seen": [
+        "slime",
+        "slime2"
+    ],
+    "stats": {
+        "items_used": 11,
+        "chests_opened": 4,
+        "purchases": 1,
+        "fireballs": 0,
+        "kills": 40
+    },
+    "zones_seen": [
+        "central",
+        "cofres",
+        "combate",
+        "combate_izq",
+        "inicio",
+        "tienda"
+    ],
+    "shop_inventory": [
+        null,
+        null,
+        null,
+        null,
+        null
+    ],
+    "tuto_seen": [
+        0
+    ],
+    "death_drops": [
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 944,
+            "y": 318,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "mapa",
+            "x": 942,
+            "y": 320,
+            "map": "mapa1"
+        }
+    ]
+}
