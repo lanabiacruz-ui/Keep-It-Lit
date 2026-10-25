@@ -28,12 +28,12 @@ from world.items import (
 from world.melee import Melee, TrainingDummy
 from world.fireball import Fireball, FireBurst
 from world.lights import LIGHTS, light_stats
-from world.doors import DoorManager, Door
+from world.doors import DoorManager, Door, DOOR_LAYOUT
 from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
 from world.final_door import MapSwitcher, enter_map, draw_placed_gems
 from world.crusher import CrusherBlocks
-from world.zones import ZoneTracker
+from world.zones import ZoneTracker, ZONES
 from world.slime import SlimeManager
 from world.shop import (
     Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES
@@ -45,6 +45,7 @@ from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
+from ui.guide import Guide
 from ui.Zone_banner import ZoneBanner
 from ui.achievement_toast import AchievementToast
 from ui.objectives import Objectives
@@ -68,6 +69,14 @@ MAX_STACK = 15
 MESSAGE_TIME = 2.2
 
 NO_LIGHT_COUNTDOWN = 10.0
+
+# version 2: se agregaron pasos de practica al principio del tutorial
+OBJECTIVE_VERSION = 2
+
+OLD_OBJECTIVE_MAP = {
+    0: 0, 1: 3, 2: 5, 3: 7, 4: 8, 5: 9, 6: 10, 7: 11, 8: 12,
+    9: 13, 10: 14, 11: 15, 12: 16, 13: 17, 14: 18, 15: 19, 16: 20,
+}
 
 FLICKER_THRESHOLD = 0.25
 
@@ -210,6 +219,12 @@ class NewGame:
 
         self.shop_cart = {}
 
+        # inventario personalizado de la tienda (se guarda en la partida)
+        self.shop_inventory = [
+            entry if isinstance(entry, (list, tuple)) else None
+            for entry in self.save_data.get("shop_inventory", [])
+        ]
+
         spawn_x, spawn_y = get_spawn_point(
             self.collision_map,
             "cabana"
@@ -274,9 +289,7 @@ class NewGame:
         self.effects_bar = EffectsBar((self.width, self.height))
         self.effects_bar.set_alert_image(self.arena.mosquito_art.warning)
 
-        self.tutorial = (
-            None if self.save_data else Tutorial((self.width, self.height))
-        )
+        self.tutorial = None
 
         self.zone_tracker = ZoneTracker()
         self.zone_banner = ZoneBanner((self.width, self.height))
@@ -304,6 +317,22 @@ class NewGame:
 
         self._objective_saved = self.save_data.get("objective_index")
 
+        # Las partidas viejas contaban los objetivos sin los pasos nuevos
+        # del tutorial: se pasa el numero viejo al que le corresponde ahora.
+        if (
+            self._objective_saved is not None
+            and self.save_data.get("objective_version", 1) < OBJECTIVE_VERSION
+            and "tuto_seen" not in self.save_data
+        ):
+
+            old = int(self._objective_saved)
+
+            self._objective_saved = (
+                OLD_OBJECTIVE_MAP.get(old, 10 ** 6)
+                if old <= max(OLD_OBJECTIVE_MAP)
+                else 10 ** 6
+            )
+
         if not self.save_data:
             start = 0
         elif self._objective_saved is not None:
@@ -325,6 +354,30 @@ class NewGame:
         else:
 
             self.objectives = None
+
+        # guia: flechas, lista de botones a probar y explicaciones
+        # que frenan el juego al empezar cada paso
+        self.guide = Guide()
+        self.tuto_flags = set()
+        self._tuto_last = None
+
+        saved_seen = self.save_data.get("tuto_seen")
+
+        if saved_seen is not None:
+            self.tuto_seen = {int(i) for i in saved_seen}
+        elif self.save_data:
+            self.tuto_seen = set(range(min(start or 0, 200) + 1))
+        else:
+            self.tuto_seen = set()
+
+        if not self.save_data and objective_list:
+
+            self.tuto_seen.add(0)
+
+            self.tutorial = Tutorial(
+                (self.width, self.height),
+                pages=objective_list[0]["tuto"]
+            )
 
         self.coins = int(self.save_data.get("coins", 0))
 
@@ -797,6 +850,109 @@ class NewGame:
         self._reset_fury()
 
 
+    TUTO_KEYS = {
+        pygame.K_w: "w",
+        pygame.K_a: "a",
+        pygame.K_s: "s",
+        pygame.K_d: "d",
+        pygame.K_1: "slotkey",
+        pygame.K_2: "slotkey",
+        pygame.K_3: "slotkey",
+        pygame.K_4: "slotkey",
+        pygame.K_5: "k5",
+        pygame.K_ESCAPE: "esc",
+        pygame.K_TAB: "tab",
+        pygame.K_F1: "f1",
+    }
+
+    def _record_tuto_input(self, event):
+
+        if self.state != "playing" or self.objectives is None:
+            return
+
+        if event.type == pygame.KEYDOWN:
+
+            name = self.TUTO_KEYS.get(event.key)
+
+            if name:
+                self.tuto_flags.add(name)
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+
+            self.tuto_flags.add("click_l")
+
+        elif event.type == pygame.MOUSEWHEEL and event.y != 0:
+
+            self.tuto_flags.add("wheel")
+
+    def _tuto_step_check(self):
+
+        obj = self.objectives
+
+        if obj is None or not obj.started:
+            return
+
+        idx = obj.index
+
+        if idx == self._tuto_last:
+            return
+
+        self._tuto_last = idx
+        self.tuto_flags = set()
+
+        if idx >= len(obj.objectives) or idx in self.tuto_seen:
+            return
+
+        self.tuto_seen.add(idx)
+
+        pages = obj.objectives[idx].get("tuto")
+
+        if pages and self.tutorial is None:
+
+            self.tutorial = Tutorial(
+                (self.width, self.height), pages=pages
+            )
+
+    def _draw_guidance(self):
+
+        obj = self.objectives
+
+        if (
+            obj is None or obj.finished or not obj.started
+            or obj.index >= len(obj.objectives)
+            or self.tutorial is not None
+            or self.shop is not None
+            or self.minigame is not None
+            or self.pause_view is not None
+        ):
+            return
+
+        step = obj.objectives[obj.index]
+
+        if obj.phase == "done":
+            return
+
+        checks = step.get("checks")
+
+        if checks is not None:
+            self.guide.draw_checklist(self.screen, checks(self))
+
+        target_fn = step.get("target")
+
+        if (
+            target_fn is None
+            or getattr(self, "current_map", "mapa1") != "mapa1"
+        ):
+            return
+
+        target = target_fn(self)
+
+        if target is not None:
+
+            self.guide.draw_arrow(
+                self.screen, self.camera, self.player.rect, target
+            )
+
     def count_stat(self, name, amount=1):
 
         self.stats[name] = self.stats.get(name, 0) + amount
@@ -812,43 +968,203 @@ class NewGame:
                 for a in g.arenas
             )
 
+        def flag(name):
+
+            return lambda g: name in g.tuto_flags
+
+        def checks_done(checks):
+
+            return lambda g: all(ok for _, ok in checks(g))
+
+        def zone_center(zone_id):
+
+            for zone in ZONES:
+                if zone.id == zone_id:
+                    return zone.rect.center
+
+            return None
+
+        def door_point(door_id):
+
+            for entry in DOOR_LAYOUT:
+                if entry[0] == door_id:
+                    return (entry[3], entry[4])
+
+            return None
+
+        def nearest(g, points):
+
+            points = [p for p in points if p is not None]
+
+            if not points:
+                return None
+
+            px, py = g.player.rect.center
+
+            return min(
+                points,
+                key=lambda p: (p[0] - px) ** 2 + (p[1] - py) ** 2
+            )
+
+        def item_points(g, coins):
+
+            return [
+                it.rect.center
+                for it in g.world_items
+                if str(getattr(it, "item_id", "")).startswith("moneda")
+                == coins
+                and getattr(it, "fly", None) is None
+            ]
+
+        def light_point(g):
+
+            return nearest(
+                g, [d.rect.center for d in g.light_drops]
+            ) or MATCH_POS
+
+        def hotbar_empty(g):
+
+            return all(i is None for i in g.hud.items)
+
+        def move_checks(g):
+
+            return [
+                ("W  (arriba)", "w" in g.tuto_flags),
+                ("A  (izquierda)", "a" in g.tuto_flags),
+                ("S  (abajo)", "s" in g.tuto_flags),
+                ("D  (derecha)", "d" in g.tuto_flags),
+            ]
+
+        def attack_checks(g):
+
+            return [
+                ("Click izquierdo", "click_l" in g.tuto_flags),
+            ]
+
+        def slot_checks(g):
+
+            return [
+                ("Teclas 1 a 4 (casilleros)", "slotkey" in g.tuto_flags),
+                ("Tecla 5 (tu luz)", "k5" in g.tuto_flags),
+                ("Ruedita del mouse", "wheel" in g.tuto_flags),
+            ]
+
+        def use_checks(g):
+
+            return [
+                ("Usar un objeto (F o click derecho)",
+                 "used" in g.tuto_flags),
+                ("Soltar un objeto (Q)", "dropped" in g.tuto_flags),
+            ]
+
+        def help_checks(g):
+
+            return [
+                ("ESC: pausa (volvé con ESC)", "esc" in g.tuto_flags),
+                ("TAB: ocultar el objetivo", "tab" in g.tuto_flags),
+                ("F1: ver la ayuda", "f1" in g.tuto_flags),
+            ]
+
         return [
 
             {
                 "text": (
-                    "Está oscuro: acercate a la luz del piso y "
-                    "agarrala con E. Si en "
+                    "Está oscuro: buscá el fósforo del piso (te lo marca "
+                    "la flecha) y agarralo con E. Si en "
                     f"{int(NO_LIGHT_COUNTDOWN)} segundos no tenés luz, perdés."
                 ),
+                "tuto": [
+                    "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
+                    "Está oscuro. Una flecha naranja te va a guiar. Movete con W A S D hasta el fósforo del piso y agarralo con E. Tenés 10 segundos sin luz antes de perder.",
+                ],
+                "target": light_point,
                 "done": lambda g: g.has_match,
             },
             {
-                "text": (
-                    "Agarrá objetos del piso con E (madera, resina, "
-                    "aceite): sirven para que tu luz no se apague."
-                ),
-                "done": lambda g: g.items_picked > 0,
-                "max_time": 30.0,
+                "text": "Probá moverte con las cuatro teclas: W, A, S y D.",
+                "tuto": [
+                    "¡Ya tenés luz! Ahora vamos a practicar. MOVERTE: probá las cuatro teclas W A S D, una por una. La lista de arriba se tilda sola.",
+                ],
+                "checks": move_checks,
+                "done": checks_done(move_checks),
             },
             {
                 "text": (
-                    "Usá un objeto: elegilo con 1-4 (o la ruedita) y "
-                    "apretá F o click derecho."
+                    "Probá atacar con click izquierdo. "
+                    "Cada golpe gasta un poco de luz."
                 ),
-                "done": lambda g: g.stats["items_used"] >= 1,
-                "max_time": 45.0,
+                "tuto": [
+                    "ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más. Probalo.",
+                ],
+                "checks": attack_checks,
+                "done": checks_done(attack_checks),
+            },
+            {
+                "text": (
+                    "Agarrá un objeto del piso con E (madera, resina, "
+                    "aceite): sirven para que tu luz no se apague."
+                ),
+                "tuto": [
+                    "AGARRAR: acercate a un objeto del piso (madera, resina, aceite) y apretá E. Sirven para recuperar luz. Seguí la flecha.",
+                ],
+                "target": lambda g: nearest(g, item_points(g, False)),
+                "done": lambda g: g.items_picked > 0,
+            },
+            {
+                "text": (
+                    "Probá elegir casilleros: teclas 1 a 4, la tecla 5 "
+                    "(tu luz) y la ruedita del mouse."
+                ),
+                "tuto": [
+                    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrerlos con la RUEDITA. Probá las tres cosas.",
+                ],
+                "checks": slot_checks,
+                "done": checks_done(slot_checks),
+            },
+            {
+                "text": (
+                    "Usá un objeto (F o click derecho) y soltá otro con Q. "
+                    "Si te quedás sin objetos, agarrá más del piso."
+                ),
+                "tuto": [
+                    "USAR: elegí un casillero con un objeto y apretá F o click derecho. SOLTAR: con Q tirás el objeto elegido. Probá las dos. Podés volver a agarrar con E.",
+                ],
+                "target": lambda g: (
+                    nearest(g, item_points(g, False))
+                    if hotbar_empty(g) else None
+                ),
+                "checks": use_checks,
+                "done": checks_done(use_checks),
+            },
+            {
+                "text": (
+                    "Probá los botones de ayuda: ESC (pausa), TAB "
+                    "(ocultar el objetivo) y F1 (ayuda)."
+                ),
+                "tuto": [
+                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de bichos), TAB esconde o muestra el objetivo y F1 vuelve a mostrar la ayuda completa. Probá las tres.",
+                ],
+                "checks": help_checks,
+                "done": checks_done(help_checks),
             },
             {
                 "text": (
                     "Salí de la cabaña: pegale a la puerta con click "
-                    "izquierdo o ESPACIO hasta romperla. Cada golpe "
+                    "izquierdo hasta romperla. Cada golpe "
                     "gasta luz."
                 ),
+                "tuto": [
+                    "PUERTAS: pegale a la puerta con tu luz (click izquierdo) hasta romperla. Cada golpe gasta luz, y cada tipo de puerta pide una luz distinta. Seguí la flecha.",
+                ],
+                "target": lambda g: door_point("cabana"),
                 "done": lambda g: "cabana" in g.doors.broken_ids,
             },
-
             {
                 "text": "Seguí el camino al norte hasta la sala central.",
+                "tuto": [
+                    "Seguí el camino hacia el norte. La flecha te lleva hasta la sala central, que conecta todo el mapa.",
+                ],
+                "target": lambda g: zone_center("central"),
                 "done": lambda g: "central" in g.zones_seen,
             },
             {
@@ -856,20 +1172,31 @@ class NewGame:
                     "Juntá 10 monedas: hay tiradas por el mapa, en los "
                     "cofres y las sueltan los slimes."
                 ),
+                "tuto": [
+                    "MONEDAS: se juntan solas al acercarte. Hay tiradas por el mapa, en los cofres y las sueltan los slimes. Juntá 10 siguiendo la flecha.",
+                ],
+                "target": lambda g: nearest(g, item_points(g, True)),
                 "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
             },
             {
                 "text": (
                     "Andá a la tienda (al norte de la sala central) y "
-                    "acercate al vendedor: apretá F para hablarle."
+                    "apretá F cerca del vendedor para hablarle."
                 ),
-                "done": lambda g: "tienda" in g.zones_seen,
+                "tuto": [
+                    "TIENDA: está al norte de la sala central. Acercate al vendedor hasta que aparezca la tecla F y apretala para abrir la tienda.",
+                ],
+                "target": lambda g: g.shopkeeper.TALK_RECT.center,
+                "done": flag("shop_opened"),
             },
             {
                 "text": (
                     "Comprale algo al vendedor: elegí un objeto, la "
                     "cantidad y apretá Comprar."
                 ),
+                "tuto": [
+                    "COMPRAR: click en un producto para agregarlo, click derecho para quitarlo, y Comprar para pagar. Con la pestaña Inventario armás tus casilleros y comprás todo junto.",
+                ],
                 "done": lambda g: g.stats["purchases"] >= 1,
             },
             {
@@ -878,13 +1205,23 @@ class NewGame:
                     "Pegale a un cofre con tu luz y apretá ESPACIO en la "
                     "zona marcada para abrirlo."
                 ),
+                "tuto": [
+                    "COFRES: están en la sala de arriba a la izquierda. Pegale a un cofre con tu luz y, en el minijuego, apretá ESPACIO cuando la barra esté en la zona marcada.",
+                ],
+                "target": lambda g: zone_center("cofres"),
                 "done": lambda g: g.stats["chests_opened"] >= 1,
             },
-
             {
                 "text": (
                     "Conseguí una vela, una luz mejor que el fósforo: "
                     "comprala en la tienda o buscala en los cofres."
+                ),
+                "tuto": [
+                    "LUCES: la vela ilumina más y dura más que el fósforo. Comprala en la tienda o buscala en los cofres. Las luces se equipan solas al agarrarlas con E.",
+                ],
+                "target": lambda g: (
+                    nearest(g, [d.rect.center for d in g.light_drops])
+                    or g.shopkeeper.TALK_RECT.center
                 ),
                 "done": lambda g: (
                     g.has_match and g.light_type in ("vela", "antorcha")
@@ -895,16 +1232,31 @@ class NewGame:
                     "Pegale a una puerta gris con tu vela hasta romperla: "
                     "son las que llevan a las salas de combate."
                 ),
+                "tuto": [
+                    "PUERTAS GRISES: solo se rompen con vela o antorcha. Llevan a las salas de combate, a la izquierda y a la derecha de la sala central. Seguí la flecha.",
+                ],
+                "target": lambda g: nearest(
+                    g,
+                    [
+                        door_point(i) for i in ("sala_izq", "sala_der")
+                        if i not in g.doors.broken_ids
+                    ]
+                ),
                 "done": lambda g: (
                     "sala_izq" in g.doors.broken_ids
                     or "sala_der" in g.doors.broken_ids
                 ),
             },
-
             {
                 "text": (
                     "Entrá a una sala de combate y elegí: con escape "
                     "podés irte, sin escape el premio es mayor."
+                ),
+                "tuto": [
+                    "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando; sin escape el premio es mayor, pero si tu luz se apaga perdés. Entrá a una.",
+                ],
+                "target": lambda g: nearest(
+                    g, [zone_center("combate_izq"), zone_center("combate")]
                 ),
                 "done": in_combat,
             },
@@ -913,6 +1265,9 @@ class NewGame:
                     "Derrotá a todos los enemigos de la oleada pegándoles "
                     "con tu luz y juntá las monedas del premio."
                 ),
+                "tuto": [
+                    "COMBATE: pegales a los enemigos con tu luz y juntá las monedas del premio. Cuidado con los mosquitos: se pegan y chupan vida. Usá tus objetos a tiempo.",
+                ],
                 "done": lambda g: any(
                     a.wave >= 2 or a.completed for a in g.arenas
                 ),
@@ -922,6 +1277,14 @@ class NewGame:
                     "Conseguí la antorcha: con G cambiás de golpe y "
                     "lanzás una bola de fuego. ¡Probala!"
                 ),
+                "tuto": [
+                    "ANTORCHA: se desbloquea en la tienda al llegar a la oleada 6. Con G cambiás de golpe y lanzás una bola de fuego. ¡Probala!",
+                ],
+                "target": lambda g: (
+                    None
+                    if g.has_match and g.light_type == "antorcha"
+                    else g.shopkeeper.TALK_RECT.center
+                ),
                 "done": lambda g: g.stats["fireballs"] >= 1,
             },
             {
@@ -929,6 +1292,7 @@ class NewGame:
                     "Completá Orkun - Sala de combate 2 (izquierda, la "
                     "del Guardián): 10 oleadas y una gema verde oscuro."
                 ),
+                "target": lambda g: zone_center("combate_izq"),
                 "done": lambda g: g.arena_left.completed,
             },
             {
@@ -936,6 +1300,7 @@ class NewGame:
                     "Completá Orkun - Sala de combate 1 (derecha): "
                     "10 oleadas y una gema te esperan."
                 ),
+                "target": lambda g: zone_center("combate"),
                 "done": lambda g: g.arena.completed,
             },
             {
@@ -1152,6 +1517,8 @@ class NewGame:
 
         self._take_one(slot)
 
+        self.tuto_flags.add("dropped")
+
         if self._magnet_active():
 
             self.show_message(
@@ -1231,6 +1598,8 @@ class NewGame:
         self._take_one(slot)
 
         self.count_stat("items_used")
+
+        self.tuto_flags.add("used")
 
         if item_id == "iman":
 
@@ -2015,6 +2384,8 @@ class NewGame:
         if self.shop is not None:
             return
 
+        self.tuto_flags.add("shop_opened")
+
         self.shop = ShopUI(
             self.screen.get_size(),
             self.catalog,
@@ -2023,13 +2394,20 @@ class NewGame:
             MATCH_DURATION,
             cart=self.shop_cart,
             locks=self.shop_locks(),
-            best_wave=self.best_wave()
+            best_wave=self.best_wave(),
+            inventory=self.shop_inventory,
+            max_stack=self._max_stack,
+            inv_slots=self.hud.SLOTS
         )
 
     def _close_shop(self):
 
         if self.shop is not None:
             self.shop_cart = dict(self.shop.cart)
+            self.shop_inventory = [
+                list(slot) if slot else None
+                for slot in self.shop.inventory
+            ]
 
         self.shop = None
 
@@ -2110,6 +2488,111 @@ class NewGame:
         self._close_shop()
 
 
+    def _buy_inventory(self, slots):
+
+        locks = self.shop_locks()
+
+        def valid(slot):
+            return bool(
+                slot and slot[0] not in locks
+                and slot[0] in self.shop_prices
+            )
+
+        # los primeros casilleros son los del HUD, el ultimo es la luz
+        wanted = [
+            (slot[0], int(slot[1]))
+            for slot in slots[:self.hud.SLOTS]
+            if valid(slot)
+        ]
+
+        light = None
+
+        if len(slots) > self.hud.SLOTS and valid(slots[self.hud.SLOTS]):
+            light = slots[self.hud.SLOTS][0]
+
+        if light not in LIGHTS:
+            light = None
+
+        total = sum(
+            self.shop_prices[item_id] * qty for item_id, qty in wanted
+        )
+
+        if light is not None:
+            total += self.shop_prices[light]
+
+        if total <= 0:
+            return
+
+        if total > self.coins:
+            self.show_message("No te alcanzan las monedas")
+            return
+
+        # Primero se prueba si entra todo en los casilleros reales,
+        # asi no se cobra una compra que no se puede entregar.
+        items = list(self.hud.items)
+        counts = list(self.hud.counts)
+
+        for item_id, qty in wanted:
+
+            limit = self._max_stack(item_id)
+
+            for _ in range(qty):
+
+                spot = None
+
+                for i in range(self.hud.SLOTS):
+                    if items[i] == item_id and counts[i] < limit:
+                        spot = i
+                        break
+
+                if spot is None:
+                    for i in range(self.hud.SLOTS):
+                        if items[i] is None:
+                            spot = i
+                            break
+
+                if spot is None:
+                    self.show_message(
+                        "No tenés lugar: vaciá casilleros de tu inventario"
+                    )
+                    return
+
+                items[spot] = item_id
+                counts[spot] += 1
+
+        self.coins -= total
+
+        for i in range(self.hud.SLOTS):
+            self.hud.items[i] = items[i]
+            self.hud.counts[i] = counts[i]
+
+        if light is not None:
+
+            if self.has_match:
+
+                # ya tenes una luz en la mano: la nueva sale por la boca
+                for item in self.shopkeeper.spit(
+                    [light], self.collision_map
+                ):
+                    self.light_drops.append(item)
+
+            else:
+
+                self.equip_match(light, 1.0)
+
+        if self.shop is not None:
+            self.shop.coins = int(self.coins)
+
+        audio.play("buy")
+
+        self.show_message("Inventario comprado")
+
+        self.count_stat("purchases")
+
+        self._close_shop()
+
+        self._save()
+
     def _save(self):
 
         if not self.save_path:
@@ -2155,6 +2638,11 @@ class NewGame:
 
             "inventory": inventory,
 
+            "shop_inventory": [
+                list(slot) if slot else None
+                for slot in self.shop_inventory
+            ],
+
             "collected": list(
                 self.collected
             ),
@@ -2181,14 +2669,17 @@ class NewGame:
 
             "stats": dict(self.stats),
             "zones_seen": sorted(self.zones_seen),
+            "tuto_seen": sorted(self.tuto_seen),
         }
 
         if self.objectives is not None:
             data["objective_index"] = self.objectives.index
+            data["objective_version"] = OBJECTIVE_VERSION
             data["objectives_minimized"] = self.objectives.minimized
 
         elif self._objective_saved is not None:
             data["objective_index"] = int(self._objective_saved)
+            data["objective_version"] = OBJECTIVE_VERSION
 
         save_progress(
             self.save_path,
@@ -2225,6 +2716,9 @@ class NewGame:
         for i in range(self.hud.SLOTS):
             self.hud.items[i] = None
             self.hud.counts[i] = 0
+
+        # los objetos del mapa vuelven a aparecer
+        self.collected = set()
 
         self.has_match = True
         self.light_type = "fosforo"
@@ -2366,8 +2860,18 @@ class NewGame:
 
                 self._buy(result[1])
 
+            elif (
+                isinstance(result, tuple)
+                and len(result) == 2
+                and result[0] == "buy_inventory"
+            ):
+
+                self._buy_inventory(result[1])
+
             return None
 
+
+        self._record_tuto_input(event)
 
         menu_arena = self._menu_arena()
 
@@ -2649,10 +3153,6 @@ class NewGame:
 
                 self._toggle_attack_mode()
 
-            elif event.key == pygame.K_SPACE:
-
-                self._attack()
-
         if (
             event.type == pygame.MOUSEBUTTONDOWN
             and event.button == 1
@@ -2858,6 +3358,10 @@ class NewGame:
                 dt,
                 self
             )
+
+            self._tuto_step_check()
+
+            self.guide.update(dt)
 
             if self.objectives.finished:
 
@@ -3732,6 +4236,8 @@ class NewGame:
 
             if self.objectives is not None:
                 self.objectives.draw(self.screen)
+
+            self._draw_guidance()
 
             self.zone_banner.draw(self.screen)
 

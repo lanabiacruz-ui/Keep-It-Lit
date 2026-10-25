@@ -1,0 +1,65 @@
+{
+    "player_name": "o",
+    "mode": "normal",
+    "created_at": "2026-10-24T22:18:30",
+    "last_played": "2026-10-24T22:26:30",
+    "password_salt": "48015042e070c06da3d9002ce23c6476",
+    "password_hash": "45e98f8c183616ce36dc2bf4eed57e35b7b3ce1366298d2db788ad5b8b603058",
+    "x": 984,
+    "y": 944,
+    "coins": 2,
+    "gems": 0,
+    "gems_green": 0,
+    "has_match": true,
+    "light": "fosforo",
+    "vida": 1.0,
+    "escudo": 0.0,
+    "inventory": [
+        null,
+        null,
+        null,
+        null
+    ],
+    "shop_inventory": [],
+    "collected": [],
+    "item_seed": 385451229,
+    "arena_wave": 1,
+    "arena_completed": false,
+    "arena_left_wave": 1,
+    "arena_left_completed": false,
+    "broken_doors": [
+        "cabana"
+    ],
+    "final_door_slots": {
+        "clara": false,
+        "oscura": false
+    },
+    "current_map": "mapa1",
+    "chests": {},
+    "placeables": [],
+    "enemies_seen": [
+        "slime"
+    ],
+    "stats": {
+        "items_used": 2,
+        "chests_opened": 0,
+        "purchases": 0,
+        "fireballs": 0,
+        "kills": 0
+    },
+    "zones_seen": [
+        "inicio"
+    ],
+    "tuto_seen": [
+        0,
+        2,
+        4,
+        5,
+        6,
+        7,
+        8
+    ],
+    "objective_index": 8,
+    "objective_version": 2,
+    "objectives_minimized": true
+}
