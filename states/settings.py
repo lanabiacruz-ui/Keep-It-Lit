@@ -98,6 +98,8 @@ class Settings:
 
     TOP_Y = 302
     NAV_BTN = (118, 32)
+    NAV_Y = 487
+    NAV_GAP = 24
     COL_X = (508, 736, 964)
     COL_W = 216
     GROUP_Y = 334
@@ -107,7 +109,8 @@ class Settings:
 
     TEXT = (244, 248, 255)
     TEXT_DIM = (176, 198, 232)
-    ACCENT = (255, 200, 110)
+    ACCENT = (140, 200, 255)
+    FILL = (30, 84, 196)
     SHADOW = (14, 26, 58)
 
     def __init__(
@@ -195,16 +198,20 @@ class Settings:
 
         nav_w, nav_h = self._size(self.NAV_BTN)
 
+        center_x = (self.LEFT + self.RIGHT) / 2
+
+        nav_y = round(self.NAV_Y * self.sy) - nav_h // 2
+
         self.back_rect = pygame.Rect(
-            round(self.LEFT * self.sx),
-            round(self.TOP_Y * self.sy) - nav_h // 2,
+            round((center_x - self.NAV_GAP / 2 - self.NAV_BTN[0]) * self.sx),
+            nav_y,
             nav_w,
             nav_h
         )
 
         self.reset_rect = pygame.Rect(
-            round((self.RIGHT - self.NAV_BTN[0]) * self.sx),
-            round(self.TOP_Y * self.sy) - nav_h // 2,
+            round((center_x + self.NAV_GAP / 2) * self.sx),
+            nav_y,
             nav_w,
             nav_h
         )
@@ -245,6 +252,8 @@ class Settings:
         self.img_track = self._load("slider_track.png", self.tracks["music"].size)
 
         self.img_handle = self._load("slider_handle.png", self.handle_size)
+
+        self.img_fill = self._load("slider_relleno.png", self.tracks["music"].size)
 
         self.img_on = self._load("toggle_on.png", self.toggle_rect.size)
         self.img_off = self._load("toggle_off.png", self.toggle_rect.size)
@@ -602,6 +611,41 @@ class Settings:
             self.small_font, fallback_text, (40, 30, 20), center=rect.center
         )
 
+    def _draw_fill(self, track, handle_x):
+
+        width = min(track.width, handle_x - track.left)
+
+        if width <= 0:
+            return
+
+        if self.img_fill is not None:
+
+            crop = self.img_fill.subsurface(
+                pygame.Rect(0, 0, width, self.img_fill.get_height())
+            )
+
+            self.screen.blit(crop, track.topleft)
+
+            return
+
+        inner = pygame.Rect(
+            track.left + round(track.width * 0.055),
+            track.top + round(track.height * 0.34),
+            round(track.width * 0.89),
+            max(2, round(track.height * 0.34))
+        )
+
+        pygame.draw.rect(
+            self.screen,
+            self.FILL,
+            pygame.Rect(
+                inner.left, inner.top,
+                max(1, min(inner.width, handle_x - inner.left)),
+                inner.height
+            ),
+            border_radius=inner.height // 2
+        )
+
     def _draw_main(self, mouse):
 
         rows = (
@@ -622,6 +666,16 @@ class Settings:
 
             track = self.tracks[name]
 
+            left, right = self._handle_x_range(track)
+
+            hx = round(left + (right - left) * value)
+
+            left, right = self._handle_x_range(track)
+
+            hx = round(left + (right - left) * value)
+
+            self._draw_fill(track, hx)
+
             if self.img_track is not None:
 
                 self.screen.blit(self.img_track, track)
@@ -631,10 +685,6 @@ class Settings:
                 pygame.draw.rect(
                     self.screen, (24, 38, 78), track, border_radius=8
                 )
-
-            left, right = self._handle_x_range(track)
-
-            hx = round(left + (right - left) * value)
 
             if self.img_handle is not None:
 
@@ -726,7 +776,7 @@ class Settings:
             title,
             color,
             center=(
-                (self.back_rect.right + self.reset_rect.left) // 2,
+                round((self.LEFT + self.RIGHT) / 2 * self.sx),
                 round(self.TOP_Y * self.sy)
             )
         )

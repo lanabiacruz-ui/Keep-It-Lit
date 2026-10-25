@@ -1,7 +1,10 @@
 import math
+import random
 from pathlib import Path
 
 import pygame
+
+from core.audio_manager import audio
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -44,6 +47,12 @@ class Tutorial:
     INPUT_DELAY = 0.6
 
     MIN_FONT = 17
+
+    TYPE_SPEED = 38.0
+    BLIP_EVERY = 2
+    PAUSE_END = 0.22
+    PAUSE_COMMA = 0.10
+    BLIPS = ("talk_a", "talk_b", "talk_c", "talk_d")
 
     def __init__(
         self,
@@ -123,6 +132,8 @@ class Tutorial:
         self._lines_cache = {}
         self._text_cache = {}
         self._fonts = {}
+
+        self._reset_typing()
 
 
     @staticmethod
@@ -288,6 +299,74 @@ class Tutorial:
         return self._lines_cache[index]
 
 
+    def _reset_typing(self):
+
+        self.shown = 0
+        self.reveal = 0.0
+        self.pause = 0.0
+        self._blip_count = 0
+        self._last_blip = None
+
+    def _flat(self):
+
+        _, lines = self._lines(self.index)
+
+        return "".join(lines)
+
+    def _typing_done(self):
+
+        return self.shown >= len(self._flat())
+
+    def _blip(self):
+
+        names = [n for n in self.BLIPS if n != self._last_blip]
+
+        self._last_blip = random.choice(names)
+
+        audio.play(self._last_blip)
+
+    def _update_typing(self, dt):
+
+        if self.phase != "show" or self._typing_done():
+            return
+
+        if self.pause > 0.0:
+
+            self.pause -= dt
+
+            return
+
+        flat = self._flat()
+
+        self.reveal += dt * self.TYPE_SPEED
+
+        while self.shown < min(int(self.reveal), len(flat)):
+
+            ch = flat[self.shown]
+
+            self.shown += 1
+
+            if ch.isalnum():
+
+                self._blip_count += 1
+
+                if self._blip_count % self.BLIP_EVERY == 0:
+                    self._blip()
+
+            if ch in ".!?:":
+
+                self.pause = self.PAUSE_END
+                self.reveal = float(self.shown)
+
+                break
+
+            if ch in ",;":
+
+                self.pause = self.PAUSE_COMMA
+                self.reveal = float(self.shown)
+
+                break
+
     def handle_event(self, event):
 
         if not self.active or self.phase != "show":
@@ -321,7 +400,15 @@ class Tutorial:
         if event.key != pygame.K_SPACE:
             return False
 
+        if not self._typing_done():
+
+            self.shown = len(self._flat())
+
+            return True
+
         self.index += 1
+
+        self._reset_typing()
 
         if self.index >= len(self.pages):
 
@@ -339,6 +426,8 @@ class Tutorial:
 
         self.age += dt
         self.phase_time += dt
+
+        self._update_typing(dt)
 
         if self.phase == "in" and self.phase_time >= self.SLIDE_TIME:
 
@@ -381,7 +470,11 @@ class Tutorial:
         bob = 0
 
         if self.phase == "show":
-            bob = int(round(math.sin(self.age * 4) * 2))
+
+            if self._typing_done():
+                bob = int(round(math.sin(self.age * 4) * 2))
+            else:
+                bob = int(round(math.sin(self.age * 22) * 2.5))
 
         screen.blit(
             self.character,
@@ -404,12 +497,24 @@ class Tutorial:
             (frame_pos.height - block_h) // 2 - 6
         )
 
+        remaining = (
+            sum(len(l) for l in lines)
+            if self.phase == "out" else self.shown
+        )
+
         for i, line in enumerate(lines):
+
+            if remaining <= 0:
+                break
+
+            part = line[:remaining]
+
+            remaining -= len(line)
 
             y = top + i * line_h
 
-            shadow = self._text(font, line, SHADOW_COLOR)
-            label = self._text(font, line, TEXT_COLOR)
+            shadow = font.render(part, True, SHADOW_COLOR)
+            label = font.render(part, True, TEXT_COLOR)
 
             screen.blit(shadow, (frame_pos.left + self.pad_x + 1, y + 1))
             screen.blit(label, (frame_pos.left + self.pad_x, y))
@@ -432,7 +537,11 @@ class Tutorial:
         )
 
 
-        if self.phase == "show" and self.age >= self.INPUT_DELAY:
+        if (
+            self.phase == "show"
+            and self.age >= self.INPUT_DELAY
+            and self._typing_done()
+        ):
 
             if int(self.age * 2) % 2 == 0:
 

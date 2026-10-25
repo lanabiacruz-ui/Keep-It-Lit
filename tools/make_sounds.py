@@ -578,6 +578,35 @@ def heartbeat():
     return mix(thump(1.0), delay(thump(0.7), 0.2))
 
 
+def _talk(base, wobble=0.06, rise=0.12):
+    # blip corto y agudo con un temblor rapido: "bu-ru-bu-ru" cuando habla el fantasma
+    dur = 0.075
+    n = int(SR * dur)
+    f = Sig(
+        base * (1 + rise * i / n)
+        * (1 + wobble * math.sin(2 * math.pi * 36 * i / SR))
+        for i in range(n)
+    )
+    tone = sine(f, dur) + 0.30 * sine(f * 2, dur) + 0.10 * sine(f * 3, dur)
+    return tone * env(n, 0.002, 26)
+
+
+def talk_a():
+    return _talk(1080)
+
+
+def talk_b():
+    return _talk(1240, 0.05, 0.08)
+
+
+def talk_c():
+    return _talk(1410, 0.07, 0.15)
+
+
+def talk_d():
+    return _talk(1590, 0.05, 0.10)
+
+
 SOUNDS = {
     "coin": coin, "coin_big": coin_big, "pickup": pickup, "gem": gem,
     "swing": swing, "hit": hit, "hit_heavy": hit_heavy, "hurt": hurt,
@@ -600,6 +629,7 @@ SOUNDS = {
     "wave_start": wave_start, "map_complete": map_complete,
     "portal": portal, "place": place, "bite": bite,
     "slime_hit": slime_hit, "crackle": crackle, "heartbeat": heartbeat,
+    "talk_a": talk_a, "talk_b": talk_b, "talk_c": talk_c, "talk_d": talk_d,
 }
 
 

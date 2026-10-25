@@ -40,7 +40,9 @@ pygame.display.set_caption(
 )
 
 clock = pygame.time.Clock()
-startup = Startup(screen)
+STARTUP_SOUND_HOLD = 2.6
+
+startup = Startup(screen, duration=STARTUP_SOUND_HOLD)
 menu = MainMenu(screen)
 settings_menu = None
 achievements_menu = None
@@ -69,6 +71,8 @@ current_state = "startup"
 
 
 running = True
+
+music.stinger("intro", hold=STARTUP_SOUND_HOLD)
 
 
 MENU_STATES = (
@@ -361,8 +365,6 @@ while running:
         if startup.update(dt) == "done":
 
             current_state = "menu"
-
-            music.stinger("intro", hold=2.6)
 
             menu.play_intro()
 

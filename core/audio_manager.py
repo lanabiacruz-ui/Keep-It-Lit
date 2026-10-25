@@ -68,6 +68,10 @@ SOUNDS = {
     "objective_done": (0.65, 0.50),
     "tutorial_page":  (0.50, 0.06),
     "heartbeat":      (0.70, 0.70),
+    "talk_a":         (0.30, 0.0),
+    "talk_b":         (0.30, 0.0),
+    "talk_c":         (0.30, 0.0),
+    "talk_d":         (0.30, 0.0),
 }
 
 
