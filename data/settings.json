@@ -1,6 +1,6 @@
 {
     "music_volume": 0.0,
-    "sfx_volume": 0.32,
+    "sfx_volume": 0.13,
     "fullscreen": true,
     "controls": {
         "up": 119,
@@ -9,8 +9,8 @@
         "right": 100,
         "pickup": 101,
         "drop": 113,
-        "use": 111,
-        "magnet": 112,
+        "use": 102,
+        "magnet": 111,
         "attack_mode": 103,
         "slot1": 49,
         "slot2": 50,

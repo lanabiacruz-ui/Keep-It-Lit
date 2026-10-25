@@ -39,9 +39,13 @@ IMAGES = {
     "tab_on": "tienda_pestana_activa.png",
     "inv_panel": "tienda_inventario.png",
     "inv_empty": "tienda_slot_vacio.png",
+    # boton "x15" al lado del +  (opcional: si falta se dibuja por codigo)
+    "bulk": "tienda_x15.png",
 }
 
-OPTIONAL_IMAGES = ("info", "tab", "tab_on", "inv_panel", "inv_empty")
+OPTIONAL_IMAGES = (
+    "info", "tab", "tab_on", "inv_panel", "inv_empty", "bulk"
+)
 
 INFO_PAD_X = 28
 INFO_PAD_TOP = 24
@@ -100,6 +104,10 @@ DEFAULT_STACK = 15
 NOT_IN_INVENTORY = {"bolsa"}
 
 INV_ROW_STEP = 44
+
+# Cantidad que suma el boton "x15" de cada fila
+BULK_AMOUNT = 15
+BULK_SIZE = (32, 20)
 
 
 class ShopUI:
@@ -386,7 +394,7 @@ class ShopUI:
             if slot is not None and slot[0] == item_id
         )
 
-    def inv_add(self, item_id, slot_index=None):
+    def inv_add(self, item_id, slot_index=None, amount=1):
 
         if item_id in self.locks:
 
@@ -418,7 +426,7 @@ class ShopUI:
             slot = self.inventory[slot_index]
 
             if slot is not None and slot[1] < limit:
-                slot[1] += 1
+                slot[1] = min(limit, slot[1] + amount)
             elif slot is not None:
                 self._flash(f"Máximo {limit} por casillero")
 
@@ -487,10 +495,13 @@ class ShopUI:
                 self.rows_rect.x, y, self.rows_rect.width, INV_ROW_STEP - 2
             )
 
-            plus = pygame.Rect(row.right - 26, row.y + 11, 20, 20)
-            minus = pygame.Rect(plus.x - 26, row.y + 11, 20, 20)
+            bulk = pygame.Rect(
+                row.right - 6 - BULK_SIZE[0], row.y + 11, *BULK_SIZE
+            )
+            plus = pygame.Rect(bulk.x - 24, row.y + 11, 20, 20)
+            minus = pygame.Rect(plus.x - 24, row.y + 11, 20, 20)
 
-            rows.append((n, slot, row, minus, plus))
+            rows.append((n, slot, row, minus, plus, bulk))
 
         return rows
 
@@ -612,10 +623,13 @@ class ShopUI:
                 self.rows_rect.x, y, self.rows_rect.width, self.ROW_H - 4
             )
 
-            plus = pygame.Rect(row.right - 26, row.y + 12, 20, 20)
-            minus = pygame.Rect(plus.x - 26, row.y + 12, 20, 20)
+            bulk = pygame.Rect(
+                row.right - 6 - BULK_SIZE[0], row.y + 12, *BULK_SIZE
+            )
+            plus = pygame.Rect(bulk.x - 24, row.y + 12, 20, 20)
+            minus = pygame.Rect(plus.x - 24, row.y + 12, 20, 20)
 
-            rows.append((item_id, qty, row, minus, plus))
+            rows.append((item_id, qty, row, minus, plus, bulk))
 
         return rows
 
@@ -670,6 +684,61 @@ class ShopUI:
                 return item_id
 
         return None
+
+    def _card_bulk_rect(self, card_rect):
+
+        return pygame.Rect(
+            card_rect.right - 6 - BULK_SIZE[0],
+            card_rect.bottom - 6 - BULK_SIZE[1],
+            *BULK_SIZE
+        )
+
+    def _card_has_bulk(self, item_id):
+
+        if item_id in self.locks:
+            return False
+
+        if self.tab == "inv":
+            return (
+                item_id not in NOT_IN_INVENTORY and item_id not in LIGHTS
+            )
+
+        return True
+
+    def _bulk_at(self, pos):
+
+        if not self.list_rect.collidepoint(pos):
+            return None
+
+        x = pos[0] - self.list_rect.x
+        y = pos[1] - self.list_rect.y + int(self.scroll)
+
+        for rect, item_id in self.cards:
+
+            if (
+                self._card_has_bulk(item_id)
+                and self._card_bulk_rect(rect).collidepoint(x, y)
+            ):
+                return item_id
+
+        return None
+
+    def _bulk_add(self, item_id):
+
+        if self.tab != "inv":
+
+            self.add(item_id, BULK_AMOUNT)
+
+            return
+
+        for _ in range(BULK_AMOUNT):
+
+            before = self.inv_count(item_id)
+
+            self.inv_add(item_id)
+
+            if self.inv_count(item_id) == before:
+                break
 
     def handle_event(self, event):
 
@@ -737,6 +806,16 @@ class ShopUI:
 
             return None
 
+        if event.button == 1:
+
+            bulk_card = self._bulk_at(pos)
+
+            if bulk_card is not None:
+
+                self._bulk_add(bulk_card)
+
+                return None
+
         card = self._card_at(pos)
 
         if card is not None:
@@ -782,10 +861,16 @@ class ShopUI:
 
             if self.rows_rect.collidepoint(pos):
 
-                for n, slot, _, minus, plus in self._inv_rows():
+                for n, slot, _, minus, plus, bulk in self._inv_rows():
 
                     if slot is None:
                         continue
+
+                    if bulk.collidepoint(pos) and n != self.light_idx:
+                        self.inv_add(
+                            slot[0], slot_index=n, amount=BULK_AMOUNT
+                        )
+                        return None
 
                     if minus.collidepoint(pos):
                         self.inv_remove(slot_index=n)
@@ -825,7 +910,11 @@ class ShopUI:
 
         if self.rows_rect.collidepoint(pos):
 
-            for item_id, _, _, minus, plus in self._cart_rows():
+            for item_id, _, _, minus, plus, bulk in self._cart_rows():
+
+                if bulk.collidepoint(pos):
+                    self.add(item_id, BULK_AMOUNT)
+                    return None
 
                 if minus.collidepoint(pos):
                     self.remove(item_id)
@@ -1066,6 +1155,12 @@ class ShopUI:
                 center=badge.center
             )
 
+        if self._card_has_bulk(item_id):
+
+            self._draw_bulk_button(
+                screen, self._card_bulk_rect(rect), pygame.mouse.get_pos()
+            )
+
     def _draw_list(self, screen, mouse):
 
         screen.set_clip(self.list_rect)
@@ -1134,6 +1229,34 @@ class ShopUI:
 
         pygame.draw.circle(screen, C_TEXT, (x + 9, y + 18), 2)
         pygame.draw.circle(screen, C_TEXT, (x + 17, y + 18), 2)
+
+    def _draw_bulk_button(self, screen, rect, mouse):
+
+        hover = rect.collidepoint(mouse)
+
+        img = self._img("bulk", rect.size, shade=40 if hover else 0)
+
+        if img is not None:
+
+            screen.blit(img, rect.topleft)
+
+            return
+
+        pygame.draw.rect(
+            screen,
+            C_CARD_HOVER if hover else C_PANEL,
+            rect,
+            border_radius=5
+        )
+
+        pygame.draw.rect(
+            screen, C_BADGE, rect, width=1, border_radius=5
+        )
+
+        self._text(
+            screen, self.tiny_font, f"x{BULK_AMOUNT}", C_BADGE,
+            center=rect.center
+        )
 
     def _draw_trash_icon(self, screen, rect, color):
 
@@ -1221,7 +1344,7 @@ class ShopUI:
 
             screen.set_clip(self.rows_rect)
 
-            for item_id, qty, row, minus, plus in self._cart_rows():
+            for item_id, qty, row, minus, plus, bulk in self._cart_rows():
 
                 row_img = self._img("row", row.size)
 
@@ -1239,7 +1362,7 @@ class ShopUI:
 
                 self._text(
                     screen,
-                    self._fit_font(row_name, row.w - 96, 23),
+                    self._fit_font(row_name, minus.x - row.x - 44, 23),
                     row_name, C_TEXT,
                     topleft=(row.x + 40, row.y + 4)
                 )
@@ -1251,6 +1374,8 @@ class ShopUI:
                     f"{qty} × {price} = {qty * price}", C_MUTED,
                     topleft=(row.x + 40, row.y + 22)
                 )
+
+                self._draw_bulk_button(screen, bulk, mouse)
 
                 for rect, symbol, key in (
                     (minus, "-", "minus"), (plus, "+", "plus")
@@ -1405,7 +1530,7 @@ class ShopUI:
 
         screen.set_clip(self.rows_rect)
 
-        for n, slot, row, minus, plus in self._inv_rows():
+        for n, slot, row, minus, plus, bulk in self._inv_rows():
 
             row_img = (
                 self._img("inv_empty", row.size) if slot is None else None
@@ -1445,7 +1570,7 @@ class ShopUI:
 
             self._text(
                 screen,
-                self._fit_font(row_name, row.w - 96, 23),
+                self._fit_font(row_name, minus.x - row.x - 44, 23),
                 row_name, C_TEXT,
                 topleft=(row.x + 40, row.y + 4)
             )
@@ -1462,6 +1587,9 @@ class ShopUI:
                 C_MUTED,
                 topleft=(row.x + 40, row.y + 22)
             )
+
+            if n != self.light_idx:
+                self._draw_bulk_button(screen, bulk, mouse)
 
             buttons = (
                 ((minus, "-", "minus"),)
@@ -1742,7 +1870,7 @@ class ShopUI:
             self._draw_info(screen, self.info_id)
 
         help_text = (
-            "Click: agregar  ·  Click derecho: quitar  ·  "
+            "Click: agregar  ·  x15: agregar 15  ·  Click derecho: quitar  ·  "
             "Click en la rueda: info  ·  Rueda: bajar  ·  "
             "Tab: cambiar  ·  E / Esc: cerrar"
         )
