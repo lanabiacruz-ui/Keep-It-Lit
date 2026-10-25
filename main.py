@@ -16,6 +16,8 @@ from ui.zoom_transition import ZoomTransition
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
+from core.music_manager import music
+from core.sound_events import watcher
 
 pygame.init()
 audio.preload()
@@ -67,6 +69,50 @@ current_state = "startup"
 
 
 running = True
+
+
+MENU_STATES = (
+    "menu",
+    "settings",
+    "achievements",
+    "name_input",
+    "password_set",
+    "mode_select",
+    "continue",
+    "loading",
+)
+
+
+UI_SOUND_STATES = (
+    "settings",
+    "achievements",
+    "name_input",
+    "password_set",
+    "mode_select",
+    "continue",
+)
+
+
+def desired_music():
+
+    if current_state == "startup":
+
+        return None
+
+    if current_state in MENU_STATES:
+
+        return "menu"
+
+    if (
+        current_state == "gameplay"
+        and game is not None
+        and game.state == "playing"
+        and any(a.state == a.WAVE for a in game.arenas)
+    ):
+
+        return "combate"
+
+    return "ambiente"
 
 
 def handle_menu_action(action):
@@ -128,6 +174,22 @@ while running:
                 game.apply_loss()
 
             running = False
+
+        if current_state in UI_SOUND_STATES:
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+
+                audio.play("ui_confirm")
+
+            elif event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_ESCAPE:
+
+                    audio.play("ui_back")
+
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+
+                    audio.play("ui_confirm")
 
         if current_state == "menu":
 
@@ -300,6 +362,8 @@ while running:
 
             current_state = "menu"
 
+            music.stinger("intro", hold=2.6)
+
             menu.play_intro()
 
     elif current_state == "menu":
@@ -391,6 +455,15 @@ while running:
                 if SLIDE_ON_RESPAWN:
                     transition = SlideTransition(screen.copy())
 
+
+    music.play(desired_music())
+    music.update(dt)
+
+    watcher.update(
+        game if current_state == "gameplay" else None,
+        dt,
+        transition is None
+    )
 
     screen.fill((0, 0, 0))
 

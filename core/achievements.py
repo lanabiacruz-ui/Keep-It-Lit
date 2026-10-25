@@ -2,6 +2,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from core.audio_manager import audio
+
 
 ACHIEVEMENTS_PATH = (
     Path(__file__).resolve().parent.parent
@@ -119,6 +121,8 @@ class AchievementManager:
         self.pending.append(achievement_id)
 
         self.save()
+
+        audio.play("achievement")
 
         return True
 
