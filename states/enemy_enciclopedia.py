@@ -32,7 +32,7 @@ HUD_DIR = (
     / "hud"
 )
 
-TITLE_TEXT = "BICHOS"
+TITLE_TEXT = "Criaturas"
 KIND_WORD = "bicho"
 
 DEFAULT_DATA = {
