@@ -32,7 +32,7 @@ IMAGES = {
     "trash": "tienda_boton_tacho.png",
     "arrow": "tienda_flecha.png",
     "coins": "tienda_monedas.png",
-    "close": "2026_10_04_05p_Kleki.png",
+    "close": "tienda_cerrar.png",
     "info": "tienda_info_panel.png",
     # pestañas e inventario (opcionales: si falta la imagen se dibuja por codigo)
     "tab": "tienda_pestana.png",

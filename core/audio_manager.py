@@ -63,6 +63,11 @@ SOUNDS = {
     "bite":        (0.70, 0.30),
     "slime_hit":   (0.60, 0.08),
     "crackle":     (0.50, 0.90),
+    "deny":          (0.55, 0.15),
+    "objective_new":  (0.50, 0.40),
+    "objective_done": (0.65, 0.50),
+    "tutorial_page":  (0.50, 0.06),
+    "heartbeat":      (0.70, 0.70),
 }
 
 

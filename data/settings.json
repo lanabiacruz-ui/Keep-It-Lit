@@ -1,6 +1,6 @@
 {
-    "music_volume": 0.0,
-    "sfx_volume": 0.03,
+    "music_volume": 0.502,
+    "sfx_volume": 0.251,
     "fullscreen": true,
     "controls": {
         "up": 119,

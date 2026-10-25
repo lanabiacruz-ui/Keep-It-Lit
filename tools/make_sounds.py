@@ -6,7 +6,7 @@ from array import array
 from pathlib import Path
 
 SR = 44100
-OUT = Path(__file__).resolve().parent.parent / "assets" / "sounds"
+OUT = Path(__file__).resolve().parent.parent / "assets" / "maps" / "sounds"
 
 rng = random.Random(7)
 
@@ -307,6 +307,277 @@ def mosquito():
     return buzz * lin(0, math.pi, n).map(math.sin) * 0.6
 
 
+
+def ui_confirm():
+    return mix(
+        note(660, 0.12, 22.0, (1.0, 0.2)),
+        delay(note(880, 0.14, 20.0, (1.0, 0.2)), 0.05),
+    )
+
+
+def ui_back():
+    return mix(
+        note(660, 0.12, 22.0, (1.0, 0.2)),
+        delay(note(440, 0.16, 18.0, (1.0, 0.2)), 0.05),
+    )
+
+
+def slot():
+    return sine(sweep(1500, 1100, 0.05), 0.05) * env(int(SR * 0.05), 0.001, 60)
+
+
+def msg():
+    return note(740, 0.12, 24.0, (1.0, 0.25))
+
+
+def deny():
+    a = sine(160, 0.11)
+    a = a.sign() * 0.4 + a * 0.6
+    a = a * env(len(a), 0.003, 16)
+    return mix(a, delay(a, 0.14))
+
+
+def tick():
+    n = int(SR * 0.04)
+    return sine(sweep(1900, 1300, 0.04), 0.04) * env(n, 0.0005, 95)
+
+
+def tick_high():
+    n = int(SR * 0.04)
+    a = sine(sweep(2600, 1800, 0.04), 0.04) * env(n, 0.0005, 95)
+    return mix(a, delay(a, 0.08, 0.8))
+
+
+def shop_open():
+    return mix(
+        note(1568, 0.45, 7.0, (1.0, 0.4, 0.2)),
+        delay(note(2093, 0.5, 6.0, (1.0, 0.3)), 0.09),
+    )
+
+
+def shop_close():
+    return mix(
+        note(1319, 0.3, 9.0, (1.0, 0.4)),
+        delay(note(988, 0.4, 8.0, (1.0, 0.4)), 0.09),
+    )
+
+
+def pause_open():
+    n = int(SR * 0.22)
+    return (
+        sine(sweep(420, 230, 0.22), 0.22) * env(n, 0.004, 11) * 0.8
+        + lowpass(noise(0.22), 1200) * env(n, 0.004, 16) * 0.2
+    )
+
+
+def pause_close():
+    n = int(SR * 0.22)
+    return (
+        sine(sweep(230, 420, 0.22), 0.22) * env(n, 0.004, 11) * 0.8
+        + lowpass(noise(0.22), 1200) * env(n, 0.004, 16) * 0.2
+    )
+
+
+def objective_new():
+    return mix(
+        note(784, 0.3, 8.0, (1.0, 0.3)),
+        delay(note(1047, 0.4, 7.0, (1.0, 0.3)), 0.1),
+    )
+
+
+def objective_done():
+    return mix(
+        note(659, 0.35, 7.0, (1.0, 0.4, 0.2)),
+        delay(note(880, 0.35, 7.0, (1.0, 0.4, 0.2)), 0.09),
+        delay(note(1319, 0.6, 5.5, (1.0, 0.4)), 0.18),
+    )
+
+
+def tutorial_page():
+    n = int(SR * 0.12)
+    flick = highpass(lowpass(noise(0.12), 5000), 900)
+    flick = flick * lin(0, math.pi, n).map(math.sin)
+    return mix(flick * 0.7, delay(note(880, 0.1, 26.0, (1.0, 0.2)), 0.04) * 0.5)
+
+
+def achievement():
+    parts = [
+        delay(note(f, 0.6, 5.0, (1.0, 0.5, 0.25)), 0.09 * i)
+        for i, f in enumerate((659, 784, 988, 1319))
+    ]
+    parts.append(delay(note(2637, 0.6, 6.0, (1.0, 0.3)), 0.34) * 0.5)
+    return mix(*parts)
+
+
+def _step(f0, f1):
+    n = int(SR * 0.10)
+    thump = sine(sweep(f0, f1, 0.10), 0.10) * env(n, 0.002, 38)
+    scuff = highpass(lowpass(noise(0.10), 2400), 300) * env(n, 0.001, 45)
+    return mix(thump * 0.8, scuff * 0.9)
+
+
+def step_a():
+    return _step(150, 70)
+
+
+def step_b():
+    return _step(130, 60)
+
+
+def light_on():
+    n = int(SR * 0.55)
+    puff = highpass(lowpass(noise(0.55), 3000), 400)
+    swell = lin(0, math.pi, n).map(math.sin) ** 1.4
+    rise = sine(sweep(180, 520, 0.55, 1.4), 0.55) * 0.25
+    sparks = [
+        delay(lowpass(noise(0.03), 5000) * env(int(SR * 0.03), 0.001, 90), d, 0.6)
+        for d in (0.05, 0.14, 0.23, 0.31)
+    ]
+    return mix((puff * 0.7 + rise) * swell, *sparks)
+
+
+def drop():
+    n = int(SR * 0.14)
+    thud = sine(sweep(320, 110, 0.14), 0.14) * env(n, 0.002, 26)
+    rustle = lowpass(noise(0.08), 1800) * env(int(SR * 0.08), 0.001, 50)
+    return mix(thud, rustle * 0.5)
+
+
+def use_item():
+    n = int(SR * 0.12)
+    a = sine(sweep(260, 620, 0.12), 0.12) * env(n, 0.004, 14)
+    b = sine(sweep(300, 700, 0.12), 0.12) * env(n, 0.004, 14)
+    return mix(a, delay(b, 0.11, 0.9))
+
+
+def heal():
+    return mix(*[
+        delay(note(f, 0.45, 5.0, (1.0, 0.3)), 0.09 * i)
+        for i, f in enumerate((523, 659, 784, 1047))
+    ])
+
+
+def shield_up():
+    n = int(SR * 0.7)
+    s1 = sine(sweep(380, 980, 0.7, 0.8), 0.7)
+    s2 = sine(sweep(390, 1000, 0.7, 0.8), 0.7)
+    shimmer = (s1 * 0.5 + s2 * 0.5) * env(n, 0.05, 3.2)
+    ping = delay(note(1568, 0.5, 6.0, (1.0, 0.4)), 0.35)
+    return mix(shimmer * 0.8, ping * 0.7)
+
+
+def _magnet(f0, f1):
+    n = int(SR * 0.32)
+    buzz = sine(sweep(f0, f1, 0.32, 1.5), 0.32)
+    buzz = buzz.sign() * 0.35 + buzz * 0.65
+    hiss = highpass(lowpass(noise(0.32), 2500), 500) * env(n, 0.01, 9)
+    return buzz * env(n, 0.01, 5.0) * 0.8 + hiss * 0.25
+
+
+def magnet_on():
+    return _magnet(120, 340)
+
+
+def magnet_off():
+    return _magnet(340, 120)
+
+
+def game_over():
+    parts = [
+        delay(note(f, 0.9, 3.2, (1.0, 0.5, 0.2)), 0.28 * i)
+        for i, f in enumerate((392, 330, 262, 196))
+    ]
+    drone = sine(sweep(110, 55, 1.6), 1.6) * env(int(SR * 1.6), 0.05, 1.8) * 0.5
+    return mix(*parts, drone)
+
+
+def wave_start():
+    def drum(when):
+        body = sine(sweep(130, 48, 0.3), 0.3) * env(int(SR * 0.3), 0.002, 9)
+        skin = lowpass(noise(0.1), 1500) * env(int(SR * 0.1), 0.001, 40)
+        return delay(mix(body, skin * 0.5), when)
+
+    n = int(SR * 0.7)
+    horn = zeros(n)
+    for i, h in enumerate((1.0, 0.6, 0.4, 0.25), start=1):
+        horn = horn + h * sine(196 * i, 0.7)
+    horn = horn * env(n, 0.12, 2.6) * 0.5
+    return mix(drum(0.0), drum(0.22), delay(horn, 0.15))
+
+
+def map_complete():
+    chords = (
+        (523, 659, 784),
+        (587, 740, 880),
+        (659, 784, 988),
+        (784, 988, 1175, 1568),
+    )
+    parts = []
+    for i, chord in enumerate(chords):
+        for f in chord:
+            dur = 0.9 if i == len(chords) - 1 else 0.5
+            parts.append(delay(note(f, dur, 4.5, (1.0, 0.4, 0.15)), 0.22 * i) * 0.5)
+    parts.append(note(392, 1.4, 3.0, (1.0, 0.5)) * 0.6)
+    return mix(*parts)
+
+
+def portal():
+    n = int(SR * 0.7)
+    sway = lin(0, math.pi, n).map(math.sin)
+    freq = Sig(
+        300 + (i / n) * 900 + 40 * math.sin(2 * math.pi * 9 * i / SR)
+        for i in range(n)
+    )
+    air = highpass(lowpass(noise(0.7), 4000), 500)
+    return sine(freq, 0.7) * sway * 0.7 + air * sway * 0.3
+
+
+def place():
+    n = int(SR * 0.14)
+    thunk = sine(sweep(220, 90, 0.14), 0.14) * env(n, 0.002, 24)
+    knock = lowpass(noise(0.05), 2800) * env(int(SR * 0.05), 0.001, 60)
+    return mix(thunk, knock * 0.6)
+
+
+def bite():
+    chomps = [
+        delay(lowpass(noise(0.07), 3200) * env(int(SR * 0.07), 0.001, 38), d, g)
+        for d, g in ((0.0, 1.0), (0.08, 0.8), (0.17, 0.6))
+    ]
+    growl = sine(sweep(140, 90, 0.3), 0.3) * env(int(SR * 0.3), 0.01, 8) * 0.5
+    return mix(*chomps, growl)
+
+
+def slime_hit():
+    n = int(SR * 0.18)
+    freq = Sig(
+        520 - 380 * (i / n) + 60 * math.sin(2 * math.pi * 34 * i / SR)
+        for i in range(n)
+    )
+    squelch = lowpass(noise(0.18), 1600) * env(n, 0.002, 22)
+    return sine(freq, 0.18) * env(n, 0.003, 14) * 0.8 + squelch * 0.35
+
+
+def crackle():
+    bed = lowpass(noise(0.9), 700) * 0.12
+    parts = [bed]
+    for _ in range(14):
+        when = rng.uniform(0.0, 0.8)
+        gain = rng.uniform(0.3, 1.0)
+        dur = rng.uniform(0.01, 0.03)
+        pop = highpass(lowpass(noise(dur), 6000), 800)
+        parts.append(delay(pop * env(len(pop), 0.0005, 150), when, gain))
+    return mix(*parts)
+
+
+def heartbeat():
+    def thump(gain):
+        n = int(SR * 0.16)
+        return sine(sweep(75, 42, 0.16), 0.16) * env(n, 0.004, 17) * gain
+
+    return mix(thump(1.0), delay(thump(0.7), 0.2))
+
+
 SOUNDS = {
     "coin": coin, "coin_big": coin_big, "pickup": pickup, "gem": gem,
     "swing": swing, "hit": hit, "hit_heavy": hit_heavy, "hurt": hurt,
@@ -316,8 +587,33 @@ SOUNDS = {
     "door_break": door_break, "chest_open": chest_open, "buy": buy,
     "wave_clear": wave_clear, "click": click, "light_out": light_out,
     "alert": alert, "mosquito": mosquito,
+    "ui_confirm": ui_confirm, "ui_back": ui_back, "slot": slot,
+    "msg": msg, "deny": deny, "tick": tick, "tick_high": tick_high,
+    "shop_open": shop_open, "shop_close": shop_close,
+    "pause_open": pause_open, "pause_close": pause_close,
+    "objective_new": objective_new, "objective_done": objective_done,
+    "tutorial_page": tutorial_page, "achievement": achievement,
+    "step_a": step_a, "step_b": step_b, "light_on": light_on,
+    "drop": drop, "use_item": use_item, "heal": heal,
+    "shield_up": shield_up, "magnet_on": magnet_on,
+    "magnet_off": magnet_off, "game_over": game_over,
+    "wave_start": wave_start, "map_complete": map_complete,
+    "portal": portal, "place": place, "bite": bite,
+    "slime_hit": slime_hit, "crackle": crackle, "heartbeat": heartbeat,
 }
 
+
 if __name__ == "__main__":
+
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    force = "--force" in sys.argv[1:]
+
     for name, fn in SOUNDS.items():
+
+        if args and name not in args:
+            continue
+
+        if not args and not force and (OUT / f"{name}.wav").exists():
+            continue
+
         save(name, fn())

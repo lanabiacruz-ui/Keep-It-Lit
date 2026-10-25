@@ -4,7 +4,10 @@ from pathlib import Path
 import pygame
 
 ROOT = Path(__file__).resolve().parent.parent
-MUSIC_DIR = ROOT / "assets" / "music"
+MUSIC_DIRS = (
+    ROOT / "assets" / "music",
+    ROOT / "assets" / "maps" / "sounds",
+)
 SETTINGS_PATH = ROOT / "data" / "settings.json"
 
 TRACKS = {
@@ -57,12 +60,14 @@ class MusicManager:
 
     def _path(self, name):
 
-        for ext in (".ogg", ".wav", ".mp3"):
+        for folder in MUSIC_DIRS:
 
-            path = MUSIC_DIR / f"{name}{ext}"
+            for ext in (".ogg", ".wav", ".mp3"):
 
-            if path.exists():
-                return path
+                path = folder / f"{name}{ext}"
+
+                if path.exists():
+                    return path
 
         return None
 

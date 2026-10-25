@@ -5,6 +5,16 @@ from core.audio_manager import audio
 STEP_INTERVAL = 0.34
 CRACKLE_INTERVAL = 1.15
 CRACKLE_RANGE = 420.0
+HEART_INTERVAL = 0.95
+HEART_LIFE = 0.2
+
+DENY_PREFIXES = (
+    "no te alcanzan",
+    "inventario lleno",
+    "eso no se puede",
+    "necesitas una luz",
+    "faltan ",
+)
 
 
 def _hud_total(game):
@@ -39,6 +49,8 @@ class SoundWatcher:
         self.crackle_t = 0.0
         self.slime_flash = {}
         self.broken = False
+        self.heart_t = 0.0
+        self.disabled = set()
 
     def _read(self, game):
 
@@ -47,6 +59,16 @@ class SoundWatcher:
             "has_match": bool(game.has_match),
             "magnet": bool(game.magnet_mode),
             "msg_t": float(getattr(game, "message_timer", 0.0) or 0.0),
+            "msg_text": str(getattr(game, "message", "") or ""),
+            "obj_phase": getattr(
+                getattr(game, "objectives", None), "phase", None
+            ),
+            "obj_index": getattr(
+                getattr(game, "objectives", None), "index", None
+            ),
+            "tut_index": getattr(
+                getattr(game, "tutorial", None), "index", None
+            ),
             "state": game.state,
             "pause": game.pause_view,
             "shop": game.shop is not None,
@@ -72,6 +94,7 @@ class SoundWatcher:
         self.slime_flash = {}
         self.step_t = 0.25
         self.crackle_t = 0.0
+        self.heart_t = 0.0
 
     def update(self, game, dt, active):
 
@@ -100,6 +123,7 @@ class SoundWatcher:
             self.slime_flash = {}
             self.step_t = 0.25
             self.crackle_t = 0.0
+            self.heart_t = 0.0
             return
 
         cur = self._read(game)
@@ -124,7 +148,13 @@ class SoundWatcher:
             play("magnet_on" if cur["magnet"] else "magnet_off")
 
         if cur["msg_t"] > prev["msg_t"] + 0.3:
-            play("msg")
+
+            text = cur["msg_text"].strip().lower()
+
+            if text.startswith(DENY_PREFIXES):
+                play("deny")
+            else:
+                play("msg")
 
         if cur["total"] < prev["total"]:
 
@@ -176,9 +206,68 @@ class SoundWatcher:
         if cur["map"] != prev["map"] and prev["map"] is not None:
             play("portal")
 
-        self._slimes(game, play)
-        self._steps(game, dt, play)
-        self._crackle(game, dt, play)
+        self._guard("slimes", self._slimes, game, play)
+        self._guard("steps", self._steps, game, dt, play)
+        self._guard("crackle", self._crackle, game, dt, play)
+        self._guard("objectives", self._objectives, prev, cur, play)
+        self._guard("tutorial", self._tutorial, prev, cur, play)
+        self._guard("heartbeat", self._heartbeat, game, dt, play)
+
+    def _guard(self, name, fn, *args):
+
+        if name in self.disabled:
+            return
+
+        try:
+            fn(*args)
+
+        except Exception as exc:
+
+            self.disabled.add(name)
+            print(f"[sonidos] '{name}' desactivado: {exc!r}")
+
+    def _objectives(self, prev, cur, play):
+
+        if cur["obj_phase"] == "done" and prev["obj_phase"] != "done":
+            play("objective_done")
+
+        elif (
+            cur["obj_index"] is not None
+            and prev["obj_index"] is not None
+            and cur["obj_index"] > prev["obj_index"]
+        ):
+            play("objective_new")
+
+    def _tutorial(self, prev, cur, play):
+
+        if (
+            cur["tut_index"] is not None
+            and prev["tut_index"] is not None
+            and cur["tut_index"] > prev["tut_index"]
+        ):
+            play("tutorial_page")
+
+    def _heartbeat(self, game, dt, play):
+
+        weak = (
+            game.state == "playing"
+            and game.pause_view is None
+            and game.shop is None
+            and 0.0 < float(game.vida) < HEART_LIFE
+            and float(game.escudo) <= 0.0
+        )
+
+        if not weak:
+
+            self.heart_t = HEART_INTERVAL * 0.5
+            return
+
+        self.heart_t += dt
+
+        if self.heart_t >= HEART_INTERVAL:
+
+            self.heart_t = 0.0
+            play("heartbeat", 1.0 - float(game.vida) / HEART_LIFE * 0.5)
 
     def _slimes(self, game, play):
 
