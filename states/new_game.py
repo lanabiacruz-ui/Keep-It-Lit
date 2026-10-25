@@ -3013,7 +3013,8 @@ class NewGame:
 
                 self.pause_settings = Settings(
                     self.screen,
-                    background="tablet_ajustes.png"
+                    background="tablet_ajustes.png",
+                    controls_background="tablet_ajustes.png"
                 )
 
                 self.pause_view = "settings"

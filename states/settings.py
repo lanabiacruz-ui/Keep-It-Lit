@@ -116,7 +116,7 @@ class ControlsScreen:
     ]
 
     TEXT = (228, 238, 255)
-    HEADER = (255, 205, 120)
+    HEADER = (35, 89, 149)
     MUTED = (190, 210, 245)
 
     def __init__(self, screen, background="mapacontroles.png"):
@@ -205,10 +205,10 @@ class ControlsScreen:
             button_size
         )
 
-        self.back_img = self._optional("btn_regresar.png", button_size)
+        self.back_img = self._optional("btn_volver_ajustes.png", button_size)
 
         self.back_hover_img = self._optional(
-            "btn_regresar_hover.png",
+            "btn_volver_ajustes_hover.png",
             button_size
         )
 
@@ -662,7 +662,7 @@ class Settings:
         ("Controles", "controls", "button"),
     ]
 
-    def __init__(self, screen, background="mapaajustes.png"):
+    def __init__(self, screen, background="mapaajustes.png", controls_background=None):
 
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -689,6 +689,14 @@ class Settings:
         self.background = pygame.transform.smoothscale(
             background,
             (self.width, self.height)
+        )
+
+        # The pause tablet and the main-menu settings use different backgrounds.
+        # Keep controls on the same tablet when settings were opened from Escape.
+        self.controls_background = controls_background or (
+            "tablet_ajustes.png"
+            if background_path.name == "tablet_ajustes.png"
+            else "mapaajustes.png"
         )
 
         self.track_img = self._load(
@@ -874,7 +882,12 @@ class Settings:
 
         self.dragging = None
 
-        self.panel = ControlsScreen(self.screen)
+        # Do not fall back to the missing mapacontroles.png. In the Escape
+        # menu, controls must stay inside the handheld tablet artwork.
+        self.panel = ControlsScreen(
+            self.screen,
+            background=self.controls_background
+        )
 
     def _activate(self, index):
 
