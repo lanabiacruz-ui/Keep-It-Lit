@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pygame
 
+from core.controls import controls
+
 
 MG_DIR = (
     Path(__file__).resolve().parent.parent
@@ -145,7 +147,10 @@ class ChestMinigame:
             if event.key == pygame.K_ESCAPE:
                 return "cancel"
 
-            if event.key in (pygame.K_SPACE, pygame.K_e):
+            if (
+                event.key == pygame.K_SPACE
+                or controls.matches("pickup", event.key)
+            ):
                 self.hit()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

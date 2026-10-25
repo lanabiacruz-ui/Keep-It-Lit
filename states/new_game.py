@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 from core.audio_manager import audio
+from core.controls import controls, SLOT_ACTIONS
 from core.achievements import achievements
 from core.Save_manager import (
     save_progress, delete_save, normalize_mode, MODE_HARDCORE
@@ -890,7 +891,31 @@ class NewGame:
 
         if event.type == pygame.KEYDOWN:
 
-            name = self.TUTO_KEYS.get(event.key)
+            action = controls.action_for(event.key)
+
+            if action in ("up", "down", "left", "right"):
+                name = {
+                    "up": "w",
+                    "down": "s",
+                    "left": "a",
+                    "right": "d",
+                }[action]
+
+            elif action in SLOT_ACTIONS:
+                name = "slotkey"
+
+            elif action == "equipped":
+                name = "k5"
+
+            elif event.key in (
+                pygame.K_ESCAPE,
+                pygame.K_TAB,
+                pygame.K_F1
+            ):
+                name = self.TUTO_KEYS.get(event.key)
+
+            else:
+                name = None
 
             if name:
                 self.tuto_flags.add(name)
@@ -1662,7 +1687,7 @@ class NewGame:
         elif item_id == "iman":
 
             self.show_message(
-                "Usaste Imán: apretá O para activarlo o desactivarlo"
+                f"Usaste Imán: apretá {controls.label('magnet')} para activarlo o desactivarlo"
             )
 
         elif item_id == "chuleta":
@@ -3268,18 +3293,18 @@ class NewGame:
 
                 self.coins += DEBUG_COINS
 
-            elif event.key in SLOT_KEYS:
+            elif controls.slot_for(event.key) is not None:
 
-                slot = SLOT_KEYS[event.key]
+                slot = controls.slot_for(event.key)
 
                 if slot < self.hud.SLOTS:
                     self.selected_slot = slot
 
-            elif event.key == pygame.K_5:
+            elif controls.matches("equipped", event.key):
 
                 self.selected_slot = "equipped"
 
-            elif event.key == pygame.K_e:
+            elif controls.matches("pickup", event.key):
 
                 kind, thing = self._nearest_pickup()
 
@@ -3305,7 +3330,7 @@ class NewGame:
                     return None
 
 
-            elif event.key == pygame.K_q:
+            elif controls.matches("drop", event.key):
 
                 if self.selected_slot == "equipped":
 
@@ -3318,7 +3343,7 @@ class NewGame:
                         self.selected_slot
                     )
 
-            elif event.key == pygame.K_o:
+            elif controls.matches("magnet", event.key):
 
                 if not self._magnet_available():
 
@@ -3331,12 +3356,12 @@ class NewGame:
                     self.magnet_mode = not self.magnet_mode
 
                     self.show_message(
-                        "Imán activado (O para desactivarlo)"
+                        f"Imán activado ({controls.label('magnet')} para desactivarlo)"
                         if self.magnet_mode
-                        else "Imán desactivado (O para activarlo)"
+                        else f"Imán desactivado ({controls.label('magnet')} para activarlo)"
                     )
 
-            elif event.key == pygame.K_f:
+            elif controls.matches("use", event.key):
 
                 fd = self.doors.final_door
 
@@ -3357,7 +3382,7 @@ class NewGame:
                         self.selected_slot
                     )
 
-            elif event.key == pygame.K_g:
+            elif controls.matches("attack_mode", event.key):
 
                 self._toggle_attack_mode()
 

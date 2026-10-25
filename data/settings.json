@@ -1,5 +1,21 @@
 {
     "music_volume": 0.0,
     "sfx_volume": 0.32,
-    "fullscreen": true
+    "fullscreen": true,
+    "controls": {
+        "up": 119,
+        "down": 115,
+        "left": 97,
+        "right": 100,
+        "pickup": 101,
+        "drop": 113,
+        "use": 111,
+        "magnet": 112,
+        "attack_mode": 103,
+        "slot1": 49,
+        "slot2": 50,
+        "slot3": 51,
+        "slot4": 52,
+        "equipped": 53
+    }
 }

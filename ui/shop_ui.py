@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pygame
 
+from core.controls import controls
+
 from world.items import load_icon, HUD_DIR
 from world.lights import LIGHTS
 
@@ -679,7 +681,10 @@ class ShopUI:
 
                 return None
 
-            if event.key in (pygame.K_ESCAPE, pygame.K_f):
+            if (
+                event.key == pygame.K_ESCAPE
+                or controls.matches("use", event.key)
+            ):
                 return "close"
 
             if event.key == pygame.K_TAB:
