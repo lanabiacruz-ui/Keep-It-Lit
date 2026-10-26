@@ -21,11 +21,11 @@ FRAME_CROP = None
 TUTORIAL_PAGES = [
 
     "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
-    "MOVERTE: W A S D. ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más.",
-    "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Las luces (fósforo, vela, antorcha) se equipan solas, y solo podés llevar una. Con Q soltás lo seleccionado.",
+    "MOVERTE: W A S D. SALTAR: ESPACIO (por ahora es solo un saltito, no sirve de nada). ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más.",
+    "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Las luces (fósforo, vela, antorcha) se equipan solas, y solo podés llevar una. Con Q soltás lo seleccionado y con CTRL + Q soltás TODO el inventario (la luz equipada no se suelta).",
     "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
     "USAR OBJETOS: elegí el casillero (con 1-4 o la ruedita) y apretá F o click derecho. Mantené click izquierdo sobre un casillero para ver qué hace.",
-    "RECUPERAR LUZ: la madera suma 25%, la resina recupera de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
+    "RECUPERAR LUZ: la madera suma 25%, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
     "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
     "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
     "AYUDA: ESC abre la pausa y F1 vuelve a mostrar este tutorial. ¡Mucha suerte y que tu luz nunca se apague!",

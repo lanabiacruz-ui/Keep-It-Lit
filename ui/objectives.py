@@ -100,6 +100,9 @@ class Objectives:
         self._button_rect = None
         self._pill_rect = None
 
+        # altura (y) donde se dibuja; new_game la baja si hay gemas arriba
+        self.top = TOP
+
     @staticmethod
     def _load_frame(name):
 
@@ -423,7 +426,7 @@ class Objectives:
         w, h = PILL_SIZE
 
         rect = pygame.Rect(0, 0, w, h)
-        rect.topright = (self.width - MARGIN + offset, TOP)
+        rect.topright = (self.width - MARGIN + offset, self.top)
 
         done = self.was_done and self.phase in ("done", "out")
 
@@ -518,7 +521,7 @@ class Objectives:
             rect = panel.get_rect(
                 topright=(
                     self.width - MARGIN + self._offset() + panel_extra,
-                    TOP
+                    self.top
                 )
             )
 

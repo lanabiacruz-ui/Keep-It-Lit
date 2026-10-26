@@ -70,6 +70,7 @@ FIXED_KEYS = {
     pygame.K_TAB,
     pygame.K_RETURN,
     pygame.K_KP_ENTER,
+    pygame.K_SPACE,      # saltar (no se puede reasignar)
     pygame.K_F1,
     pygame.K_F2,
     pygame.K_F3,

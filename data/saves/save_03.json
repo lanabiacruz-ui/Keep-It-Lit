@@ -2,12 +2,12 @@
     "player_name": "ujuju",
     "mode": "normal",
     "created_at": "2026-10-10T22:55:15",
-    "last_played": "2026-10-25T21:47:04",
+    "last_played": "2026-10-25T22:53:57",
     "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
     "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
-    "x": 945,
-    "y": 142,
-    "coins": 55650,
+    "x": 917,
+    "y": 151,
+    "coins": 0,
     "gems": 1,
     "has_match": true,
     "light": "antorcha",
@@ -16,50 +16,50 @@
     "inventory": [
         [
             "aceite",
-            15
-        ],
-        [
-            "aceite",
-            15
+            13
         ],
         [
             "hongo_azul",
             11
         ],
+        [
+            "aceite",
+            14
+        ],
         null
     ],
     "collected": [
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_cofres#0",
-        "cera_02#0",
+        "madera_09#0",
+        "aceite_01#0",
         "madera_06#0",
-        "madera_11#0",
+        "aceite_02#0",
+        "madera_08#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_der#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_pasillo_tienda#0",
+        "madera_01#0",
+        "madera_07#0",
+        "moneda5_pasillo_cofres#0",
+        "cera_01#0",
+        "madera_05#0",
+        "madera_03#0",
         "madera_04#0",
         "moneda_pasillo_cabana#1",
-        "madera_01#0",
-        "moneda_sala_cofres#1",
-        "madera_08#0",
-        "moneda_pasillo_tienda#0",
-        "madera_05#0",
-        "madera_02#0",
-        "moneda_sala_central#1",
-        "moneda_sala_cofres#0",
-        "moneda_sala_central#0",
-        "moneda_pasillo_cabana#0",
-        "moneda5_sala_cofres#0",
-        "aceite_01#0",
-        "aceite_02#0",
         "madera_12#0",
-        "cera_03#0",
         "aceite_03#0",
-        "madera_09#0",
-        "moneda_pasillo_izq#0",
-        "madera_07#0",
-        "moneda_pasillo_der#0",
-        "cera_01#0",
-        "moneda5_pasillo_cofres#0",
+        "cera_02#0",
+        "moneda5_sala_cofres#0",
+        "moneda_sala_cofres#1",
         "madera_10#0",
-        "madera_03#0"
+        "madera_11#0",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_izq#0",
+        "cera_03#0",
+        "madera_02#0"
     ],
     "item_seed": 162672674,
     "arena_wave": 1,
@@ -99,10 +99,10 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1855,
+        "items_used": 1859,
         "chests_opened": 1,
-        "purchases": 112,
-        "fireballs": 3435,
+        "purchases": 114,
+        "fireballs": 3468,
         "kills": 1682
     },
     "zones_seen": [
@@ -115,10 +115,13 @@
     "placeables": [
         {
             "t": "bolsa",
-            "x": 907,
-            "y": 148,
+            "x": 905,
+            "y": 161,
             "slots": [
-                null,
+                [
+                    "chuleta",
+                    2
+                ],
                 null,
                 null,
                 null
@@ -284,13 +287,6 @@
         {
             "k": "item",
             "id": "moneda",
-            "x": 485,
-            "y": 103,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
             "x": 509,
             "y": 65,
             "map": "mapa1"
@@ -321,6 +317,55 @@
             "id": "moneda",
             "x": 505,
             "y": 66,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 881,
+            "y": 153,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 916,
+            "y": 154,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 878,
+            "y": 159,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 938,
+            "y": 155,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 949,
+            "y": 169,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 931,
+            "y": 171,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 993,
+            "y": 153,
             "map": "mapa1"
         }
     ]

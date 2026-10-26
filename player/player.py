@@ -5,6 +5,20 @@ from player.movement import PlayerMovement
 from player import walk_anim as wa
 
 
+SHEET_CELL = (190, 214)
+SHEET_COLS = 5
+SHEET_ROWS = 4
+
+
+def _grid_rects():
+    w, h = SHEET_CELL
+
+    return [
+        [(col * w, row * h, w, h) for col in range(SHEET_COLS)]
+        for row in range(SHEET_ROWS)
+    ]
+
+
 class Player:
     CELL_WIDTH = 176
     CELL_HEIGHT = 226
@@ -14,50 +28,18 @@ class Player:
     ROWS = ["up", "down", "left", "right"]
 
 
-    SHEET_RECTS = [
-        [(326, 37, 151, 209), (597, 36, 150, 213),
-         (869, 36, 151, 214), (1141, 36, 150, 209)],
-        [(323, 285, 154, 213), (597, 286, 153, 208),
-         (872, 286, 152, 212), (1143, 285, 154, 210)],
-        [(316, 539, 159, 209), (590, 540, 156, 208),
-         (862, 539, 155, 209), (1138, 539, 155, 208)],
-        [(316, 780, 158, 207), (589, 780, 161, 207),
-         (868, 781, 158, 207), (1141, 782, 157, 206)],
-    ]
+    # Hojas de caminata (ver tools/make_walk_frames.py): 5 columnas x 4 filas,
+    # celdas de 190x214. Columnas 0..3 = pasos, columna 4 = pose quieta.
+    SHEET_RECTS = _grid_rects()
+    SHEET_RECTS_PHOSPHOR = _grid_rects()
+    SHEET_RECTS_VELA = _grid_rects()
+    SHEET_RECTS_ANTORCHA = _grid_rects()
 
+    WALK_FRAMES = 4      # cuadros de caminata por direccion
+    IDLE_FRAME = 4       # indice del cuadro de pose quieta
 
-    SHEET_RECTS_PHOSPHOR = [
-        [(341, 48, 150, 206), (594, 46, 151, 209),
-         (847, 47, 149, 208), (1099, 47, 150, 208)],
-        [(325, 295, 168, 209), (581, 294, 166, 210),
-         (834, 294, 168, 211), (1087, 294, 169, 211)],
-        [(328, 541, 159, 208), (585, 541, 157, 208),
-         (840, 541, 159, 208), (1092, 541, 160, 208)],
-        [(333, 783, 158, 205), (588, 783, 155, 204),
-         (847, 783, 157, 205), (1099, 783, 157, 206)],
-    ]
-
-    SHEET_RECTS_VELA = [
-        [(343, 50, 161, 203), (596, 49, 162, 204),
-         (848, 49, 164, 204), (1101, 49, 163, 204)],
-        [(318, 297, 173, 205), (573, 297, 171, 205),
-         (829, 297, 170, 206), (1082, 297, 173, 206)],
-        [(315, 544, 170, 202), (572, 545, 168, 202),
-         (827, 545, 170, 203), (1084, 545, 167, 202)],
-        [(337, 785, 165, 202), (591, 785, 166, 201),
-         (850, 785, 163, 202), (1102, 785, 168, 202)],
-    ]
-
-    SHEET_RECTS_ANTORCHA = [
-        [(343, 49, 166, 204), (596, 49, 167, 204),
-         (848, 49, 168, 204), (1101, 49, 168, 204)],
-        [(313, 297, 178, 205), (568, 297, 176, 205),
-         (824, 297, 175, 206), (1076, 297, 179, 206)],
-        [(310, 544, 175, 202), (568, 545, 172, 202),
-         (825, 545, 172, 203), (1079, 545, 172, 202)],
-        [(335, 785, 172, 202), (589, 785, 173, 201),
-         (845, 785, 172, 202), (1102, 785, 172, 202)],
-    ]
+    JUMP_TIME = 0.36       # segundos que dura el saltito
+    JUMP_HEIGHT = 9        # alto maximo (pixeles del mundo)
 
     HURT_TIME = 0.30
     INVULN_TIME = 0.90
@@ -104,6 +86,8 @@ class Player:
         self._step_pending = False   # un pie acaba de pisar (lo lee el sonido)
         self.dust = wa.DustPuffs()
 
+        self.jump_t = 0.0            # >0 mientras esta en el aire (solo visual)
+
         self._sprite_cache = {}
         self._feet_cache = {}
         self._shadow_cache = {}
@@ -144,7 +128,7 @@ class Player:
 
             sheet = pygame.image.load(
                 str(sheet_path)
-            ).convert()
+            ).convert_alpha()
 
             self.frames = self.load_frames_from_sheet(sheet)
 
@@ -154,7 +138,7 @@ class Player:
 
             torch_sheet = pygame.image.load(
                 str(torch_path)
-            ).convert()
+            ).convert_alpha()
 
             self.frames_torch = self.load_frames_from_sheet(
                 torch_sheet,
@@ -167,7 +151,7 @@ class Player:
 
             vela_sheet = pygame.image.load(
                 str(vela_path)
-            ).convert()
+            ).convert_alpha()
 
             self.frames_vela = self.load_frames_from_sheet(
                 vela_sheet,
@@ -180,7 +164,7 @@ class Player:
 
             antorcha_sheet = pygame.image.load(
                 str(antorcha_path)
-            ).convert()
+            ).convert_alpha()
 
             self.frames_antorcha = self.load_frames_from_sheet(
                 antorcha_sheet,
@@ -218,6 +202,29 @@ class Player:
                 self._hurt_dir_x = max(-1.0, min(1.0, away.normalize().x))
 
         return True
+
+    def jump(self):
+        """Saltito. Solo se ve (no cambia colisiones ni dano)."""
+
+        if self.jump_t > 0 or self.grabbed:
+            return False
+
+        self.jump_t = self.JUMP_TIME
+
+        self._emit_dust(2, 0.8)
+
+        return True
+
+    @property
+    def jump_height(self):
+        """Cuanto esta despegado del piso ahora (pixeles del mundo)."""
+
+        if self.jump_t <= 0:
+            return 0.0
+
+        p = 1.0 - self.jump_t / self.JUMP_TIME
+
+        return self.JUMP_HEIGHT * 4.0 * p * (1.0 - p)
 
     def pop_step(self):
         """True una sola vez por cada pisada (para sincronizar el sonido)."""
@@ -322,7 +329,10 @@ class Player:
                     pygame.Rect(rect)
                 ).copy()
 
-                crop = self._remove_background(crop)
+                # las hojas nuevas ya vienen con transparencia; solo se limpia
+                # el fondo si la hoja es opaca (formato viejo)
+                if crop.get_at((0, 0))[3] == 255:
+                    crop = self._remove_background(crop)
 
                 crops[direction].append(crop)
 
@@ -332,10 +342,9 @@ class Player:
 
         if self.frame_scale is None:
 
-            self.frame_scale = min(
-                (self.CELL_WIDTH - 12) / max_w,
-                (self.CELL_HEIGHT - 12) / max_h
-            )
+            # las celdas nuevas conservan la escala de las hojas originales
+            # (1 pixel de hoja = 1 pixel de celda)
+            self.frame_scale = 1.0
 
         scale = self.frame_scale
 
@@ -407,6 +416,13 @@ class Player:
             self.rect.centerx,
             self.rect.bottom + 3
         )
+
+        if self.jump_t > 0:
+
+            self.jump_t = max(0.0, self.jump_t - dt)
+
+            if self.jump_t == 0.0:
+                self._emit_dust(3, 1.0)    # aterrizaje
 
         self._update_walk(dt)
 
@@ -499,10 +515,19 @@ class Player:
         if self.hurt_anim > 0:
             self.hurt_anim = max(0.0, self.hurt_anim - dt / 0.45)
 
-        self.animation_frame = wa.frame_for_phase(
-            self.walk_phase,
-            len(self.frames[self.direction])
-        )
+        if (
+            not self.moving
+            and not self._finishing_step
+            and self.walk_blend < 0.05
+        ):
+            # quieto del todo: pies juntos
+            self.animation_frame = self.IDLE_FRAME
+
+        else:
+            self.animation_frame = wa.frame_for_phase(
+                self.walk_phase,
+                self.WALK_FRAMES
+            )
 
         self.dust.update(dt)
 
@@ -618,7 +643,7 @@ class Player:
 
         feet = None
 
-        if self.direction in ("up", "down"):
+        if self.direction in ("up", "down") and wa.FOOT_LIFT > 0:
 
             feet = self._feet_cache.get(key)
 
@@ -633,7 +658,9 @@ class Player:
         # --- polvo y sombra (debajo del personaje) ---
         self._draw_dust(screen, camera)
 
-        lift = int(self.grab_lift * camera.zoom) if self.grab_lift > 0 else 0
+        lift = int(
+            (max(0.0, self.grab_lift) + self.jump_height) * camera.zoom
+        )
 
         sw = base.get_width()
 

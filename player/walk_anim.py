@@ -16,7 +16,7 @@ SWAY_DEG = 5.5         # balanceo de lado a lado (de frente / espaldas)
 LEAN_DEG = 4.0         # inclinacion hacia adelante (de perfil)
 SIDE_WOBBLE_DEG = 1.8  # vaiven extra de perfil
 SHIFT_X = 0.012        # el cuerpo se corre un poco hacia el pie que pisa
-FOOT_LIFT = 0.055      # cuanto sube el pie que esta en el aire (fraccion del alto)
+FOOT_LIFT = 0.0        # los pies ahora se mueven en las hojas (tools/make_walk_frames.py); >0 los levanta tambien por codigo
 FOOT_BAND = 0.115      # franja de abajo que se considera "pies" (fraccion del alto)
 
 BREATH_TIME = 2.7

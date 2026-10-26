@@ -141,12 +141,13 @@ DELETE_SAVE_ON_LOSS = True
 NORMAL_KEEP_COINS = True
 
 GEMS_MARGIN = (110, 100)
+OBJECTIVES_TOP = 118   # y normal del objetivo (igual a ui.objectives.TOP)
 
 ITEM_EFFECTS = {
     "madera": {"vida": 0.20},
     "cera": {"consumo": 0.5, "duracion": 20.0},
     "aceite": {"velocidad": 1.5, "duracion": 12.0},
-    "resina": {"regen": 0.5, "regen_tiempo": 10.0},
+    "resina": {"regen": 0.9, "regen_tiempo": 8.0},
     "polvora": {"polvora_dps": 10.0, "duracion": 8.0},
     "hongo_azul": {"escudo": 0.25},
 }
@@ -1271,11 +1272,11 @@ class NewGame:
             {
                 "text": (
                     "Conseguí una vela, una luz mejor que el fósforo: "
-                    "comprala en la tienda o buscala en los cofres. "
+                    "solo se consigue en la tienda y cuesta 55 monedas. "
                     "Soltá el fósforo antes (casillero de luz y Q)."
                 ),
                 "tuto": [
-                    "LUCES: la vela ilumina más y dura más que el fósforo. Comprala en la tienda o buscala en los cofres.",
+                    "LUCES: la vela ilumina más y dura más que el fósforo. Solo se consigue en la tienda (los cofres no la dan) y cuesta 55 monedas.",
                     "CAMBIAR DE LUZ: solo podés tener una luz equipada. Si agarrás otra con el fósforo en la mano, no se cambia: tenés que soltar el fósforo primero. Elegí el casillero de la luz (el aislado) y apretá Q. Después agarrá la vela con E y se equipa sola.",
                 ],
                 "target": lambda g: (
@@ -1583,6 +1584,52 @@ class NewGame:
             self.show_message(
                 "Apagá el imán (O) para soltar items"
             )
+
+    def drop_all_items(self):
+        """Suelta TODO el inventario (los 4 casilleros, con todas sus unidades).
+
+        La luz equipada se queda con vos.
+        """
+
+        x, y = self.player.rect.center
+
+        dropped = 0
+
+        for slot in range(self.hud.SLOTS):
+
+            item_id = self.hud.items[slot]
+
+            if item_id is None:
+                continue
+
+            for _ in range(max(1, int(self.hud.counts[slot]))):
+
+                self.world_items.append(
+                    WorldItem(
+                        item_id,
+                        x + random.randint(-18, 18),
+                        y + random.randint(-18, 18)
+                    )
+                )
+
+                dropped += 1
+
+            self.hud.items[slot] = None
+            self.hud.counts[slot] = 0
+
+        if dropped:
+
+            self.tuto_flags.add("dropped")
+
+            if self._magnet_active():
+
+                self.show_message(
+                    "Apagá el imán (O) para soltar items"
+                )
+
+        else:
+
+            self.show_message("No tenés nada para soltar")
 
     def _take_one(self, slot):
 
@@ -2001,6 +2048,27 @@ class NewGame:
                 self.light_type
             )["golpe_costo"]
 
+    CHEST_SAFE_SLIME_DIST = 90     # px: con un slime vivo mas cerca, no se abren cofres
+    CHEST_SAFE_HIT_MS = 600        # ms despues de pegarle a un enemigo
+
+    def _chests_hittable(self):
+
+        last = getattr(self, "_enemy_hit_ms", -10_000)
+
+        if pygame.time.get_ticks() - last < self.CHEST_SAFE_HIT_MS:
+            return False
+
+        px, py = self.player.rect.center
+
+        for slime in self.slimes.targets():
+
+            sx, sy = slime.rect.center
+
+            if math.hypot(sx - px, sy - py) < self.CHEST_SAFE_SLIME_DIST:
+                return False
+
+        return True
+
     def _melee_hits(self, pivot):
 
         if not self.melee.swinging and not self.melee.final_pass:
@@ -2008,7 +2076,13 @@ class NewGame:
 
         targets = [t for a in self.arenas for t in a.targets()]
         targets += list(self.doors.doors)
-        targets += list(self.chests.chests)
+
+        # los cofres solo se abren pegandoles "en calma": si hay un slime cerca
+        # o recien le pegaste a un enemigo, el golpe no los toca (antes se
+        # abrian sin querer al pelear con slimes en la sala de cofres)
+        if self._chests_hittable():
+            targets += list(self.chests.chests)
+
         targets += [d for d in self.dummies if not d.dead]
         targets += self.slimes.targets()
 
@@ -2196,6 +2270,8 @@ class NewGame:
                 "hit_heavy" if self.melee.heavy or damage >= 2 else "hit"
             )
 
+            self._enemy_hit_ms = pygame.time.get_ticks()
+
             target.take_damage(damage)
 
 
@@ -2379,7 +2455,6 @@ class NewGame:
 
         targets = [t for a in self.arenas for t in a.targets()]
         targets += list(self.doors.doors)
-        targets += list(self.chests.chests)
         targets += [d for d in self.dummies if not d.dead]
         targets += self.slimes.targets()
 
@@ -3312,6 +3387,16 @@ class NewGame:
 
                 self.coins += DEBUG_COINS
 
+            elif event.key == pygame.K_F9:
+
+                # al reves de F8 (debug): resta monedas, sin bajar de 0
+                self.coins = max(0, self.coins - DEBUG_COINS)
+
+            elif event.key == pygame.K_SPACE and self.state == "playing":
+
+                # saltito (solo visual, no sirve para nada todavia)
+                self.player.jump()
+
             elif controls.slot_for(event.key) is not None:
 
                 slot = controls.slot_for(event.key)
@@ -3365,7 +3450,12 @@ class NewGame:
 
             elif controls.matches("drop", event.key):
 
-                if self.selected_slot == "equipped":
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+
+                    # CTRL + Q: suelta todo el inventario (la luz equipada no)
+                    self.drop_all_items()
+
+                elif self.selected_slot == "equipped":
 
                     if self.has_match:
                         self._drop_match()
@@ -4170,6 +4260,8 @@ class NewGame:
 
     def _draw_gems(self):
 
+        self._gems_bottom = 0
+
         if self.gems <= 0 and self.gems_green <= 0:
             return
 
@@ -4214,6 +4306,9 @@ class NewGame:
             row_h = icon.get_height() if icon is not None else 28
 
             y += row_h + 4
+
+        # hasta donde llegan las gemas (el objetivo se dibuja debajo)
+        self._gems_bottom = y
 
     def _draw_debug_items(self):
 
@@ -4517,6 +4612,15 @@ class NewGame:
         if self.state == "playing":
 
             if self.objectives is not None:
+
+                # que el objetivo no tape las gemas
+                gems_bottom = getattr(self, "_gems_bottom", 0)
+
+                self.objectives.top = max(
+                    OBJECTIVES_TOP,
+                    gems_bottom + 8 if gems_bottom else 0
+                )
+
                 self.objectives.draw(self.screen)
 
             self._draw_guidance()

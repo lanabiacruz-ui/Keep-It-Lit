@@ -475,31 +475,15 @@ class Shopkeeper:
         sx = 1.0 - 0.020 * breath
         sy = 1.0 + 0.045 * breath
 
+        # el cuerpo queda siempre pegado al mostrador (dy = 0): el recorte del
+        # vendedor termina en el mostrador, si se levantara se veria cortado
         dy = 0.0
 
-        # contento: saltitos
-        if self._happy > 0.01:
-
-            hop = abs(math.sin(self._clock * 5.2)) ** 1.4
-
-            dy -= hop * 1.6 * self._happy
-
-            land = 1.0 - hop
-
-            sy += (hop - 0.5) * 0.10 * self._happy
-            sx -= (hop - 0.5) * 0.06 * self._happy
-
-            if land > 0.85:
-                sy -= 0.02 * self._happy
-
-        # disparo
+        # disparo: solo se infla / se achica un poco, sin despegarse del mostrador
         k = self.kick
 
         sx += 0.11 * k
         sy -= 0.09 * k
-
-        if k < 0:
-            dy += 0.7 * k   # salta un poquito hacia arriba al disparar
 
         self._pose = (sx, sy, dy)
 
