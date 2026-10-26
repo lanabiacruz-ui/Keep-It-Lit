@@ -2,6 +2,7 @@ import pygame
 from pathlib import Path
 
 from player.movement import PlayerMovement
+from player import walk_anim as wa
 
 
 class Player:
@@ -90,6 +91,23 @@ class Player:
 
         self.animation_timer = 0
         self.animation_frame = 0
+
+        # --- animacion de caminata (ver player/walk_anim.py) ---
+        self.walk_phase = 0.0        # 0..1, un ciclo = 2 pasos
+        self.walk_blend = 0.0        # 0 quieto .. 1 caminando (suavizado)
+        self.idle_t = 0.0            # reloj de la respiracion
+        self.settle = 0.0            # rebote al frenar
+        self.hurt_anim = 0.0         # sacudida al recibir dano
+        self._hurt_dir_x = 0.0
+        self._was_moving = False
+        self._finishing_step = False
+        self._step_pending = False   # un pie acaba de pisar (lo lee el sonido)
+        self.dust = wa.DustPuffs()
+
+        self._sprite_cache = {}
+        self._feet_cache = {}
+        self._shadow_cache = {}
+        self._dust_cache = {}
 
         self.has_torch = False
         self.torch_kind = "fosforo"
@@ -188,14 +206,26 @@ class Player:
         self.hurt_timer = self.HURT_TIME
         self.invuln_timer = self.INVULN_TIME
 
+        self.hurt_anim = 1.0
+        self._hurt_dir_x = 0.0
+
         if from_pos is not None:
 
             away = pygame.Vector2(self.rect.center) - pygame.Vector2(from_pos)
 
             if away.length_squared() > 0.01:
                 self.kb_vel = away.normalize() * self.KNOCKBACK
+                self._hurt_dir_x = max(-1.0, min(1.0, away.normalize().x))
 
         return True
+
+    def pop_step(self):
+        """True una sola vez por cada pisada (para sincronizar el sonido)."""
+
+        pending = self._step_pending
+        self._step_pending = False
+
+        return pending
 
     def _apply_knockback(self, dt, collision_map):
 
@@ -378,23 +408,177 @@ class Player:
             self.rect.bottom + 3
         )
 
+        self._update_walk(dt)
+
+    # ------------------------------------------------------------------
+    # Animacion de caminata
+    # ------------------------------------------------------------------
+
+    FACING_VEC = {
+        "up": (0.0, -1.0),
+        "down": (0.0, 1.0),
+        "left": (-1.0, 0.0),
+        "right": (1.0, 0.0),
+    }
+
+    def _feet_world(self):
+
+        return (float(self.rect.centerx), float(self.rect.bottom + 3))
+
+    def _emit_dust(self, count, strength=1.0):
+
+        fx, fy = self._feet_world()
+        vx, vy = self.FACING_VEC[self.direction]
+
+        self.dust.emit(fx, fy, -vx, -vy, count=count, strength=strength)
+
+    def _update_walk(self, dt):
+
+        dt = min(dt, 0.05)
+
+        spd = max(0.6, min(1.7, float(self.movement.speed_mult)))
+
+        self.idle_t += dt
+
+        target = 1.0 if self.moving else 0.0
+        rate = wa.START_RATE if self.moving else wa.STOP_RATE
+
+        self.walk_blend = wa.smooth_toward(self.walk_blend, target, rate, dt)
+
+        if not self.moving and self.walk_blend < 0.01:
+            self.walk_blend = 0.0
+
+        prev_phase = self.walk_phase
+
         if self.moving:
 
-            self.animation_timer += dt
+            if not self._was_moving:
 
-            if self.animation_timer >= 0.12:
+                # arranque: primer paso con un poco de polvo
+                self._finishing_step = False
+                self._step_pending = True
+                self._emit_dust(3, 1.2)
+                self.settle = 0.0
 
-                self.animation_timer = 0
+            self.walk_phase = (
+                self.walk_phase + dt / wa.CYCLE_TIME * spd
+            ) % 1.0
 
-                self.animation_frame += 1
+            if wa.step_crossed(prev_phase, self.walk_phase):
 
-                self.animation_frame %= len(
-                    self.frames[self.direction]
-                )
+                self._step_pending = True
+
+                if self.walk_blend > 0.5:
+                    self._emit_dust(2)
 
         else:
 
-            self.animation_frame = 0
+            if self._was_moving:
+
+                # frenada: termina el paso que venia haciendo y se aplasta un poco
+                self._finishing_step = True
+                self.settle = 1.0
+
+            if self._finishing_step:
+
+                nxt = (int(self.walk_phase * 2.0) + 1) / 2.0
+
+                self.walk_phase += dt / wa.CYCLE_TIME * spd * 1.6
+
+                if self.walk_phase >= nxt:
+                    self.walk_phase = nxt % 1.0
+                    self._finishing_step = False
+
+                self.walk_phase %= 1.0
+
+        self._was_moving = self.moving
+
+        if self.settle > 0:
+            self.settle = max(0.0, self.settle - dt / wa.STOP_SETTLE_TIME)
+
+        if self.hurt_anim > 0:
+            self.hurt_anim = max(0.0, self.hurt_anim - dt / 0.45)
+
+        self.animation_frame = wa.frame_for_phase(
+            self.walk_phase,
+            len(self.frames[self.direction])
+        )
+
+        self.dust.update(dt)
+
+    def _scaled_frame(self, frames, height):
+
+        key = (id(frames), self.direction, self.animation_frame, height)
+
+        sprite = self._sprite_cache.get(key)
+
+        if sprite is None:
+
+            frame = frames[self.direction][self.animation_frame]
+
+            scale = height / self.CELL_HEIGHT
+
+            sprite = pygame.transform.smoothscale(
+                frame,
+                (round(self.CELL_WIDTH * scale), height)
+            )
+
+            self._sprite_cache[key] = sprite
+
+        return key, sprite
+
+    def _shadow(self, width, height, alpha):
+
+        key = (width, height, alpha)
+
+        shadow = self._shadow_cache.get(key)
+
+        if shadow is None:
+
+            shadow = pygame.Surface((width, height), pygame.SRCALPHA)
+
+            pygame.draw.ellipse(shadow, (0, 0, 0, alpha), shadow.get_rect())
+
+            self._shadow_cache[key] = shadow
+
+        return shadow
+
+    def _dust_sprite(self, radius, alpha):
+
+        key = (radius, alpha)
+
+        spr = self._dust_cache.get(key)
+
+        if spr is None:
+
+            spr = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
+
+            pygame.draw.circle(
+                spr, (196, 186, 162, alpha), (radius + 1, radius + 1), radius
+            )
+
+            self._dust_cache[key] = spr
+
+        return spr
+
+    def _draw_dust(self, screen, camera):
+
+        for p in self.dust.puffs:
+
+            t = p["t"] / p["life"]
+
+            radius = max(1, int((p["r"] + 1.6 * t) * camera.zoom))
+
+            alpha = int(120 * (1.0 - t) ** 1.5 // 12 * 12)
+
+            if alpha <= 0:
+                continue
+
+            pos = camera.apply(pygame.Rect(int(p["x"]), int(p["y"]), 0, 0)).topleft
+
+            spr = self._dust_sprite(radius, alpha)
+
+            screen.blit(spr, spr.get_rect(center=pos))
 
     def draw(self, screen, camera):
 
@@ -415,20 +599,55 @@ class Player:
         else:
             frames = self.frames
 
-        frame = frames[
-            self.direction
-        ][
-            self.animation_frame
-        ]
+        height = self.image_rect.height
 
-        scale = self.image_rect.height / self.CELL_HEIGHT
+        if self.animation_frame >= len(frames[self.direction]):
+            self.animation_frame = 0
 
-        sprite = pygame.transform.smoothscale(
-            frame,
-            (
-                round(self.CELL_WIDTH * scale),
-                self.image_rect.height
-            )
+        key, base = self._scaled_frame(frames, height)
+
+        pose = wa.walk_pose(
+            self.walk_phase,
+            self.walk_blend,
+            self.direction,
+            idle_t=self.idle_t,
+            settle=self.settle,
+            hurt=self.hurt_anim,
+            lean_in=self._hurt_dir_x,
+        )
+
+        feet = None
+
+        if self.direction in ("up", "down"):
+
+            feet = self._feet_cache.get(key)
+
+            if feet is None:
+                feet = wa.split_feet(base, pygame)
+                self._feet_cache[key] = feet
+
+        sprite, ofs_x, ofs_y = wa.compose_pose(base, feet, pose, pygame)
+
+        anchor = camera.apply(self.image_rect).midbottom
+
+        # --- polvo y sombra (debajo del personaje) ---
+        self._draw_dust(screen, camera)
+
+        lift = int(self.grab_lift * camera.zoom) if self.grab_lift > 0 else 0
+
+        sw = base.get_width()
+
+        k = pose["contact"]
+
+        shadow_w = int(sw * (0.50 + 0.07 * k) * (1.0 - min(0.5, lift / 60.0)))
+        shadow_h = max(3, int(shadow_w * 0.30))
+        shadow_a = int((60 + 34 * k) * (1.0 - min(0.6, lift / 60.0)) // 6 * 6)
+
+        shadow = self._shadow(max(4, shadow_w), shadow_h, shadow_a)
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(anchor[0], anchor[1] - 4))
         )
 
         if self.hurt_timer > 0:
@@ -453,14 +672,7 @@ class Player:
 
             sprite.set_alpha(140)
 
-        dest = sprite.get_rect(
-            midbottom=camera.apply(self.image_rect).midbottom
-        )
-
-        if self.grab_lift > 0:
-            dest.y -= int(self.grab_lift * camera.zoom)
-
         screen.blit(
             sprite,
-            dest
+            (anchor[0] + ofs_x, anchor[1] + ofs_y - lift)
         )

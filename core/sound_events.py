@@ -301,9 +301,25 @@ class SoundWatcher:
             and bool(getattr(game.player, "moving", False))
         )
 
+        # si el jugador avisa cada pisada (player.pop_step), el sonido cae justo
+        # cuando el pie toca el piso; si no, se usa el reloj de siempre
+        pop = getattr(game.player, "pop_step", None)
+
+        stepped = pop() if pop is not None else False
+
         if not walking:
 
             self.step_t = STEP_INTERVAL * 0.75
+            return
+
+        if pop is not None:
+
+            if stepped:
+
+                self.step_flip = not self.step_flip
+
+                play("step_a" if self.step_flip else "step_b")
+
             return
 
         self.step_t += dt

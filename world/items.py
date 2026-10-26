@@ -216,7 +216,14 @@ class WorldItem(MatchItem):
         self.fly = None
         self._lift = 0.0
 
-    def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45):
+    def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45,
+                  fancy=False):
+        """Hace volar el objeto de src a dst.
+
+        fancy=True (lo usa el vendedor): sale disparado y frena al caer,
+        gira, "pega un salto" de tamano, deja estela, tiene sombra en el
+        piso y rebota aplastandose al caer.
+        """
 
         self.fly = {
             "src": src,
@@ -225,6 +232,9 @@ class WorldItem(MatchItem):
             "t": 0.0,
             "dur": duration,
             "h": height,
+            "fancy": fancy,
+            "spin": random.choice((-1, 1)) * random.uniform(420, 900),
+            "trail": [],
         }
 
         self.rect.center = (round(src[0]), round(src[1]))
@@ -248,19 +258,35 @@ class WorldItem(MatchItem):
             self.fly = None
             self._lift = 0.0
 
-            if getattr(self, "sparkle", False):
+            if f.get("fancy") or getattr(self, "sparkle", False):
                 self._land_ms = pygame.time.get_ticks()
+                self._land_fancy = bool(f.get("fancy"))
 
             return
 
         t = f["t"]
 
-        x = f["src"][0] + (f["dst"][0] - f["src"][0]) * t
-        y = f["src"][1] + (f["dst"][1] - f["src"][1]) * t
+        if f.get("fancy"):
+            # sale rapido y va frenando: se siente como un disparo
+            te = 1.0 - (1.0 - t) ** 2.2
+        else:
+            te = t
+
+        x = f["src"][0] + (f["dst"][0] - f["src"][0]) * te
+        y = f["src"][1] + (f["dst"][1] - f["src"][1]) * te
 
         self.rect.center = (round(x), round(y))
 
         self._lift = f["h"] * 4 * t * (1 - t)
+
+        if f.get("fancy"):
+
+            trail = f["trail"]
+
+            trail.append((x, y, self._lift))
+
+            if len(trail) > 4:
+                del trail[0]
 
     def is_near(self, player):
 
@@ -269,11 +295,83 @@ class WorldItem(MatchItem):
 
         return super().is_near(player)
 
+    def _draw_fancy_flight(self, screen, camera, f):
+
+        sprite = self._get_sprite(camera.zoom)
+
+        t = f["t"]
+        zoom = camera.zoom
+
+        # sombra en el piso: mas chica y clara cuanto mas alto vuela
+        lift_w = self._lift
+        sw = max(4, int(sprite.get_width() * (0.55 - 0.18 * min(1.0, lift_w / 22.0))))
+        sh = max(2, sw // 3)
+
+        shadow = pygame.Surface((sw, sh), pygame.SRCALPHA)
+
+        pygame.draw.ellipse(
+            shadow,
+            (0, 0, 0, int(95 - 40 * min(1.0, lift_w / 22.0))),
+            shadow.get_rect()
+        )
+
+        ground = camera.apply(self.rect)
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(ground.centerx, ground.centery + int(sprite.get_height() * 0.28)))
+        )
+
+        # tamano: nace chiquito en la boca, "explota" al salir y se asienta
+        pop = 0.45 + 0.55 * min(1.0, t * 6.0)
+        pop += 0.22 * math.sin(math.pi * min(1.0, t * 1.4))
+
+        angle = f["spin"] * (1.0 - (1.0 - t) ** 2.0)
+
+        w = max(2, int(sprite.get_width() * pop))
+        h = max(2, int(sprite.get_height() * pop))
+
+        spr = pygame.transform.smoothscale(sprite, (w, h))
+
+        spr = pygame.transform.rotozoom(spr, angle, 1.0)
+
+        # estela: copias que se van borrando
+        trail = f["trail"]
+
+        for i, (tx, ty, tl) in enumerate(trail[:-1]):
+
+            k = (i + 1) / max(1, len(trail))
+
+            ghost = spr.copy()
+            ghost.set_alpha(int(150 * k * k))
+
+            gpos = camera.apply(
+                pygame.Rect(int(tx) - 1, int(ty) - 1, 2, 2)
+            ).center
+
+            screen.blit(
+                ghost,
+                ghost.get_rect(center=(gpos[0], gpos[1] - int(tl * zoom)))
+            )
+
+        dest = camera.apply(self.rect)
+
+        screen.blit(
+            spr,
+            spr.get_rect(
+                center=(dest.centerx, dest.centery - int(self._lift * zoom))
+            )
+        )
+
     def draw(self, screen, camera):
 
         f = self.fly
 
         if f is not None and f["delay"] > 0:
+            return
+
+        if f is not None and f.get("fancy"):
+            self._draw_fancy_flight(screen, camera, f)
             return
 
         sprite = self._get_sprite(camera.zoom)
@@ -284,16 +382,43 @@ class WorldItem(MatchItem):
 
         land = getattr(self, "_land_ms", None)
 
+        squash = 0.0
+
         if land is not None and f is None:
 
             b = (pygame.time.get_ticks() - land) / 1000.0
 
             if b < 0.55:
-                lift_w = 7.0 * abs(math.sin(b * math.pi * 3.0)) * (1 - b / 0.55)
+
+                fade = 1 - b / 0.55
+
+                lift_w = 7.0 * abs(math.sin(b * math.pi * 3.0)) * fade
+
+                if getattr(self, "_land_fancy", False):
+                    # se aplasta cada vez que toca el piso
+                    squash = (1.0 - abs(math.sin(b * math.pi * 3.0))) * fade * 0.28
+
             else:
                 self._land_ms = None
 
         lift = int(lift_w * camera.zoom)
+
+        if squash > 0.01:
+
+            w = int(sprite.get_width() * (1.0 + squash))
+            h = int(sprite.get_height() * (1.0 - squash))
+
+            sprite = pygame.transform.smoothscale(sprite, (max(2, w), max(2, h)))
+
+            # el borde de abajo no se mueve
+            bottom = dest.centery + self._get_sprite(camera.zoom).get_height() // 2
+
+            screen.blit(
+                sprite,
+                sprite.get_rect(midbottom=(dest.centerx, bottom - lift))
+            )
+
+            return
 
         screen.blit(
             sprite,
@@ -329,6 +454,7 @@ class LightItem(MatchItem):
 
     start_fly = WorldItem.start_fly
     update_fly = WorldItem.update_fly
+    _draw_fancy_flight = WorldItem._draw_fancy_flight
     draw = WorldItem.draw
 
     def is_near(self, player):

@@ -2556,6 +2556,8 @@ class NewGame:
                         src=mouth, delay=0.3
                     )
 
+                    self.shopkeeper.add_shot(landing, 0.3)
+
                 continue
 
             item_ids.extend([item_id] * qty)
@@ -3838,7 +3840,7 @@ class NewGame:
             self._burn_out()
 
 
-        self.shopkeeper.update(dt)
+        self.shopkeeper.update(dt, self.player)
 
         self.placeables.update(self, dt)
 
@@ -4265,6 +4267,8 @@ class NewGame:
             self.screen,
             self.camera
         )
+
+        self.shopkeeper.draw_body(self.screen, self.camera)
 
         for drop in self.light_drops:
             drop.draw(self.screen, self.camera)
