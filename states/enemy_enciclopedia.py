@@ -33,7 +33,7 @@ HUD_DIR = (
 )
 
 TITLE_TEXT = "Criaturas"
-KIND_WORD = "bicho"
+KIND_WORD = "criatura"
 
 DEFAULT_DATA = {
     "pino": {
@@ -203,7 +203,14 @@ class EnemyEncyclopedia:
         self.data = self._load_data()
 
         self.selected = 0
+
+        # scroll = fila de arriba que queremos ver (entero)
+        # scroll_f = la que se dibuja ahora (float, se acerca de a poco)
         self.scroll = 0
+        self.scroll_f = 0.0
+
+        self._drag = False
+        self._drag_dy = 0
 
         self.images = {}
 
@@ -395,6 +402,23 @@ class EnemyEncyclopedia:
             )
         )
 
+        first = self._slot_rect(0)
+        last = self._slot_rect(self.VISIBLE_ROWS - 1)
+
+        self.bar_rect = pygame.Rect(
+            first.right + round(8 * self.sx),
+            first.top,
+            max(6, round(10 * self.sx)),
+            last.bottom - first.top,
+        )
+
+        self.clip_rect = pygame.Rect(
+            first.left - round(4 * self.sx),
+            first.top - round(2 * self.sy),
+            first.width + round(8 * self.sx),
+            last.bottom - first.top + round(4 * self.sy),
+        )
+
         back_size = self.back_rect.size
 
         self.bg_img = self._load_ui(
@@ -503,6 +527,78 @@ class EnemyEncyclopedia:
             unsetcolor=(0, 0, 0, 0),
         )
 
+    def _max_scroll(self):
+
+        return max(0, len(self.ORDER) - self.VISIBLE_ROWS)
+
+    def _set_scroll(self, value):
+
+        self.scroll = max(0, min(self._max_scroll(), int(value)))
+
+    def _thumb_rect(self):
+
+        total = len(self.ORDER)
+
+        if total <= self.VISIBLE_ROWS:
+            return None
+
+        bar = self.bar_rect
+
+        height = max(
+            round(28 * self.sy),
+            round(bar.height * self.VISIBLE_ROWS / total)
+        )
+
+        span = bar.height - height
+
+        ratio = self.scroll_f / self._max_scroll()
+
+        ratio = max(0.0, min(1.0, ratio))
+
+        return pygame.Rect(
+            bar.left,
+            bar.top + round(span * ratio),
+            bar.width,
+            height
+        )
+
+    def _scroll_from_mouse(self, mouse_y):
+
+        thumb = self._thumb_rect()
+
+        if thumb is None:
+            return
+
+        span = self.bar_rect.height - thumb.height
+
+        if span <= 0:
+            return
+
+        top = mouse_y - self._drag_dy - self.bar_rect.top
+
+        ratio = max(0.0, min(1.0, top / span))
+
+        self._set_scroll(round(ratio * self._max_scroll()))
+
+        self._clamp_selection()
+
+    def _clamp_selection(self):
+
+        low = self.scroll
+        high = self.scroll + self.VISIBLE_ROWS - 1
+
+        self.selected = max(low, min(high, self.selected))
+
+    def _hover_select(self):
+
+        index = self._row_at(pygame.mouse.get_pos())
+
+        if index is not None:
+            self.selected = index
+
+        else:
+            self._clamp_selection()
+
     def is_discovered(self, key):
 
         return key in self.discovered
@@ -510,14 +606,16 @@ class EnemyEncyclopedia:
 
     def _visible_range(self):
 
+        first = max(0, int(self.scroll_f))
+
         return range(
-            self.scroll,
-            min(len(self.ORDER), self.scroll + self.VISIBLE_ROWS)
+            first,
+            min(len(self.ORDER), first + self.VISIBLE_ROWS + 2)
         )
 
     def _enemy_rect(self, index):
 
-        return self._slot_rect(index - self.scroll)
+        return self._slot_rect(index - self.scroll_f)
 
     def _slot_rect(self, slot):
 
@@ -623,21 +721,38 @@ class EnemyEncyclopedia:
         return font, self._wrap(font, text, width)
 
 
-    def _select(self, index):
+    def _select(self, index, wrap=True):
 
-        self.selected = index % len(self.ORDER)
+        total = len(self.ORDER)
+
+        if wrap:
+            self.selected = index % total
+        else:
+            self.selected = max(0, min(total - 1, index))
 
         if self.selected < self.scroll:
-            self.scroll = self.selected
+            self._set_scroll(self.selected)
 
         elif self.selected >= self.scroll + self.VISIBLE_ROWS:
-            self.scroll = self.selected - self.VISIBLE_ROWS + 1
+            self._set_scroll(self.selected - self.VISIBLE_ROWS + 1)
 
     def _row_at(self, pos):
 
+        if not self.clip_rect.collidepoint(pos):
+            return None
+
         for index in self._visible_range():
 
-            if self._enemy_rect(index).collidepoint(pos):
+            rect = self._enemy_rect(index)
+
+            if rect.collidepoint(pos):
+
+                # solo filas que se ven completas o casi
+                if rect.centery < self.clip_rect.top:
+                    continue
+
+                if rect.centery > self.clip_rect.bottom:
+                    continue
 
                 return index
 
@@ -669,27 +784,33 @@ class EnemyEncyclopedia:
 
                 self._select(self.selected + 1)
 
+            elif event.key == pygame.K_PAGEUP:
+
+                self._select(
+                    self.selected - self.VISIBLE_ROWS, wrap=False
+                )
+
+            elif event.key == pygame.K_PAGEDOWN:
+
+                self._select(
+                    self.selected + self.VISIBLE_ROWS, wrap=False
+                )
+
+            elif event.key == pygame.K_HOME:
+
+                self._select(0, wrap=False)
+
+            elif event.key == pygame.K_END:
+
+                self._select(len(self.ORDER) - 1, wrap=False)
+
         elif event.type == pygame.MOUSEMOTION:
 
-            index = self._row_at(event.pos)
+            if self._drag:
 
-            if index is not None:
+                self._scroll_from_mouse(event.pos[1])
 
-                self.selected = index
-
-        elif event.type == pygame.MOUSEWHEEL:
-
-            self._select(self.selected - event.y)
-
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-
-            if (
-                event.button == 1
-                and self.back_rect.collidepoint(event.pos)
-            ):
-                return "back"
-
-            if event.button == 1:
+            else:
 
                 index = self._row_at(event.pos)
 
@@ -697,18 +818,75 @@ class EnemyEncyclopedia:
 
                     self.selected = index
 
-            elif event.button == 4:
+        elif event.type == pygame.MOUSEWHEEL:
 
-                self._select(self.selected - 1)
+            # La rueda mueve la LISTA (no la seleccion) y se clava en
+            # los bordes: no da la vuelta ni se pasa de largo.
+            # En pygame 2 cada giro tambien manda un MOUSEBUTTONDOWN 4/5:
+            # por eso esos botones se ignoran mas abajo (antes contaban doble).
+            if event.y:
 
-            elif event.button == 5:
+                step = -1 if event.y > 0 else 1
 
-                self._select(self.selected + 1)
+                self._set_scroll(self.scroll + step)
+
+                self._hover_select()
+
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+
+            if event.button == 1:
+
+                if self.back_rect.collidepoint(event.pos):
+                    return "back"
+
+                thumb = self._thumb_rect()
+
+                if thumb is not None and self.bar_rect.inflate(
+                    round(10 * self.sx), 0
+                ).collidepoint(event.pos):
+
+                    if thumb.collidepoint(event.pos):
+
+                        self._drag_dy = event.pos[1] - thumb.top
+
+                    else:
+
+                        # click en el riel: salta y agarra la barra
+                        self._drag_dy = thumb.height // 2
+
+                    self._drag = True
+
+                    self._scroll_from_mouse(event.pos[1])
+
+                    return None
+
+                index = self._row_at(event.pos)
+
+                if index is not None:
+
+                    self.selected = index
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+
+            if event.button == 1:
+
+                self._drag = False
 
         return None
 
 
     def update(self, dt):
+
+        diff = self.scroll - self.scroll_f
+
+        if abs(diff) < 0.01:
+
+            self.scroll_f = float(self.scroll)
+
+        else:
+
+            # se acerca rapido pero sin saltos (independiente de los FPS)
+            self.scroll_f += diff * min(1.0, dt * 16.0)
 
         return None
 
@@ -787,44 +965,42 @@ class EnemyEncyclopedia:
 
     def _draw_scroll_arrows(self):
 
-        first = self._slot_rect(0)
-        last = self._slot_rect(self.VISIBLE_ROWS - 1)
+        thumb = self._thumb_rect()
 
-        cx = first.right + round(14 * self.sx)
+        if thumb is None:
+            return
 
-        size = max(5, round(9 * self.sy))
+        bar = self.bar_rect
 
-        if self.scroll > 0:
+        pygame.draw.rect(
+            self.screen,
+            (20, 36, 52),
+            bar,
+            border_radius=bar.width // 2,
+        )
 
-            cy = first.top + size
+        pygame.draw.rect(
+            self.screen,
+            (82, 125, 150),
+            bar,
+            width=1,
+            border_radius=bar.width // 2,
+        )
 
-            pygame.draw.polygon(
-                self.screen,
-                self.TITLE_COLOR,
-                [
-                    (cx - size, cy + size),
-                    (cx + size, cy + size),
-                    (cx, cy - size),
-                ],
-            )
-
-        if self.scroll + self.VISIBLE_ROWS < len(self.ORDER):
-
-            cy = last.bottom - size
-
-            pygame.draw.polygon(
-                self.screen,
-                self.TITLE_COLOR,
-                [
-                    (cx - size, cy - size),
-                    (cx + size, cy - size),
-                    (cx, cy + size),
-                ],
-            )
+        pygame.draw.rect(
+            self.screen,
+            self.TITLE_COLOR if self._drag else (77, 170, 191),
+            thumb,
+            border_radius=bar.width // 2,
+        )
 
     def _draw_list(self):
 
         self._draw_scroll_arrows()
+
+        previous_clip = self.screen.get_clip()
+
+        self.screen.set_clip(self.clip_rect)
 
         for index in self._visible_range():
 
@@ -918,6 +1094,8 @@ class EnemyEncyclopedia:
                         (cx - size, cy + size),
                     ],
                 )
+
+        self.screen.set_clip(previous_clip)
 
     def _draw_card(self):
 
@@ -1023,8 +1201,8 @@ class EnemyEncyclopedia:
             (
                 str(enemy.get("descripcion", ""))
                 if found
-                else f"Todavía no te encontraste con este {KIND_WORD}. "
-                     "Explorá las salas y las oleadas para descubrirlo."
+                else f"Todavía no te encontraste con esta {KIND_WORD}. "
+                     "Explorá las salas y las oleadas para descubrirla."
             ),
             card.width - pad * 2,
             available_h,

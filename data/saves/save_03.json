@@ -2,12 +2,12 @@
     "player_name": "ujuju",
     "mode": "normal",
     "created_at": "2026-10-10T22:55:15",
-    "last_played": "2026-10-25T23:38:01",
+    "last_played": "2026-10-26T08:27:36",
     "password_salt": "6d7474a6937190c7227d6d0ef941f3ab",
     "password_hash": "4c279509df555cddb38f9331b5a9c246d4fb2d0671da9109d263f47943db0a10",
-    "x": 939,
-    "y": 167,
-    "coins": 45,
+    "x": 998,
+    "y": 123,
+    "coins": 99945,
     "gems": 1,
     "has_match": true,
     "light": "antorcha",
@@ -22,47 +22,41 @@
             "hongo_azul",
             11
         ],
-        [
-            "cera",
-            1
-        ],
-        [
-            "gelea",
-            4
-        ]
+        null,
+        null
     ],
     "collected": [
-        "madera_03#0",
-        "moneda_sala_central#1",
-        "cera_03#0",
-        "moneda_pasillo_cofres#0",
+        "moneda5_pasillo_cofres#0",
+        "cera_02#0",
         "madera_05#0",
+        "madera_09#0",
         "madera_11#0",
+        "moneda_pasillo_tienda#1",
+        "madera_04#0",
+        "cera_03#0",
         "aceite_02#0",
-        "madera_02#0",
-        "aceite_01#0",
-        "moneda_sala_cofres#0",
-        "madera_07#0",
-        "madera_08#0",
-        "cera_01#0",
-        "madera_10#0",
-        "moneda_pasillo_izq#0",
-        "madera_06#0",
-        "moneda_pasillo_cabana#0",
         "madera_01#0",
         "moneda_pasillo_tienda#0",
-        "moneda_sala_central#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda5_sala_cofres#0",
-        "madera_04#0",
         "moneda_pasillo_der#0",
         "moneda_pasillo_cabana#1",
+        "aceite_01#0",
+        "madera_10#0",
         "aceite_03#0",
-        "moneda_pasillo_tienda#1",
-        "madera_09#0",
         "moneda_sala_cofres#1",
+        "cera_01#0",
+        "madera_03#0",
+        "moneda_sala_cofres#0",
+        "moneda_sala_central#0",
         "madera_12#0",
-        "cera_02#0"
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_cabana#0",
+        "madera_02#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_cofres#0",
+        "moneda5_sala_cofres#0",
+        "madera_08#0",
+        "madera_06#0",
+        "madera_07#0"
     ],
     "item_seed": 162672674,
     "arena_wave": 1,
@@ -102,9 +96,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1864,
+        "items_used": 1868,
         "chests_opened": 4,
-        "purchases": 114,
+        "purchases": 116,
         "fireballs": 3468,
         "kills": 1682
     },
@@ -123,11 +117,20 @@
             "slots": [
                 [
                     "gelea",
+                    6
+                ],
+                [
+                    "polvora",
                     2
                 ],
-                null,
-                null,
-                null
+                [
+                    "aceite",
+                    1
+                ],
+                [
+                    "cera",
+                    1
+                ]
             ]
         },
         {
@@ -152,7 +155,7 @@
             "t": "fogata",
             "x": 956,
             "y": 154,
-            "fuel": 0.0
+            "fuel": 55.2
         },
         {
             "t": "fogata",
@@ -200,6 +203,12 @@
             "t": "fogata",
             "x": 935,
             "y": 517,
+            "fuel": 0.0
+        },
+        {
+            "t": "faro",
+            "x": 1032,
+            "y": 170,
             "fuel": 0.0
         }
     ],
@@ -285,41 +294,6 @@
             "id": "moneda",
             "x": 1247,
             "y": 559,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "madera",
-            "x": 881,
-            "y": 153,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 916,
-            "y": 154,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "cera",
-            "x": 878,
-            "y": 159,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 949,
-            "y": 169,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 993,
-            "y": 153,
             "map": "mapa1"
         },
         {
@@ -535,13 +509,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 872,
-            "y": 170,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 862,
             "y": 170,
             "map": "mapa1"
@@ -555,9 +522,86 @@
         },
         {
             "k": "item",
-            "id": "aceite",
-            "x": 928,
-            "y": 156,
+            "id": "gelea",
+            "x": 490,
+            "y": 207,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 503,
+            "y": 183,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 495,
+            "y": 213,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 479,
+            "y": 183,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 545,
+            "y": 207,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 546,
+            "y": 196,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 538,
+            "y": 209,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 514,
+            "y": 172,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 489,
+            "y": 206,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 471,
+            "y": 191,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 518,
+            "y": 171,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "faro",
+            "x": 884,
+            "y": 139,
             "map": "mapa1"
         }
     ],

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.achievements import achievements
 from core.audio_manager import audio
 from world.items import WorldItem
 from world.zones import ZONES
@@ -745,6 +746,11 @@ class SlimeManager:
                 if not slime.dropped:
 
                     slime.dropped = True
+
+                    achievements.add_counter("slimes")
+
+                    if slime.variant == "brillante":
+                        achievements.unlock("slime_brillante")
 
                     game.discover_enemy(
                         CODEX_KEYS.get(slime.variant, "slime")

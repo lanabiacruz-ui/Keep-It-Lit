@@ -318,6 +318,9 @@ class NewGame:
 
         self.items_picked = 0
 
+        # golpes que recibio el jugador (para el logro "Intocable")
+        self.hits_taken = 0
+
         saved_stats = self.save_data.get("stats", {})
 
         self.stats = {
@@ -719,6 +722,8 @@ class NewGame:
 
         audio.play("hurt")
 
+        self.hits_taken += 1
+
         self.fx.player_hurt(*self.player.rect.center)
 
         absorbed = min(self.escudo, amount)
@@ -731,6 +736,11 @@ class NewGame:
 
 
     def equip_match(self, kind=None, life=None):
+
+        left = getattr(self, "no_light_timer", None)
+
+        if left is not None and 0 < left < 2.0:
+            achievements.unlock("ultimo_segundo")
 
         if kind in LIGHTS:
             self.light_type = kind
@@ -1234,7 +1244,7 @@ class NewGame:
                     "(ocultar el objetivo) y F1 (ayuda)."
                 ),
                 "tuto": [
-                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de bichos), TAB esconde o muestra el objetivo y F1 vuelve a mostrar la ayuda completa. Probá las tres.",
+                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de criaturas), TAB esconde o muestra el objetivo y F1 vuelve a mostrar la ayuda completa. Probá las tres.",
                 ],
                 "checks": help_checks,
                 "done": checks_done(help_checks),
@@ -1266,7 +1276,7 @@ class NewGame:
                 ),
                 "tuto": [
                     "MONEDAS: sirven para comprar luces y objetos en la tienda. Se juntan solas al acercarte. Hay tiradas por el mapa y en los cofres. Juntá 10 siguiendo la flecha.",
-                    "SLIMES: son bichos tranquilos que andan por la sala central y la de cofres. No te atacan: pegales con tu luz hasta matarlos. Sueltan 10 monedas y una gelea que te cura al comerla.",
+                    "SLIMES: son criaturas tranquilas que andan por la sala central y la de cofres. No te atacan: pegales con tu luz hasta matarlos. Sueltan 10 monedas y una gelea que te cura al comerla.",
                 ],
                 "target": lambda g: nearest(g, item_points(g, True)),
                 "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
@@ -1473,7 +1483,7 @@ class NewGame:
             {
                 "text": (
                     "Completá la enciclopedia: descubrí los "
-                    f"{len(EnemyEncyclopedia.ORDER)} bichos del juego "
+                    f"{len(EnemyEncyclopedia.ORDER)} criaturas del juego "
                     "(la abrís desde la pausa con ESC)."
                 ),
                 "done": lambda g: len(
@@ -1492,6 +1502,18 @@ class NewGame:
 
         if getattr(self, "current_map", "mapa1") == "mapa2":
             achievements.unlock("region_1")
+
+        if self.mode == MODE_HARDCORE and (
+            self.arena.completed or self.arena_left.completed
+        ):
+            achievements.unlock("sin_red")
+
+        if not achievements.is_unlocked("coctel"):
+
+            effects = set(self._active_effects()) - {"mosquito", "furia"}
+
+            if len(effects) >= 3:
+                achievements.unlock("coctel")
 
     def show_message(self, text):
 
@@ -1639,6 +1661,9 @@ class NewGame:
             return
 
         self.coins += amount
+
+        if self.coins >= 500:
+            achievements.unlock("dragon_monedas")
 
         audio.play("coin_big" if amount >= 5 else "coin")
 
@@ -2369,7 +2394,12 @@ class NewGame:
 
             else:
 
+                was_broken = target.broken
+
                 cost = target.take_damage(damage)
+
+                if target.broken and not was_broken:
+                    achievements.add_counter("doors")
 
                 audio.play(
                     "door_break" if target.broken else "door_hit"
@@ -2538,6 +2568,7 @@ class NewGame:
             self.fire_combo_timer = FIRE_COMBO_WINDOW
 
         self.count_stat("fireballs")
+        achievements.add_counter("fireballs")
 
         if not fury:
 
@@ -2639,6 +2670,7 @@ class NewGame:
                 self.chests.consume_use(chest)
 
                 self.count_stat("chests_opened")
+                achievements.add_counter("chests")
 
                 self.world_items.extend(
                     self.chests.spawn_drops(
@@ -2997,6 +3029,9 @@ class NewGame:
             return
 
         self.discovered_enemies.add(key)
+
+        if set(EnemyEncyclopedia.ORDER) <= self.discovered_enemies:
+            achievements.unlock("entomologo")
 
     def save_progress(self):
 

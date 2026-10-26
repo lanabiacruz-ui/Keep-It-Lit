@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.achievements import achievements
 from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
@@ -4753,6 +4754,8 @@ class Arena:
 
     def _spawn_wave(self, game):
 
+        self._hits_at_wave_start = getattr(game, "hits_taken", 0)
+
         (pinos, troncos, mosquitos, honguns, guardians,
          shooters, destellos, golems) = wave_composition(
             self.wave, self.cfg.table
@@ -4855,6 +4858,13 @@ class Arena:
             )
 
     def _wave_cleared(self, game):
+
+        if (
+            self.wave >= 5
+            and getattr(game, "hits_taken", 0)
+            == getattr(self, "_hits_at_wave_start", -1)
+        ):
+            achievements.unlock("intocable")
 
         pos = self.last_death or self.cfg.room.center
 
@@ -5295,6 +5305,14 @@ class Arena:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
                 game.count_stat("kills")
+                achievements.add_counter("kills")
+
+                if (
+                    isinstance(enemy, Destello)
+                    and not getattr(enemy, "boom", False)
+                ):
+                    achievements.unlock("desactivado")
+
                 if not getattr(enemy, "boom", False):
                     self._death_puff(enemy.pos)
 
@@ -5319,6 +5337,8 @@ class Arena:
             and p.invuln_timer <= 0
         ):
             enemy.start_grab(pygame.Vector2(p.rect.center) - enemy.pos)
+
+            achievements.unlock("abrazo_golem")
 
             p.grabbed = True
             p.kb_vel = pygame.Vector2()
@@ -5371,6 +5391,8 @@ class Arena:
     def _golem_squeeze(self, game, enemy):
 
         p = game.player
+
+        game.hits_taken = getattr(game, "hits_taken", 0) + 1
         pos = pygame.Vector2(p.rect.center)
 
         p.hurt_timer = p.HURT_TIME
@@ -5508,6 +5530,8 @@ class Arena:
         p.kb_vel = away.normalize() * HONGUN_KNOCKBACK
 
     def _destello_explode(self, game, enemy):
+
+        achievements.unlock("ojos_ciegos")
 
         p = game.player
         pos = pygame.Vector2(enemy.pos)

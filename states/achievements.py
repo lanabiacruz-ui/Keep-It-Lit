@@ -152,6 +152,18 @@ class AchievementsMenu:
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self._move_scroll(step)
 
+            elif event.key == pygame.K_PAGEUP:
+                self._move_scroll(-step * 3)
+
+            elif event.key == pygame.K_PAGEDOWN:
+                self._move_scroll(step * 3)
+
+            elif event.key == pygame.K_HOME:
+                self.scroll = 0
+
+            elif event.key == pygame.K_END:
+                self.scroll = self._max_scroll()
+
         elif event.type == pygame.MOUSEWHEEL:
 
             self._move_scroll(-event.y * step)
@@ -165,6 +177,20 @@ class AchievementsMenu:
 
     def update(self, dt):
         pass
+
+    def _fit_text(self, text, max_width, color):
+
+        font = self.desc_font
+
+        size = font.get_height()
+
+        while font.size(text)[0] > max_width and size > 12:
+
+            size -= 1
+
+            font = pygame.font.Font(None, size)
+
+        return font.render(text, True, color)
 
     def _draw_row(self, row, rect):
 
@@ -226,7 +252,16 @@ class AchievementsMenu:
             (255, 255, 255) if unlocked else (215, 228, 250)
         )
 
-        desc = self.desc_font.render(row["desc"], True, (205, 220, 245))
+        right_limit = rect.right - 14
+
+        if row["goal"] > 1 and not unlocked:
+            right_limit -= round(150 * self.sx) + 14
+        else:
+            right_limit -= round(120 * self.sx)
+
+        desc = self._fit_text(
+            row["desc"], max(40, right_limit - text_x), (205, 220, 245)
+        )
 
         self.screen.blit(title, (text_x, rect.top + round(rect.height * 0.10)))
 
@@ -279,6 +314,39 @@ class AchievementsMenu:
                 status.get_rect(midright=(right, rect.centery))
             )
 
+    def _draw_scrollbar(self):
+
+        max_scroll = self._max_scroll()
+
+        if max_scroll <= 0:
+            return
+
+        track = pygame.Rect(
+            self.panel.right + round(6 * self.sx),
+            self.panel.top,
+            max(4, round(7 * self.sx)),
+            self.panel.height,
+        )
+
+        pygame.draw.rect(
+            self.screen, (15, 30, 70), track, border_radius=track.width // 2
+        )
+
+        total = self.panel.height + max_scroll
+
+        thumb_h = max(round(24 * self.sy), round(track.height * self.panel.height / total))
+
+        thumb = pygame.Rect(
+            track.left,
+            track.top + round((track.height - thumb_h) * self.scroll / max_scroll),
+            track.width,
+            thumb_h,
+        )
+
+        pygame.draw.rect(
+            self.screen, (110, 160, 230), thumb, border_radius=track.width // 2
+        )
+
     def draw(self):
 
         self.screen.blit(self.background, (0, 0))
@@ -305,6 +373,8 @@ class AchievementsMenu:
             self._draw_row(row, rect)
 
         self.screen.set_clip(previous_clip)
+
+        self._draw_scrollbar()
 
         done = sum(1 for row in self.rows if row["unlocked"])
 
