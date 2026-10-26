@@ -689,7 +689,7 @@ class SlimeManager:
 
         for n in range(slime.cfg["chops"]):
 
-            chop = WorldItem("chuleta", cx, cy)
+            chop = WorldItem("gelea", cx, cy)
 
             chop.start_fly(
                 (cx, cy),

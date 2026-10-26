@@ -34,7 +34,7 @@ from world.chests import ChestManager, Chest, format_time
 from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
 from world.final_door import MapSwitcher, enter_map, draw_placed_gems
 from world.crusher import CrusherBlocks
-from world.zones import ZoneTracker, ZONES
+from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
 from world.slime import SlimeManager
 from world.shop import (
     Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES
@@ -72,12 +72,31 @@ MESSAGE_TIME = 2.2
 NO_LIGHT_COUNTDOWN = 10.0
 
 # version 2: se agregaron pasos de practica al principio del tutorial
-OBJECTIVE_VERSION = 2
+# version 3: se agregaron pasos de tienda (info, recoger, inventario) y de
+# construccion
+OBJECTIVE_VERSION = 3
 
 OLD_OBJECTIVE_MAP = {
     0: 0, 1: 3, 2: 5, 3: 7, 4: 8, 5: 9, 6: 10, 7: 11, 8: 12,
     9: 13, 10: 14, 11: 15, 12: 16, 13: 17, 14: 18, 15: 19, 16: 20,
 }
+
+# de la numeracion de la version 2 a la 3
+V2_TO_V3 = {
+    11: 12, 12: 15, 13: 16, 14: 17, 15: 18, 16: 19, 17: 20,
+    18: 22, 19: 23, 20: 24,
+}
+
+
+def v2_to_v3(index):
+
+    index = int(index)
+
+    if index >= 10 ** 6:
+        return index
+
+    return V2_TO_V3.get(index, index)
+
 
 FLICKER_THRESHOLD = 0.25
 
@@ -294,6 +313,7 @@ class NewGame:
         self.tutorial = None
 
         self.zone_tracker = ZoneTracker()
+        self._approach_current = None
         self.zone_banner = ZoneBanner((self.width, self.height))
 
         self.items_picked = 0
@@ -321,9 +341,11 @@ class NewGame:
 
         # Las partidas viejas contaban los objetivos sin los pasos nuevos
         # del tutorial: se pasa el numero viejo al que le corresponde ahora.
+        saved_version = self.save_data.get("objective_version", 1)
+
         if (
             self._objective_saved is not None
-            and self.save_data.get("objective_version", 1) < OBJECTIVE_VERSION
+            and saved_version < 2
             and "tuto_seen" not in self.save_data
         ):
 
@@ -334,6 +356,12 @@ class NewGame:
                 if old <= max(OLD_OBJECTIVE_MAP)
                 else 10 ** 6
             )
+
+        # version 2 -> 3: se corren los numeros por los pasos nuevos
+        if saved_version < 3:
+
+            if self._objective_saved is not None:
+                self._objective_saved = v2_to_v3(self._objective_saved)
 
         if not self.save_data:
             start = 0
@@ -367,6 +395,9 @@ class NewGame:
 
         if saved_seen is not None:
             self.tuto_seen = {int(i) for i in saved_seen}
+
+            if saved_version < 3:
+                self.tuto_seen = {v2_to_v3(i) for i in self.tuto_seen}
         elif self.save_data:
             self.tuto_seen = set(range(min(start or 0, 200) + 1))
         else:
@@ -387,6 +418,9 @@ class NewGame:
         self.gems = int(self.save_data.get("gems", 0))
 
         self.gems_green = int(self.save_data.get("gems_green", 0))
+
+        # usos ya gastados de la ganzua que se esta usando (dura varios usos)
+        self.ganzua_uses = int(self.save_data.get("ganzua_uses", 0))
 
 
         self.has_match = bool(self.save_data.get("has_match", False))
@@ -1185,6 +1219,7 @@ class NewGame:
                 ),
                 "tuto": [
                     "USAR: elegí un casillero con un objeto y apretá F o click derecho. SOLTAR: con Q tirás el objeto elegido. Probá las dos. Podés volver a agarrar con E.",
+                    "OBJETOS: la madera suma 25% de luz, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. La GELEA (la sueltan los slimes) cura al azar. Usalos ANTES de quedarte sin luz.",
                 ],
                 "target": lambda g: (
                     nearest(g, item_points(g, False))
@@ -1231,7 +1266,7 @@ class NewGame:
                 ),
                 "tuto": [
                     "MONEDAS: sirven para comprar luces y objetos en la tienda. Se juntan solas al acercarte. Hay tiradas por el mapa y en los cofres. Juntá 10 siguiendo la flecha.",
-                    "SLIMES: son bichos tranquilos que andan por la sala central y la de cofres. No te atacan: pegales con tu luz hasta matarlos. Sueltan 10 monedas y una chuleta que te cura al comerla.",
+                    "SLIMES: son bichos tranquilos que andan por la sala central y la de cofres. No te atacan: pegales con tu luz hasta matarlos. Sueltan 10 monedas y una gelea que te cura al comerla.",
                 ],
                 "target": lambda g: nearest(g, item_points(g, True)),
                 "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
@@ -1242,10 +1277,25 @@ class NewGame:
                     "apretá F cerca del vendedor para hablarle."
                 ),
                 "tuto": [
-                    "TIENDA: está al norte de la sala central. Acercate al vendedor hasta que aparezca la tecla F y apretala para abrir la tienda.",
+                    "TIENDA: está al norte de la sala central. Acercate al vendedor hasta que aparezca la tecla F y apretala para abrir la tienda. Se cierra con E o ESC.",
+                    "Ahí gastás las monedas en luces, objetos y construcciones. Cada producto muestra su precio. Algunos están bloqueados hasta llegar a cierta oleada en las salas de combate.",
                 ],
                 "target": lambda g: g.shopkeeper.TALK_RECT.center,
                 "done": flag("shop_opened"),
+            },
+            {
+                "text": (
+                    "Con la tienda abierta, hacé click con la RUEDITA del "
+                    "mouse sobre un producto para ver qué hace."
+                ),
+                "tuto": [
+                    "INFO: apuntá a un producto y hacé click con la ruedita del mouse (el botón del medio). Te explica qué hace y, en las luces, cuánto duran y cuánto pegan. Otro click la cierra.",
+                ],
+                "target": lambda g: (
+                    g.shopkeeper.TALK_RECT.center
+                    if g.shop is None else None
+                ),
+                "done": flag("shop_info"),
             },
             {
                 "text": (
@@ -1253,9 +1303,41 @@ class NewGame:
                     "cantidad y apretá Comprar."
                 ),
                 "tuto": [
-                    "COMPRAR: click en un producto para agregarlo, click derecho para quitarlo, y Comprar para pagar. Con la pestaña Inventario armás tus casilleros y comprás todo junto.",
+                    "COMPRAR: click en un producto lo suma al carrito, click derecho saca uno y el botón x15 suma 15 de golpe. Abajo ves el total y el tachito vacía el carrito.",
+                    "Cuando estés listo, apretá Comprar. Si no te alcanzan las monedas no cobra nada: sacá algo del carrito o juntá más. Conviene comprar un objeto (madera, cera...).",
                 ],
                 "done": lambda g: g.stats["purchases"] >= 1,
+            },
+            {
+                "text": (
+                    "El vendedor escupe lo que comprás: agarralo del piso "
+                    "con E."
+                ),
+                "tuto": [
+                    "LO COMPRADO: el vendedor lo escupe al piso, cerca de él. Acercate y apretá E para agarrarlo. Con el imán (tecla O) los objetos sueltos se juntan solos.",
+                ],
+                "target": lambda g: (
+                    nearest(
+                        g,
+                        item_points(g, False)
+                        + [d.rect.center for d in g.light_drops]
+                    )
+                ),
+                "done": flag("picked"),
+            },
+            {
+                "text": (
+                    "Volvé a abrir la tienda (F) y apretá TAB para ir a la "
+                    "pestaña Inventario."
+                ),
+                "tuto": [
+                    "INVENTARIO DE LA TIENDA: con TAB cambiás entre Tienda e Inventario. En Inventario armás tus casilleros y tu luz como quieras y comprás todo junto con 'Comprar inventario'. Probalo con TAB.",
+                ],
+                "target": lambda g: (
+                    g.shopkeeper.TALK_RECT.center
+                    if g.shop is None else None
+                ),
+                "done": flag("shop_inv"),
             },
             {
                 "text": (
@@ -1264,7 +1346,8 @@ class NewGame:
                     "zona marcada para abrirlo."
                 ),
                 "tuto": [
-                    "COFRES: están en la sala de arriba a la izquierda. Pegale a un cofre con tu luz y, en el minijuego, apretá ESPACIO cuando la barra esté en la zona marcada.",
+                    "COFRES: están en la sala de arriba a la izquierda. Pegale a uno con tu luz y apretá ESPACIO cuando el marcador esté en la zona marcada.",
+                    "Cada cofre se abre de 10 a 15 veces seguidas y después descansa 3 minutos. Dan monedas, madera, cera, aceite... y con suerte una GANZÚA, que abre un cofre sin minijuego y dura 3 usos.",
                 ],
                 "target": lambda g: zone_center("cofres"),
                 "done": lambda g: g.stats["chests_opened"] >= 1,
@@ -1306,7 +1389,7 @@ class NewGame:
                     "jugar: con escape o sin escape (premio doble)."
                 ),
                 "tuto": [
-                    "ORKUN (ZONA 1): tiene oleadas de enemigos. Al entrar elegís cómo jugar. Evitá Stonun (zona 2) por ahora.",
+                    "ORKUN (ZONA 1): tiene oleadas de enemigos. Antes de entrar te avisa el nombre de la zona y al entrar elegís cómo jugar. Evitá Stonun (zona 2) por ahora.",
                     "JUGAR CON ESCAPE: la salida queda abierta, así que si te complicás podés irte caminando y volver después. El premio es el normal. Ideal para aprender.",
                     "JUGAR SIN ESCAPE (X2 PREMIO): la salida se cierra hasta que termines la oleada. No podés huir, pero ganás el doble de monedas. Si tu luz se apaga, perdés.",
                 ],
@@ -1327,6 +1410,7 @@ class NewGame:
                 "tuto": [
                     "COMBATE: pegales a los enemigos con tu luz hasta eliminarlos a todos. Cuando termine la oleada aparece el premio: juntá las monedas. Cada golpe gasta un poco de luz, así que no pegues al aire.",
                     "CUIDADO: los mosquitos se te pegan y chupan tu luz; matalos rápido. Usá tus objetos (madera, cera, aceite) a tiempo para que tu luz dure más. Entre oleadas podés irte o seguir.",
+                    "PREMIOS: al terminar cada oleada ganás monedas. Al completar todas las oleadas de una zona ganás una gema, que sirve para abrir la puerta final del mapa.",
                 ],
                 "done": lambda g: any(
                     a.wave >= 2 or a.completed for a in g.arenas
@@ -1346,6 +1430,29 @@ class NewGame:
                     else g.shopkeeper.TALK_RECT.center
                 ),
                 "done": lambda g: g.stats["fireballs"] >= 1,
+            },
+            {
+                "text": (
+                    "Armá una base: comprá una fogata en la tienda, "
+                    "elegila en tu casillero y hacé click en el mapa para "
+                    "ponerla."
+                ),
+                "tuto": [
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata y candil. Elegí uno en tu casillero y hacé click en el mapa donde lo querés poner.",
+                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más chico y come cera. Ideales como base de descanso entre oleadas.",
+                ],
+                "target": lambda g: (
+                    None
+                    if any(
+                        o.kind in ("fogata", "faro")
+                        for o in g.placeables.objects
+                    )
+                    else g.shopkeeper.TALK_RECT.center
+                ),
+                "done": lambda g: any(
+                    o.kind in ("fogata", "faro")
+                    for o in g.placeables.objects
+                ),
             },
             {
                 "text": (
@@ -1503,6 +1610,8 @@ class NewGame:
                 self.hud.counts[slot] += 1
 
             self.items_picked += 1
+
+            self.tuto_flags.add("picked")
 
             audio.play("pickup")
 
@@ -1712,6 +1821,27 @@ class NewGame:
             if legacy:
                 self._apply_effect(legacy)
 
+        if item_id == "ganzua":
+
+            # la ganzua no se gasta de una: dura varios usos
+            usos = max(1, int(item.get("usos", 3)))
+
+            self.ganzua_uses += 1
+
+            if self.ganzua_uses < usos:
+
+                self.count_stat("items_used")
+
+                self.tuto_flags.add("used")
+
+                self.show_message(
+                    f"Ganzúa: te quedan {usos - self.ganzua_uses} usos"
+                )
+
+                return
+
+            self.ganzua_uses = 0
+
         self._take_one(slot)
 
         self.count_stat("items_used")
@@ -1740,10 +1870,10 @@ class NewGame:
                 f"Usaste Imán: apretá {controls.label('magnet')} para activarlo o desactivarlo"
             )
 
-        elif item_id == "chuleta":
+        elif item_id == "gelea":
 
             self.show_message(
-                f"Comiste una chuleta: curaste {round(self.last_heal * 100)}%"
+                f"Comiste una gelea: curaste {round(self.last_heal * 100)}%"
             )
 
         else:
@@ -2795,6 +2925,7 @@ class NewGame:
             "y": self.player.rect.centery,
 
             "coins": self.coins,
+            "ganzua_uses": self.ganzua_uses,
             "gems": self.gems,
             "gems_green": self.gems_green,
 
@@ -3160,6 +3291,12 @@ class NewGame:
 
         if self.shop is not None:
 
+            if (
+                event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 2
+            ):
+                self.tuto_flags.add("shop_info")
+
             result = self.shop.handle_event(
                 event
             )
@@ -3413,6 +3550,8 @@ class NewGame:
                 kind, thing = self._nearest_pickup()
 
                 if kind == "light":
+
+                    self.tuto_flags.add("picked")
 
                     self.light_drops.remove(
                         thing
@@ -3699,6 +3838,20 @@ class NewGame:
             self.zone_banner.show(
                 zone.name
             )
+
+        approach = None
+
+        for az in APPROACH_ZONES:
+
+            if az.rect.collidepoint(self.player.rect.center):
+                approach = az
+                break
+
+        if approach is not None and approach is not self._approach_current:
+
+            self.zone_banner.show(approach.name)
+
+        self._approach_current = approach
 
         if zone is not None:
             self.zones_seen.add(zone.id)
@@ -3991,6 +4144,9 @@ class NewGame:
 
 
         if self.shop is not None:
+
+            if self.shop.tab == "inv":
+                self.tuto_flags.add("shop_inv")
 
             self.shop.update(
                 dt

@@ -45,13 +45,16 @@ MAP_DIR = (
 )
 
 
+# Solo el nombre de la zona, todas las letras del mismo color.
+LABEL_COLOR = (240, 225, 190)
+
 ZONE_LABELS = {
-    "inicio": ("Cabaña", None, (240, 225, 190)),
-    "central": ("Centro", None, (240, 225, 190)),
-    "tienda": ("Tienda", None, (240, 225, 190)),
-    "cofres": ("Sala de cofres", None, (240, 225, 190)),
-    "combate": ("ORKUN", "Zona 1 - empezá acá", (150, 235, 150)),
-    "combate_izq": ("STONUN", "Zona 2 - difícil", (255, 120, 100)),
+    "inicio": ("Cabaña", None, LABEL_COLOR),
+    "central": ("Centro", None, LABEL_COLOR),
+    "tienda": ("Tienda", None, LABEL_COLOR),
+    "cofres": ("Sala de cofres", None, LABEL_COLOR),
+    "combate": ("ORKUN", None, LABEL_COLOR),
+    "combate_izq": ("STONUN", None, LABEL_COLOR),
 }
 
 LABEL_OUTLINE = (0, 0, 0)

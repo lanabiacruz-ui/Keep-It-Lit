@@ -14,6 +14,14 @@ ZONES = [
 ]
 
 
+# Zonas de aviso: el pasillo que da a la puerta gris de cada sala de combate.
+# Al pisarlas se muestra el nombre de la zona ANTES de entrar.
+APPROACH_ZONES = [
+    Zone("aviso_combate", "Orkun - Zona 1", pygame.Rect(1104, 456, 110, 124)),
+    Zone("aviso_combate_izq", "Stonun - Zona 2", pygame.Rect(690, 456, 110, 124)),
+]
+
+
 class ZoneTracker:
 
 

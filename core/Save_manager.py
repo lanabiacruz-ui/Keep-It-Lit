@@ -32,6 +32,24 @@ OK = "ok"
 CORRUPT = "corrupt"
 
 
+# ids de items que cambiaron de nombre: las partidas viejas se actualizan solas
+RENAMED_ITEMS = {"chuleta": "gelea"}
+
+
+def _migrate_ids(value):
+
+    if isinstance(value, str):
+        return RENAMED_ITEMS.get(value, value)
+
+    if isinstance(value, list):
+        return [_migrate_ids(v) for v in value]
+
+    if isinstance(value, dict):
+        return {k: _migrate_ids(v) for k, v in value.items()}
+
+    return value
+
+
 def _read_slot(path):
 
 
@@ -53,7 +71,7 @@ def _read_slot(path):
     if not data:
         return EMPTY, {}
 
-    return OK, data
+    return OK, _migrate_ids(data)
 
 
 def _slot_is_empty(path):

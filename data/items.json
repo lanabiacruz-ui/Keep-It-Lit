@@ -40,7 +40,8 @@
     },
     "ganzua": {
         "nombre": "Ganzúa",
-        "descripcion": "Abre un cofre cercano sin hacer el minijuego. No salta la espera de 3 minutos.",
+        "descripcion": "Abre un cofre cercano sin hacer el minijuego. Dura 3 usos antes de romperse. No salta la espera de 3 minutos.",
+        "usos": 3,
         "requiere_fosforo": false,
         "efectos": [
             {
@@ -184,9 +185,9 @@
         "requiere_fosforo": false,
         "efectos": []
     },
-    "Gelea": {
+    "gelea": {
         "nombre": "Gelea",
-        "descripcion": "Al comerla cura 15%, 45% o 88% de la vida de tu luz, al azar. Las grandes curaciones son raras.",
+        "descripcion": "Al comerla cura 15%, 45% o 88% de la vida de tu luz, al azar. Las grandes curaciones son raras. La sueltan los slimes.",
         "requiere_fosforo": true,
         "efectos": [
             {
