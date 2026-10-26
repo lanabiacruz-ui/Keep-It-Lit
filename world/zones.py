@@ -9,8 +9,8 @@ ZONES = [
     Zone("central", "Centro", pygame.Rect(836, 400, 216, 220)),
     Zone("tienda", "Tienda", pygame.Rect(856, 36, 184, 142)),
     Zone("cofres", "Sala De Cofres", pygame.Rect(316, 44, 272, 176)),
-    Zone("combate", "Orkun", pygame.Rect(1244, 388, 436, 284)),
-    Zone("combate_izq", "Stonun", pygame.Rect(148, 336, 500, 408)),
+    Zone("combate", "Orkun - Zona 1", pygame.Rect(1244, 388, 436, 284)),
+    Zone("combate_izq", "Stonun - Zona 2", pygame.Rect(148, 336, 500, 408)),
 ]
 
 

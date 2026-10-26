@@ -437,9 +437,9 @@ class NewGame:
         if self.has_match:
             self.equip_match(self.light_type)
         else:
-            self.light_drops.append(
-                LightItem("fosforo", *MATCH_POS)
-            )
+            start_match = LightItem("fosforo", *MATCH_POS)
+            start_match.initial = True
+            self.light_drops.append(start_match)
 
 
         self.item_defs = load_item_defs()
@@ -1226,10 +1226,11 @@ class NewGame:
             {
                 "text": (
                     "Juntá 10 monedas: hay tiradas por el mapa, en los "
-                    "cofres y las sueltan los slimes."
+                    "cofres y las sueltan los slimes (matalos a golpes)."
                 ),
                 "tuto": [
-                    "MONEDAS: se juntan solas al acercarte. Hay tiradas por el mapa, en los cofres y las sueltan los slimes. Juntá 10 siguiendo la flecha.",
+                    "MONEDAS: sirven para comprar luces y objetos en la tienda. Se juntan solas al acercarte. Hay tiradas por el mapa y en los cofres. Juntá 10 siguiendo la flecha.",
+                    "SLIMES: son bichos tranquilos que andan por la sala central y la de cofres. No te atacan: pegales con tu luz hasta matarlos. Sueltan 10 monedas y una chuleta que te cura al comerla.",
                 ],
                 "target": lambda g: nearest(g, item_points(g, True)),
                 "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
@@ -1270,10 +1271,12 @@ class NewGame:
             {
                 "text": (
                     "Conseguí una vela, una luz mejor que el fósforo: "
-                    "comprala en la tienda o buscala en los cofres."
+                    "comprala en la tienda o buscala en los cofres. "
+                    "Soltá el fósforo antes (casillero de luz y Q)."
                 ),
                 "tuto": [
-                    "LUCES: la vela ilumina más y dura más que el fósforo. Comprala en la tienda o buscala en los cofres. Las luces se equipan solas al agarrarlas con E.",
+                    "LUCES: la vela ilumina más y dura más que el fósforo. Comprala en la tienda o buscala en los cofres.",
+                    "CAMBIAR DE LUZ: solo podés tener una luz equipada. Si agarrás otra con el fósforo en la mano, no se cambia: tenés que soltar el fósforo primero. Elegí el casillero de la luz (el aislado) y apretá Q. Después agarrá la vela con E y se equipa sola.",
                 ],
                 "target": lambda g: (
                     nearest(g, [d.rect.center for d in g.light_drops])
@@ -1285,36 +1288,35 @@ class NewGame:
             },
             {
                 "text": (
-                    "Pegale a una puerta gris con tu vela hasta romperla: "
-                    "son las que llevan a las salas de combate."
+                    "Pegale con tu vela a la puerta gris de la DERECHA: "
+                    "lleva a Orkun, la zona 1. No vayas a la de la "
+                    "izquierda (Stonun, zona 2): es muy difícil."
                 ),
                 "tuto": [
-                    "PUERTAS GRISES: solo se rompen con vela o antorcha. Llevan a las salas de combate, a la izquierda y a la derecha de la sala central. Seguí la flecha.",
+                    "ZONA 1: la puerta gris de la DERECHA de la sala central lleva a Orkun, la zona para empezar. Se rompe solo con vela o antorcha. Seguí la flecha.",
+                    "ZONA 2: la puerta gris de la izquierda lleva a Stonun, que es MUY difícil. No vayas hasta tener buenas luces y haber pasado Orkun.",
                 ],
-                "target": lambda g: nearest(
-                    g,
-                    [
-                        door_point(i) for i in ("sala_izq", "sala_der")
-                        if i not in g.doors.broken_ids
-                    ]
-                ),
-                "done": lambda g: (
-                    "sala_izq" in g.doors.broken_ids
-                    or "sala_der" in g.doors.broken_ids
-                ),
+                "target": lambda g: door_point("sala_der"),
+                "done": lambda g: "sala_der" in g.doors.broken_ids,
             },
             {
                 "text": (
-                    "Entrá a una sala de combate y elegí: con escape "
-                    "podés irte, sin escape el premio es mayor."
+                    "Entrá a Orkun (zona 1, a la derecha) y elegí cómo "
+                    "jugar: con escape o sin escape (premio doble)."
                 ),
                 "tuto": [
-                    "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando; sin escape el premio es mayor, pero si tu luz se apaga perdés. Entrá a una.",
+                    "ORKUN (ZONA 1): tiene oleadas de enemigos. Al entrar elegís cómo jugar. Evitá Stonun (zona 2) por ahora.",
+                    "JUGAR CON ESCAPE: la salida queda abierta, así que si te complicás podés irte caminando y volver después. El premio es el normal. Ideal para aprender.",
+                    "JUGAR SIN ESCAPE (X2 PREMIO): la salida se cierra hasta que termines la oleada. No podés huir, pero ganás el doble de monedas. Si tu luz se apaga, perdés.",
                 ],
-                "target": lambda g: nearest(
-                    g, [zone_center("combate_izq"), zone_center("combate")]
+                "target": lambda g: zone_center("combate"),
+                "done": lambda g: (
+                    g.arena.state in (
+                        g.arena.WAVE, g.arena.CLEAR, g.arena.COLLECT
+                    )
+                    or g.arena.wave >= 2
+                    or g.arena.completed
                 ),
-                "done": in_combat,
             },
             {
                 "text": (
@@ -1322,7 +1324,8 @@ class NewGame:
                     "con tu luz y juntá las monedas del premio."
                 ),
                 "tuto": [
-                    "COMBATE: pegales a los enemigos con tu luz y juntá las monedas del premio. Cuidado con los mosquitos: se pegan y chupan vida. Usá tus objetos a tiempo.",
+                    "COMBATE: pegales a los enemigos con tu luz hasta eliminarlos a todos. Cuando termine la oleada aparece el premio: juntá las monedas. Cada golpe gasta un poco de luz, así que no pegues al aire.",
+                    "CUIDADO: los mosquitos se te pegan y chupan tu luz; matalos rápido. Usá tus objetos (madera, cera, aceite) a tiempo para que tu luz dure más. Entre oleadas podés irte o seguir.",
                 ],
                 "done": lambda g: any(
                     a.wave >= 2 or a.completed for a in g.arenas
@@ -1345,19 +1348,19 @@ class NewGame:
             },
             {
                 "text": (
-                    "Completá Orkun - Sala de combate 2 (izquierda, la "
-                    "del Guardián): 10 oleadas y una gema verde oscuro."
-                ),
-                "target": lambda g: zone_center("combate_izq"),
-                "done": lambda g: g.arena_left.completed,
-            },
-            {
-                "text": (
-                    "Completá Orkun - Sala de combate 1 (derecha): "
-                    "10 oleadas y una gema te esperan."
+                    "Completá Orkun (zona 1, derecha): 10 oleadas y una "
+                    "gema te esperan."
                 ),
                 "target": lambda g: zone_center("combate"),
                 "done": lambda g: g.arena.completed,
+            },
+            {
+                "text": (
+                    "Ahora sí, Stonun (zona 2, izquierda, la del "
+                    "Guardián): 10 oleadas y una gema verde oscuro."
+                ),
+                "target": lambda g: zone_center("combate_izq"),
+                "done": lambda g: g.arena_left.completed,
             },
             {
                 "text": (
@@ -1612,7 +1615,7 @@ class NewGame:
         if item.get("tipo") == "luz":
 
             self.show_message(
-                "Las luces se equipan solas al agarrarlas"
+                "Las luces se equipan solas al agarrarlas (soltá antes la que tenés)"
             )
             return
 
@@ -2494,6 +2497,13 @@ class NewGame:
 
         self.shop = None
 
+    def _shop_notice(self, text):
+
+        if self.shop is not None:
+            self.shop._flash(text)
+        else:
+            self.show_message(text)
+
     def _buy(self, cart):
 
         locks = self.shop_locks()
@@ -2509,7 +2519,7 @@ class NewGame:
             return
 
         if total > self.coins:
-            self.show_message("No te alcanzan las monedas")
+            self._shop_notice("No te alcanzan las monedas")
             return
 
         self.coins -= total
@@ -2607,7 +2617,7 @@ class NewGame:
             return
 
         if total > self.coins:
-            self.show_message("No te alcanzan las monedas")
+            self._shop_notice("No te alcanzan las monedas")
             return
 
         # Primero se prueba si entra todo en los casilleros reales,
@@ -2635,8 +2645,8 @@ class NewGame:
                             break
 
                 if spot is None:
-                    self.show_message(
-                        "No tenés lugar: vaciá casilleros de tu inventario"
+                    self._shop_notice(
+                        "Tu inventario está lleno: soltá o usá items antes de comprar"
                     )
                     return
 
@@ -2820,7 +2830,13 @@ class NewGame:
 
         for it in list(items) + list(lights):
 
-            if not getattr(it, "death_drop", False):
+            if getattr(it, "initial", False):
+                continue
+
+            if (
+                not getattr(it, "death_drop", False)
+                and getattr(it, "spawn_id", None) is not None
+            ):
                 continue
 
             fly = getattr(it, "fly", None)
@@ -3318,6 +3334,20 @@ class NewGame:
                     self.equip_match(
                         thing.kind,
                         thing.life
+                    )
+
+                    return None
+
+                if (
+                    kind is None
+                    and self.has_match
+                    and self._nearest_light_drop() is not None
+                ):
+
+                    self.show_message(
+                        "Ya tenés una luz: soltala primero "
+                        f"({controls.label('equipped')} y después "
+                        f"{controls.label('drop')}) para agarrar esta"
                     )
 
                     return None
@@ -4445,6 +4475,7 @@ class NewGame:
             self.collision_map.walkable,
             self._map_held(),
             self._font(28),
+            map_name=getattr(self, "current_map", "mapa1"),
         )
 
         self.hud.selected = (

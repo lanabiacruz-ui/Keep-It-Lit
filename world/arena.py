@@ -4395,9 +4395,13 @@ class ArenaConfig:
                  show_total=False,
                  sealed_text="Mapa completado: la sala esta cerrada",
                  done_text="Mapa completado! La sala se cerro para siempre",
-                 gem_id="gema", gem_name="gema"):
+                 gem_id="gema", gem_name="gema",
+                 zone_name="", zone_tag="", hard=False):
 
         self.key = key
+        self.zone_name = zone_name
+        self.zone_tag = zone_tag
+        self.hard = hard
         self.title = title
         self.room = room
         self.trigger = trigger
@@ -4416,10 +4420,11 @@ class ArenaConfig:
 
 
 RIGHT_ARENA = ArenaConfig(
-    "right", "Orkun - Sala de combate 1",
+    "right", "Orkun - Zona 1",
     ROOM, TRIGGER, EXIT_POS, GATE,
     WAVE_COMPOSITION, WAVE_REWARDS, LAST_WAVE,
     "arena_wave", "arena_completed",
+    zone_name="ORKUN", zone_tag="ZONA 1",
 )
 
 
@@ -4431,7 +4436,7 @@ LEFT_WAVE_REWARDS = {
 LEFT_LAST_WAVE = 10
 
 LEFT_ARENA = ArenaConfig(
-    "left", "Orkun - Sala de combate 2",
+    "left", "Stonun - Zona 2",
     ROOM_LEFT, TRIGGER_LEFT, EXIT_POS_LEFT, GATE_LEFT,
     LEFT_WAVE_COMPOSITION, LEFT_WAVE_REWARDS, LEFT_LAST_WAVE,
     "arena_left_wave", "arena_left_completed",
@@ -4440,6 +4445,7 @@ LEFT_ARENA = ArenaConfig(
     done_text="Sala completada! Se cerro para siempre",
     gem_id="gema_verde",
     gem_name="gema verde oscuro",
+    zone_name="STONUN", zone_tag="ZONA 2", hard=True,
 )
 
 
@@ -5852,6 +5858,80 @@ class Arena:
 
         screen.blit(layer, rect)
 
+    def _draw_zone_warning(self, screen, game):
+
+        cfg = self.cfg
+
+        if not cfg.zone_name:
+            return
+
+        cx = self.panel_rect.centerx
+        top = self.panel_rect.top
+
+        lines = [
+            (f"Estás en la zona {cfg.zone_name} ({cfg.zone_tag})", 34,
+             (255, 240, 200)),
+        ]
+
+        right = getattr(game, "arena", None)
+        right_done = bool(right is not None and right.completed)
+
+        if cfg.hard and not right_done:
+            lines.append((
+                "¡CUIDADO! Esta zona es MUY difícil para empezar.",
+                26, (255, 110, 90)
+            ))
+            lines.append((
+                "Salí y andá primero a Orkun (zona 1), la sala de la derecha.",
+                24, (255, 170, 120)
+            ))
+        elif cfg.hard:
+            lines.append((
+                "Zona difícil: entrá con buenas luces y tus objetos listos.",
+                24, (255, 170, 120)
+            ))
+        else:
+            lines.append((
+                "Zona 1: la mejor para empezar.",
+                26, (150, 235, 150)
+            ))
+
+        lines.append((
+            "Al empezar la oleada se oscurece: fijate bien dónde estás.",
+            22, (220, 220, 235)
+        ))
+
+        gap = 8
+        heights = [get_font(size).get_height() for _, size, _ in lines]
+        total = sum(heights) + gap * (len(lines) - 1) + 24
+        width = 640
+
+        box = pygame.Rect(0, 0, width, total)
+        box.midbottom = (cx, top - 10)
+
+        back = pygame.Surface(box.size, pygame.SRCALPHA)
+
+        border = (255, 110, 90, 230) if (
+            cfg.hard and not right_done
+        ) else (226, 201, 150, 200)
+
+        pygame.draw.rect(
+            back, (0, 0, 0, 170), back.get_rect(), border_radius=12
+        )
+        pygame.draw.rect(
+            back, border, back.get_rect(), 2, border_radius=12
+        )
+
+        screen.blit(back, box)
+
+        y = box.top + 12
+
+        for (text, size, color), h in zip(lines, heights):
+
+            draw_text(screen, text, size, color, midtop=(cx, y))
+
+            y += h + gap
+
     def draw_menu(self, screen, game):
 
         screen.blit(self.dim, (0, 0))
@@ -5868,6 +5948,8 @@ class Arena:
             pygame.draw.rect(
                 screen, (180, 180, 192), self.panel_rect, 3, border_radius=16
             )
+
+        self._draw_zone_warning(screen, game)
 
         draw_text(
             screen, self.cfg.title, 36, (255, 240, 200),

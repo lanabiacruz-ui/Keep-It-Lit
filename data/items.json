@@ -155,7 +155,7 @@
     },
     "mapa": {
         "nombre": "Mapa",
-        "descripcion": "Mantené click derecho con el mapa elegido para ver la forma de la dungeon (solo los contornos, no tu ubicación). No se gasta",
+        "descripcion": "Mantené click derecho con el mapa elegido para ver la forma de la dungeon con los nombres de las zonas (no muestra tu ubicación). No se gasta",
         "requiere_fosforo": false,
         "max_pila": 1,
         "efectos": []

@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pygame
 
+from world.zones import ZONES
+
 
 OUTLINE_COLOR = (226, 201, 150)
 SHADOW_COLOR = (14, 10, 6)
@@ -43,6 +45,18 @@ MAP_DIR = (
 )
 
 
+ZONE_LABELS = {
+    "inicio": ("Cabaña", None, (240, 225, 190)),
+    "central": ("Centro", None, (240, 225, 190)),
+    "tienda": ("Tienda", None, (240, 225, 190)),
+    "cofres": ("Sala de cofres", None, (240, 225, 190)),
+    "combate": ("ORKUN", "Zona 1 - empezá acá", (150, 235, 150)),
+    "combate_izq": ("STONUN", "Zona 2 - difícil", (255, 120, 100)),
+}
+
+LABEL_OUTLINE = (0, 0, 0)
+
+
 def _erode(mask, size, t):
 
     eroded = mask.copy()
@@ -60,12 +74,12 @@ def _erode(mask, size, t):
     return eroded
 
 
-def build_outline(walkable, screen_size):
+def _fit(walkable, screen_size):
 
     rects = [pygame.Rect(r) for r in walkable if r.width > 0 and r.height > 0]
 
     if not rects:
-        return None, None
+        return None
 
     sw, sh = screen_size
 
@@ -79,6 +93,18 @@ def build_outline(walkable, screen_size):
     thickness = max(2, int(min(sw, sh) / 240))
 
     pad = thickness + 4
+
+    return rects, bounds, scale, thickness, pad
+
+
+def build_outline(walkable, screen_size):
+
+    fit = _fit(walkable, screen_size)
+
+    if fit is None:
+        return None, None
+
+    rects, bounds, scale, thickness, pad = fit
 
     size = (
         int(math.ceil(bounds.width * scale)) + pad * 2,
@@ -140,6 +166,9 @@ class DungeonMapView:
         self._scaled_key = None
         self._scaled = None
         self._frame = None
+
+        self._fonts = {}
+        self._label_cache = {}
 
     def _ensure_bg(self, screen_size):
 
@@ -272,6 +301,80 @@ class DungeonMapView:
             self._dim.fill((0, 0, 0, DIM_ALPHA))
             self._dim_size = tuple(screen_size)
 
+    def _font(self, size):
+
+        if size not in self._fonts:
+            self._fonts[size] = pygame.font.Font(None, size)
+
+        return self._fonts[size]
+
+    def _label(self, text, size, color):
+
+        key = (text, size, color)
+
+        if key not in self._label_cache:
+
+            font = self._font(size)
+
+            body = font.render(text, True, color)
+            edge = font.render(text, True, LABEL_OUTLINE)
+
+            w, h = body.get_size()
+
+            surf = pygame.Surface((w + 4, h + 4), pygame.SRCALPHA)
+
+            for dx, dy in (
+                (0, 2), (4, 2), (2, 0), (2, 4),
+                (0, 0), (4, 4), (0, 4), (4, 0),
+            ):
+                surf.blit(edge, (dx, dy))
+
+            surf.blit(body, (2, 2))
+
+            self._label_cache[key] = surf
+
+        return self._label_cache[key]
+
+    def _draw_zone_labels(self, screen, to_screen, alpha, screen_h):
+
+        base = max(15, int(screen_h / 34))
+
+        for zone in ZONES:
+
+            info = ZONE_LABELS.get(zone.id)
+
+            if info is None:
+                continue
+
+            title, sub, color = info
+
+            cx, cy = to_screen(*zone.rect.center)
+
+            main = self._label(title, base, color)
+
+            main.set_alpha(alpha)
+
+            if sub is None:
+
+                screen.blit(main, main.get_rect(center=(cx, cy)))
+
+                continue
+
+            small = self._label(sub, max(13, base - 5), color)
+
+            small.set_alpha(alpha)
+
+            total = main.get_height() + small.get_height() - 2
+
+            top = cy - total // 2
+
+            screen.blit(main, main.get_rect(midtop=(cx, top)))
+
+            screen.blit(
+                small,
+                small.get_rect(midtop=(cx, top + main.get_height() - 2))
+            )
+
     def draw(self, screen, walkable, held, label_font=None, map_name="mapa1"):
 
         now = pygame.time.get_ticks()
@@ -325,6 +428,20 @@ class DungeonMapView:
 
             top = rect.top
 
+            fit = _fit(walkable, (sw, sh))
+
+            if map_name == "mapa1" and fit is not None:
+
+                bounds = fit[1]
+
+                def to_screen(x, y, rect=rect, bounds=bounds):
+                    return (
+                        rect.left + (x - bounds.left) / bounds.width * rect.width,
+                        rect.top + (y - bounds.top) / bounds.height * rect.height,
+                    )
+
+                self._draw_zone_labels(screen, to_screen, a, sh)
+
         else:
 
             if self._line is None:
@@ -342,6 +459,21 @@ class DungeonMapView:
             screen.blit(self._line, pos)
 
             top = pos[1]
+
+            fit = _fit(walkable, (sw, sh))
+
+            if map_name == "mapa1" and fit is not None:
+
+                _, bounds, scale, _, pad = fit
+
+                def to_screen(x, y, pos=pos, bounds=bounds,
+                              scale=scale, pad=pad):
+                    return (
+                        pos[0] + pad + (x - bounds.left) * scale,
+                        pos[1] + pad + (y - bounds.top) * scale,
+                    )
+
+                self._draw_zone_labels(screen, to_screen, a, sh)
 
         if bg_top is not None:
             top = bg_top
