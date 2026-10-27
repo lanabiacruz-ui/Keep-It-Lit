@@ -1,6 +1,6 @@
 {
     "music_volume": 0.04,
-    "sfx_volume": 0.097,
+    "sfx_volume": 0.0,
     "fullscreen": true,
     "controls": {
         "up": 119,
@@ -19,9 +19,5 @@
         "equipped": 53
     },
     "skin": "pago_3",
-    "skins_owned": [
-        "pago_1",
-        "pago_2",
-        "pago_3"
-    ]
+    "skins_owned": []
 }
