@@ -196,6 +196,35 @@ def buy(skin_id):
     return _write_settings(data)
 
 
+def _achievement(skin):
+
+    from core.achievements import ACHIEVEMENTS
+
+    for ach in ACHIEVEMENTS:
+
+        if ach["id"] == skin["logro"]:
+            return ach
+
+    return None
+
+
+def progress_text(skin_id):
+
+    skin = get(skin_id)
+
+    if skin is None or not skin["logro"]:
+        return ""
+
+    from core.achievements import achievements
+
+    ach = _achievement(skin)
+
+    if ach is None or ach["goal"] <= 1:
+        return ""
+
+    return f"{achievements.progress(skin['logro'])}/{ach['goal']}"
+
+
 def requirement_text(skin_id):
 
     skin = get(skin_id)
@@ -205,20 +234,40 @@ def requirement_text(skin_id):
 
     if skin["logro"]:
 
-        from core.achievements import achievements
+        ach = _achievement(skin)
 
-        title = achievements.title_of(skin["logro"]) or skin["logro"]
+        if ach is None:
+            return ""
 
-        return f"Se consigue con el logro \"{title}\""
+        text = ach["desc"]
+
+        progress = progress_text(skin_id)
+
+        if progress:
+            text = f"{text} ({progress})"
+
+        return text
 
     if skin["precio"] is not None:
 
-        return (
-            f"Se compra en la tienda del tendero por "
-            f"{skin['precio']} monedas"
-        )
+        return f"Se compra en la tienda del tendero por {skin['precio']} monedas"
 
     return ""
+
+
+def status_text(skin_id):
+
+    skin = get(skin_id)
+
+    if skin is None:
+        return "Bloqueada"
+
+    if skin["precio"] is not None and not skin["logro"]:
+        return f"{skin['precio']} monedas"
+
+    progress = progress_text(skin_id)
+
+    return progress if progress else "Bloqueada"
 
 
 # ---------- skin elegida ----------

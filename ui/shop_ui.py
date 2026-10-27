@@ -774,7 +774,7 @@ class ShopUI:
 
     def _card_has_bulk(self, item_id):
 
-        if item_id in self.locks:
+        if item_id in self.locks or is_skin(item_id):
             return False
 
         if self.tab == "inv":
@@ -991,7 +991,7 @@ class ShopUI:
 
             for item_id, _, _, minus, plus, bulk in self._cart_rows():
 
-                if bulk.collidepoint(pos):
+                if bulk.collidepoint(pos) and not is_skin(item_id):
                     self.add(item_id, BULK_AMOUNT)
                     return None
 
@@ -1456,7 +1456,8 @@ class ShopUI:
                     topleft=(row.x + 40, row.y + 22)
                 )
 
-                self._draw_bulk_button(screen, bulk, mouse)
+                if not is_skin(item_id):
+                    self._draw_bulk_button(screen, bulk, mouse)
 
                 for rect, symbol, key in (
                     (minus, "-", "minus"), (plus, "+", "plus")

@@ -6,13 +6,68 @@
       "gratis": true
     },
     {
-      "id": "region_1",
-      "nombre": "Skin Primera región",
-      "logro": "region_1",
+      "id": "pago_1",
+      "nombre": "Monje",
+      "precio": 1000
+    },
+    {
+      "id": "pago_2",
+      "nombre": "Casual",
+      "precio": 2000
+    },
+    {
+      "id": "pago_3",
+      "nombre": "Ejecutivo",
+      "precio": 5000
+    },
+    {
+      "id": "derribapuertas",
+      "nombre": "Skin Derribapuertas",
+      "logro": "derribapuertas",
       "color": [
-        170,
-        240,
-        190
+        140,
+        94,
+        54
+      ]
+    },
+    {
+      "id": "saqueador",
+      "nombre": "Skin Saqueador",
+      "logro": "saqueador",
+      "color": [
+        206,
+        150,
+        40
+      ]
+    },
+    {
+      "id": "gelatinero",
+      "nombre": "Skin Gelatinero",
+      "logro": "gelatinero",
+      "color": [
+        104,
+        196,
+        84
+      ]
+    },
+    {
+      "id": "pirotecnico",
+      "nombre": "Skin Pirotécnico",
+      "logro": "pirotecnico",
+      "color": [
+        232,
+        72,
+        32
+      ]
+    },
+    {
+      "id": "dragon_monedas",
+      "nombre": "Skin Dragón de monedas",
+      "logro": "dragon_monedas",
+      "color": [
+        176,
+        40,
+        52
       ]
     },
     {
@@ -20,49 +75,29 @@
       "nombre": "Skin Primera zona",
       "logro": "zona_1",
       "color": [
-        248,
-        175,
-        208
+        236,
+        128,
+        176
       ]
     },
     {
-      "id": "zona_2",
-      "nombre": "Skin Segunda zona",
-      "logro": "zona_2",
+      "id": "coctel",
+      "nombre": "Skin Cóctel molotov",
+      "logro": "coctel",
       "color": [
-        250,
-        218,
-        120
+        52,
+        120,
+        84
       ]
     },
     {
-      "id": "perder_50",
-      "nombre": "Skin Mala racha",
-      "logro": "perder_50",
+      "id": "region_1",
+      "nombre": "Skin Primera región",
+      "logro": "region_1",
       "color": [
-        140,
-        205,
-        255
-      ]
-    },
-    {
-      "id": "ultimo_segundo",
-      "nombre": "Skin Por los pelos",
-      "logro": "ultimo_segundo",
-      "color": [
-        105,
-        105,
-        125
-      ]
-    },
-    {
-      "id": "intocable",
-      "nombre": "Skin Intocable",
-      "logro": "intocable",
-      "color": [
-        240,
-        140,
-        120
+        54,
+        160,
+        140
       ]
     },
     {
@@ -70,9 +105,9 @@
       "nombre": "Skin Abrazo de oso",
       "logro": "abrazo_golem",
       "color": [
-        190,
-        160,
-        245
+        122,
+        98,
+        180
       ]
     },
     {
@@ -80,9 +115,9 @@
       "nombre": "Skin ¡Mis ojos!",
       "logro": "ojos_ciegos",
       "color": [
-        150,
-        235,
-        235
+        252,
+        232,
+        130
       ]
     },
     {
@@ -90,9 +125,9 @@
       "nombre": "Skin Desactivado",
       "logro": "desactivado",
       "color": [
-        235,
-        235,
-        140
+        64,
+        64,
+        68
       ]
     },
     {
@@ -101,28 +136,18 @@
       "logro": "slime_brillante",
       "color": [
         250,
-        170,
-        110
+        208,
+        80
       ]
     },
     {
-      "id": "gelatinero",
-      "nombre": "Skin Gelatinero",
-      "logro": "gelatinero",
+      "id": "zona_2",
+      "nombre": "Skin Segunda zona",
+      "logro": "zona_2",
       "color": [
-        130,
-        200,
-        130
-      ]
-    },
-    {
-      "id": "entomologo",
-      "nombre": "Skin Naturalista",
-      "logro": "entomologo",
-      "color": [
-        220,
-        120,
-        180
+        128,
+        118,
+        104
       ]
     },
     {
@@ -130,59 +155,49 @@
       "nombre": "Skin Exterminador",
       "logro": "exterminador",
       "color": [
-        160,
         190,
-        255
+        44,
+        44
       ]
     },
     {
-      "id": "saqueador",
-      "nombre": "Skin Saqueador",
-      "logro": "saqueador",
+      "id": "entomologo",
+      "nombre": "Skin Naturalista",
+      "logro": "entomologo",
       "color": [
-        255,
-        200,
-        160
+        112,
+        132,
+        72
       ]
     },
     {
-      "id": "pirotecnico",
-      "nombre": "Skin Pirotécnico",
-      "logro": "pirotecnico",
+      "id": "ultimo_segundo",
+      "nombre": "Skin Por los pelos",
+      "logro": "ultimo_segundo",
       "color": [
-        200,
-        230,
-        120
+        62,
+        62,
+        84
       ]
     },
     {
-      "id": "derribapuertas",
-      "nombre": "Skin Derribapuertas",
-      "logro": "derribapuertas",
+      "id": "intocable",
+      "nombre": "Skin Intocable",
+      "logro": "intocable",
       "color": [
-        120,
-        170,
-        210
+        206,
+        216,
+        240
       ]
     },
     {
-      "id": "dragon_monedas",
-      "nombre": "Skin Dragón de monedas",
-      "logro": "dragon_monedas",
+      "id": "perder_50",
+      "nombre": "Skin Mala racha",
+      "logro": "perder_50",
       "color": [
-        230,
-        150,
-        230
-      ]
-    },
-    {
-      "id": "coctel",
-      "nombre": "Skin Cóctel molotov",
-      "logro": "coctel",
-      "color": [
-        180,
-        180,
-        180
+        70,
+        86,
+        108
       ]
     },
     {
@@ -190,25 +205,10 @@
       "nombre": "Skin Sin red",
       "logro": "sin_red",
       "color": [
-        170,
-        240,
-        190
+        28,
+        26,
+        30
       ]
-    },
-    {
-      "id": "pago_1",
-      "nombre": "Monje",
-      "precio": 300
-    },
-    {
-      "id": "pago_2",
-      "nombre": "Casual",
-      "precio": 600
-    },
-    {
-      "id": "pago_3",
-      "nombre": "Ejecutivo",
-      "precio": 1000
     }
   ]
 }

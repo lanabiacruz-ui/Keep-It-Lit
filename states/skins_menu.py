@@ -74,6 +74,7 @@ class SkinsMenu:
         self._scroll_to_selected(instant=True)
 
         self._scaled = {}
+        self._lines = {}
 
     def _box(self, box):
 
@@ -328,7 +329,7 @@ class SkinsMenu:
         if equipped:
             status, color = "Equipada", (255, 205, 90)
         elif not unlocked:
-            status, color = "Bloqueada", (150, 170, 205)
+            status, color = skin_lib.status_text(skin["id"]), (150, 170, 205)
         else:
             status, color = "", (255, 255, 255)
 
@@ -361,6 +362,27 @@ class SkinsMenu:
             self.screen, (220, 230, 250), body, border_radius=3
         )
 
+    def _fit_line(self, text, max_width):
+
+        key = (text, max_width)
+
+        if key in self._lines:
+            return self._lines[key]
+
+        size = max(18, round(28 * self.sy))
+
+        while True:
+
+            font = pygame.font.Font(None, size)
+
+            line = font.render(text, True, (235, 242, 255))
+
+            if line.get_width() <= max_width or size <= 14:
+                self._lines[key] = line
+                return line
+
+            size -= 1
+
     def draw(self):
 
         self.screen.blit(self.background, (0, 0))
@@ -387,7 +409,7 @@ class SkinsMenu:
         else:
             hint = f"{skin['nombre']}: {skin_lib.requirement_text(skin['id'])}"
 
-        info = self.info_font.render(hint, True, (235, 242, 255))
+        info = self._fit_line(hint, self.panel.width - 12)
 
         self.screen.blit(
             info,
