@@ -3,6 +3,8 @@ from pathlib import Path
 
 from player.movement import PlayerMovement
 from player import walk_anim as wa
+from core import skins as skin_lib
+from core.skins import tint_frames
 
 
 SHEET_CELL = (190, 214)
@@ -45,7 +47,7 @@ class Player:
     INVULN_TIME = 0.90
     KNOCKBACK = 120.0
 
-    def __init__(self, x, y, width=54, height=74):
+    def __init__(self, x, y, width=54, height=74, skin=None):
 
         self.image_rect = pygame.Rect(
             x - width // 2,
@@ -108,11 +110,21 @@ class Player:
         player_dir = base / "assets" / "maps" / "player"
 
 
+        skin_id = skin or skin_lib.get_skin()
+
+        def skin_sheet(name):
+
+            # hoja de la skin si la trae; si no, la del personaje base
+            return skin_lib.sheet_path(skin_id, name) or (player_dir / name)
+
         frames_path = player_dir / "player_frames.png"
-        sheet_path = player_dir / "player.png"
-        torch_path = player_dir / "player_phosphor.png"
-        vela_path = player_dir / "player_vela.png"
-        antorcha_path = player_dir / "player_antorcha.png"
+        sheet_path = skin_sheet("player.png")
+        torch_path = skin_sheet("player_phosphor.png")
+        vela_path = skin_sheet("player_vela.png")
+        antorcha_path = skin_sheet("player_antorcha.png")
+
+        if skin_lib.sheet_path(skin_id, "player.png") is not None:
+            frames_path = player_dir / "__sin_frames_viejos__.png"
 
         self.frame_scale = None
 
@@ -170,6 +182,12 @@ class Player:
                 antorcha_sheet,
                 self.SHEET_RECTS_ANTORCHA
             )
+
+        # skin elegida en el menu (Skins): pinta el cuerpo claro del personaje
+        self.frames = tint_frames(self.frames, skin_id)
+        self.frames_torch = tint_frames(self.frames_torch, skin_id)
+        self.frames_vela = tint_frames(self.frames_vela, skin_id)
+        self.frames_antorcha = tint_frames(self.frames_antorcha, skin_id)
 
     def set_torch(self, value, kind="fosforo"):
 

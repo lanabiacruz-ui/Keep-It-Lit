@@ -44,6 +44,8 @@ from world.dungeon_map import DungeonMapView
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
 from ui.chest_minigame import ChestMinigame
+from core import skins as skin_lib
+
 from ui.shop_ui import ShopUI
 from ui.tutorial import Tutorial
 from ui.guide import Guide
@@ -177,6 +179,12 @@ SLOT_KEYS = {
     pygame.K_3: 2,
     pygame.K_4: 3,
 }
+
+
+
+def is_skin_item(item_id):
+
+    return item_id.startswith(skin_lib.SHOP_PREFIX)
 
 
 class NewGame:
@@ -1352,11 +1360,11 @@ class NewGame:
             {
                 "text": (
                     "Andá a la sala de cofres (arriba a la izquierda). "
-                    "Pegale a un cofre con tu luz y apretá ESPACIO en la "
+                    "Acercate a un cofre y apretá F, después ESPACIO en la "
                     "zona marcada para abrirlo."
                 ),
                 "tuto": [
-                    "COFRES: están en la sala de arriba a la izquierda. Pegale a uno con tu luz y apretá ESPACIO cuando el marcador esté en la zona marcada.",
+                    "COFRES: están en la sala de arriba a la izquierda. Acercate y apretá F (cuenta como un golpe) y después ESPACIO cuando el marcador esté en la zona marcada.",
                     "Cada cofre se abre de 10 a 15 veces seguidas y después descansa 3 minutos. Dan monedas, madera, cera, aceite... y con suerte una GANZÚA, que abre un cofre sin minijuego y dura 3 usos.",
                 ],
                 "target": lambda g: zone_center("cofres"),
@@ -2203,26 +2211,47 @@ class NewGame:
                 self.light_type
             )["golpe_costo"]
 
-    CHEST_SAFE_SLIME_DIST = 90     # px: con un slime vivo mas cerca, no se abren cofres
-    CHEST_SAFE_HIT_MS = 600        # ms despues de pegarle a un enemigo
+    CHEST_REACH = 14    # px alrededor del cofre en los que F funciona
 
-    def _chests_hittable(self):
+    def _chest_in_reach(self):
 
-        last = getattr(self, "_enemy_hit_ms", -10_000)
+        # los cofres ya no se abren a golpes: se abren con F estando cerca
+        # (asi se puede pelear con slimes al lado de un cofre sin abrirlo)
+        best = None
+        best_dist = None
 
-        if pygame.time.get_ticks() - last < self.CHEST_SAFE_HIT_MS:
-            return False
+        for chest in self.chests.chests:
 
-        px, py = self.player.rect.center
+            if chest.busy:
+                continue
 
-        for slime in self.slimes.targets():
+            zone = chest.block.inflate(
+                self.CHEST_REACH * 2, self.CHEST_REACH * 2
+            )
 
-            sx, sy = slime.rect.center
+            if not zone.colliderect(self.player.rect):
+                continue
 
-            if math.hypot(sx - px, sy - py) < self.CHEST_SAFE_SLIME_DIST:
-                return False
+            dist = pygame.Vector2(chest.rect.center).distance_to(
+                self.player.rect.center
+            )
 
-        return True
+            if best is None or dist < best_dist:
+                best, best_dist = chest, dist
+
+        return best
+
+    def _use_chest(self, chest):
+
+        # F cuenta como un golpe al cofre: destello + sacudida + sonido
+        audio.play("door_hit")
+
+        chest.take_damage(1)
+
+        if chest.ready:
+            self._open_chest(chest)
+        else:
+            self.show_message(f"Faltan {format_time(chest.cooldown)}")
 
     def _melee_hits(self, pivot):
 
@@ -2231,12 +2260,6 @@ class NewGame:
 
         targets = [t for a in self.arenas for t in a.targets()]
         targets += list(self.doors.doors)
-
-        # los cofres solo se abren pegandoles "en calma": si hay un slime cerca
-        # o recien le pegaste a un enemigo, el golpe no los toca (antes se
-        # abrian sin querer al pelear con slimes en la sala de cofres)
-        if self._chests_hittable():
-            targets += list(self.chests.chests)
 
         targets += [d for d in self.dummies if not d.dead]
         targets += self.slimes.targets()
@@ -2429,8 +2452,6 @@ class NewGame:
             audio.play(
                 "hit_heavy" if self.melee.heavy or damage >= 2 else "hit"
             )
-
-            self._enemy_hit_ms = pygame.time.get_ticks()
 
             target.take_damage(damage)
 
@@ -2747,6 +2768,25 @@ class NewGame:
 
         cart = {i: q for i, q in cart.items() if i not in locks}
 
+        # skins: se desbloquean (una sola vez), no son objetos del juego
+        skin_ids = []
+
+        for item_id in [i for i in cart if is_skin_item(i)]:
+
+            skin_id = item_id[len(skin_lib.SHOP_PREFIX):]
+
+            if skin_lib.is_unlocked(skin_id):
+                del cart[item_id]
+            else:
+                cart[item_id] = 1
+                skin_ids.append(skin_id)
+
+        if not cart:
+
+            self._shop_notice("Ya tenés esa skin")
+
+            return
+
         total = sum(
             self.shop_prices.get(item_id, 0) * qty
             for item_id, qty in cart.items()
@@ -2771,9 +2811,15 @@ class NewGame:
         else:
             x, y = self.player.rect.center
 
+        for skin_id in skin_ids:
+            skin_lib.buy(skin_id)
+
         item_ids = []
 
         for item_id, qty in cart.items():
+
+            if is_skin_item(item_id):
+                continue
 
             if item_id == "bolsa":
 
@@ -2799,7 +2845,10 @@ class NewGame:
 
             item_ids.extend([item_id] * qty)
 
-        for item in self.shopkeeper.spit(item_ids, self.collision_map):
+        for item in (
+            self.shopkeeper.spit(item_ids, self.collision_map)
+            if item_ids else []
+        ):
 
             if isinstance(item, LightItem):
                 self.light_drops.append(item)
@@ -3673,6 +3722,14 @@ class NewGame:
 
                     return None
 
+                chest = self._chest_in_reach()
+
+                if chest is not None:
+
+                    self._use_chest(chest)
+
+                    return None
+
                 if self.selected_slot != "equipped":
 
                     self.use_item(
@@ -3896,7 +3953,7 @@ class NewGame:
                 and self.stats.get("chests_opened", 0) < 1
             ):
                 self.show_message(
-                    "Pegale a un cofre con tu luz y se abre"
+                    "Acercate a un cofre y apretá F para abrirlo"
                 )
 
         self.zone_banner.update(
@@ -4759,6 +4816,23 @@ class NewGame:
             and self.shopkeeper.can_talk(self.player)
         ):
             self.shopkeeper.draw_prompt(self.screen, self.camera)
+
+        if self.state == "playing" and self.minigame is None:
+
+            near_chest = self._chest_in_reach()
+
+            if near_chest is not None and near_chest.ready:
+
+                dest = self.camera.apply(near_chest.rect)
+
+                icon = self.shopkeeper.f_icon
+
+                self.screen.blit(
+                    icon,
+                    icon.get_rect(
+                        midbottom=(dest.centerx, dest.top - 6)
+                    )
+                )
 
         self.dungeon_map.draw(
             self.screen,

@@ -59,6 +59,23 @@ DEFAULT_CATALOG = [
 ]
 
 
+def _with_skins(catalog):
+
+    """Suma la seccion Skins con las skins de pago de data/skins.json."""
+
+    from core import skins as skin_lib
+
+    items = [
+        {"id": skin_lib.SHOP_PREFIX + s["id"], "precio": s["precio"]}
+        for s in skin_lib.paid_skins()
+    ]
+
+    if not items:
+        return catalog
+
+    return list(catalog) + [{"nombre": "Skins", "items": items}]
+
+
 def load_catalog():
 
     try:
@@ -71,7 +88,7 @@ def load_catalog():
 
         print(f"[tienda] No se pudo leer data/shop.json: {error}")
 
-        return DEFAULT_CATALOG
+        return _with_skins(DEFAULT_CATALOG)
 
     catalog = []
 
@@ -93,7 +110,7 @@ def load_catalog():
                 {"nombre": str(sec.get("nombre", "")), "items": items}
             )
 
-    return catalog or DEFAULT_CATALOG
+    return _with_skins(catalog or DEFAULT_CATALOG)
 
 
 def price_table(catalog):

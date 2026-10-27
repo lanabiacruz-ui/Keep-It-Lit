@@ -237,6 +237,7 @@ class MainMenu:
             ("Continuar partida", "continue_game"),
             ("Configuraciones", "settings"),
             ("Logros", "achievements"),
+            ("Skins", "skins"),
             ("Salir", "quit")
         ]
 
@@ -474,13 +475,14 @@ class MainMenu:
 
     def get_option_rect(self, index):
 
-        y = 227.25 + index * 33
+        # 6 opciones: el texto del dibujo (menu.png) va cada 36 px de la imagen
+        y = 230.0 + index * 27.5
 
         return pygame.Rect(
             376,
             y,
             290,
-            38
+            30
         )
 
     def draw(self):

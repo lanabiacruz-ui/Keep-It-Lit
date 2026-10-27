@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pygame
 
+from core import skins as skin_lib
 from core.controls import controls
 
 from world.items import load_icon, HUD_DIR
@@ -102,6 +103,22 @@ DEFAULT_STACK = 15
 # La bolsa no se guarda en un casillero: se coloca en el piso.
 # Las luces tienen su propio casillero extra (el de la mano).
 NOT_IN_INVENTORY = {"bolsa"}
+
+
+def is_skin(item_id):
+
+    return item_id.startswith(skin_lib.SHOP_PREFIX)
+
+
+def no_inventory(item_id):
+
+    # las skins no son objetos: se desbloquean al comprarlas
+    return item_id in NOT_IN_INVENTORY or is_skin(item_id)
+
+
+def skin_of(item_id):
+
+    return skin_lib.get(item_id[len(skin_lib.SHOP_PREFIX):])
 
 INV_ROW_STEP = 44
 
@@ -270,6 +287,12 @@ class ShopUI:
 
     def item_name(self, item_id):
 
+        if is_skin(item_id):
+
+            skin = skin_of(item_id)
+
+            return skin["nombre"] if skin else item_id
+
         data = self.defs.get(item_id, {})
 
         return data.get("nombre", item_id.capitalize())
@@ -299,6 +322,19 @@ class ShopUI:
         )
 
     def info_lines(self, item_id):
+
+        if is_skin(item_id):
+
+            owned = self._skin_owned(item_id)
+
+            return [
+                "Skin para tu personaje.",
+                "",
+                "Ya la tenés: equipala desde Skins en el menú principal."
+                if owned
+                else "Al comprarla queda desbloqueada para todas tus "
+                     "partidas. Equipala desde Skins en el menú principal.",
+            ]
 
         data = self.defs.get(item_id, {})
 
@@ -362,7 +398,7 @@ class ShopUI:
 
             if (
                 item_id not in self.prices
-                or item_id in NOT_IN_INVENTORY
+                or no_inventory(item_id)
                 or item_id in self.locks
             ):
                 continue
@@ -402,7 +438,7 @@ class ShopUI:
 
             return
 
-        if item_id in NOT_IN_INVENTORY:
+        if no_inventory(item_id):
 
             self._flash("Eso no va en el inventario")
 
@@ -510,9 +546,40 @@ class ShopUI:
         if tab in self.tab_rects:
             self.tab = tab
 
+    @staticmethod
+    def _skin_owned(item_id):
+
+        return skin_lib.is_unlocked(item_id[len(skin_lib.SHOP_PREFIX):])
+
+    def _skin_icon(self, item_id, size):
+
+        try:
+
+            sprite = skin_lib.preview_sprite(
+                item_id[len(skin_lib.SHOP_PREFIX):]
+            )
+
+        except Exception:
+
+            return None
+
+        k = min(size / sprite.get_width(), size / sprite.get_height())
+
+        return pygame.transform.smoothscale(
+            sprite,
+            (
+                max(1, round(sprite.get_width() * k)),
+                max(1, round(sprite.get_height() * k)),
+            )
+        )
+
     def _icon(self, item_id, size):
 
         key = (item_id, size)
+
+        if key not in self._icons and is_skin(item_id):
+
+            self._icons[key] = self._skin_icon(item_id, size)
 
         if key not in self._icons:
 
@@ -648,6 +715,18 @@ class ShopUI:
 
             return
 
+        if is_skin(item_id):
+
+            if self._skin_owned(item_id):
+
+                self._flash("Ya tenés esta skin")
+
+            else:
+
+                self.cart[item_id] = 1
+
+            return
+
         current = self.cart.get(item_id, 0)
 
         self.cart[item_id] = min(MAX_PER_ITEM, current + amount)
@@ -700,7 +779,7 @@ class ShopUI:
 
         if self.tab == "inv":
             return (
-                item_id not in NOT_IN_INVENTORY and item_id not in LIGHTS
+                not no_inventory(item_id) and item_id not in LIGHTS
             )
 
         return True
@@ -1094,7 +1173,7 @@ class ShopUI:
 
         locked_wave = self.locks.get(item_id)
 
-        no_inv = self.tab == "inv" and item_id in NOT_IN_INVENTORY
+        no_inv = self.tab == "inv" and no_inventory(item_id)
 
         if locked_wave is not None or no_inv:
 
@@ -1119,6 +1198,8 @@ class ShopUI:
                 if locked_wave is not None
                 else "No va al inventario"
                 if no_inv
+                else "Ya la tenés"
+                if is_skin(item_id) and self._skin_owned(item_id)
                 else f"{self.prices[item_id]} monedas"
             ),
             C_MUTED,

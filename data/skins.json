@@ -1,0 +1,214 @@
+{
+  "skins": [
+    {
+      "id": "clasico",
+      "nombre": "Clásico",
+      "gratis": true
+    },
+    {
+      "id": "region_1",
+      "nombre": "Skin Primera región",
+      "logro": "region_1",
+      "color": [
+        170,
+        240,
+        190
+      ]
+    },
+    {
+      "id": "zona_1",
+      "nombre": "Skin Primera zona",
+      "logro": "zona_1",
+      "color": [
+        248,
+        175,
+        208
+      ]
+    },
+    {
+      "id": "zona_2",
+      "nombre": "Skin Segunda zona",
+      "logro": "zona_2",
+      "color": [
+        250,
+        218,
+        120
+      ]
+    },
+    {
+      "id": "perder_50",
+      "nombre": "Skin Mala racha",
+      "logro": "perder_50",
+      "color": [
+        140,
+        205,
+        255
+      ]
+    },
+    {
+      "id": "ultimo_segundo",
+      "nombre": "Skin Por los pelos",
+      "logro": "ultimo_segundo",
+      "color": [
+        105,
+        105,
+        125
+      ]
+    },
+    {
+      "id": "intocable",
+      "nombre": "Skin Intocable",
+      "logro": "intocable",
+      "color": [
+        240,
+        140,
+        120
+      ]
+    },
+    {
+      "id": "abrazo_golem",
+      "nombre": "Skin Abrazo de oso",
+      "logro": "abrazo_golem",
+      "color": [
+        190,
+        160,
+        245
+      ]
+    },
+    {
+      "id": "ojos_ciegos",
+      "nombre": "Skin ¡Mis ojos!",
+      "logro": "ojos_ciegos",
+      "color": [
+        150,
+        235,
+        235
+      ]
+    },
+    {
+      "id": "desactivado",
+      "nombre": "Skin Desactivado",
+      "logro": "desactivado",
+      "color": [
+        235,
+        235,
+        140
+      ]
+    },
+    {
+      "id": "slime_brillante",
+      "nombre": "Skin Cacería de oro",
+      "logro": "slime_brillante",
+      "color": [
+        250,
+        170,
+        110
+      ]
+    },
+    {
+      "id": "gelatinero",
+      "nombre": "Skin Gelatinero",
+      "logro": "gelatinero",
+      "color": [
+        130,
+        200,
+        130
+      ]
+    },
+    {
+      "id": "entomologo",
+      "nombre": "Skin Naturalista",
+      "logro": "entomologo",
+      "color": [
+        220,
+        120,
+        180
+      ]
+    },
+    {
+      "id": "exterminador",
+      "nombre": "Skin Exterminador",
+      "logro": "exterminador",
+      "color": [
+        160,
+        190,
+        255
+      ]
+    },
+    {
+      "id": "saqueador",
+      "nombre": "Skin Saqueador",
+      "logro": "saqueador",
+      "color": [
+        255,
+        200,
+        160
+      ]
+    },
+    {
+      "id": "pirotecnico",
+      "nombre": "Skin Pirotécnico",
+      "logro": "pirotecnico",
+      "color": [
+        200,
+        230,
+        120
+      ]
+    },
+    {
+      "id": "derribapuertas",
+      "nombre": "Skin Derribapuertas",
+      "logro": "derribapuertas",
+      "color": [
+        120,
+        170,
+        210
+      ]
+    },
+    {
+      "id": "dragon_monedas",
+      "nombre": "Skin Dragón de monedas",
+      "logro": "dragon_monedas",
+      "color": [
+        230,
+        150,
+        230
+      ]
+    },
+    {
+      "id": "coctel",
+      "nombre": "Skin Cóctel molotov",
+      "logro": "coctel",
+      "color": [
+        180,
+        180,
+        180
+      ]
+    },
+    {
+      "id": "sin_red",
+      "nombre": "Skin Sin red",
+      "logro": "sin_red",
+      "color": [
+        170,
+        240,
+        190
+      ]
+    },
+    {
+      "id": "pago_1",
+      "nombre": "Monje",
+      "precio": 300
+    },
+    {
+      "id": "pago_2",
+      "nombre": "Casual",
+      "precio": 600
+    },
+    {
+      "id": "pago_3",
+      "nombre": "Ejecutivo",
+      "precio": 1000
+    }
+  ]
+}

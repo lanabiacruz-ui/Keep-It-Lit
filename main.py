@@ -11,6 +11,7 @@ from states.new_game import NewGame
 from states.startup import Startup
 from states.settings import Settings, load_settings
 from states.achievements import AchievementsMenu
+from states.skins_menu import SkinsMenu
 from ui.slide_transition import SlideTransition
 from ui.zoom_transition import ZoomTransition
 
@@ -46,6 +47,7 @@ startup = Startup(screen, duration=STARTUP_SOUND_HOLD)
 menu = MainMenu(screen)
 settings_menu = None
 achievements_menu = None
+skins_menu = None
 name_menu = None
 password_menu = None
 mode_menu = None
@@ -79,6 +81,7 @@ MENU_STATES = (
     "menu",
     "settings",
     "achievements",
+    "skins",
     "name_input",
     "password_set",
     "mode_select",
@@ -90,6 +93,7 @@ MENU_STATES = (
 UI_SOUND_STATES = (
     "settings",
     "achievements",
+    "skins",
     "name_input",
     "password_set",
     "mode_select",
@@ -122,6 +126,7 @@ def desired_music():
 def handle_menu_action(action):
 
     global name_menu, continue_menu, settings_menu, achievements_menu
+    global skins_menu
     global current_state, running
 
     if action == "new_game":
@@ -147,6 +152,12 @@ def handle_menu_action(action):
         achievements_menu = AchievementsMenu(screen)
 
         current_state = "achievements"
+
+    elif action == "skins":
+
+        skins_menu = SkinsMenu(screen)
+
+        current_state = "skins"
 
     elif action == "quit":
 
@@ -208,6 +219,12 @@ while running:
         elif current_state == "achievements":
 
             if achievements_menu.handle_event(event) == "back":
+
+                current_state = "menu"
+
+        elif current_state == "skins":
+
+            if skins_menu.handle_event(event) == "back":
 
                 current_state = "menu"
 
@@ -486,6 +503,12 @@ while running:
     elif current_state == "achievements":
 
         achievements_menu.draw()
+
+        menu.draw_live("mapaajustes")
+
+    elif current_state == "skins":
+
+        skins_menu.draw()
 
         menu.draw_live("mapaajustes")
 
