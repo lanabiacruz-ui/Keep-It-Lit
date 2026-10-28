@@ -17,7 +17,8 @@ No se ha detectado Pygame; se intentará descargarlo e instalarlo automáticamen
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pygame"])
         except subprocess.CalledProcessError:
-            print("No ha descargdo")
+            print("\n\nNo ha descargdo correctamente, tu vercion es muy anvazado,vamos a provar con PYGAME COMUNITY EDITON")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pygame-ce"])
     
     """
            HAY OTRO FORMA DE HACER,LO CUAL ESTÀ ABAJO
@@ -64,7 +65,7 @@ Se ha localizado el archivo principal del juego {game_file}; iniciando el juego 
         print("Pygame 环境已配置完毕！如果您换了别的主文件名，请直接运行您的游戏脚本即可。" \
         "\nPygame ya ha instalado correctamente, si tu archivo principal es otro nombre,solo ejecuta tu juego y listo!!!!")
         input("\n按回车键关闭窗口..."
-        "\nPreociona ENTER para cerrar")
+        "\nPresiona ENTER para cerrar")
 
 
 install_and_run()
