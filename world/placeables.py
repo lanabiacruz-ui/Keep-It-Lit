@@ -631,6 +631,7 @@ class Bag(Placeable):
 class Chest(Placeable):
 
     kind = "cofre"
+    draggable = True
     container_slots = CHEST_SLOTS
 
 

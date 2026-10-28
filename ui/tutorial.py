@@ -26,7 +26,8 @@ TUTORIAL_PAGES = [
     "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
     "USAR OBJETOS: elegí el casillero (con 1-4 o la ruedita) y apretá F o click derecho. Mantené click izquierdo sobre un casillero para ver qué hace.",
     "RECUPERAR LUZ: la madera suma 25%, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
-    "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
+    "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. La DORADA vale 1, la AZUL vale 5 y la ROJA vale 10. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
+    "ENCICLOPEDIA: en la pausa (ESC) está la enciclopedia de criaturas. Tocá la figura de cada criatura descubierta para cobrar monedas de regalo.",
     "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
     "AYUDA: ESC abre la pausa y F1 vuelve a mostrar este tutorial. ¡Mucha suerte y que tu luz nunca se apague!",
 ]
