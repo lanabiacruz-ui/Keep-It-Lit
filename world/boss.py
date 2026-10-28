@@ -82,7 +82,10 @@ SUMMON_COUNT = 6
 WAIT_MIN = 1.0
 
 PHASE_TIME = 2.2
-DYING_TIME = 1.8
+DYING_TIME = 4.6
+
+# cada tanto, mientras se rompe, suelta un crujido (evento "crack")
+CRACK_EVERY = 0.75
 
 BODY_DAMAGE = 0.20
 FRAG_DAMAGE = 0.16
@@ -298,7 +301,8 @@ class PinaBoss:
     touch_cd = 0.0
     stun = 0.0
 
-    def __init__(self, x, y, room, art, hp=BOSS_HP):
+    def __init__(self, x, y, room, art, hp=BOSS_HP, intro_time=INTRO_TIME,
+                 hold_time=0.0):
 
         self.room = room
         self.art = art
@@ -332,7 +336,14 @@ class PinaBoss:
         self.spin = 0.0
         self.anim_t = 0.0
 
-        self.spawn_t = INTRO_TIME
+        self.intro_time = float(intro_time)
+        self.spawn_t = self.intro_time
+
+        # despues de aparecer se queda quieto este tiempo (la presentacion)
+        self.hold_after = float(hold_time)
+        self.hold_t = 0.0
+
+        self._crack_t = 0.0
 
         self.state = "intro"
         self.step = -1
@@ -395,7 +406,12 @@ class PinaBoss:
 
         # Solo mientras aparece o se esta muriendo. El resto del tiempo
         # recibe dano.
-        return self.spawning or self.dying
+        return self.spawning or self.dying or self.hold_t > 0
+
+    @property
+    def dying_k(self):
+
+        return 1.0 - max(0.0, self.dying_t) / DYING_TIME
 
     @property
     def dead(self):
@@ -415,7 +431,7 @@ class PinaBoss:
     def hit_targets(self):
         """A quien se le puede pegar. Los fragmentos NO se pueden golpear."""
 
-        if self.spawning or self.dying:
+        if self.spawning or self.dying or self.hold_t > 0:
             return []
 
         if self.state in ("frags", "regroup"):
@@ -428,7 +444,7 @@ class PinaBoss:
     def contact_hit(self, body):
         """(dano, punto de origen) si algo del jefe toca el cuerpo del jugador."""
 
-        if self.spawning or self.dying:
+        if self.spawning or self.dying or self.hold_t > 0:
             return None
 
         if self.state in ("frags", "regroup"):
@@ -566,18 +582,54 @@ class PinaBoss:
 
             self.spawn_t -= dt
 
-            k = _ease(1.0 - max(0.0, self.spawn_t) / INTRO_TIME)
+            k = _ease(1.0 - max(0.0, self.spawn_t) / self.intro_time)
+
+            raw = 1.0 - max(0.0, self.spawn_t) / self.intro_time
 
             self.size = _lerp(self.base * 0.35, self.base, k)
-            self.spin += 300.0 * dt
-            self.shake = 0.0
+
+            # gira rapido y va frenando; tiembla cada vez mas fuerte
+            self.spin += (60.0 + 420.0 * (1.0 - raw ** 2)) * dt
+            self.shake = 0.4 + 2.2 * raw ** 1.5
 
             self._sync_rect()
 
             if self.spawn_t <= 0:
 
                 self.ring_t = 0.0
-                self._emit("roar")
+                self.shake = 0.0
+                self.flash = 0.12
+                self._emit("slam")
+
+                if self.hold_after > 0:
+
+                    self.state = "idle"
+                    self.hold_t = self.hold_after
+
+                else:
+                    self._go(0)
+
+            return
+
+        if self.hold_t > 0:
+
+            # presentacion: respira quieto mientras sale el titulo
+            self.hold_t -= dt
+
+            s = ((self.spin + 180.0) % 360.0) - 180.0
+
+            self.spin = s * max(0.0, 1.0 - 5.0 * dt)
+
+            self.size = self.base * (1.0 + 0.02 * math.sin(self.anim_t * 2.6))
+            self.shake = 0.0
+
+            self._sync_rect()
+
+            if self.hold_t <= 0:
+
+                self.hold_t = 0.0
+                self.spin = 0.0
+                self.size = self.base
                 self._go(0)
 
             return
@@ -976,13 +1028,27 @@ class PinaBoss:
 
         self.fx_cd -= dt
 
-        self.shake = 2.0 + 2.0 * (1.0 - max(0.0, self.dying_t) / DYING_TIME)
-        self.spin = (self.spin + 500.0 * dt) % 360.0
+        k = self.dying_k
 
-        if int(self.anim_t * 14) % 2 == 0:
-            self.flash = 0.06
+        # tiembla cada vez mas, gira cada vez mas rapido
+        self.shake = 1.2 + 3.8 * k ** 1.3
+        self.spin = (self.spin + (150.0 + 950.0 * k ** 2) * dt) % 360.0
 
-        self.size = self.base * (1.0 + 0.25 * math.sin(self.anim_t * 24.0))
+        # se hincha despacio hasta que esta por reventar
+        self.size = self.base * (
+            1.0 + 0.10 * k + 0.45 * max(0.0, k - 0.82) / 0.18
+            + 0.03 * math.sin(self.anim_t * 9.0)
+        )
+
+        # cada crujido hace parpadear al jefe una sola vez
+        self._crack_t += dt
+
+        if self._crack_t >= CRACK_EVERY * (1.0 - 0.45 * k):
+
+            self._crack_t = 0.0
+            self.flash = 0.09
+
+            self._emit("crack")
 
         self._sync_rect()
 
@@ -1063,7 +1129,7 @@ class PinaBoss:
 
             img = img.copy()
 
-            k = 1.0 - max(0.0, self.spawn_t) / INTRO_TIME
+            k = 1.0 - max(0.0, self.spawn_t) / self.intro_time
 
             img.set_alpha(int(60 + 195 * max(0.0, min(1.0, k))))
 

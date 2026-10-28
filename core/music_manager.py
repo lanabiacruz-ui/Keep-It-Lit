@@ -14,6 +14,7 @@ TRACKS = {
     "menu": {"fade_in": 3.0, "fade_out": 2.0, "gain": 1.0},
     "ambiente": {"fade_in": 5.0, "fade_out": 2.5, "gain": 1.0},
     "combate": {"fade_in": 0.9, "fade_out": 2.0, "gain": 1.0},
+    "jefe": {"fade_in": 0.6, "fade_out": 1.2, "gain": 1.0},
 }
 
 

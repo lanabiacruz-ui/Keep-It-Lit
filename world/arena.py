@@ -9,6 +9,7 @@ from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
 from world.items import WorldItem, get_gem_icon, get_green_gem_icon
+from world.boss_cinematic import BossCinematic
 from world.boss import (
     PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH
 )
@@ -4507,6 +4508,10 @@ class Arena:
             BossArt(COMBAT_DIR, load_image, load_strip)
             if self.cfg.boss else None
         )
+
+        # entrada y derrota "epicas" del jefe (barras, titulo, musica)
+        self.cinematic = BossCinematic()
+
         self.blasts = []
         self.mosquito_alert = False
 
@@ -4731,9 +4736,7 @@ class Arena:
 
         self._spawn_wave(game)
 
-        if self._is_boss_wave():
-            game.show_message("JEFE: Piña Colosal!")
-        else:
+        if not self._is_boss_wave():
             game.show_message(f"Oleada {self.wave}")
 
 
@@ -4788,19 +4791,24 @@ class Arena:
         if self.boss_art is None:
             self.boss_art = BossArt(COMBAT_DIR, load_image, load_strip)
 
-        boss = PinaBoss(room.centerx, room.centery, room, self.boss_art)
+        # la primera vez se ve la entrada completa; despues, una version corta
+        first = not getattr(game, "boss_intro_seen", False)
+
+        game.boss_intro_seen = True
+
+        cin = self.cinematic
+
+        boss = PinaBoss(
+            room.centerx, room.centery, room, self.boss_art,
+            intro_time=cin.intro_time(first),
+            hold_time=cin.hold_time(first),
+        )
 
         self.enemies = [boss]
         self.shots = []
         self.blasts = []
 
-        fx = getattr(game, "fx", None)
-
-        if fx is not None:
-            fx.wave_start(
-                room.centerx, room.centery, self.wave, room,
-                [(room.centerx, room.centery)]
-            )
+        cin.start_intro(game, first)
 
     def _boss_sound(self, event):
 
@@ -4810,6 +4818,46 @@ class Arena:
             audio.play("explosion")
         elif event == "merge":
             audio.play("hit_heavy")
+
+    def _boss_event(self, game, boss, event):
+
+        fx = game.fx
+
+        if event == "slam":
+
+            self.cinematic.on_slam(game, boss)
+
+        elif event == "die":
+
+            # el golpe final: todo se congela un instante y arranca la caida
+            self.cinematic.start_victory(game)
+
+            fx.hitstop = max(fx.hitstop, 0.3)
+            fx.shake(9.0, 0.7)
+
+            audio.play("boss_slam")
+            audio.play("boss_roar")
+
+        elif event == "crack":
+
+            audio.play("explosion")
+
+            fx.shake(7.0, 0.45)
+
+            for _ in range(14):
+
+                a = random.uniform(0, math.tau)
+
+                fx._spark(
+                    boss.pos.x, boss.pos.y, a, random.uniform(50, 160),
+                    random.uniform(0.4, 0.9),
+                    random.choice(((255, 170, 70), (170, 235, 110))),
+                    size=random.uniform(1.6, 2.8), drag=2.2, streak=True,
+                )
+
+        else:
+
+            self._boss_sound(event)
 
     def _boss_summon(self, game, boss):
 
@@ -4893,9 +4941,11 @@ class Arena:
         boss.update(dt, target)
 
         for event in boss.events:
-            self._boss_sound(event)
+            self._boss_event(game, boss, event)
 
         boss.events = []
+
+        self.cinematic.update(dt, game, boss)
 
         if boss.summon_request:
 
@@ -4917,7 +4967,7 @@ class Arena:
 
             if boss.fx_cd <= 0:
 
-                boss.fx_cd = 0.12
+                boss.fx_cd = 0.32 - 0.22 * boss.dying_k
 
                 self._death_puff(pygame.Vector2(
                     boss.pos.x + random.uniform(-boss.size / 2, boss.size / 2),
@@ -5068,7 +5118,8 @@ class Arena:
         self.chest = RewardChest(pos[0], pos[1])
         self.state = self.CLEAR
 
-        audio.play("wave_clear")
+        if not self._is_boss_wave():
+            audio.play("wave_clear")
 
         self._open_gate(game)
 
@@ -5126,10 +5177,9 @@ class Arena:
 
         if self.wave == self.cfg.last_wave:
 
-            self._add_gem(game)
-
+            # la gema se cuenta recien cuando la agarras
             gem = WorldItem(self.cfg.gem_id, cx, cy)
-            gem.value = 0
+            gem.value = 1
             gem.sparkle = True
 
             gem.start_fly(
@@ -5214,6 +5264,8 @@ class Arena:
         self._credit_leftover(game)
         self._open_gate(game)
 
+        self.cinematic.cancel()
+
         self.enemies = []
         self.shots = []
         self.chest = None
@@ -5287,6 +5339,9 @@ class Arena:
 
         if self.state != self.WAVE:
             self.mosquito_alert = False
+
+            if self.cinematic.active:
+                self.cinematic.update(dt, game, None)
 
         p = game.player
 
@@ -5505,6 +5560,10 @@ class Arena:
         for enemy in self.enemies:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
+
+                if isinstance(enemy, PinaBoss):
+                    self.cinematic.finale(game, enemy)
+
                 game.count_stat("kills")
                 achievements.add_counter("kills")
 
@@ -6013,14 +6072,16 @@ class Arena:
             )
 
 
-        if self.state == self.WAVE:
+        if self.state == self.WAVE and not self.cinematic.active:
 
             for enemy in self.enemies:
                 if getattr(enemy, "is_boss", False):
                     draw_boss_bar(screen, enemy)
 
-        if self.banner_t > 0:
+        if self.banner_t > 0 and not self.cinematic.active:
             self._draw_banner(screen)
+
+        self.cinematic.draw(screen)
 
     def _draw_banner(self, screen):
 

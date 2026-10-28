@@ -1,3 +1,15 @@
 {
-
+    "unlocked": {
+        "dragon_monedas": "2026-10-28T19:02:03",
+        "coctel": "2026-10-28T19:06:20",
+        "pirotecnico": "2026-10-28T19:07:45",
+        "zona_1": "2026-10-28T19:23:17",
+        "slime_brillante": "2026-10-28T19:25:28"
+    },
+    "counters": {
+        "defeats": 6,
+        "fireballs": 1018,
+        "kills": 121,
+        "slimes": 6
+    }
 }
