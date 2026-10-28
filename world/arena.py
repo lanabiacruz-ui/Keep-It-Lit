@@ -9,6 +9,9 @@ from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
 from world.items import WorldItem, get_gem_icon, get_green_gem_icon
+from world.boss import (
+    PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH
+)
 from world.melee import (
     ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
     ease_out, sector_outline,
@@ -64,7 +67,8 @@ WAVE_COMPOSITION = {
     9: (4, 6, 10, 3,),
     10: (5, 6, 7, 8,),
 }
-LAST_WAVE = 10
+# Oleadas 1-10: normales. Oleada 11: jefe (Pina Colosal). La gema la da el jefe.
+LAST_WAVE = 11
 
 PINOS_STEP = 1
 TRONCOS_STEP = 1
@@ -4397,12 +4401,13 @@ class ArenaConfig:
                  sealed_text="Mapa completado: la sala esta cerrada",
                  done_text="Mapa completado! La sala se cerro para siempre",
                  gem_id="gema", gem_name="gema",
-                 zone_name="", zone_tag="", hard=False):
+                 zone_name="", zone_tag="", hard=False, boss=False):
 
         self.key = key
         self.zone_name = zone_name
         self.zone_tag = zone_tag
         self.hard = hard
+        self.boss = boss
         self.title = title
         self.room = room
         self.trigger = trigger
@@ -4425,7 +4430,7 @@ RIGHT_ARENA = ArenaConfig(
     ROOM, TRIGGER, EXIT_POS, GATE,
     WAVE_COMPOSITION, WAVE_REWARDS, LAST_WAVE,
     "arena_wave", "arena_completed",
-    zone_name="ORKUN", zone_tag="ZONA 1",
+    zone_name="ORKUN", zone_tag="ZONA 1", boss=True,
 )
 
 
@@ -4498,6 +4503,10 @@ class Arena:
         self.golem_art = GolemArt()
         self.guardian_art = GuardianArt()
         self.shooter_art = GuardianShooterArt()
+        self.boss_art = (
+            BossArt(COMBAT_DIR, load_image, load_strip)
+            if self.cfg.boss else None
+        )
         self.blasts = []
         self.mosquito_alert = False
 
@@ -4601,7 +4610,16 @@ class Arena:
 
     def targets(self):
 
-        return [e for e in self.enemies if not e.spawning and not e.dead and not getattr(e, "attached", False)]
+        out = []
+
+        for e in self.enemies:
+
+            if getattr(e, "is_boss", False):
+                out.extend(e.hit_targets())
+            elif not e.spawning and not e.dead and not getattr(e, "attached", False):
+                out.append(e)
+
+        return out
 
     def hurt_in_radius(self, center, radius, damage):
 
@@ -4636,6 +4654,10 @@ class Arena:
 
                 if light is not None:
                     sources.append(light)
+
+            elif isinstance(enemy, PinaBoss):
+
+                sources.extend(enemy.lights())
 
         for blast in self.blasts:
 
@@ -4709,7 +4731,10 @@ class Arena:
 
         self._spawn_wave(game)
 
-        game.show_message(f"Oleada {self.wave}")
+        if self._is_boss_wave():
+            game.show_message("JEFE: Piña Colosal!")
+        else:
+            game.show_message(f"Oleada {self.wave}")
 
 
     def _close_gate(self, game):
@@ -4752,9 +4777,180 @@ class Arena:
         self._close_gate(game)
 
 
+    def _is_boss_wave(self):
+
+        return bool(self.cfg.boss and self.wave == self.cfg.last_wave)
+
+    def _spawn_boss(self, game):
+
+        room = self.cfg.room
+
+        if self.boss_art is None:
+            self.boss_art = BossArt(COMBAT_DIR, load_image, load_strip)
+
+        boss = PinaBoss(room.centerx, room.centery, room, self.boss_art)
+
+        self.enemies = [boss]
+        self.shots = []
+        self.blasts = []
+
+        fx = getattr(game, "fx", None)
+
+        if fx is not None:
+            fx.wave_start(
+                room.centerx, room.centery, self.wave, room,
+                [(room.centerx, room.centery)]
+            )
+
+    def _boss_sound(self, event):
+
+        if event in ("roar", "summon"):
+            audio.play("alert")
+        elif event in ("split", "phase", "die"):
+            audio.play("explosion")
+        elif event == "merge":
+            audio.play("hit_heavy")
+
+    def _boss_summon(self, game, boss):
+
+        wave = self.cfg.last_wave - 1
+
+        hp = min(ENEMY_HP_MAX, ENEMY_HP_BASE + wave)
+        tronco_hp = min(ENEMY_HP_MAX, hp + TRONCO_HP_EXTRA)
+        speed = min(ENEMY_SPEED_MAX, ENEMY_SPEED_BASE + ENEMY_SPEED_STEP * wave)
+
+        room = self.cfg.room
+        cmap = game.collision_map
+        player_pos = pygame.Vector2(game.player.rect.center)
+        center = pygame.Vector2(room.center)
+
+        kinds = ["pino", "tronco", "mosquito", "hongun"] * SUMMON_COUNT
+        random.shuffle(kinds)
+
+        hitboxes = {
+            "mosquito": MOSQUITO_HITBOX,
+            "hongun": HONGUN_HITBOX,
+        }
+
+        for i, kind in enumerate(kinds):
+
+            hitbox = hitboxes.get(kind, ENEMY_HITBOX)
+
+            pos = None
+
+            for _ in range(80):
+
+                angle = random.uniform(0, math.tau)
+                dist = random.uniform(40, 135)
+
+                x = center.x + math.cos(angle) * dist
+                y = center.y + math.sin(angle) * dist * 0.8
+
+                probe = pygame.Rect(0, 0, *hitbox)
+                probe.center = (round(x), round(y))
+
+                if not (room.contains(probe) and cmap.can_move(probe)):
+                    continue
+                if player_pos.distance_to((x, y)) < 70:
+                    continue
+                if any(
+                    pygame.Vector2(x, y).distance_to(e.pos) < 14
+                    for e in self.enemies if e is not boss
+                ):
+                    continue
+
+                pos = (x, y)
+                break
+
+            if pos is None:
+                pos = (center.x + random.uniform(-30, 30),
+                       center.y + random.uniform(-30, 30))
+
+            delay = i * 0.06
+
+            if kind == "tronco":
+                enemy = Tronco(pos[0], pos[1], tronco_hp, spawn_delay=delay)
+            elif kind == "mosquito":
+                enemy = Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay)
+            elif kind == "hongun":
+                enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
+            else:
+                enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
+
+            enemy.codex_key = kind
+            enemy.room = room
+
+            self.enemies.append(enemy)
+
+        game.show_message("La piña invoca refuerzos!")
+
+    def _update_boss(self, game, boss, dt, target, body):
+
+        boss.minions = sum(
+            1 for e in self.enemies if e is not boss and not e.dead
+        )
+
+        boss.update(dt, target)
+
+        for event in boss.events:
+            self._boss_sound(event)
+
+        boss.events = []
+
+        if boss.summon_request:
+
+            boss.summon_request = False
+            self._boss_summon(game, boss)
+
+        if boss.dying:
+
+            if not boss.cleanup_done:
+
+                boss.cleanup_done = True
+
+                for e in self.enemies:
+                    if e is not boss:
+                        self._death_puff(e.pos)
+
+                self.enemies = [boss]
+                self.shots = []
+
+            if boss.fx_cd <= 0:
+
+                boss.fx_cd = 0.12
+
+                self._death_puff(pygame.Vector2(
+                    boss.pos.x + random.uniform(-boss.size / 2, boss.size / 2),
+                    boss.pos.y + random.uniform(-boss.size / 2, boss.size / 2),
+                ))
+
+            return
+
+        hit = boss.contact_hit(body)
+
+        if hit is not None:
+
+            damage, origin = hit
+            p = game.player
+
+            if p.hurt(origin):
+
+                game.take_damage(damage)
+
+                away = pygame.Vector2(body.center) - pygame.Vector2(origin)
+
+                if away.length_squared() > 0.01:
+                    p.kb_vel = away.normalize() * CONTACT_PUSH
+
     def _spawn_wave(self, game):
 
         self._hits_at_wave_start = getattr(game, "hits_taken", 0)
+
+        if self._is_boss_wave():
+
+            self._spawn_boss(game)
+
+            return
 
         (pinos, troncos, mosquitos, honguns, guardians,
          shooters, destellos, golems) = wave_composition(
@@ -5202,8 +5398,10 @@ class Arena:
         light_world = game._light_radius() / game.camera.zoom if light_on else 0.0
         repel = light_on and game.repel_timer > 0
 
-        for enemy in self.enemies:
-            if isinstance(enemy, Mosquito):
+        for enemy in list(self.enemies):
+            if isinstance(enemy, PinaBoss):
+                self._update_boss(game, enemy, dt, target, body)
+            elif isinstance(enemy, Mosquito):
                 enemy.update(dt, target, game.collision_map, light_on, light_world, repel)
                 if enemy.attached and enemy.damage_t <= 0.0:
                     game.take_damage(MOSQUITO_DAMAGE)
@@ -5251,7 +5449,10 @@ class Arena:
         if self.mosquito_alert and not was_alert:
             audio.play("alert")
 
-        bounce_enemies(self.enemies, game.collision_map, target)
+        bounce_enemies(
+            [e for e in self.enemies if not isinstance(e, PinaBoss)],
+            game.collision_map, target
+        )
 
         for shot in self.shots:
             shot.update(dt, game.collision_map)
@@ -5600,7 +5801,9 @@ class Arena:
         for enemy in self.enemies:
             if not view.colliderect(camera.apply(enemy.rect)):
                 continue
-            if isinstance(enemy, Mosquito):
+            if isinstance(enemy, PinaBoss):
+                enemy.draw(screen, camera)
+            elif isinstance(enemy, Mosquito):
                 enemy.draw(screen, camera, self.mosquito_art)
             elif isinstance(enemy, Hongun):
                 enemy.draw(screen, camera, self.hongun_art)
@@ -5762,7 +5965,10 @@ class Arena:
 
         number = self.wave - 1 if self.state == self.COLLECT else self.wave
 
-        label = f"Oleada {number}"
+        if self.cfg.boss and number == self.cfg.last_wave:
+            label = "JEFE"
+        else:
+            label = f"Oleada {number}"
 
         if self.cfg.show_total:
             label += f"/{self.cfg.last_wave}"
@@ -5806,6 +6012,12 @@ class Arena:
                 topleft=(text_rect.right + 8, premio_y)
             )
 
+
+        if self.state == self.WAVE:
+
+            for enemy in self.enemies:
+                if getattr(enemy, "is_boss", False):
+                    draw_boss_bar(screen, enemy)
 
         if self.banner_t > 0:
             self._draw_banner(screen)
@@ -5984,7 +6196,7 @@ class Arena:
 
         draw_text(
             screen,
-            f"Oleada {self.wave}   Premio: {reward}   "
+            f"{'JEFE' if self._is_boss_wave() else 'Oleada ' + str(self.wave)}   Premio: {reward}   "
             f"(sin escape: {reward * NO_ESCAPE_MULT})",
             22, (255, 225, 120),
             center=(self.panel_rect.centerx, self.panel_rect.top + 54)

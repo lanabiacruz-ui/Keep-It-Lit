@@ -1,7 +1,13 @@
 {
     "unlocked": {
+        "dragon_monedas": "2026-10-28T10:46:38",
+        "coctel": "2026-10-28T10:47:28",
+        "pirotecnico": "2026-10-28T10:48:25",
+        "zona_1": "2026-10-28T10:49:50"
     },
     "counters": {
-        "defeats": 0
+        "defeats": 1,
+        "fireballs": 263,
+        "kills": 30
     }
 }

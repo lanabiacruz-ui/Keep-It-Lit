@@ -1474,8 +1474,8 @@ class NewGame:
             },
             {
                 "text": (
-                    "Completá Orkun (zona 1, derecha): 10 oleadas y una "
-                    "gema te esperan."
+                    "Completá Orkun (zona 1, derecha): 10 oleadas, un "
+                    "jefe y una gema verde clara te esperan."
                 ),
                 "target": lambda g: zone_center("combate"),
                 "done": lambda g: g.arena.completed,
