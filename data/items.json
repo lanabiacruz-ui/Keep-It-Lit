@@ -169,7 +169,7 @@
     },
     "cofre": {
         "nombre": "Cofre",
-        "descripcion": "Elegilo en la hotbar y hacé click en el mapa donde lo querés poner: queda fijo para siempre. Click derecho sobre él para abrirlo. 8 casilleros, 15 por casillero.",
+        "descripcion": "Elegilo en la hotbar y hacé click en el mapa donde lo querés poner: después podés cambiarlo de lugar manteniendo click izquierdo sobre él y arrastrando. Click derecho sobre él para abrirlo. 8 casilleros, 15 por casillero.",
         "requiere_fosforo": false,
         "efectos": []
     },

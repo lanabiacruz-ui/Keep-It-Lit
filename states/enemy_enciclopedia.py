@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 import pygame
@@ -194,11 +195,34 @@ class EnemyEncyclopedia:
     LINE_COLOR = (96, 102, 120)
     SHADOW_COLOR = (14, 16, 22)
 
-    def __init__(self, screen, discovered=None):
+    REWARDS = {
+        "pino": 100,
+        "tronco": 200,
+        "mosquito": 300,
+        "hongun": 500,
+        "guardian": 700,
+        "guardian_tirador": 800,
+        "destello": 900,
+        "golem": 1000,
+        "slime": 100,
+        "slime2": 100,
+        "slime3": 100,
+    }
+    DEFAULT_REWARD = 10
+
+    def __init__(self, screen, discovered=None, claimed=None, on_claim=None):
 
         self.screen = screen
 
         self.discovered = set(discovered or ())
+
+        self.claimed = set(claimed or ())
+
+        self.on_claim = on_claim
+
+        self.t = 0.0
+
+        self.pops = []
 
         self.data = self._load_data()
 
@@ -603,6 +627,37 @@ class EnemyEncyclopedia:
 
         return key in self.discovered
 
+    def reward_for(self, key):
+
+        return int(self.REWARDS.get(key, self.DEFAULT_REWARD))
+
+    def can_claim(self, key):
+
+        return key in self.discovered and key not in self.claimed
+
+    def pending_count(self):
+
+        return sum(1 for k in self.ORDER if self.can_claim(k))
+
+    def _sprite_rect(self):
+
+        return self.pedestal_rect
+
+    def _claim(self, key):
+
+        if not self.can_claim(key):
+            return False
+
+        amount = self.reward_for(key)
+
+        self.claimed.add(key)
+
+        self.pops.append([f"+{amount}", 0.0])
+
+        if self.on_claim is not None:
+            self.on_claim(key, amount)
+
+        return True
 
     def _visible_range(self):
 
@@ -766,6 +821,12 @@ class EnemyEncyclopedia:
             if event.key == pygame.K_ESCAPE:
                 return "back"
 
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+
+                self._claim(self.ORDER[self.selected])
+
+                return None            
+
             if event.key in (
                 pygame.K_UP,
                 pygame.K_w,
@@ -860,6 +921,12 @@ class EnemyEncyclopedia:
 
                     return None
 
+                if self._sprite_rect().collidepoint(event.pos):
+
+                    self._claim(self.ORDER[self.selected])
+
+                    return None
+
                 index = self._row_at(event.pos)
 
                 if index is not None:
@@ -876,6 +943,13 @@ class EnemyEncyclopedia:
 
 
     def update(self, dt):
+
+        self.t += dt
+
+        for pop in self.pops:
+            pop[1] += dt
+
+        self.pops = [p for p in self.pops if p[1] < 1.2]
 
         diff = self.scroll - self.scroll_f
 
@@ -1077,6 +1151,27 @@ class EnemyEncyclopedia:
                 midleft=(text_left, rect.centery),
             )
 
+            if self.can_claim(key):
+
+                beat = 0.5 + 0.5 * math.sin(self.t * 6.0)
+
+                radius = max(5, round((8 + 2 * beat) * self.sy))
+
+                bx = rect.right - round(24 * self.sx)
+
+                by = rect.centery
+
+                if selected:
+                    bx -= round(26 * self.sx)
+
+                pygame.draw.circle(
+                    self.screen, (60, 40, 8), (bx, by), radius + 2
+                )
+
+                pygame.draw.circle(
+                    self.screen, (255, 205, 70), (bx, by), radius
+                )
+
             if selected:
 
                 size = max(6, round(9 * self.sy))
@@ -1176,6 +1271,8 @@ class EnemyEncyclopedia:
                 )
             )
 
+        self._draw_reward(key)
+
         desc_y = self.pedestal_rect.bottom + round(16 * self.sy)
 
         title_rect = self._blit_text(
@@ -1218,6 +1315,81 @@ class EnemyEncyclopedia:
 
             y += font.get_linesize() + 2
 
+    def _draw_reward(self, key):
+        rect = self.pedestal_rect
+
+        if self.can_claim(key):
+
+            beat = 0.5 + 0.5 * math.sin(self.t * 5.0)
+
+            glow = pygame.Surface(rect.size, pygame.SRCALPHA)
+
+            pygame.draw.rect(
+                glow,
+                (255, 205, 70, int(40 + 70 * beat)),
+                glow.get_rect(),
+                width=max(2, round(4 * self.sy)),
+                border_radius=14,
+            )
+
+            self.screen.blit(glow, rect)
+
+            text = f"¡Tocá la criatura! +{self.reward_for(key)} monedas"
+
+            font = self._font(max(14, round(26 * self.sy)))
+
+            surf = font.render(text, True, (255, 225, 120))
+
+            badge = surf.get_rect(
+                midbottom=(rect.centerx, rect.bottom - round(6 * self.sy))
+            ).inflate(round(16 * self.sx), round(8 * self.sy))
+
+            back = pygame.Surface(badge.size, pygame.SRCALPHA)
+
+            pygame.draw.rect(
+                back, (14, 16, 22, 215), back.get_rect(), border_radius=8
+            )
+
+            self.screen.blit(back, badge)
+
+            self.screen.blit(surf, surf.get_rect(center=badge.center))
+
+        elif self.is_discovered(key) and key in self.claimed:
+
+            font = self._font(max(12, round(22 * self.sy)))
+
+            surf = font.render("Recompensa cobrada", True, self.MUTED_COLOR)
+
+            self.screen.blit(
+                surf,
+                surf.get_rect(
+                    midbottom=(
+                        rect.centerx, rect.bottom - round(6 * self.sy)
+                    )
+                ),
+            )
+
+        for text, age in self.pops:
+
+            k = age / 1.2
+
+            alpha = max(0, int(255 * (1.0 - k * k)))
+
+            font = self._font(max(24, round(56 * self.sy)))
+
+            surf = font.render(text, True, (255, 215, 80))
+
+            surf.set_alpha(alpha)
+
+            rise = round(60 * self.sy * k)
+
+            self.screen.blit(
+                surf,
+                surf.get_rect(
+                    center=(rect.centerx, rect.centery - rise)
+                ),
+            )
+
     def _draw_hint(self):
 
         hint_x = self._slot_rect(0).left
@@ -1234,10 +1406,17 @@ class EnemyEncyclopedia:
 
         count = sum(1 for k in self.ORDER if self.is_discovered(k))
 
-        parts = (
-            f"Descubiertos: {count}/{total}",
-            "Flechas / W-S: elegir   ESC: volver",
-        )
+        pending = self.pending_count()
+
+        parts = [f"Descubiertos: {count}/{total}"]
+
+        if pending:
+            parts.append(
+                f"Recompensas sin cobrar: {pending} (tocá la criatura)"
+            )
+
+        parts.append("Flechas / W-S: elegir   ESC: volver")
+        
 
         size = max(14, round(24 * self.sy))
 
