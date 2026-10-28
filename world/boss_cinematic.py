@@ -33,6 +33,10 @@ BARS_OUT = 0.7
 
 VICTORY_TITLE = 3.4
 
+BOSS_TAG = "JEFE DE LA ZONA 1"
+BOSS_LABEL = "PIÑA COLOSAL"
+BOSS_SUB = "Esquivá sus fragmentos y pegale cuando esté entera"
+
 BAR_FRACTION = 0.115
 
 GOLD = (255, 214, 120)
@@ -363,8 +367,48 @@ class BossCinematic:
                 pygame.draw.line(screen, edge, (0, h), (sw, h), 1)
                 pygame.draw.line(screen, edge, (0, sh - h - 1), (sw, sh - h - 1), 1)
 
+        if self.mode == "intro" and self.title is None:
+            self._draw_preview(screen, sw, sh)
+
         if self.title is not None and self.title_t is not None:
             self._draw_title(screen, sw, sh)
+
+    def _draw_preview(self, screen, sw, sh):
+
+        start = 0.9 if self.first else 0.5
+
+        k = _ease_out((self.t - start) / 0.9)
+
+        if k <= 0.01:
+            return
+
+        cy = int(sh * 0.27)
+
+        tag = self._font(34).render(BOSS_TAG, True, (236, 224, 196))
+        name = self._font(78).render(BOSS_LABEL, True, GOLD)
+        sub = self._font(28).render(BOSS_SUB, True, (236, 224, 196))
+
+        shade_tag = self._font(34).render(BOSS_TAG, True, (20, 10, 2))
+        shade_name = self._font(78).render(BOSS_LABEL, True, GOLD_DARK)
+        shade_sub = self._font(28).render(BOSS_SUB, True, (20, 10, 2))
+
+        rise = int((1.0 - k) * 14)
+
+        rows = (
+            (tag, shade_tag, cy - 52),
+            (name, shade_name, cy),
+            (sub, shade_sub, cy + 48),
+        )
+
+        for img, shade, y in rows:
+
+            img.set_alpha(int(255 * k))
+            shade.set_alpha(int(255 * k))
+
+            pos = (sw // 2, y + rise)
+
+            screen.blit(shade, shade.get_rect(center=(pos[0] + 3, pos[1] + 3)))
+            screen.blit(img, img.get_rect(center=pos))
 
     def _glow_for(self, text, size):
 

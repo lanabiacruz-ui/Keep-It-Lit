@@ -2,50 +2,28 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-10-28T19:53:52",
+    "last_played": "2026-10-28T20:21:28",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 945,
-    "y": 146,
-    "coins": 96939,
+    "x": 984,
+    "y": 944,
+    "coins": 96940,
     "gems": 3,
     "gems_green": 0,
     "has_match": true,
-    "light": "antorcha",
-    "vida": 1.0,
-    "escudo": 0.75,
+    "light": "fosforo",
+    "vida": 0.4903333333333222,
+    "escudo": 0.0,
     "inventory": [
-        [
-            "hongo_azul",
-            4
-        ],
-        [
-            "repelente",
-            6
-        ],
-        [
-            "polvora",
-            8
-        ],
+        null,
+        null,
+        null,
         null
     ],
-    "collected": [
-        "moneda_sala_central#1",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_cabana#0",
-        "aceite_01#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_central#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_cofres#0",
-        "moneda5_sala_cofres#0",
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_der#0",
-        "moneda_sala_cofres#0"
-    ],
+    "collected": [],
     "item_seed": 757481128,
-    "arena_wave": 12,
-    "arena_completed": true,
+    "arena_wave": 11,
+    "arena_completed": false,
     "arena_left_wave": 1,
     "arena_left_completed": false,
     "broken_doors": [
@@ -116,7 +94,7 @@
         "items_used": 379,
         "chests_opened": 4,
         "purchases": 23,
-        "fireballs": 1460,
+        "fireballs": 1503,
         "kills": 210
     },
     "zones_seen": [
@@ -2482,6 +2460,132 @@
             "id": "hongo_azul",
             "x": 978,
             "y": 167,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 967,
+            "y": 172,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 949,
+            "y": 221,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 952,
+            "y": 204,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 960,
+            "y": 161,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 983,
+            "y": 144,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 939,
+            "y": 216,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 925,
+            "y": 167,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1013,
+            "y": 144,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 887,
+            "y": 169,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 933,
+            "y": 191,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 974,
+            "y": 164,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 950,
+            "y": 235,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 906,
+            "y": 170,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 931,
+            "y": 176,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 944,
+            "y": 147,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 970,
+            "y": 158,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 901,
+            "y": 146,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 927,
+            "y": 156,
             "map": "mapa1"
         },
         {

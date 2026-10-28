@@ -11,7 +11,7 @@ from world import pathing
 from world.items import WorldItem, get_gem_icon, get_green_gem_icon
 from world.boss_cinematic import BossCinematic
 from world.boss import (
-    PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH
+    PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH, BOSS_NAME
 )
 from world.melee import (
     ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
@@ -6173,24 +6173,13 @@ class Arena:
         right = getattr(game, "arena", None)
         right_done = bool(right is not None and right.completed)
 
-        if cfg.hard and not right_done:
+        if self._is_boss_wave():
             lines.append((
-                "¡CUIDADO! Esta zona es MUY difícil para empezar.",
-                26, (255, 110, 90)
+                f"¡JEFE! Te enfrentás a la {BOSS_NAME}", 30, (255, 214, 120)
             ))
             lines.append((
-                "Salí y andá primero a Orkun (zona 1), la sala de la derecha.",
+                "Guardiana de la gema: se parte en pedazos y invoca ayudantes.",
                 24, (255, 170, 120)
-            ))
-        elif cfg.hard:
-            lines.append((
-                "Zona difícil: entrá con buenas luces y tus objetos listos.",
-                24, (255, 170, 120)
-            ))
-        else:
-            lines.append((
-                "Zona 1: la mejor para empezar.",
-                26, (150, 235, 150)
             ))
 
         lines.append((
@@ -6245,8 +6234,6 @@ class Arena:
             pygame.draw.rect(
                 screen, (180, 180, 192), self.panel_rect, 3, border_radius=16
             )
-
-        self._draw_zone_warning(screen, game)
 
         draw_text(
             screen, self.cfg.title, 36, (255, 240, 200),
