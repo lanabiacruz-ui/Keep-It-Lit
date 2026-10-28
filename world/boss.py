@@ -36,7 +36,7 @@ import pygame
 BOSS_NAME = "PIÑA COLOSAL"
 
 # Vida total. El golpe del jugador hace 1 (fosforo/vela) o 2 (antorcha).
-BOSS_HP = 260.0
+BOSS_HP = 360.0
 
 # El juego dibuja con zoom x4: 1 unidad de mundo = 4 pixeles de sprite.
 REF_ZOOM = 4
@@ -50,7 +50,7 @@ MAX_MULT = 2.4
 MAX_ROOM_FRACTION = 0.8
 
 # En fase 2 todo (movimiento, tiempos, ataques) corre a esta velocidad.
-PHASE2_SPEED = 1.4
+PHASE2_SPEED = 1.55
 
 # Girar el sprite mientras rueda (como la piña normal). Ponelo en False si
 # tu dibujo tiene cara y no queres que gire.
@@ -60,16 +60,16 @@ ANIM_FRAME = 0.14
 
 INTRO_TIME = 1.8
 
-ROLL_SPEED = 62.0
+ROLL_SPEED = 110.0
 ROLL_TIME = 5.0
 GROW_TIME = 2.0
 HOLD_TIME = 1.6
 SHRINK_TIME = 1.5
-CENTER_SPEED = 170.0
+CENTER_SPEED = 220.0
 SPLIT_WIND = 1.1
 
 FRAG_COUNT = 12
-FRAG_SPEED = 150.0
+FRAG_SPEED = 175.0
 FRAG_TIME = 4.5
 REGROUP_START = 120.0
 REGROUP_ACCEL = 200.0
@@ -78,17 +78,17 @@ REGROUP_TIMEOUT = 7.0
 
 SUMMON_WIND = 1.3
 SUMMON_REST = 1.3
-SUMMON_COUNT = 5
+SUMMON_COUNT = 6
 WAIT_MIN = 1.0
 
 PHASE_TIME = 2.2
 DYING_TIME = 1.8
 
-BODY_DAMAGE = 0.15
-FRAG_DAMAGE = 0.12
+BODY_DAMAGE = 0.20
+FRAG_DAMAGE = 0.16
 
 # Con cuanta fuerza empuja al jugador al tocarlo
-CONTACT_PUSH = 260.0
+CONTACT_PUSH = 300.0
 
 BOUNCE_AIM = 0.6
 
@@ -1238,7 +1238,7 @@ def draw_boss_bar(screen, boss):
 
     if frac > 0:
 
-        color = (214, 62, 42) if boss.phase == 1 else (255, 122, 30)
+        color = (40, 200, 75) if boss.phase == 1 else (20, 240, 90)
 
         pygame.draw.rect(
             screen, color,
@@ -1246,7 +1246,7 @@ def draw_boss_bar(screen, boss):
             border_radius=4
         )
 
-        light = (240, 120, 100) if boss.phase == 1 else (255, 190, 90)
+        light = (120, 255, 145) if boss.phase == 1 else (150, 255, 175)
 
         pygame.draw.rect(
             screen, light,
