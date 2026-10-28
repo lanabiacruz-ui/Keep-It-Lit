@@ -100,9 +100,9 @@ MAX_PER_ITEM = 99
 INV_SLOTS = 4
 DEFAULT_STACK = 15
 
-# La bolsa no se guarda en un casillero: se coloca en el piso.
-# Las luces tienen su propio casillero extra (el de la mano).
-NOT_IN_INVENTORY = {"bolsa"}
+# La bolsa y el candil no se guardan en un casillero: salen al piso
+# y se arrastran. Las luces tienen su propio casillero extra (la mano).
+NOT_IN_INVENTORY = {"bolsa", "faro"}
 
 
 def is_skin(item_id):

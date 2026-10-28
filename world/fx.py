@@ -250,6 +250,21 @@ class FxManager:
 
         self._ring(x, y, 3, 22, 0.3, (255, 70, 60), 2)
 
+    @staticmethod
+    def item_color(item):
+
+        value = int(getattr(item, "value", 1) or 1)
+
+        if item.item_id in ("gema", "gema_verde"):
+            return (120, 210, 255) if item.item_id == "gema" else (110, 255, 160)
+
+        if item.item_id.startswith("moneda"):
+            return COIN_COLORS.get(
+                10 if value >= 10 else 5 if value >= 5 else 1
+            )
+
+        return (150, 200, 255)
+
     def draw_item_glow(self, screen, camera, item, t):
 
         f = getattr(item, "fly", None)
@@ -257,14 +272,7 @@ class FxManager:
         if f is not None:
             return
 
-        value = int(getattr(item, "value", 1) or 1)
-
-        if item.item_id in ("gema", "gema_verde"):
-            color = (120, 210, 255) if item.item_id == "gema" else (110, 255, 160)
-        else:
-            color = COIN_COLORS.get(
-                10 if value >= 10 else 5 if value >= 5 else 1
-            )
+        color = self.item_color(item)
 
         pulse = 0.65 + 0.35 * math.sin(t * 5 + item.rect.x * 0.37)
 
@@ -385,7 +393,8 @@ class FxManager:
             py = wy + math.sin(a) * r
 
             if inward:
-                vx, vy = -math.cos(a) * 40, -math.sin(a) * 40
+                # nacen en el borde y caen hacia el centro, rapido
+                vx, vy = -math.cos(a) * 95, -math.sin(a) * 95
             else:
                 vx, vy = random.uniform(-8, 8), random.uniform(-45, -15)
 
@@ -398,6 +407,141 @@ class FxManager:
 
         self._emit_acc[name] = acc
 
+
+    # ---------- iman ----------
+
+    def magnet_grab(self, x, y, color):
+
+        # el objeto "despierta": un destello chico y chispas hacia arriba
+        self._spark(x, y, 0, 0, 0.16, color, size=7, drag=0)
+
+        for _ in range(4):
+
+            self._spark(
+                x, y, -math.pi / 2 + random.uniform(-0.9, 0.9),
+                random.uniform(30, 70), random.uniform(0.2, 0.4),
+                color, size=1.6, drag=3.0
+            )
+
+    def magnet_absorb(self, x, y, color):
+
+        # al llegar al jugador: ondas y chispas que salen disparadas
+        white = (235, 245, 255)
+
+        self._spark(x, y, 0, 0, 0.2, white, size=11, drag=0)
+
+        for i in range(9):
+
+            a = math.tau * i / 9 + random.uniform(-0.25, 0.25)
+
+            self._spark(
+                x, y, a, random.uniform(70, 150), random.uniform(0.22, 0.4),
+                random.choice((color, white, (120, 190, 255))),
+                size=random.uniform(1.4, 2.4), drag=4.5, streak=True
+            )
+
+    def draw_magnet_field(self, screen, cx, cy, radius, phase, strength=1.0):
+
+        # anillos que se achican hacia el jugador + arcos que giran:
+        # se ve como un campo que succiona hacia adentro
+        if radius < 12:
+            return
+
+        size = int(radius * 2 + 16)
+        layer = pygame.Surface((size, size), pygame.SRCALPHA)
+        c = size // 2
+
+        for i in range(3):
+
+            k = (phase * 0.9 + i / 3.0) % 1.0
+
+            rr = int(radius * (1.0 - k * 0.92))
+
+            if rr < 4:
+                continue
+
+            alpha = int(150 * math.sin(math.pi * k) ** 1.5 * strength)
+
+            pygame.draw.circle(
+                layer, (120, 190, 255, alpha), (c, c), rr,
+                max(1, int(2 * (1.0 - k) + 1))
+            )
+
+        for i in range(4):
+
+            a0 = phase * 2.2 + i * math.pi / 2
+
+            rect = pygame.Rect(0, 0, radius * 2 - 6, radius * 2 - 6)
+            rect.center = (c, c)
+
+            pygame.draw.arc(
+                layer, (200, 230, 255, int(170 * strength)), rect,
+                a0, a0 + 0.55, 3
+            )
+            pygame.draw.arc(
+                layer, (110, 175, 255, int(90 * strength)), rect,
+                a0 - 0.35, a0, 2
+            )
+
+        screen.blit(
+            layer, layer.get_rect(center=(int(cx), int(cy))),
+        )
+
+    def draw_magnet_pull(self, screen, camera, items, player_pos):
+
+        # estela de cada objeto que esta siendo atraido
+        z = camera.zoom
+
+        for item in items:
+
+            trail = getattr(item, "_mag_trail", None)
+
+            if not trail or getattr(item, "_mag_t", 0) <= 0:
+                continue
+
+            color = self.item_color(item)
+
+            n = len(trail)
+
+            for i, (tx, ty) in enumerate(trail):
+
+                k = (i + 1) / (n + 1)
+
+                rad = max(3, int((3 + 6 * k) * z))
+
+                tint = tuple(int(v * k * 0.8) for v in color)
+
+                spr = self.glow_sprite(rad, tint)
+
+                sx = int(tx * z - camera.x)
+                sy = int(ty * z - camera.y)
+
+                screen.blit(
+                    spr, spr.get_rect(center=(sx, sy)),
+                    special_flags=pygame.BLEND_RGB_ADD
+                )
+
+            # hilito de luz entre el objeto y el jugador
+            ix, iy = item.rect.center
+            px, py = player_pos
+
+            d = math.hypot(px - ix, py - iy)
+
+            if d > 14:
+
+                a = min(1.0, getattr(item, "_mag_t", 0) / 0.25)
+
+                sx = int(ix * z - camera.x)
+                sy = int(iy * z - camera.y)
+
+                # punta del hilo: un poco hacia el jugador
+                ex = sx + int((px - ix) / d * 14 * z)
+                ey = sy + int((py - iy) / d * 14 * z)
+
+                pygame.draw.line(
+                    screen, tuple(int(v * 0.55 * a) for v in color),
+                    (sx, sy), (ex, ey), max(1, int(z))
+                )
 
     def update(self, dt):
 

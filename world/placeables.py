@@ -12,7 +12,19 @@ REACH = 64
 
 DRAG_RANGE = 56
 
-DRAG_SPEED = 16.0
+# si te alejas mas que esto del objeto arrastrado, se suelta
+DRAG_RELEASE = 120
+
+DRAG_SPEED = 22.0
+
+# maximo de px por paso al mover (evita atravesar paredes finas)
+DRAG_STEP = 2.0
+
+# margen extra para agarrar el objeto con el mouse (mas comodo)
+GRAB_PAD = 10
+
+# el objeto "se levanta" un poco mientras lo arrastras
+DRAG_LIFT = 4.0
 
 BAG_SLOTS = 4
 CHEST_SLOTS = 8
@@ -425,6 +437,21 @@ class Placeable:
         self.fly = None
         self._lift = 0.0
 
+        self._world_h = h
+
+        self.grab_dx = 0.0
+        self.grab_dy = 0.0
+
+    def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45):
+
+        self.fly = {
+            "src": src, "dst": dst, "delay": delay,
+            "t": 0.0, "dur": duration, "h": height,
+        }
+
+        self.rect.center = (round(src[0]), round(src[1]))
+
+    update_fly = _items.WorldItem.update_fly
 
     @property
     def uses_fuel(self):
@@ -537,11 +564,24 @@ class Placeable:
 
             self._scaled[key] = sprite
 
+            # alto real del dibujo en el mundo (para agarrarlo mejor)
+            self._world_h = max(self.rect.h, h / max(zoom, 0.01))
+
         return sprite
 
     def hit(self, wx, wy):
 
-        return self.rect.inflate(6, 6).collidepoint(wx, wy)
+        # el dibujo es mas alto que la caja: se puede agarrar por
+        # cualquier parte visible, con un poco de margen
+        area = self.rect.inflate(GRAB_PAD, GRAB_PAD)
+
+        extra = int(self._world_h - self.rect.h)
+
+        if extra > 0:
+            area.y -= extra
+            area.h += extra
+
+        return area.collidepoint(wx, wy)
 
     def draw(self, screen, camera, clock):
 
@@ -616,22 +656,12 @@ class Bag(Placeable):
     draggable = True
     container_slots = BAG_SLOTS
 
-    def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45):
-
-        self.fly = {
-            "src": src, "dst": dst, "delay": delay,
-            "t": 0.0, "dur": duration, "h": height,
-        }
-
-        self.rect.center = (round(src[0]), round(src[1]))
-
-    update_fly = _items.WorldItem.update_fly
-
 
 class Chest(Placeable):
 
+    # una vez puesto, el cofre queda fijo para siempre
     kind = "cofre"
-    draggable = True
+    draggable = False
     container_slots = CHEST_SLOTS
 
 
@@ -927,16 +957,25 @@ class PlaceableManager:
         return best
 
 
-    def spawn_bag(self, x, y, src=None, delay=0.0, collision_map=None):
+    def spawn(self, kind, x, y, src=None, delay=0.0):
 
-        bag = Bag(x, y)
+        # objetos que salen de la tienda (bolsa, candil): no pasan por
+        # el inventario, aparecen en el piso y se arrastran
+        obj = KINDS[kind](x, y)
+
+        if obj.uses_fuel:
+            obj.fuel = FARO_START if kind == "faro" else FOGATA_START
 
         if src is not None:
-            bag.start_fly(src, (x, y), delay=delay)
+            obj.start_fly(src, (x, y), delay=delay)
 
-        self.objects.append(bag)
+        self.objects.append(obj)
 
-        return bag
+        return obj
+
+    def spawn_bag(self, x, y, src=None, delay=0.0, collision_map=None):
+
+        return self.spawn("bolsa", x, y, src=src, delay=delay)
 
     def _spot_free(self, game, rect):
 
@@ -1102,6 +1141,14 @@ class PlaceableManager:
             obj = self._under_mouse(game)
 
             if obj is not None and obj.draggable:
+
+                wx, wy = self._mouse_world(game)
+
+                # se agarra desde donde hiciste click: no pega un salto
+                obj.grab_dx = obj.rect.centerx - wx
+                obj.grab_dy = obj.rect.centery - wy
+
+                self._unstick(game, obj)
 
                 self.dragging = obj
 
@@ -1651,6 +1698,19 @@ class PlaceableManager:
             ):
                 self.open_obj = None
 
+        for obj in self.objects:
+
+            if obj.fly is not None:
+                continue
+
+            # se levanta suave al agarrarlo y baja suave al soltarlo
+            want = DRAG_LIFT if obj is self.dragging else 0.0
+
+            obj._lift += (want - obj._lift) * min(1.0, 14.0 * dt)
+
+            if abs(obj._lift - want) < 0.05:
+                obj._lift = want
+
         if self.dragging is not None:
 
             obj = self.dragging
@@ -1658,8 +1718,10 @@ class PlaceableManager:
             if (
                 not pygame.mouse.get_pressed()[0]
                 or obj not in self.objects
-                or self._dist(game, obj) > DRAG_RANGE * 2
+                or self._dist(game, obj) > DRAG_RELEASE
             ):
+
+                self._drop(game, obj)
 
                 self.dragging = None
 
@@ -1667,9 +1729,85 @@ class PlaceableManager:
 
             self._drag(game, obj, dt)
 
+    # ---------- movimiento y colisiones de lo arrastrable ----------
+
+    def _footprint_ok(self, game, rect):
+
+        # 8 puntos del borde: no se cuela por paredes finas ni esquinas
+        cmap = game.collision_map
+
+        l, t = rect.left, rect.top
+        r, b = rect.right - 1, rect.bottom - 1
+        cx, cy = rect.centerx, rect.centery
+
+        for p in (
+            (cx, cy), (l, t), (cx, t), (r, t),
+            (l, cy), (r, cy), (l, b), (cx, b), (r, b),
+        ):
+            if not cmap.point_is_walkable(*p):
+                return False
+
+        return True
+
+    def _blocked_by_objects(self, obj, rect):
+
+        # caja un poco mas chica: roza a los vecinos sin trabarse
+        hit = rect.inflate(-2, -2)
+
+        for other in self.objects:
+
+            if other is obj or other.fly is not None:
+                continue
+
+            if other.rect.colliderect(hit):
+                return other
+
+        return None
+
+    def _spot_ok(self, game, obj, x, y):
+
+        r = pygame.Rect(0, 0, *obj.rect.size)
+        r.center = (int(round(x)), int(round(y)))
+
+        return (
+            self._footprint_ok(game, r)
+            and self._blocked_by_objects(obj, r) is None
+        )
+
+    def _unstick(self, game, obj):
+
+        # si quedo trabado (pared u otro objeto) lo saca al lugar libre
+        # mas cercano, asi nunca queda "pegado"
+        cx, cy = obj.rect.center
+
+        if self._spot_ok(game, obj, cx, cy):
+            return
+
+        for radius in range(2, 26, 2):
+
+            for i in range(16):
+
+                a = math.tau * i / 16
+
+                x = cx + math.cos(a) * radius
+                y = cy + math.sin(a) * radius
+
+                if self._spot_ok(game, obj, x, y):
+
+                    obj.rect.center = (int(round(x)), int(round(y)))
+
+                    return
+
+    def _drop(self, game, obj):
+
+        self._unstick(game, obj)
+
     def _drag(self, game, obj, dt):
 
         mx, my = self._mouse_world(game)
+
+        mx += obj.grab_dx
+        my += obj.grab_dy
 
         px, py = game.player.rect.center
 
@@ -1677,6 +1815,7 @@ class PlaceableManager:
 
         d = math.hypot(dx, dy)
 
+        # el objeto solo se puede llevar hasta DRAG_RANGE del jugador
         if d > DRAG_RANGE:
 
             mx = px + dx / d * DRAG_RANGE
@@ -1686,39 +1825,41 @@ class PlaceableManager:
 
         k = min(1.0, DRAG_SPEED * dt)
 
-        nx = cx + (mx - cx) * k
-        ny = cy + (my - cy) * k
+        mvx = (mx - cx) * k
+        mvy = (my - cy) * k
 
-        w, h = obj.rect.size
+        dist = math.hypot(mvx, mvy)
 
-        def ok(x, y):
+        if dist < 0.01:
+            return
 
-            r = pygame.Rect(0, 0, w, h)
-            r.center = (int(x), int(y))
+        # avanza de a pocos pixeles y desliza por los costados:
+        # en paredes y esquinas sigue por el eje que si esta libre
+        steps = max(1, int(math.ceil(dist / DRAG_STEP)))
 
-            for p in (
-                r.center, r.topleft, r.topright,
-                (r.left, r.bottom - 1), (r.right - 1, r.bottom - 1),
-            ):
-                if not game.collision_map.point_is_walkable(*p):
-                    return False
+        sx, sy = mvx / steps, mvy / steps
 
-            for other in self.objects:
+        fx, fy = float(cx), float(cy)
 
-                if other is not obj and other.fly is None \
-                        and other.rect.colliderect(r):
-                    return False
+        for _ in range(steps):
 
-            return True
+            if self._spot_ok(game, obj, fx + sx, fy + sy):
 
-        if ok(nx, ny):
-            obj.rect.center = (int(nx), int(ny))
+                fx += sx
+                fy += sy
 
-        elif ok(nx, cy):
-            obj.rect.center = (int(nx), cy)
+            elif sx and self._spot_ok(game, obj, fx + sx, fy):
 
-        elif ok(cx, ny):
-            obj.rect.center = (cx, int(ny))
+                fx += sx
+
+            elif sy and self._spot_ok(game, obj, fx, fy + sy):
+
+                fy += sy
+
+            else:
+                break
+
+        obj.rect.center = (int(round(fx)), int(round(fy)))
 
 
     def draw(self, screen, camera):

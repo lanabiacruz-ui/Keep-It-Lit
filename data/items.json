@@ -169,13 +169,13 @@
     },
     "cofre": {
         "nombre": "Cofre",
-        "descripcion": "Elegilo en la hotbar y hacé click en el mapa donde lo querés poner: después podés cambiarlo de lugar manteniendo click izquierdo sobre él y arrastrando. Click derecho sobre él para abrirlo. 8 casilleros, 15 por casillero.",
+        "descripcion": "Elegilo en la hotbar y hacé click en el mapa donde lo querés poner: queda fijo para siempre, así que pensá bien dónde. Click derecho sobre él para abrirlo. 8 casilleros, 15 por casillero.",
         "requiere_fosforo": false,
         "efectos": []
     },
     "faro": {
         "nombre": "Candil",
-        "descripcion": "El candil. Eligela y hacé click donde la quieras poner. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarla con cera (con la cera elegida, F o click derecho cerca). Se arrastra con click izquierdo mantenido.",
+        "descripcion": "El candil. No va al inventario: el vendedor lo escupe al piso. Mantené click izquierdo sobre él para arrastrarlo. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarlo con cera (con la cera elegida, F o click derecho cerca).",
         "requiere_fosforo": false,
         "efectos": []
     },

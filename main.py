@@ -115,10 +115,20 @@ def desired_music():
         current_state == "gameplay"
         and game is not None
         and game.state == "playing"
-        and any(a.state == a.WAVE for a in game.arenas)
     ):
 
-        return "combate"
+        # durante la entrada y la derrota del jefe suena solo la escena
+        if any(
+            getattr(a, "cinematic", None) is not None and a.cinematic.active
+            for a in game.arenas
+        ):
+            return None
+
+        for a in game.arenas:
+
+            if a.state == a.WAVE:
+
+                return "jefe" if a._is_boss_wave() else "combate"
 
     return "ambiente"
 

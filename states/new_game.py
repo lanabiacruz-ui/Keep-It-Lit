@@ -147,6 +147,12 @@ MAGNET_SPEED_NEAR = 360.0
 
 MAGNET_PICKUP_DISTANCE = 10
 
+# segundos que tarda el objeto en "despertar" antes de salir volando
+MAGNET_WAKE = 0.14
+
+# largo de la estela (posiciones guardadas)
+MAGNET_TRAIL = 7
+
 MAGNET_NEEDS_ITEM = True
 
 REPEL_RING_COLOR = (120, 235, 130)
@@ -427,6 +433,11 @@ class NewGame:
         self.coins = int(self.save_data.get("coins", 0))
 
         self.gems = int(self.save_data.get("gems", 0))
+
+        # la entrada epica del jefe se muestra completa solo la primera vez
+        self.boss_intro_seen = bool(
+            self.save_data.get("boss_intro_seen", False)
+        )
 
         self.gems_green = int(self.save_data.get("gems_green", 0))
 
@@ -1390,24 +1401,22 @@ class NewGame:
             },
             {
                 "text": (
-                    "Pegale con tu vela a la puerta gris de la DERECHA: "
-                    "lleva a Orkun, la zona 1. No vayas a la de la "
-                    "izquierda (Stonun, zona 2): es muy difícil."
+                    "Pegale con tu vela a una puerta gris de la sala "
+                    "central para romperla."
                 ),
                 "tuto": [
-                    "ZONA 1: la puerta gris de la DERECHA de la sala central lleva a Orkun, la zona para empezar. Se rompe solo con vela o antorcha. Seguí la flecha.",
-                    "ZONA 2: la puerta gris de la izquierda lleva a Stonun, que es MUY difícil. No vayas hasta tener buenas luces y haber pasado Orkun.",
+                    "PUERTAS: las puertas grises de la sala central llevan a las zonas de combate. Se rompen solo con vela o antorcha. Seguí la flecha.",
                 ],
                 "target": lambda g: door_point("sala_der"),
                 "done": lambda g: "sala_der" in g.doors.broken_ids,
             },
             {
                 "text": (
-                    "Entrá a Orkun (zona 1, a la derecha) y elegí cómo "
+                    "Entrá a una zona de combate y elegí cómo "
                     "jugar: con escape o sin escape (premio doble)."
                 ),
                 "tuto": [
-                    "ORKUN (ZONA 1): tiene oleadas de enemigos. Antes de entrar te avisa el nombre de la zona y al entrar elegís cómo jugar. Evitá Stonun (zona 2) por ahora.",
+                    "ZONAS DE COMBATE: tienen oleadas de enemigos. Antes de entrar te avisa el nombre de la zona y al entrar elegís cómo jugar.",
                     "JUGAR CON ESCAPE: la salida queda abierta, así que si te complicás podés irte caminando y volver después. El premio es el normal. Ideal para aprender.",
                     "JUGAR SIN ESCAPE (X2 PREMIO): la salida se cierra hasta que termines la oleada. No podés huir, pero ganás el doble de monedas. Si tu luz se apaga, perdés.",
                 ],
@@ -1456,7 +1465,7 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata y candil. Elegí uno en tu casillero y hacé click en el mapa donde lo querés poner.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata y candil. La bolsa y el candil salen al piso y los movés con click izquierdo mantenido. El cofre y la fogata los elegís en tu casillero y hacés click en el mapa: quedan fijos para siempre.",
                     "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más chico y come cera. Ideales como base de descanso entre oleadas.",
                 ],
                 "target": lambda g: (
@@ -1598,6 +1607,14 @@ class NewGame:
     def pick_up_item(self, item):
 
         item_id = item.item_id
+
+        if getattr(item, "_mag_t", 0) > 0:
+
+            # llego por el iman: absorbe con destello y onda
+            self.fx.magnet_absorb(
+                item.rect.centerx, item.rect.centery,
+                self.fx.item_color(item)
+            )
 
         if item_id in COIN_VALUES:
 
@@ -2181,9 +2198,20 @@ class NewGame:
                 dt
             )
 
+    def cinematic_lock(self):
+
+        # mientras entra o cae el jefe, el jugador mira (no se mueve ni pega)
+        return any(
+            getattr(a, "cinematic", None) is not None and a.cinematic.active
+            for a in self.arenas
+        )
+
     def _attack(self):
 
         if self.state != "playing":
+            return
+
+        if self.cinematic_lock():
             return
 
         if not self.has_match:
@@ -2821,7 +2849,7 @@ class NewGame:
             if is_skin_item(item_id):
                 continue
 
-            if item_id == "bolsa":
+            if item_id in ("bolsa", "faro"):
 
                 for _ in range(qty):
 
@@ -2834,8 +2862,8 @@ class NewGame:
                         landing = self.player.rect.center
                         mouth = None
 
-                    self.placeables.spawn_bag(
-                        landing[0], landing[1],
+                    self.placeables.spawn(
+                        item_id, landing[0], landing[1],
                         src=mouth, delay=0.3
                     )
 
@@ -3007,6 +3035,7 @@ class NewGame:
 
             "coins": self.coins,
             "ganzua_uses": self.ganzua_uses,
+            "boss_intro_seen": self.boss_intro_seen,
             "gems": self.gems,
             "gems_green": self.gems_green,
 
@@ -3988,6 +4017,8 @@ class NewGame:
             self.player
         ) > 0
 
+        lock = self.cinematic_lock()
+
         if self.has_match:
 
             if in_shop:
@@ -3997,7 +4028,7 @@ class NewGame:
                     self.vida + dt / SHOP_RECHARGE_TIME
                 )
 
-            else:
+            elif not lock:
 
                 burn = (
                     self.base_burn
@@ -4103,10 +4134,12 @@ class NewGame:
                 self.regen_rate = 0.0
 
 
-        self.player.update(
-            dt,
-            self.collision_map
-        )
+        if not lock:
+
+            self.player.update(
+                dt,
+                self.collision_map
+            )
 
 
         self.camera.update(
@@ -4225,6 +4258,8 @@ class NewGame:
 
                     continue
 
+            self._magnet_release(item)
+
             if item.item_id not in COIN_VALUES:
                 continue
 
@@ -4330,16 +4365,48 @@ class NewGame:
 
         return self._free_slot_for(item_id) is not None
 
+    def _magnet_release(self, item):
+
+        # el objeto ya no esta siendo atraido: vuelve a su estado normal
+        if getattr(item, "_mag_t", 0) > 0:
+
+            item._mag_t = 0.0
+            item._mag_trail = []
+            item._lift = 0.0
+
     def _magnet_pull(self, item, px, py, dist, dt):
+
+        t = getattr(item, "_mag_t", 0.0)
+
+        if t <= 0:
+
+            # recien lo agarra el iman: destello + semilla del giro
+            item._mag_trail = []
+            item._mag_spin = random.choice((-1.0, 1.0))
+
+            self.fx.magnet_grab(
+                item.rect.centerx, item.rect.centery,
+                self.fx.item_color(item)
+            )
+
+        t += dt
+        item._mag_t = t
 
         k = 1.0 - min(1.0, dist / MAGNET_RADIUS)
 
+        # primero "despierta" (se levanta y retrocede un poquito) y
+        # despues acelera cada vez mas fuerte hacia el jugador
+        ramp = min(1.0, t / MAGNET_WAKE)
+
         speed = (
             MAGNET_SPEED_FAR
-            + (MAGNET_SPEED_NEAR - MAGNET_SPEED_FAR) * k
-        )
+            + (MAGNET_SPEED_NEAR - MAGNET_SPEED_FAR) * (k ** 1.4)
+        ) * (0.25 + 0.75 * ramp) * (1.0 + min(1.0, t) * 0.6)
 
-        step = min(speed * dt, dist)
+        if t < MAGNET_WAKE:
+            speed = -26.0 * (1.0 - t / MAGNET_WAKE)
+
+        step = min(abs(speed) * dt, dist) * (1 if speed >= 0 else -1)
 
         fx = getattr(item, "_mag_x", None)
         fy = getattr(item, "_mag_y", None)
@@ -4354,8 +4421,17 @@ class NewGame:
         dx = (px - fx) / max(0.01, dist)
         dy = (py - fy) / max(0.01, dist)
 
-        nx = fx + dx * step
-        ny = fy + dy * step
+        # curva: un empuje de costado que se apaga al acercarse, asi
+        # los objetos entran en espiral en vez de ir en linea recta
+        swirl = item._mag_spin * (1.0 - k) * 0.55 * min(1.0, t / 0.4)
+
+        mx = dx - dy * swirl
+        my = dy + dx * swirl
+
+        norm = max(0.01, math.hypot(mx, my))
+
+        nx = fx + mx / norm * step
+        ny = fy + my / norm * step
 
         walk = self.collision_map.point_is_walkable
 
@@ -4375,6 +4451,16 @@ class NewGame:
         item._mag_y = fy
 
         item.rect.center = (round(fx), round(fy))
+
+        # flota mientras viaja y baja al llegar
+        item._lift = 6.0 * min(1.0, t / 0.2) * (1.0 - 0.7 * k)
+
+        trail = item._mag_trail
+
+        trail.append((fx, fy - item._lift))
+
+        if len(trail) > MAGNET_TRAIL:
+            del trail[0]
 
 
     def _lit_rects(self):
@@ -4764,6 +4850,12 @@ class NewGame:
 
             if getattr(item, "sparkle", False):
                 self.fx.draw_item_glow(self.screen, self.camera, item, now)
+
+        if self._magnet_active():
+            self.fx.draw_magnet_pull(
+                self.screen, self.camera, self.world_items,
+                self.player.rect.center
+            )
 
         self.fx.draw(self.screen, self.camera)
 
