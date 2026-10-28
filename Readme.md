@@ -26,8 +26,7 @@ Hay dos modos: en Normal perdés tus objetos al morir, y en Hardcore se borra to
 Necesitás Python 3.9+ y Pygame 2.x.
 
 
-pip install pygame
-python main.py
+run_game.py
 
 
 ## Controles
@@ -55,4 +54,5 @@ player/     # Movimiento y animación
 ui/         # HUD, tutorial y objetivos
 data/       # Configuración en JSON
 assets/     # Imágenes y sonidos
+
 ```
