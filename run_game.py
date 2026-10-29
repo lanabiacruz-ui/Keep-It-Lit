@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import subprocess
 import sys
 import os
@@ -13,18 +12,18 @@ Comprobando el entorno de ejecución de Pygame...""")
 Pygame detectado; iniciando el juego...""")
     except ImportError:
         print("""\n未检测到 Pygame，正在尝试自动下载安装...
-No se ha detectado Pygame; se intentará descargarlo e instalarlo automáticamente...""")
+No se ha detectado Pygame; se intentará descargarlo e instarlo automáticamente...""")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pygame"])
         except subprocess.CalledProcessError:
-            print("\n\nNo ha descargdo correctamente, tu vercion es muy anvazado,vamos a provar con PYGAME COMUNITY EDITON")
+            print("\n\nNo ha descargado correctamente, tu versión es muy avanzado,vamos a probar con PYGAME COMMUNITY EDITION")
             subprocess.check_call([sys.executable, "-m", "pip", "install", "pygame-ce"])
     
-    """
-           HAY OTRO FORMA DE HACER,LO CUAL ESTÀ ABAJO
-                                                            """
+    comentario="""
+           HAY OTRO FORMA DE HACER,LO CUAL ESTÁ ABAJO
+           """
     
-    """        except subprocess.CalledProcessError:
+    comentario="""        except subprocess.CalledProcessError:
             print("官方源下载失败，正在切换至国内清华镜像源加速下载...")
             try:
                 subprocess.check_call([
