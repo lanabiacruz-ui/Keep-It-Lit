@@ -521,28 +521,6 @@ class FxManager:
                     special_flags=pygame.BLEND_RGB_ADD
                 )
 
-            # hilito de luz entre el objeto y el jugador
-            ix, iy = item.rect.center
-            px, py = player_pos
-
-            d = math.hypot(px - ix, py - iy)
-
-            if d > 14:
-
-                a = min(1.0, getattr(item, "_mag_t", 0) / 0.25)
-
-                sx = int(ix * z - camera.x)
-                sy = int(iy * z - camera.y)
-
-                # punta del hilo: un poco hacia el jugador
-                ex = sx + int((px - ix) / d * 14 * z)
-                ey = sy + int((py - iy) / d * 14 * z)
-
-                pygame.draw.line(
-                    screen, tuple(int(v * 0.55 * a) for v in color),
-                    (sx, sy), (ex, ey), max(1, int(z))
-                )
-
     def update(self, dt):
 
         for p in self.particles:

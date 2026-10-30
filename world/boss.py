@@ -87,8 +87,8 @@ DYING_TIME = 4.6
 # cada tanto, mientras se rompe, suelta un crujido (evento "crack")
 CRACK_EVERY = 0.75
 
-BODY_DAMAGE = 0.20
-FRAG_DAMAGE = 0.16
+BODY_DAMAGE = 0.25
+FRAG_DAMAGE = 0.25
 
 # Con cuanta fuerza empuja al jugador al tocarlo
 CONTACT_PUSH = 300.0

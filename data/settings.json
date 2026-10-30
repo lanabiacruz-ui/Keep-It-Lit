@@ -1,5 +1,5 @@
 {
-    "music_volume": 0.04,
+    "music_volume": 0.013,
     "sfx_volume": 0.018,
     "fullscreen": true,
     "controls": {
@@ -18,6 +18,6 @@
         "slot4": 52,
         "equipped": 53
     },
-    "skin": "coctel",
+    "skin": "zona_1",
     "skins_owned": []
 }

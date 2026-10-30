@@ -127,6 +127,9 @@ ENEMY_KNOCKBACK = 150.0
 ENEMY_STUN_TIME = 0.25
 ENEMY_FLASH_TIME = 0.12
 ENEMY_SPAWN_TIME = 0.8
+
+# Segundos que duran los enemigos que invoca el jefe antes de irse
+BOSS_MINION_LIFE = 50.0
 ENEMY_ANIM_FRAME = 0.15
 ENEMY_SPIN_RATE = 2.0
 ENEMY_HOP_DIST = 38.0
@@ -4928,9 +4931,42 @@ class Arena:
             enemy.codex_key = kind
             enemy.room = room
 
+            # se van solos a los BOSS_MINION_LIFE segundos
+            enemy.boss_life = BOSS_MINION_LIFE
+
             self.enemies.append(enemy)
 
         game.show_message("La piña invoca refuerzos!")
+
+    def _expire_minions(self, game, boss, dt):
+        """Los enemigos invocados por el jefe desaparecen despues de 50 s.
+
+        Se van sin soltar nada (no cuentan como muertos del jugador).
+        """
+
+        gone = []
+
+        for e in self.enemies:
+
+            life = getattr(e, "boss_life", None)
+
+            if life is None or e is boss:
+                continue
+
+            e.boss_life = life - dt
+
+            if e.boss_life <= 0:
+                gone.append(e)
+
+        if not gone:
+            return
+
+        for e in gone:
+            self._death_puff(pygame.Vector2(e.pos))
+
+        self.enemies = [e for e in self.enemies if e not in gone]
+
+        game.show_message("Los refuerzos de la piña se fueron!")
 
     def _update_boss(self, game, boss, dt, target, body):
 
@@ -4939,6 +4975,9 @@ class Arena:
         )
 
         boss.update(dt, target)
+
+        if not boss.dying:
+            self._expire_minions(game, boss, dt)
 
         for event in boss.events:
             self._boss_event(game, boss, event)

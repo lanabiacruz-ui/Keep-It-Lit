@@ -16,8 +16,8 @@ COMBAT_DIR = (
     / "combate"
 )
 
-DRAW_SIZE = 15
-HITBOX = (12, 12)
+DRAW_SIZE = 18
+HITBOX = (14, 14)
 HP = 4
 
 WALK_SPEED = 24

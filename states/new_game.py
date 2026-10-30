@@ -142,13 +142,13 @@ COIN_GAIN_FADE = 0.5
 
 
 MAGNET_RADIUS = 130
-MAGNET_SPEED_FAR = 120.0
-MAGNET_SPEED_NEAR = 360.0
+MAGNET_SPEED_FAR = 55.0
+MAGNET_SPEED_NEAR = 150.0
 
 MAGNET_PICKUP_DISTANCE = 10
 
 # segundos que tarda el objeto en "despertar" antes de salir volando
-MAGNET_WAKE = 0.14
+MAGNET_WAKE = 0.35
 
 # largo de la estela (posiciones guardadas)
 MAGNET_TRAIL = 7
