@@ -616,6 +616,11 @@ class NewGame:
         self.repel_timer = 0.0
         self.repel_total = 1.0
 
+        # escudo amarillo (hongo amarillo): invulnerable mientras dura
+        self.yshield_timer = 0.0
+        self.yshield_total = 1.0
+        self.yshield_flash = 0.0
+
         self.magnet_timer = 0.0
         self.magnet_total = 1.0
 
@@ -737,6 +742,13 @@ class NewGame:
     def take_damage(self, amount):
 
         if amount <= 0:
+            return
+
+        # escudo amarillo: el golpe no hace nada
+        if self.yshield_timer > 0:
+
+            self.yshield_flash = 0.3
+
             return
 
         audio.play("hurt")
@@ -1376,7 +1388,7 @@ class NewGame:
                 ),
                 "tuto": [
                     "COFRES: están en la sala de arriba a la izquierda. Acercate y apretá F (cuenta como un golpe) y después ESPACIO cuando el marcador esté en la zona marcada.",
-                    "Cada cofre se abre de 10 a 15 veces seguidas y después descansa 3 minutos. Dan monedas, madera, cera, aceite... y con suerte una GANZÚA, que abre un cofre sin minijuego y dura 3 usos.",
+                    "Cada cofre se abre 10 veces seguidas y después descansa 3 minutos. Dan monedas, madera, cera, aceite... y con suerte una GANZÚA, que abre un cofre sin minijuego y dura 3 usos.",
                 ],
                 "target": lambda g: zone_center("cofres"),
                 "done": lambda g: g.stats["chests_opened"] >= 1,
@@ -2008,6 +2020,17 @@ class NewGame:
             self.sphere_total = float(e.get("duracion", 120.0))
             self.sphere_timer = self.sphere_total
 
+        elif tipo == "escudo_amarillo":
+
+            if self.yshield_timer > 0:
+
+                self.show_message("Ya tenés el escudo amarillo activo")
+                return False
+
+            self.yshield_total = float(e.get("duracion", 8.0))
+            self.yshield_timer = self.yshield_total
+            self.yshield_flash = 0.3
+
         elif tipo == "escudo_sumar":
 
             self.escudo = min(
@@ -2076,6 +2099,43 @@ class NewGame:
 
             self.escudo = min(1.0, self.escudo + e["escudo"])
 
+    def _draw_yellow_shield(self):
+        """Burbuja amarilla alrededor del jugador mientras dura el escudo."""
+
+        if self.yshield_timer <= 0:
+            return
+
+        now = pygame.time.get_ticks() / 1000.0
+
+        # parpadea en el ultimo segundo y medio
+        if self.yshield_timer < 1.5 and int(now * 8) % 2 == 0:
+            return
+
+        zoom = self.camera.zoom
+
+        cx = self.player.rect.centerx * zoom - self.camera.x
+        cy = self.player.rect.centery * zoom - self.camera.y
+
+        radius = max(12, int(15 * zoom * (1.0 + 0.04 * math.sin(now * 6))))
+
+        flash = min(1.0, self.yshield_flash / 0.3)
+
+        size = radius * 2 + 12
+
+        layer = pygame.Surface((size, size), pygame.SRCALPHA)
+
+        mid = size // 2
+
+        pygame.draw.circle(
+            layer, (255, 215, 60, int(55 + 80 * flash)), (mid, mid), radius
+        )
+        pygame.draw.circle(
+            layer, (255, 240, 150, int(170 + 85 * flash)),
+            (mid, mid), radius, max(2, radius // 8)
+        )
+
+        self.screen.blit(layer, layer.get_rect(center=(round(cx), round(cy))))
+
     def _active_effects(self):
 
         active = {}
@@ -2103,6 +2163,11 @@ class NewGame:
 
         if self.repel_timer > 0:
             active["repelente"] = self.repel_timer / self.repel_total
+
+        if self.yshield_timer > 0:
+            active["escudo_amarillo"] = (
+                self.yshield_timer / self.yshield_total
+            )
 
         if self.magnet_timer > 0:
             active["iman"] = self.magnet_timer / self.magnet_total
@@ -4096,6 +4161,14 @@ class NewGame:
 
             self.repel_timer = max(0.0, self.repel_timer - dt)
 
+        if self.yshield_timer > 0:
+
+            self.yshield_timer = max(0.0, self.yshield_timer - dt)
+
+        if self.yshield_flash > 0:
+
+            self.yshield_flash = max(0.0, self.yshield_flash - dt)
+
         if self.magnet_timer > 0 and self.magnet_mode:
 
             self.magnet_timer = max(0.0, self.magnet_timer - dt)
@@ -4133,6 +4206,12 @@ class NewGame:
                 self.regen_left = 0.0
                 self.regen_rate = 0.0
 
+
+        # los slimes son solidos: no se los puede atravesar
+        self.collision_map.dynamic_blockers = [
+            s.rect for s in self.slimes.slimes
+            if not s.dead and not s.gone
+        ]
 
         if not lock:
 
@@ -4838,6 +4917,8 @@ class NewGame:
                     MAGNET_RADIUS * self.camera.zoom, (110, 180, 255),
                     pygame.time.get_ticks() / 1000.0 * 0.6, 0.55
                 )
+
+        self._draw_yellow_shield()
 
         self.placeables.draw_ghost(self, self.screen)
 

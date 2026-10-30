@@ -6,7 +6,7 @@ import pygame
 
 from core.achievements import achievements
 from core.audio_manager import audio
-from world.items import WorldItem
+from world.items import WorldItem, coin_id_for, split_coins
 from world.zones import ZONES
 
 COMBAT_DIR = (
@@ -701,11 +701,12 @@ class SlimeManager:
 
             drops.append(chop)
 
-        for n in range(slime.cfg["coins"]):
+        # pocas monedas grandes (azules/rojas) en vez de muchas doradas
+        for n, value in enumerate(split_coins(slime.cfg["coins"])):
 
-            coin = WorldItem("moneda", cx, cy)
+            coin = WorldItem(coin_id_for(value), cx, cy)
 
-            coin.value = 1
+            coin.value = value
             coin.sparkle = True
 
             coin.start_fly(

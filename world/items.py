@@ -473,6 +473,41 @@ class LightItem(MatchItem):
 COIN_SPAWN_IDS = ("moneda", "moneda_5", "moneda_10")
 
 
+def coin_id_for(value):
+    """Que moneda se dibuja segun cuanto vale: dorada 1, azul 5, roja 10."""
+
+    if value >= 10:
+        return "moneda_10"
+
+    if value >= 5:
+        return "moneda_5"
+
+    return "moneda"
+
+
+def split_coins(total, max_items=None):
+    """Reparte un total de monedas en pocas monedas grandes.
+
+    En vez de soltar 30 monedas doradas suelta 3 rojas (10 cada una). Asi no
+    se llena el piso. Devuelve la lista de valores, uno por moneda.
+    """
+
+    total = max(0, int(total))
+
+    reds, rest = divmod(total, 10)
+    blues, golds = divmod(rest, 5)
+
+    values = [10] * reds + [5] * blues + [1] * golds
+
+    if max_items and len(values) > max_items:
+
+        base, extra = divmod(total, max_items)
+
+        values = [base + (1 if n < extra else 0) for n in range(max_items)]
+
+    return values
+
+
 def make_spawn_items(zones, defs, collision_map, seed, collected):
 
     rng = random.Random(seed)

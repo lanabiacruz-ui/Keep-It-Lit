@@ -23,6 +23,7 @@ EFFECTS = {
     "repelente": {"label": "Repelente", "color": (80, 190, 96)},
     "iman":      {"label": "Iman",      "color": (226, 76, 88)},
     "esfera":    {"label": "Esfera",    "color": (96, 190, 240)},
+    "escudo_amarillo": {"label": "Escudo", "color": (255, 215, 60)},
     "mosquito": {"label": "Mosquito cerca!", "color": (255, 120, 110),
                  "alert": True},
 }

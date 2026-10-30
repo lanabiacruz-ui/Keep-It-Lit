@@ -1,6 +1,6 @@
 {
-    "music_volume": 0.013,
-    "sfx_volume": 0.018,
+    "music_volume": 0.018,
+    "sfx_volume": 0.022,
     "fullscreen": true,
     "controls": {
         "up": 119,
@@ -18,6 +18,6 @@
         "slot4": 52,
         "equipped": 53
     },
-    "skin": "zona_1",
+    "skin": "exterminador",
     "skins_owned": []
 }

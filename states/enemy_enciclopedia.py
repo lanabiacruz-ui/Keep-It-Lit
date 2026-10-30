@@ -445,10 +445,11 @@ class EnemyEncyclopedia:
 
         back_size = self.back_rect.size
 
+        # Con alfa: si se descarta el canal alfa, el contorno casi
+        # transparente del PNG aparece como un marco fantasma.
         self.bg_img = self._load_ui(
             "tablet_enemigos.png",
             (self.width, self.height),
-            alpha=False
         )
 
         self.row_img = self._load_ui(

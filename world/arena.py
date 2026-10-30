@@ -8,7 +8,9 @@ from core.achievements import achievements
 from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
-from world.items import WorldItem, get_gem_icon, get_green_gem_icon
+from world.items import (
+    WorldItem, coin_id_for, split_coins, get_gem_icon, get_green_gem_icon
+)
 from world.boss_cinematic import BossCinematic
 from world.boss import (
     PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH, BOSS_NAME
@@ -129,7 +131,7 @@ ENEMY_FLASH_TIME = 0.12
 ENEMY_SPAWN_TIME = 0.8
 
 # Segundos que duran los enemigos que invoca el jefe antes de irse
-BOSS_MINION_LIFE = 50.0
+BOSS_MINION_LIFE = 35.0
 ENEMY_ANIM_FRAME = 0.15
 ENEMY_SPIN_RATE = 2.0
 ENEMY_HOP_DIST = 38.0
@@ -4939,7 +4941,7 @@ class Arena:
         game.show_message("La piña invoca refuerzos!")
 
     def _expire_minions(self, game, boss, dt):
-        """Los enemigos invocados por el jefe desaparecen despues de 50 s.
+        """Los enemigos invocados por el jefe desaparecen despues de 35 s.
 
         Se van sin soltar nada (no cuentan como muertos del jugador).
         """
@@ -5189,17 +5191,16 @@ class Arena:
                 ]),
             })
 
-        items = max(1, min(self.reward, MAX_COIN_ITEMS))
-
-        base, extra = divmod(self.reward, items)
+        # pocas monedas grandes (azules/rojas) en vez de muchas doradas
+        values = split_coins(self.reward, MAX_COIN_ITEMS) or [self.reward]
 
         self.reward_coins = []
 
-        for n in range(items):
+        for n, value in enumerate(values):
 
-            coin = WorldItem("moneda", cx, cy)
+            coin = WorldItem(coin_id_for(value), cx, cy)
 
-            coin.value = base + (1 if n < extra else 0)
+            coin.value = value
             coin.sparkle = True
 
             target = self._coin_target(game, cx, cy)

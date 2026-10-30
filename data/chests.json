@@ -2,7 +2,7 @@
   "espera_segundos": 180,
   "aperturas_por_cofre": [
     10,
-    15
+    10
   ],
   "items_por_apertura": {
     "4": 35,
@@ -18,7 +18,8 @@
     "aceite": 5,
     "resina": 4,
     "polvora": 3,
-    "ganzua": 1
+    "ganzua": 1,
+    "hongo_amarillo": 1
   },
   "cofres": [
     {

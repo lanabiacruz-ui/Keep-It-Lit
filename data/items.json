@@ -204,5 +204,16 @@
                 ]
             }
         ]
+    },
+    "hongo_amarillo": {
+        "nombre": "Hongo amarillo",
+        "descripcion": "Muy raro: solo sale de los cofres. Te rodea un escudo amarillo durante 8 segundos: nada te hace daño mientras dure.",
+        "requiere_fosforo": false,
+        "efectos": [
+            {
+                "tipo": "escudo_amarillo",
+                "duracion": 8
+            }
+        ]
     }
 }

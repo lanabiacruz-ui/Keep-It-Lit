@@ -308,7 +308,7 @@ class Settings:
             path = UI_DIR / "mapaajustes.png"
 
         try:
-            image = pygame.image.load(str(path)).convert()
+            image = pygame.image.load(str(path)).convert_alpha()
 
         except (pygame.error, FileNotFoundError):
 
@@ -317,6 +317,9 @@ class Settings:
 
             return surface
 
+        # Se mantiene el alfa: las partes transparentes del PNG dejan
+        # ver lo que hay detras (el juego en pausa). Las imagenes opacas
+        # (mapaajustes.png, etc.) se ven igual que antes.
         return pygame.transform.smoothscale(
             image, (self.width, self.height)
         )

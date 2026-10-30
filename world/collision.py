@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import pygame
@@ -13,6 +12,10 @@ class CollisionMap:
         self.doors = None
 
         self._pt = pygame.Rect(0, 0, 1, 1)
+
+        # Rects de cosas moviles (slimes) que el jugador no puede atravesar.
+        # Los actualiza el juego en cada frame.
+        self.dynamic_blockers = []
 
         # --------------------------------------------------
         # COLISIONES DEL MAPA 1
@@ -223,6 +226,20 @@ class CollisionMap:
     # ------------------------------------------------------
     # COMPROBAR MOVIMIENTO DEL JUGADOR
     # ------------------------------------------------------
+
+    def hits_dynamic(self, test, current):
+        """True si `test` se mete en una cosa movil (slime).
+
+        Si el jugador ya estaba tocando esa cosa (`current`), se deja moverse
+        para que pueda salir y no quede trabado.
+        """
+
+        for blocker in self.dynamic_blockers:
+
+            if test.colliderect(blocker) and not current.colliderect(blocker):
+                return True
+
+        return False
 
     def can_move(self, rect):
 

@@ -5,12 +5,14 @@
         "pirotecnico": "2026-10-28T19:07:45",
         "zona_1": "2026-10-28T19:23:17",
         "slime_brillante": "2026-10-28T19:25:28",
-        "exterminador": "2026-10-29T21:37:56"
+        "exterminador": "2026-10-29T21:37:56",
+        "saqueador": "2026-10-29T22:48:47"
     },
     "counters": {
         "defeats": 13,
         "fireballs": 2176,
         "kills": 223,
-        "slimes": 7
+        "slimes": 10,
+        "chests": 27
     }
 }

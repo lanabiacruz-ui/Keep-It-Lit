@@ -93,5 +93,10 @@ class PlayerMovement:
             if not collision_map.can_move(test):
                 break
 
+            hits = getattr(collision_map, "hits_dynamic", None)
+
+            if hits is not None and hits(test, rect):
+                break
+
             rect.x = test.x
             rect.y = test.y
