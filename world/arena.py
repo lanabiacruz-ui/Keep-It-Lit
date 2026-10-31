@@ -12,6 +12,7 @@ from world.items import (
     WorldItem, coin_id_for, split_coins, get_gem_icon, get_green_gem_icon
 )
 from world.boss_cinematic import BossCinematic
+from world.boss_golem import GolemBoss, GolemBossArt
 from world.boss import (
     PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH, BOSS_NAME
 )
@@ -19,6 +20,9 @@ from world.melee import (
     ARC_DEGREES, COOLDOWN, INNER_RADIUS, OUTER_RADIUS, SWING_TIME,
     ease_out, sector_outline,
 )
+
+# los dos jefes (zona 1: Piña Colosal, zona 2: Golem Colosal)
+BOSS_TYPES = (PinaBoss, GolemBoss)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -4407,13 +4411,15 @@ class ArenaConfig:
                  sealed_text="Mapa completado: la sala esta cerrada",
                  done_text="Mapa completado! La sala se cerro para siempre",
                  gem_id="gema", gem_name="gema",
-                 zone_name="", zone_tag="", hard=False, boss=False):
+                 zone_name="", zone_tag="", hard=False, boss=False,
+                 boss_kind="pina"):
 
         self.key = key
         self.zone_name = zone_name
         self.zone_tag = zone_tag
         self.hard = hard
         self.boss = boss
+        self.boss_kind = boss_kind
         self.title = title
         self.room = room
         self.trigger = trigger
@@ -4443,9 +4449,12 @@ RIGHT_ARENA = ArenaConfig(
 LEFT_WAVE_REWARDS = {
     1: 1500, 2: 1700, 3: 1900, 4: 2100, 5: 2300,
     6: 2500, 7: 2700, 8: 2900, 9: 3100, 10: 3300,
+    11: 3500,
 }
 
-LEFT_LAST_WAVE = 10
+# Oleadas 1-10: normales. Oleada 11: jefe (Golem Colosal). La gema verde
+# oscuro la da el jefe al morir.
+LEFT_LAST_WAVE = 11
 
 LEFT_ARENA = ArenaConfig(
     "left", "Stonun - Zona 2",
@@ -4458,6 +4467,7 @@ LEFT_ARENA = ArenaConfig(
     gem_id="gema_verde",
     gem_name="gema verde oscuro",
     zone_name="STONUN", zone_tag="ZONA 2", hard=True,
+    boss=True, boss_kind="golem",
 )
 
 
@@ -4509,10 +4519,7 @@ class Arena:
         self.golem_art = GolemArt()
         self.guardian_art = GuardianArt()
         self.shooter_art = GuardianShooterArt()
-        self.boss_art = (
-            BossArt(COMBAT_DIR, load_image, load_strip)
-            if self.cfg.boss else None
-        )
+        self.boss_art = self._make_boss_art() if self.cfg.boss else None
 
         # entrada y derrota "epicas" del jefe (barras, titulo, musica)
         self.cinematic = BossCinematic()
@@ -4665,7 +4672,7 @@ class Arena:
                 if light is not None:
                     sources.append(light)
 
-            elif isinstance(enemy, PinaBoss):
+            elif isinstance(enemy, BOSS_TYPES):
 
                 sources.extend(enemy.lights())
 
@@ -4789,21 +4796,34 @@ class Arena:
 
         return bool(self.cfg.boss and self.wave == self.cfg.last_wave)
 
+    def _make_boss_art(self):
+
+        if self.cfg.boss_kind == "golem":
+            return GolemBossArt(COMBAT_DIR, load_image, load_strip)
+
+        return BossArt(COMBAT_DIR, load_image, load_strip)
+
     def _spawn_boss(self, game):
 
         room = self.cfg.room
 
         if self.boss_art is None:
-            self.boss_art = BossArt(COMBAT_DIR, load_image, load_strip)
+            self.boss_art = self._make_boss_art()
+
+        golem = self.cfg.boss_kind == "golem"
 
         # la primera vez se ve la entrada completa; despues, una version corta
-        first = not getattr(game, "boss_intro_seen", False)
+        flag = "boss2_intro_seen" if golem else "boss_intro_seen"
 
-        game.boss_intro_seen = True
+        first = not getattr(game, flag, False)
+
+        setattr(game, flag, True)
 
         cin = self.cinematic
 
-        boss = PinaBoss(
+        boss_class = GolemBoss if golem else PinaBoss
+
+        boss = boss_class(
             room.centerx, room.centery, room, self.boss_art,
             intro_time=cin.intro_time(first),
             hold_time=cin.hold_time(first),
@@ -4813,7 +4833,7 @@ class Arena:
         self.shots = []
         self.blasts = []
 
-        cin.start_intro(game, first)
+        cin.start_intro(game, first, boss)
 
     def _boss_sound(self, event):
 
@@ -4821,8 +4841,12 @@ class Arena:
             audio.play("alert")
         elif event in ("split", "phase", "die"):
             audio.play("explosion")
-        elif event == "merge":
+        elif event in ("merge", "wave", "rock", "shatter"):
             audio.play("hit_heavy")
+        elif event == "wallhit":
+            audio.play("boss_slam")
+        elif event == "beam":
+            audio.play("explosion")
 
     def _boss_event(self, game, boss, event):
 
@@ -4842,6 +4866,31 @@ class Arena:
 
             audio.play("boss_slam")
             audio.play("boss_roar")
+
+        elif event in ("wave", "rock", "wallhit", "beam", "shatter"):
+
+            amp, length = {
+                "wave": (8.0, 0.5), "rock": (4.0, 0.25),
+                "wallhit": (10.0, 0.6), "beam": (6.0, 0.5),
+                "shatter": (6.0, 0.4),
+            }[event]
+
+            fx.shake(amp, length)
+
+            self._boss_sound(event)
+
+            x, y = boss.event_pos.x, boss.event_pos.y
+
+            for _ in range(10 if event == "rock" else 18):
+
+                a = random.uniform(0, math.tau)
+
+                fx._spark(
+                    x, y, a, random.uniform(40, 150),
+                    random.uniform(0.3, 0.8),
+                    random.choice(((150, 156, 160), (90, 235, 140))),
+                    size=random.uniform(1.6, 2.6), drag=2.4, streak=True,
+                )
 
         elif event == "crack":
 
@@ -4877,12 +4926,27 @@ class Arena:
         player_pos = pygame.Vector2(game.player.rect.center)
         center = pygame.Vector2(room.center)
 
-        kinds = ["pino", "tronco", "mosquito", "hongun"] * SUMMON_COUNT
+        if isinstance(boss, GolemBoss):
+
+            # los de la zona 2: 1 golem, tiradores y mosquitos
+            extra = 1 if boss.phase == 2 else 0
+
+            kinds = (
+                ["golem"] + ["tirador"] * (2 + extra)
+                + ["mosquito"] * (3 + extra)
+            )
+
+        else:
+
+            kinds = ["pino", "tronco", "mosquito", "hongun"] * SUMMON_COUNT
+
         random.shuffle(kinds)
 
         hitboxes = {
             "mosquito": MOSQUITO_HITBOX,
             "hongun": HONGUN_HITBOX,
+            "golem": GOLEM_HITBOX,
+            "tirador": GUARDIAN_HITBOX,
         }
 
         for i, kind in enumerate(kinds):
@@ -4927,10 +4991,16 @@ class Arena:
                 enemy = Mosquito(pos[0], pos[1], MOSQUITO_HP, spawn_delay=delay)
             elif kind == "hongun":
                 enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "golem":
+                enemy = Golem(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "tirador":
+                enemy = GuardianShooter(pos[0], pos[1], spawn_delay=delay)
             else:
                 enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
 
-            enemy.codex_key = kind
+            enemy.codex_key = (
+                "guardian_tirador" if kind == "tirador" else kind
+            )
             enemy.room = room
 
             # se van solos a los BOSS_MINION_LIFE segundos
@@ -4938,7 +5008,9 @@ class Arena:
 
             self.enemies.append(enemy)
 
-        game.show_message("La piña invoca refuerzos!")
+        game.show_message(
+            getattr(boss, "summon_message", "La piña invoca refuerzos!")
+        )
 
     def _expire_minions(self, game, boss, dt):
         """Los enemigos invocados por el jefe desaparecen despues de 35 s.
@@ -4968,7 +5040,12 @@ class Arena:
 
         self.enemies = [e for e in self.enemies if e not in gone]
 
-        game.show_message("Los refuerzos de la piña se fueron!")
+        game.show_message(
+            getattr(
+                boss, "minions_gone_message",
+                "Los refuerzos de la piña se fueron!"
+            )
+        )
 
     def _update_boss(self, game, boss, dt, target, body):
 
@@ -5017,7 +5094,16 @@ class Arena:
 
             return
 
-        hit = boss.contact_hit(body)
+        if getattr(boss, "uses_jump", False):
+
+            # saltar sirve: las ondas y el barrido pasan por debajo
+            airborne = game.player.jump_height > 1.5
+
+            hit = boss.contact_hit(body, airborne)
+
+        else:
+
+            hit = boss.contact_hit(body)
 
         if hit is not None:
 
@@ -5494,7 +5580,7 @@ class Arena:
         repel = light_on and game.repel_timer > 0
 
         for enemy in list(self.enemies):
-            if isinstance(enemy, PinaBoss):
+            if isinstance(enemy, BOSS_TYPES):
                 self._update_boss(game, enemy, dt, target, body)
             elif isinstance(enemy, Mosquito):
                 enemy.update(dt, target, game.collision_map, light_on, light_world, repel)
@@ -5545,7 +5631,7 @@ class Arena:
             audio.play("alert")
 
         bounce_enemies(
-            [e for e in self.enemies if not isinstance(e, PinaBoss)],
+            [e for e in self.enemies if not isinstance(e, BOSS_TYPES)],
             game.collision_map, target
         )
 
@@ -5601,7 +5687,7 @@ class Arena:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
 
-                if isinstance(enemy, PinaBoss):
+                if isinstance(enemy, BOSS_TYPES):
                     self.cinematic.finale(game, enemy)
 
                 game.count_stat("kills")
@@ -5898,9 +5984,12 @@ class Arena:
         view = screen.get_rect().inflate(320, 320)
 
         for enemy in self.enemies:
-            if not view.colliderect(camera.apply(enemy.rect)):
+            if (
+                not getattr(enemy, "always_draw", False)
+                and not view.colliderect(camera.apply(enemy.rect))
+            ):
                 continue
-            if isinstance(enemy, PinaBoss):
+            if isinstance(enemy, BOSS_TYPES):
                 enemy.draw(screen, camera)
             elif isinstance(enemy, Mosquito):
                 enemy.draw(screen, camera, self.mosquito_art)
@@ -6069,7 +6158,7 @@ class Arena:
         else:
             label = f"Oleada {number}"
 
-        if self.cfg.show_total:
+        if self.cfg.show_total and label != "JEFE":
             label += f"/{self.cfg.last_wave}"
 
         draw_text(
@@ -6214,13 +6303,29 @@ class Arena:
         right_done = bool(right is not None and right.completed)
 
         if self._is_boss_wave():
-            lines.append((
-                f"¡JEFE! Te enfrentás a la {BOSS_NAME}", 30, (255, 214, 120)
-            ))
-            lines.append((
-                "Guardiana de la gema: se parte en pedazos y invoca ayudantes.",
-                24, (255, 170, 120)
-            ))
+            if cfg.boss_kind == "golem":
+
+                lines.append((
+                    "¡JEFE! Te enfrentás al GOLEM COLOSAL", 30,
+                    (255, 214, 120)
+                ))
+                lines.append((
+                    "Guardián de la gema verde: salta sus ondas "
+                    "(ESPACIO) y esquiva las rocas.",
+                    24, (255, 170, 120)
+                ))
+
+            else:
+
+                lines.append((
+                    f"¡JEFE! Te enfrentás a la {BOSS_NAME}", 30,
+                    (255, 214, 120)
+                ))
+                lines.append((
+                    "Guardiana de la gema: se parte en pedazos y invoca "
+                    "ayudantes.",
+                    24, (255, 170, 120)
+                ))
 
         lines.append((
             "Al empezar la oleada se oscurece: fijate bien dónde estás.",

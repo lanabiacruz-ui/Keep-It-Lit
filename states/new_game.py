@@ -446,6 +446,10 @@ class NewGame:
             self.save_data.get("boss_intro_seen", False)
         )
 
+        self.boss2_intro_seen = bool(
+            self.save_data.get("boss2_intro_seen", False)
+        )
+
         self.gems_green = int(self.save_data.get("gems_green", 0))
 
         # usos ya gastados de la ganzua que se esta usando (dura varios usos)
@@ -3135,6 +3139,7 @@ class NewGame:
             "coins": self.coins,
             "ganzua_uses": self.ganzua_uses,
             "boss_intro_seen": self.boss_intro_seen,
+            "boss2_intro_seen": self.boss2_intro_seen,
             "gems": self.gems,
             "gems_green": self.gems_green,
 
@@ -3759,7 +3764,7 @@ class NewGame:
 
             elif event.key == pygame.K_SPACE and self.state == "playing":
 
-                # saltito (solo visual, no sirve para nada todavia)
+                # saltito: esquiva las ondas y el barrido del jefe de la zona 2
                 self.player.jump()
 
             elif controls.slot_for(event.key) is not None:

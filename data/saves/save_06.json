@@ -51,7 +51,7 @@
     "item_seed": 757481128,
     "arena_wave": 12,
     "arena_completed": true,
-    "arena_left_wave": 1,
+    "arena_left_wave": 11,
     "arena_left_completed": false,
     "broken_doors": [
         "cabana",

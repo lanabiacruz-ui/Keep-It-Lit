@@ -1283,7 +1283,7 @@ def draw_boss_bar(screen, boss):
     y = BAR_TOP
 
     _text(
-        screen, BOSS_NAME, 30, (255, 235, 190),
+        screen, getattr(boss, "boss_name", BOSS_NAME), 30, (255, 235, 190),
         midtop=(w // 2, BAR_NAME_TOP - 4)
     )
 

@@ -77,6 +77,10 @@ class BossCinematic:
 
         self.first = False
 
+        self.tag = BOSS_TAG
+        self.label = BOSS_LABEL
+        self.sub = BOSS_SUB
+
         self._shake_cd = 0.0
         self._ember_acc = 0.0
 
@@ -118,9 +122,14 @@ class BossCinematic:
         # las barras que se van, asi la pelea arranca con todo despejado
         return self.title_time(first) + BARS_OUT
 
-    def start_intro(self, game, first):
+    def start_intro(self, game, first, boss=None):
 
         self._begin("intro")
+
+        # textos del jefe (cada jefe trae los suyos)
+        self.tag = getattr(boss, "tag", BOSS_TAG)
+        self.label = getattr(boss, "boss_name", BOSS_LABEL)
+        self.sub = getattr(boss, "sub", BOSS_SUB)
 
         self.first = first
 
@@ -169,7 +178,11 @@ class BossCinematic:
 
         audio.play("boss_roar")
 
-        self.title = ("PIÑA COLOSAL", "GUARDIANA DE LA GEMA", GOLD)
+        name, sub = getattr(
+            boss, "title", ("PIÑA COLOSAL", "GUARDIANA DE LA GEMA")
+        )
+
+        self.title = (name, sub, GOLD)
         self.title_t = 0.0
 
     def finale(self, game, boss):
@@ -203,9 +216,12 @@ class BossCinematic:
 
         music.stinger("boss_victory")
 
-        self.title = (
-            "PIÑA COLOSAL DERROTADA", "LA GEMA ES TUYA", GOLD
+        name, sub = getattr(
+            boss, "victory_title",
+            ("PIÑA COLOSAL DERROTADA", "LA GEMA ES TUYA")
         )
+
+        self.title = (name, sub, GOLD)
         self.title_t = 0.0
         self.title_len = VICTORY_TITLE
 
@@ -384,13 +400,13 @@ class BossCinematic:
 
         cy = int(sh * 0.27)
 
-        tag = self._font(34).render(BOSS_TAG, True, (236, 224, 196))
-        name = self._font(78).render(BOSS_LABEL, True, GOLD)
-        sub = self._font(28).render(BOSS_SUB, True, (236, 224, 196))
+        tag = self._font(34).render(self.tag, True, (236, 224, 196))
+        name = self._font(78).render(self.label, True, GOLD)
+        sub = self._font(28).render(self.sub, True, (236, 224, 196))
 
-        shade_tag = self._font(34).render(BOSS_TAG, True, (20, 10, 2))
-        shade_name = self._font(78).render(BOSS_LABEL, True, GOLD_DARK)
-        shade_sub = self._font(28).render(BOSS_SUB, True, (20, 10, 2))
+        shade_tag = self._font(34).render(self.tag, True, (20, 10, 2))
+        shade_name = self._font(78).render(self.label, True, GOLD_DARK)
+        shade_sub = self._font(28).render(self.sub, True, (20, 10, 2))
 
         rise = int((1.0 - k) * 14)
 
