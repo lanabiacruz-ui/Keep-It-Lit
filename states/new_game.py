@@ -37,7 +37,8 @@ from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
 from world.slime import SlimeManager
 from world.shop import (
-    Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES
+    Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES,
+    SHOP_UNLOCK_ZONES
 )
 from world.placeables import PlaceableManager
 from world.dungeon_map import DungeonMapView
@@ -230,6 +231,12 @@ class NewGame:
 
         self.discovered_enemies = set(
             self.save_data.get("enemies_seen", [])
+        )
+
+        # Recompensas de la enciclopedia que ya se cobraron (se guardan
+        # para que no se puedan cobrar dos veces al reabrir la partida).
+        self.claimed_enemies = set(
+            self.save_data.get("enemies_claimed", [])
         )
         self.collision_map.obstacles.extend(self.chests.blocking_rects)
 
@@ -1482,7 +1489,7 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata, candil y martillo. La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo.",
                     "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera. Ideales como base de descanso entre oleadas.",
                     "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío o una fogata para recogerlos y colocarlos en otro lugar.",
                 ],
@@ -2802,15 +2809,45 @@ class NewGame:
 
         return max(a.wave for a in self.arenas)
 
-    def shop_locks(self):
+    def zone_wave(self, zone_tag):
 
-        wave = self.best_wave()
+        """Mejor oleada de la sala de esa zona (ej. "ZONA 2")."""
+
+        for arena in self.arenas:
+            if arena.cfg.zone_tag == zone_tag:
+                return arena.wave
+
+        return self.best_wave()
+
+    def _unlock_wave(self, item_id):
+
+        zone = SHOP_UNLOCK_ZONES.get(item_id)
+
+        return self.zone_wave(zone) if zone else self.best_wave()
+
+    def shop_locks(self):
 
         return {
             item_id: need
             for item_id, need in SHOP_UNLOCK_WAVES.items()
-            if wave < need
+            if self._unlock_wave(item_id) < need
         }
+
+    def shop_lock_zones(self):
+
+        """{item: (nombre de la zona, oleada actual en esa zona)}"""
+
+        out = {}
+
+        for item_id, tag in SHOP_UNLOCK_ZONES.items():
+
+            for arena in self.arenas:
+                if arena.cfg.zone_tag == tag:
+                    out[item_id] = (
+                        f"{tag} ({arena.cfg.zone_name})", arena.wave
+                    )
+
+        return out
 
     def _open_shop(self):
 
@@ -2828,6 +2865,7 @@ class NewGame:
             cart=self.shop_cart,
             locks=self.shop_locks(),
             best_wave=self.best_wave(),
+            lock_zones=self.shop_lock_zones(),
             inventory=self.shop_inventory,
             max_stack=self._max_stack,
             inv_slots=self.hud.SLOTS
@@ -3141,6 +3179,7 @@ class NewGame:
             "placeables": self.placeables.save_data(),
 
             "enemies_seen": sorted(self.discovered_enemies),
+            "enemies_claimed": sorted(self.claimed_enemies),
 
             "stats": dict(self.stats),
             "zones_seen": sorted(self.zones_seen),
@@ -3171,6 +3210,19 @@ class NewGame:
 
         if set(EnemyEncyclopedia.ORDER) <= self.discovered_enemies:
             achievements.unlock("entomologo")
+
+    def claim_enemy_reward(self, key, amount):
+
+        """La enciclopedia avisa acá cuando el jugador cobra una criatura."""
+
+        if key in self.claimed_enemies:
+            return
+
+        self.claimed_enemies.add(key)
+
+        self.add_coins(amount)
+
+        self._save()
 
     def save_progress(self):
 
@@ -3421,7 +3473,9 @@ class NewGame:
 
                 self.enemy_encyclopedia = EnemyEncyclopedia(
                     self.screen,
-                    self.discovered_enemies
+                    self.discovered_enemies,
+                    claimed=self.claimed_enemies,
+                    on_claim=self.claim_enemy_reward,
                 )
 
                 self.pause_view = "enemies"
@@ -5105,6 +5159,10 @@ class NewGame:
             self._draw_debug_items()
 
         if self.pause_view == "pause":
+            self.pause_menu.pending_enemies = len(
+                (self.discovered_enemies & set(EnemyEncyclopedia.ORDER))
+                - self.claimed_enemies
+            )
             self.pause_menu.draw()
 
         elif self.pause_view == "settings":

@@ -145,7 +145,8 @@ class ShopUI:
     def __init__(
         self, screen_size, catalog, item_defs, coins, match_duration=30.0,
         cart=None, locks=None, best_wave=1,
-        inventory=None, max_stack=None, inv_slots=INV_SLOTS
+        inventory=None, max_stack=None, inv_slots=INV_SLOTS,
+        lock_zones=None
     ):
 
         # locks: {item_id: oleada necesaria} de lo que sigue bloqueado
@@ -153,6 +154,10 @@ class ShopUI:
 
         # mejor oleada alcanzada en las salas de combate
         self.best_wave = int(best_wave)
+
+        # {item_id: (nombre de zona, oleada actual en esa zona)} para los
+        # objetos que piden la oleada en una zona puntual
+        self.lock_zones = dict(lock_zones or {})
 
         self.sw, self.sh = screen_size
         self.catalog = catalog
@@ -304,19 +309,28 @@ class ShopUI:
         if need is None:
             return ""
 
-        missing = max(1, need - self.best_wave)
+        zone = self.lock_zones.get(item_id)
+
+        current = zone[1] if zone else self.best_wave
+
+        missing = max(1, need - current)
 
         if short:
+            where = f" en {zone[0]}" if zone else ""
             return (
-                f"Bloqueado: llega a la oleada {need} "
-                f"(vas por la {self.best_wave})"
+                f"Bloqueado: llega a la oleada {need}{where} "
+                f"(vas por la {current})"
             )
+
+        where = (
+            f"en la {zone[0]}" if zone
+            else "en cualquiera de las salas de combate"
+        )
 
         return (
             f"BLOQUEADO: todavía no llegaste a la oleada {need}. "
-            f"Se desbloquea al alcanzar la oleada {need} en cualquiera "
-            "de las salas de combate. Tu mejor oleada es la "
-            f"{self.best_wave}: te "
+            f"Se desbloquea al alcanzar la oleada {need} {where}. "
+            f"Tu mejor oleada ahí es la {current}: te "
             f"{'falta' if missing == 1 else 'faltan'} {missing} "
             f"{'oleada' if missing == 1 else 'oleadas'}."
         )
@@ -1195,6 +1209,7 @@ class ShopUI:
             screen, self.tiny_font,
             (
                 f"Bloqueado: oleada {locked_wave}"
+                f"{' · Z2' if item_id in self.lock_zones else ''}"
                 if locked_wave is not None
                 else "No va al inventario"
                 if no_inv

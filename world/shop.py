@@ -29,11 +29,19 @@ BG_IMAGE = TIENDA_DIR / "vendedor_fondo.png"
 # Oleada que hay que alcanzar (en cualquiera de las 2 salas de combate)
 # para poder comprar cada objeto en la tienda. Para cambiarlo, editá acá.
 SHOP_UNLOCK_WAVES = {
-    "hongo_azul": 5,
+    "ganzua": 3,
+    "esfera": 4,
+    "martillo": 5,
     "antorcha": 6,
-    "repelente": 8,
-    "iman": 8,
-    "esfera": 8,
+    "repelente": 6,
+    "hongo_azul": 8,
+    "iman": 9,
+}
+
+# Objetos que piden la oleada en UNA zona en particular (ver zone_tag de
+# cada sala en world/arena.py). El resto cuenta la mejor oleada de cualquiera.
+SHOP_UNLOCK_ZONES = {
+    "esfera": "ZONA 2",
 }
 
 DEFAULT_CATALOG = [

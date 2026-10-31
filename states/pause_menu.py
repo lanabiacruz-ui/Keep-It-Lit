@@ -1,3 +1,5 @@
+import math
+import time
 from pathlib import Path
 
 import pygame
@@ -17,6 +19,9 @@ class PauseMenu:
     def __init__(self, screen):
         self.screen = screen
         self.width, self.height = screen.get_size()
+
+        # cantidad de recompensas de la enciclopedia sin cobrar
+        self.pending_enemies = 0
 
         image_path = (
             Path(__file__).resolve().parent.parent
@@ -77,3 +82,23 @@ class PauseMenu:
             self.background_scaled,
             (0, 0)
         )
+
+        if self.pending_enemies > 0:
+            self._draw_pending_badge()
+
+    def _draw_pending_badge(self):
+        rect = self.button_rects["enemies"]
+
+        beat = 0.5 + 0.5 * math.sin(time.monotonic() * 6.0)
+
+        radius = max(8, round((13 + 2 * beat) * self.sy))
+
+        center = (rect.right - round(26 * self.sx), rect.top + round(4 * self.sy))
+
+        pygame.draw.circle(self.screen, (60, 40, 8), center, radius + 3)
+        pygame.draw.circle(self.screen, (255, 205, 70), center, radius)
+
+        font = pygame.font.Font(None, max(16, round(radius * 1.6)))
+        text = font.render(str(min(99, self.pending_enemies)), True, (60, 34, 4))
+
+        self.screen.blit(text, text.get_rect(center=center))

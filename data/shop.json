@@ -41,16 +41,24 @@
           "precio": 9
         },
         {
+          "id": "mapa",
+          "precio": 10
+        },
+        {
           "id": "ganzua",
           "precio": 10
         },
         {
-          "id": "hongo_azul",
-          "precio": 10
+          "id": "martillo",
+          "precio": 30
         },
         {
           "id": "repelente",
           "precio": 14
+        },
+        {
+          "id": "hongo_azul",
+          "precio": 10
         },
         {
           "id": "iman",
@@ -59,10 +67,6 @@
         {
           "id": "esfera",
           "precio": 13
-        },
-        {
-          "id": "mapa",
-          "precio": 10
         }
       ]
     },
@@ -84,10 +88,6 @@
         {
           "id": "faro",
           "precio": 55
-        },
-        {
-          "id": "martillo",
-          "precio": 30
         }
       ]
     }

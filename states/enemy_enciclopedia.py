@@ -1,5 +1,6 @@
 import json
 import math
+import random
 from pathlib import Path
 
 import pygame
@@ -223,6 +224,12 @@ class EnemyEncyclopedia:
         self.t = 0.0
 
         self.pops = []
+
+        self.particles = []
+
+        self.pulse = 0.0
+
+        self.flash = 0.0
 
         self.data = self._load_data()
 
@@ -503,7 +510,7 @@ class EnemyEncyclopedia:
             self.card_rect.left + round(24 * self.sx),
             self.card_rect.top + round(58 * self.sy),
             self.card_rect.width - round(48 * self.sx),
-            round(120 * self.sy),
+            round(136 * self.sy),
         )
 
         self.icons = {}
@@ -541,6 +548,96 @@ class EnemyEncyclopedia:
             for key, image in self.images.items()
             if image is not None
         }
+
+        coin = None
+
+        try:
+
+            coin = pygame.image.load(
+                HUD_DIR / "icon_moneda.png"
+            ).convert_alpha()
+
+        except (OSError, pygame.error):
+
+            coin = None
+
+        self.coin_16 = self._fit_icon(coin, round(16 * self.sy))
+        self.coin_22 = self._fit_icon(coin, round(22 * self.sy))
+        self.coin_30 = self._fit_icon(coin, round(30 * self.sy))
+
+        self.strip_h = round(42 * self.sy)
+
+        btn_h = round(32 * self.sy)
+
+        self.claim_rect = pygame.Rect(
+            0, 0, round(300 * self.sx), btn_h
+        )
+
+        self.claim_rect.midbottom = (
+            self.pedestal_rect.centerx,
+            self.pedestal_rect.bottom - round(8 * self.sy),
+        )
+
+        self.glow_cyan = self._make_glow(
+            self.pedestal_rect.height, (90, 210, 235)
+        )
+
+        self.glow_gold = self._make_glow(
+            self.pedestal_rect.height, (255, 205, 70)
+        )
+
+        self.flash_surf = pygame.Surface(
+            self.pedestal_rect.size, pygame.SRCALPHA
+        )
+
+        pygame.draw.rect(
+            self.flash_surf,
+            (255, 240, 170, 255),
+            self.flash_surf.get_rect(),
+            border_radius=14,
+        )
+
+    @staticmethod
+    def _fit_icon(image, height):
+
+        if image is None:
+            return None
+
+        height = max(6, height)
+
+        scale = height / image.get_height()
+
+        return pygame.transform.smoothscale(
+            image,
+            (
+                max(1, round(image.get_width() * scale)),
+                height,
+            )
+        )
+
+    @staticmethod
+    def _make_glow(size, color):
+
+        size = max(8, int(size))
+
+        surf = pygame.Surface((size, size), pygame.SRCALPHA)
+
+        steps = 18
+
+        for i in range(steps, 0, -1):
+
+            k = i / steps
+
+            alpha = int(70 * (1.0 - k) ** 1.6)
+
+            pygame.draw.circle(
+                surf,
+                (*color, alpha),
+                (size // 2, size // 2),
+                max(1, int(size / 2 * k)),
+            )
+
+        return surf
 
     @staticmethod
     def _silhouette(image):
@@ -655,10 +752,45 @@ class EnemyEncyclopedia:
 
         self.pops.append([f"+{amount}", 0.0])
 
+        self._burst(amount)
+
+        self.pulse = 1.0
+
+        self.flash = 1.0
+
         if self.on_claim is not None:
             self.on_claim(key, amount)
 
         return True
+
+    def _burst(self, amount):
+
+        cx, cy = self.pedestal_rect.center
+
+        cy -= round(self.strip_h * 0.4)
+
+        count = min(26, 10 + amount // 60)
+
+        for _ in range(count):
+
+            angle = math.radians(random.uniform(-160, -20))
+
+            speed = random.uniform(240, 560) * self.sy
+
+            life = random.uniform(0.9, 1.5)
+
+            self.particles.append({
+                "x": cx + random.uniform(-14, 14) * self.sx,
+                "y": cy + random.uniform(-8, 8) * self.sy,
+                "vx": math.cos(angle) * speed * 0.9,
+                "vy": math.sin(angle) * speed,
+                "life": life,
+                "max": life,
+                "phase": random.uniform(0, math.tau),
+                "spin": random.uniform(8, 16),
+                "kind": "coin" if random.random() < 0.7 else "spark",
+                "size": random.uniform(0.8, 1.3),
+            })
 
     def _visible_range(self):
 
@@ -922,7 +1054,10 @@ class EnemyEncyclopedia:
 
                     return None
 
-                if self._sprite_rect().collidepoint(event.pos):
+                if (
+                    self.claim_rect.collidepoint(event.pos)
+                    or self._sprite_rect().collidepoint(event.pos)
+                ):
 
                     self._claim(self.ORDER[self.selected])
 
@@ -950,7 +1085,26 @@ class EnemyEncyclopedia:
         for pop in self.pops:
             pop[1] += dt
 
-        self.pops = [p for p in self.pops if p[1] < 1.2]
+        self.pops = [p for p in self.pops if p[1] < 1.4]
+
+        gravity = 1500.0 * self.sy
+
+        for part in self.particles:
+
+            part["life"] -= dt
+            part["vy"] += gravity * dt
+            part["x"] += part["vx"] * dt
+            part["y"] += part["vy"] * dt
+            part["phase"] += part["spin"] * dt
+
+        self.particles = [
+            p for p in self.particles
+            if p["life"] > 0 and p["y"] < self.height + 40
+        ]
+
+        self.pulse = max(0.0, self.pulse - dt * 3.2)
+
+        self.flash = max(0.0, self.flash - dt * 2.6)
 
         diff = self.scroll - self.scroll_f
 
@@ -964,7 +1118,6 @@ class EnemyEncyclopedia:
             self.scroll_f += diff * min(1.0, dt * 16.0)
 
         return None
-
 
     def _draw_fallback_frames(self):
 
@@ -1038,6 +1191,55 @@ class EnemyEncyclopedia:
             max(2, round(3 * self.sy)),
         )
 
+        total = len(self.ORDER)
+
+        count = sum(1 for k in self.ORDER if self.is_discovered(k))
+
+        bar_w = round(190 * self.sx)
+
+        bar_h = max(6, round(10 * self.sy))
+
+        bar = pygame.Rect(
+            right - bar_w,
+            round(214 * self.sy),
+            bar_w,
+            bar_h,
+        )
+
+        label = self._font(max(14, round(22 * self.sy))).render(
+            f"Descubiertas {count}/{total}", True, self.MUTED_COLOR
+        )
+
+        self.screen.blit(
+            label,
+            label.get_rect(bottomright=(bar.right, bar.top - round(3 * self.sy))),
+        )
+
+        pygame.draw.rect(
+            self.screen, (20, 36, 52), bar, border_radius=bar_h // 2
+        )
+
+        if count:
+
+            fill = bar.copy()
+
+            fill.width = max(bar_h, round(bar.width * count / total))
+
+            pygame.draw.rect(
+                self.screen,
+                (255, 205, 70) if count == total else self.TITLE_COLOR,
+                fill,
+                border_radius=bar_h // 2,
+            )
+
+        pygame.draw.rect(
+            self.screen,
+            (82, 125, 150),
+            bar,
+            width=1,
+            border_radius=bar_h // 2,
+        )
+
     def _draw_scroll_arrows(self):
 
         thumb = self._thumb_rect()
@@ -1067,6 +1269,20 @@ class EnemyEncyclopedia:
             self.TITLE_COLOR if self._drag else (77, 170, 191),
             thumb,
             border_radius=bar.width // 2,
+        )
+
+    def _draw_check(self, center, size, color):
+
+        cx, cy = center
+
+        pts = [
+            (cx - size, cy),
+            (cx - size * 0.3, cy + size * 0.7),
+            (cx + size, cy - size * 0.7),
+        ]
+
+        pygame.draw.lines(
+            self.screen, color, False, pts, max(2, round(size * 0.35))
         )
 
     def _draw_list(self):
@@ -1129,7 +1345,9 @@ class EnemyEncyclopedia:
 
             name = self.data[key]["nombre"] if found else "???"
 
-            max_w = rect.right - text_left - round(34 * self.sx)
+            max_w = rect.right - text_left - round(
+                (62 if found else 34) * self.sx
+            )
 
             name_font = self.name_font
 
@@ -1152,25 +1370,36 @@ class EnemyEncyclopedia:
                 midleft=(text_left, rect.centery),
             )
 
+            mark_x = rect.right - round(50 * self.sx)
+
             if self.can_claim(key):
 
-                beat = 0.5 + 0.5 * math.sin(self.t * 6.0)
+                bob = math.sin(self.t * 6.0 + index) * 2.0 * self.sy
 
-                radius = max(5, round((8 + 2 * beat) * self.sy))
+                coin = self.coin_22
 
-                bx = rect.right - round(24 * self.sx)
+                if coin is not None:
 
-                by = rect.centery
+                    self.screen.blit(
+                        coin,
+                        coin.get_rect(center=(mark_x, rect.centery + bob)),
+                    )
 
-                if selected:
-                    bx -= round(26 * self.sx)
+                else:
 
-                pygame.draw.circle(
-                    self.screen, (60, 40, 8), (bx, by), radius + 2
-                )
+                    pygame.draw.circle(
+                        self.screen,
+                        (255, 205, 70),
+                        (mark_x, round(rect.centery + bob)),
+                        max(5, round(8 * self.sy)),
+                    )
 
-                pygame.draw.circle(
-                    self.screen, (255, 205, 70), (bx, by), radius
+            elif found and key in self.claimed:
+
+                self._draw_check(
+                    (mark_x, rect.centery),
+                    max(5, round(8 * self.sy)),
+                    (110, 220, 140),
                 )
 
             if selected:
@@ -1244,6 +1473,27 @@ class EnemyEncyclopedia:
             else self.images_locked.get(key)
         )
 
+        claimable = self.can_claim(key)
+
+        if found:
+
+            glow = self.glow_gold if claimable else self.glow_cyan
+
+            beat = 0.6 + 0.4 * math.sin(self.t * 3.0)
+
+            glow.set_alpha(int(255 * beat))
+
+            self.screen.blit(
+                glow,
+                glow.get_rect(
+                    center=(
+                        self.pedestal_rect.centerx,
+                        self.pedestal_rect.centery
+                        - round(self.strip_h * 0.4),
+                    )
+                ),
+            )
+
         if image is not None:
 
             area = self.pedestal_rect.inflate(
@@ -1251,10 +1501,19 @@ class EnemyEncyclopedia:
                 -round(20 * self.sy)
             )
 
+            area.height -= self.strip_h
+
             scale = min(
                 area.width / image.get_width(),
                 area.height / image.get_height(),
                 2.8,
+            )
+
+            scale *= 1.0 + 0.22 * math.sin(self.pulse * math.pi)
+
+            bob = (
+                math.sin(self.t * 2.4) * 3.0 * self.sy
+                if found else 0.0
             )
 
             sprite = pygame.transform.scale(
@@ -1268,13 +1527,24 @@ class EnemyEncyclopedia:
             self.screen.blit(
                 sprite,
                 sprite.get_rect(
-                    center=self.pedestal_rect.center
+                    center=(area.centerx, area.centery + bob)
                 )
             )
 
+            if not found:
+
+                mark = self._font(max(20, round(44 * self.sy))).render(
+                    "?", True, (150, 160, 180)
+                )
+
+                self.screen.blit(
+                    mark,
+                    mark.get_rect(center=area.center)
+                )
+
         self._draw_reward(key)
 
-        desc_y = self.pedestal_rect.bottom + round(16 * self.sy)
+        desc_y = self.pedestal_rect.bottom + round(12 * self.sy)
 
         title_rect = self._blit_text(
             self.body_font,
@@ -1317,7 +1587,12 @@ class EnemyEncyclopedia:
             y += font.get_linesize() + 2
 
     def _draw_reward(self, key):
+
         rect = self.pedestal_rect
+
+        found = self.is_discovered(key)
+
+        amount = self.reward_for(key)
 
         if self.can_claim(key):
 
@@ -1335,61 +1610,246 @@ class EnemyEncyclopedia:
 
             self.screen.blit(glow, rect)
 
-            text = f"¡Tocá la criatura! +{self.reward_for(key)} monedas"
+            hover = self.claim_rect.collidepoint(pygame.mouse.get_pos())
 
-            font = self._font(max(14, round(26 * self.sy)))
+            grow = 14 if hover else 6 * beat
 
-            surf = font.render(text, True, (255, 225, 120))
-
-            badge = surf.get_rect(
-                midbottom=(rect.centerx, rect.bottom - round(6 * self.sy))
-            ).inflate(round(16 * self.sx), round(8 * self.sy))
-
-            back = pygame.Surface(badge.size, pygame.SRCALPHA)
-
-            pygame.draw.rect(
-                back, (14, 16, 22, 215), back.get_rect(), border_radius=8
+            btn = self.claim_rect.inflate(
+                round(grow * self.sx), round(grow * 0.5 * self.sy)
             )
 
-            self.screen.blit(back, badge)
+            radius = max(6, btn.height // 2)
 
-            self.screen.blit(surf, surf.get_rect(center=badge.center))
+            pygame.draw.rect(
+                self.screen,
+                (70, 40, 6),
+                btn.move(0, max(2, round(3 * self.sy))),
+                border_radius=radius,
+            )
 
-        elif self.is_discovered(key) and key in self.claimed:
+            pygame.draw.rect(
+                self.screen,
+                (255, 224, 120) if hover else (255, 196, 60),
+                btn,
+                border_radius=radius,
+            )
+
+            top = btn.copy()
+
+            top.height = btn.height // 2
+
+            pygame.draw.rect(
+                self.screen,
+                (255, 238, 170) if hover else (255, 216, 100),
+                top,
+                border_top_left_radius=radius,
+                border_top_right_radius=radius,
+            )
+
+            pygame.draw.rect(
+                self.screen,
+                (130, 76, 10),
+                btn,
+                width=2,
+                border_radius=radius,
+            )
+
+            font = self._font(max(18, round(28 * self.sy)))
+
+            label = font.render(
+                f"COBRAR  +{amount}", True, (74, 40, 4)
+            )
+
+            coin = self.coin_22
+
+            gap = round(8 * self.sx)
+
+            group_w = label.get_width() + (
+                coin.get_width() + gap if coin is not None else 0
+            )
+
+            x = btn.centerx - group_w // 2
+
+            if coin is not None:
+
+                self.screen.blit(
+                    coin, coin.get_rect(midleft=(x, btn.centery))
+                )
+
+                x += coin.get_width() + gap
+
+            self.screen.blit(
+                label, label.get_rect(midleft=(x, btn.centery))
+            )
+
+        elif found and key in self.claimed:
 
             font = self._font(max(12, round(22 * self.sy)))
 
             surf = font.render("Recompensa cobrada", True, self.MUTED_COLOR)
 
+            size = max(5, round(7 * self.sy))
+
+            total_w = size * 2 + round(8 * self.sx) + surf.get_width()
+
+            left = rect.centerx - total_w // 2
+
+            cy = rect.bottom - round(8 * self.sy) - surf.get_height() // 2
+
+            self._draw_check(
+                (left + size, cy), size, (110, 220, 140)
+            )
+
             self.screen.blit(
                 surf,
                 surf.get_rect(
-                    midbottom=(
-                        rect.centerx, rect.bottom - round(6 * self.sy)
-                    )
+                    midleft=(left + size * 2 + round(8 * self.sx), cy)
                 ),
             )
+
+        elif not found:
+
+            font = self._font(max(12, round(22 * self.sy)))
+
+            surf = font.render(
+                f"Descubrila y ganá +{amount}", True, self.MUTED_COLOR
+            )
+
+            coin = self.coin_16
+
+            gap = round(6 * self.sx)
+
+            total_w = surf.get_width() + (
+                coin.get_width() + gap if coin is not None else 0
+            )
+
+            x = rect.centerx - total_w // 2
+
+            cy = rect.bottom - round(8 * self.sy) - surf.get_height() // 2
+
+            self.screen.blit(
+                surf, surf.get_rect(midleft=(x, cy))
+            )
+
+            if coin is not None:
+
+                self.screen.blit(
+                    coin,
+                    coin.get_rect(
+                        midleft=(x + surf.get_width() + gap, cy)
+                    ),
+                )
+
+        if self.flash > 0:
+
+            self.flash_surf.set_alpha(int(150 * self.flash))
+
+            self.screen.blit(self.flash_surf, rect)
 
         for text, age in self.pops:
 
-            k = age / 1.2
+            k = age / 1.4
 
             alpha = max(0, int(255 * (1.0 - k * k)))
 
-            font = self._font(max(24, round(56 * self.sy)))
+            font = self._font(max(24, round(60 * self.sy)))
 
             surf = font.render(text, True, (255, 215, 80))
 
+            shadow = font.render(text, True, (70, 40, 6))
+
+            coin = self.coin_30
+
+            gap = round(8 * self.sx)
+
+            total_w = surf.get_width() + (
+                coin.get_width() + gap if coin is not None else 0
+            )
+
+            rise = round(70 * self.sy * (1.0 - (1.0 - k) ** 2))
+
+            x = rect.centerx - total_w // 2
+
+            cy = rect.centery - rise - round(10 * self.sy)
+
+            shadow.set_alpha(alpha)
             surf.set_alpha(alpha)
 
-            rise = round(60 * self.sy * k)
+            off = max(2, round(3 * self.sy))
 
             self.screen.blit(
-                surf,
-                surf.get_rect(
-                    center=(rect.centerx, rect.centery - rise)
-                ),
+                shadow, shadow.get_rect(midleft=(x + off, cy + off))
             )
+
+            self.screen.blit(surf, surf.get_rect(midleft=(x, cy)))
+
+            if coin is not None:
+
+                coin = coin.copy()
+
+                coin.set_alpha(alpha)
+
+                self.screen.blit(
+                    coin,
+                    coin.get_rect(
+                        midleft=(x + surf.get_width() + gap, cy)
+                    ),
+                )
+
+    def _draw_particles(self):
+
+        for part in self.particles:
+
+            fade = min(1.0, part["life"] / 0.35)
+
+            alpha = int(255 * fade)
+
+            x, y = round(part["x"]), round(part["y"])
+
+            if part["kind"] == "coin" and self.coin_22 is not None:
+
+                base = self.coin_22
+
+                w = max(
+                    2,
+                    round(
+                        base.get_width()
+                        * part["size"]
+                        * abs(math.cos(part["phase"]))
+                    ),
+                )
+
+                h = max(2, round(base.get_height() * part["size"]))
+
+                img = pygame.transform.scale(base, (w, h))
+
+                img.set_alpha(alpha)
+
+                self.screen.blit(img, img.get_rect(center=(x, y)))
+
+            else:
+
+                r = max(3, round(7 * part["size"] * self.sy))
+
+                spark = pygame.Surface(
+                    (r * 2 + 2, r * 2 + 2), pygame.SRCALPHA
+                )
+
+                c = r + 1
+
+                pygame.draw.polygon(
+                    spark,
+                    (255, 235, 150, alpha),
+                    [(c, c - r), (c + r // 2, c), (c, c + r), (c - r // 2, c)],
+                )
+
+                pygame.draw.polygon(
+                    spark,
+                    (255, 235, 150, alpha),
+                    [(c - r, c), (c, c - r // 2), (c + r, c), (c, c + r // 2)],
+                )
+
+                self.screen.blit(spark, spark.get_rect(center=(x, y)))
 
     def _draw_hint(self):
 
@@ -1403,21 +1863,19 @@ class EnemyEncyclopedia:
 
         limit = self.back_rect.top - round(4 * self.sy)
 
-        total = len(self.ORDER)
-
-        count = sum(1 for k in self.ORDER if self.is_discovered(k))
-
         pending = self.pending_count()
 
-        parts = [f"Descubiertos: {count}/{total}"]
+        parts = []
 
         if pending:
-            parts.append(
-                f"Recompensas sin cobrar: {pending} (tocá la criatura)"
+
+            coins = sum(
+                self.reward_for(k) for k in self.ORDER if self.can_claim(k)
             )
 
-        parts.append("Flechas / W-S: elegir   ESC: volver")
-        
+            parts.append(f"Por cobrar: {pending} ({coins} monedas)")
+
+        parts.append("W/S: elegir   Enter: cobrar   ESC: volver")
 
         size = max(14, round(24 * self.sy))
 
@@ -1441,9 +1899,14 @@ class EnemyEncyclopedia:
 
         y = min(top, limit - total_h)
 
-        for line in lines:
+        for i, line in enumerate(lines):
 
-            hint = font.render(line, True, self.MUTED_COLOR)
+            color = (
+                (255, 215, 90) if pending and i == 0
+                else self.MUTED_COLOR
+            )
+
+            hint = font.render(line, True, color)
 
             self.screen.blit(hint, (hint_x, y))
 
@@ -1483,7 +1946,6 @@ class EnemyEncyclopedia:
 
     def draw(self):
 
-
         if self.bg_img is not None:
 
             self.screen.blit(self.bg_img, (0, 0))
@@ -1501,3 +1963,5 @@ class EnemyEncyclopedia:
         self._draw_hint()
 
         self._draw_back_button()
+
+        self._draw_particles()

@@ -2,23 +2,26 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-10-31T03:02:33",
+    "last_played": "2026-10-31T03:48:03",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 444,
-    "y": 125,
-    "coins": 103,
+    "x": 1003,
+    "y": 139,
+    "coins": 1471,
     "gems": 4,
     "gems_green": 0,
     "has_match": true,
     "light": "antorcha",
-    "vida": 0.5667006666666695,
+    "vida": 1.0,
     "escudo": 1.0,
     "inventory": [
-        null,
         [
-            "hongo_azul",
-            6
+            "martillo",
+            1
+        ],
+        [
+            "gelea",
+            1
         ],
         [
             "polvora",
@@ -26,23 +29,24 @@
         ],
         [
             "repelente",
-            15
+            14
         ]
     ],
     "collected": [
-        "moneda_sala_central#1",
-        "moneda_pasillo_cofres#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#0",
-        "aceite_01#0",
-        "moneda5_sala_cofres#0",
-        "moneda_sala_cofres#1",
-        "moneda_sala_cofres#0",
-        "moneda_pasillo_cabana#1",
         "moneda_pasillo_tienda#1",
         "moneda_pasillo_der#0",
-        "moneda_sala_central#0"
+        "aceite_01#0",
+        "madera_02#0",
+        "moneda5_sala_cofres#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_sala_central#0",
+        "moneda_sala_central#1",
+        "moneda_sala_cofres#1",
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_cabana#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -68,9 +72,6 @@
     },
     "current_map": "mapa1",
     "chests": {
-        "cofre_01": {
-            "espera": 127.5
-        },
         "cofre_02": {
             "usos": 6
         },
@@ -83,9 +84,15 @@
     },
     "placeables": [
         {
+            "t": "faro",
+            "x": 1033,
+            "y": 169,
+            "fuel": 0.0
+        },
+        {
             "t": "cofre",
-            "x": 898,
-            "y": 155,
+            "x": 1013,
+            "y": 169,
             "slots": [
                 null,
                 null,
@@ -96,12 +103,6 @@
                 null,
                 null
             ]
-        },
-        {
-            "t": "faro",
-            "x": 1033,
-            "y": 169,
-            "fuel": 0.0
         }
     ],
     "enemies_seen": [
@@ -114,9 +115,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 739,
+        "items_used": 745,
         "chests_opened": 50,
-        "purchases": 38,
+        "purchases": 40,
         "fireballs": 2628,
         "kills": 312
     },
@@ -141,10 +142,7 @@
             "polvora",
             15
         ],
-        [
-            "esfera",
-            1
-        ],
+        null,
         [
             "antorcha",
             1
@@ -2432,13 +2430,6 @@
         {
             "k": "item",
             "id": "madera",
-            "x": 393,
-            "y": 94,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "madera",
             "x": 366,
             "y": 86,
             "map": "mapa1"
@@ -2669,13 +2660,6 @@
         },
         {
             "k": "item",
-            "id": "moneda",
-            "x": 382,
-            "y": 101,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "aceite",
             "x": 425,
             "y": 85,
@@ -2712,22 +2696,8 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 425,
-            "y": 83,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 417,
             "y": 83,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 422,
-            "y": 80,
             "map": "mapa1"
         },
         {
@@ -2819,13 +2789,6 @@
             "id": "cera",
             "x": 528,
             "y": 74,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "cera",
-            "x": 471,
-            "y": 91,
             "map": "mapa1"
         },
         {
@@ -2922,13 +2885,6 @@
         {
             "k": "item",
             "id": "moneda",
-            "x": 497,
-            "y": 153,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
             "x": 509,
             "y": 172,
             "map": "mapa1"
@@ -2978,13 +2934,6 @@
         {
             "k": "item",
             "id": "moneda",
-            "x": 369,
-            "y": 147,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
             "x": 368,
             "y": 156,
             "map": "mapa1"
@@ -3026,9 +2975,72 @@
         },
         {
             "k": "item",
-            "id": "moneda_5",
-            "x": 489,
+            "id": "gelea",
+            "x": 953,
+            "y": 168,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 363,
+            "y": 85,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 330,
+            "y": 56,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "martillo",
+            "x": 881,
+            "y": 174,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 962,
             "y": 159,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 977,
+            "y": 158,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 961,
+            "y": 152,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 965,
+            "y": 154,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 961,
+            "y": 146,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 920,
+            "y": 145,
             "map": "mapa1"
         },
         {
@@ -3185,5 +3197,14 @@
         }
     ],
     "ganzua_uses": 0,
-    "boss_intro_seen": true
+    "boss_intro_seen": true,
+    "enemies_claimed": [
+        "hongun",
+        "mosquito",
+        "pino",
+        "slime",
+        "slime2",
+        "slime3",
+        "tronco"
+    ]
 }

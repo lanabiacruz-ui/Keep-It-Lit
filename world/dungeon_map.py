@@ -35,7 +35,10 @@ BG_DIRS = (
 )
 
 BG_RATIO = 0.62
-INNER_RATIO = 0.82
+
+# Que tanto del papel (fondo_mapa.png) puede ocupar el dibujo del mapa.
+# Antes el contorno se calculaba contra la pantalla y se salia del papel.
+INNER_RATIO = 0.74
 
 MAP_DIR = (
     Path(__file__).resolve().parent.parent
@@ -77,7 +80,7 @@ def _erode(mask, size, t):
     return eroded
 
 
-def _fit(walkable, screen_size):
+def _fit(walkable, screen_size, box=None):
 
     rects = [pygame.Rect(r) for r in walkable if r.width > 0 and r.height > 0]
 
@@ -88,9 +91,14 @@ def _fit(walkable, screen_size):
 
     bounds = rects[0].unionall(rects[1:])
 
+    # box = (ancho, alto) maximo que puede ocupar el dibujo; sin caja se
+    # usa la pantalla (como antes).
+    if box is None:
+        box = (sw * FILL_RATIO, sh * FILL_RATIO)
+
     scale = min(
-        sw * FILL_RATIO / bounds.width,
-        sh * FILL_RATIO / bounds.height,
+        box[0] / bounds.width,
+        box[1] / bounds.height,
     )
 
     thickness = max(2, int(min(sw, sh) / 240))
@@ -100,9 +108,9 @@ def _fit(walkable, screen_size):
     return rects, bounds, scale, thickness, pad
 
 
-def build_outline(walkable, screen_size):
+def build_outline(walkable, screen_size, box=None):
 
-    fit = _fit(walkable, screen_size)
+    fit = _fit(walkable, screen_size, box)
 
     if fit is None:
         return None, None
@@ -286,16 +294,19 @@ class DungeonMapView:
 
         return self._scaled
 
-    def _ensure(self, walkable, screen_size):
+    def _ensure(self, walkable, screen_size, box=None):
 
         key = (
             tuple((r.x, r.y, r.w, r.h) for r in walkable),
             tuple(screen_size),
+            None if box is None else (round(box[0]), round(box[1])),
         )
 
         if key != self._key:
 
-            self._line, self._shadow = build_outline(walkable, screen_size)
+            self._line, self._shadow = build_outline(
+                walkable, screen_size, box
+            )
             self._key = key
 
         if self._dim is None or self._dim_size != tuple(screen_size):
@@ -398,14 +409,20 @@ class DungeonMapView:
 
         sw, sh = screen.get_size()
 
-        self._ensure(walkable, (sw, sh))
+        bg = self._ensure_bg((sw, sh))
+
+        # el contorno tiene que entrar dentro del papel, no de la pantalla
+        box = (
+            None if bg is None
+            else (bg.get_width() * INNER_RATIO, bg.get_height() * INNER_RATIO)
+        )
+
+        self._ensure(walkable, (sw, sh), box)
 
         a = int(255 * self._alpha)
 
         self._dim.set_alpha(a)
         screen.blit(self._dim, (0, 0))
-
-        bg = self._ensure_bg((sw, sh))
 
         bg_top = None
 
@@ -431,7 +448,7 @@ class DungeonMapView:
 
             top = rect.top
 
-            fit = _fit(walkable, (sw, sh))
+            fit = _fit(walkable, (sw, sh), box)
 
             if map_name == "mapa1" and fit is not None:
 
@@ -463,7 +480,7 @@ class DungeonMapView:
 
             top = pos[1]
 
-            fit = _fit(walkable, (sw, sh))
+            fit = _fit(walkable, (sw, sh), box)
 
             if map_name == "mapa1" and fit is not None:
 
