@@ -297,7 +297,7 @@ class PinaBoss:
     contact_damage = False
     precise_hit = True
     attached = False
-    codex_key = None
+    codex_key = "jefe_pina"
     touch_cd = 0.0
     stun = 0.0
 

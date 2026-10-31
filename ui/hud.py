@@ -342,7 +342,8 @@ class Hud:
 
         return lines
 
-    def draw_overlay(self, screen, item_defs, mouse_pos, holding, message):
+    def draw_overlay(self, screen, item_defs, mouse_pos, holding, message,
+                     message_color=None):
 
         if holding:
 
@@ -399,9 +400,9 @@ class Hud:
 
         if message:
 
-            self._draw_message(screen, message)
+            self._draw_message(screen, message, message_color)
 
-    def _draw_message(self, screen, message):
+    def _draw_message(self, screen, message, color=None):
 
         max_w = screen.get_width() - 40
 
@@ -443,7 +444,7 @@ class Hud:
 
         for line in reversed(lines):
 
-            text = font.render(line, True, (255, 255, 255))
+            text = font.render(line, True, color or (255, 255, 255))
             shadow = font.render(line, True, (0, 0, 0))
 
             pos = text.get_rect(midbottom=(screen.get_width() // 2, y))

@@ -22,9 +22,17 @@ Todos son opcionales: si falta alguno se dibuja un reemplazo con codigo.
 
 El tamano en el juego sale del tamano de TU imagen (zoom x4 del juego).
 
-Patron (fase 1):  perseguir -> embestida -> rocas -> perseguir -> onda
-                  -> embestida -> escudo + refuerzos
+Patron (fase 1):  perseguir -> embestida -> onda -> rocas -> embestida
+                  -> refuerzos (sin escudo: sigue peleando) -> onda ...
 Patron (fase 2):  todo mas rapido, y suma el rayo y el barrido de brazos.
+Mientras persigue tambien tira rocas sobre el jugador, asi que nunca para.
+
+Si le pegas mucho en poco tiempo, el jefe se da cuenta, se aleja de vos con
+una embestida ("evade") y sigue peleando desde otro lado de la sala.
+
+El RAYO mata de un golpe (se esquiva moviendose de costado cuando la mira
+se pone blanca). La EXPLOSION ("blast") lo suma de vez en cuando: carga un
+aviso y despues empuja al jugador muy lejos si esta cerca.
 
 Que se esquiva con salto: las ondas y el barrido de brazos (van al ras del
 piso). Las rocas, el rayo y la embestida NO se esquivan saltando.
@@ -50,7 +58,7 @@ REF_ZOOM = 4
 
 DEFAULT_BASE = 48.0
 
-PHASE2_SPEED = 1.3
+PHASE2_SPEED = 1.5
 
 ANIM_FRAME = 0.18
 
@@ -62,72 +70,99 @@ DYING_TIME = 4.6
 CRACK_EVERY = 0.75
 FLASH_TIME = 0.10
 
-CYCLE_1 = ("chase", "charge", "rocks", "chase", "slam", "charge", "shield")
+CYCLE_1 = (
+    "chase", "charge", "slam", "rocks", "charge", "shield", "blast", "slam",
+    "chase", "charge", "rocks",
+)
 CYCLE_2 = (
-    "chase", "charge", "slam", "beam", "rocks", "sweep", "charge", "slam",
-    "shield",
+    "charge", "beam", "slam", "sweep", "blast", "rocks", "shield", "charge",
+    "beam", "slam", "sweep", "charge", "blast", "rocks", "beam",
 )
 
 # --- perseguir
-CHASE_SPEED = 36.0
-CHASE_TIME = (3.2, 2.2)
+CHASE_SPEED = 70.0
+CHASE_TIME = (1.8, 1.1)
+
+# mientras persigue deja caer una roca sobre el jugador cada tanto
+CHASE_ROCK_EVERY = (1.0, 0.7)
 
 # --- embestida
-CHARGE_AIM = 1.2
-CHARGE_LOCK = 0.5        # los ultimos segundos de la mira ya no sigue
-CHARGE_SPEED = 330.0
-CHARGE_RAMP = 0.45
+CHARGE_AIM = 0.95
+CHARGE_LOCK = 0.4        # los ultimos segundos de la mira ya no sigue
+CHARGE_SPEED = 380.0
+CHARGE_RAMP = 0.4
 CHARGE_MAX = 2.0
-STUN_TIME = 2.6
+STUN_TIME = 1.7
 
 # --- onda (se salta)
-SLAM_WIND = 1.0
-WAVE_SPEED = 190.0
+SLAM_WIND = 0.7
+WAVE_SPEED = 215.0
 WAVE_HALF = 7.0
-WAVE_GAP = 1.0
-SLAM_REST = 1.0
+WAVE_GAP = 0.7
+SLAM_REST = 0.5
 WAVE_MAX_R = 700.0
 
 # --- rocas
-ROCK_WIND = 0.8
+ROCK_WIND = 0.5
 ROCK_RADIUS = 17.0
-ROCK_WARN = (1.5, 1.05)
-ROCK_BATCHES = (3, 4)
-ROCK_PER_BATCH = (3, 4)
-ROCK_GAP = 0.85
-ROCK_AFTER = 1.3
+ROCK_WARN = (1.2, 0.9)
+ROCK_BATCHES = (4, 6)
+ROCK_PER_BATCH = (3, 5)
+ROCK_GAP = 0.65
+ROCK_AFTER = 0.7
 ROCK_IMPACT = 0.18
 ROCK_CRATER = 0.6
 
 # --- rayo (fase 2)
-BEAM_AIM = 1.5
-BEAM_LOCK = 0.6
+BEAM_AIM = 1.2
+BEAM_LOCK = 0.5
 BEAM_TIME = 0.55
-BEAM_REST = 0.5
+BEAM_REST = 0.3
 BEAM_LEN = 700.0
 BEAM_HALF = 6.0
 
+# --- esquiva: si le sacan mucha vida rapido, se va de ahi embistiendo
+# Medidor de "estres": cada golpe lo llena, y se vacia de a poco. Cuando se
+# llena, se va. Asi hay que pegarle MUCHO y por un buen rato para que escape.
+EVADE_FRAC = (0.05, 0.04)    # fraccion de la vida maxima (fase 1, fase 2)
+EVADE_DECAY = 1.5            # vida/seg que se le "olvida" al medidor
+EVADE_FIRST = 9.0            # segundos de gracia desde que arranca la fase
+EVADE_COOLDOWN = (9.0, 7.0)
+EVADE_AIM = 0.4
+EVADE_SPEED = 430.0
+EVADE_MAX = 1.1
+EVADE_REST = 0.5
+EVADE_STATES = ("chase", "stun", "slam", "rocks", "sweep")
+
+# --- explosion con empuje (no se esquiva saltando: hay que alejarse)
+BLAST_WIND = 1.1
+BLAST_RADIUS = 135.0
+BLAST_ACTIVE = 0.3
+BLAST_REST = 0.9
+BLAST_PUSH = 1900.0      # CONTACT_PUSH es 300: esto lo manda MUY lejos
+
 # --- barrido de brazos (fase 2, se salta)
-SWEEP_WIND = 0.8
-SWEEP_TIME = 2.8
+SWEEP_WIND = 0.6
+SWEEP_TIME = 3.2
 SWEEP_REACH = 54.0
 SWEEP_HALF = 7.0
 SWEEP_RATE = 250.0
-SWEEP_MOVE = 24.0
-SWEEP_REST = 1.2
+SWEEP_MOVE = 45.0
+SWEEP_REST = 0.9
 
 # --- escudo + refuerzos
-SHIELD_WIND = 1.0
-SHIELD_MIN = 2.2
-SHIELD_MAX = 18.0
+# invoca refuerzos pero NO se encierra: sigue atacando y se le puede pegar
+SHIELD_WIND = 0.7
+MAX_MINIONS = 16     # si ya hay tantos en la sala no invoca mas
 
 # --- danos (misma escala que el resto del juego)
-BODY_DAMAGE = 0.20
-CHARGE_DAMAGE = 0.35
-WAVE_DAMAGE = 0.30
-ROCK_DAMAGE = 0.30
-BEAM_DAMAGE = 0.35
-SWEEP_DAMAGE = 0.30
+BODY_DAMAGE = 0.25
+CHARGE_DAMAGE = 0.42
+WAVE_DAMAGE = 0.35
+ROCK_DAMAGE = 0.35
+BEAM_DAMAGE = 99.0       # mata de un golpe (el escudo amarillo lo frena)
+BLAST_DAMAGE = 0.30
+SWEEP_DAMAGE = 0.35
 
 CONTACT_PUSH = 300.0
 
@@ -427,7 +462,7 @@ class GolemBoss:
     contact_damage = False
     precise_hit = True
     attached = False
-    codex_key = None
+    codex_key = "jefe_golem"
     touch_cd = 0.0
     stun = 0.0
 
@@ -506,6 +541,15 @@ class GolemBoss:
         self.beam_hit = False
         self.shielded = False
         self.summoned = False
+        self.chase_rock_cd = 0.0
+        self.evade_meter = 0.0       # vida perdida "reciente" (se vacia sola)
+        self.evade_cd = EVADE_FIRST
+        self.evade_dest = pygame.Vector2(self.pos)
+        self.blast_fired = False
+        self.blast_on = False
+        self.blast_t = 0.0
+        self.blast_hit = False
+        self.hit_push = None     # empuje especial del ultimo golpe (o None)
 
         self.waves = []
         self.rocks = []
@@ -540,6 +584,11 @@ class GolemBoss:
                 value = half
                 self.pending_phase = True
 
+            lost = self._hp - max(value, 0.0)
+
+            if lost > 0:
+                self.evade_meter += lost
+
         self._hp = min(value, self.max_hp)
 
     @property
@@ -552,7 +601,7 @@ class GolemBoss:
 
         return (
             self.spawning or self.dying or self.hold_t > 0
-            or self.shielded or self.state == "phase"
+            or self.shielded or self.state in ("phase", "evade_run")
         )
 
     @property
@@ -603,6 +652,8 @@ class GolemBoss:
         airborne: el jugador esta en el aire (esquiva ondas y barrido).
         """
 
+        self.hit_push = None
+
         if self.spawning or self.dying or self.hold_t > 0:
             return None
 
@@ -631,6 +682,16 @@ class GolemBoss:
                 self.beam_hit = True
 
                 return BEAM_DAMAGE, self.pos
+
+        # explosion (no se esquiva saltando)
+        if self.blast_on and not self.blast_hit:
+
+            if center.distance_to(self.pos) < BLAST_RADIUS + 5:
+
+                self.blast_hit = True
+                self.hit_push = BLAST_PUSH
+
+                return BLAST_DAMAGE, self.pos
 
         if not airborne:
 
@@ -667,7 +728,7 @@ class GolemBoss:
 
         if math.hypot(nx - self.pos.x, ny - self.pos.y) < radius:
 
-            if self.state == "charge_run":
+            if self.state in ("charge_run", "evade_run"):
                 return CHARGE_DAMAGE, self.pos
 
             return BODY_DAMAGE, self.pos
@@ -707,7 +768,7 @@ class GolemBoss:
                     24
                 ))
 
-        if self.state == "charge_aim" or (
+        if self.state in ("charge_aim", "evade_aim") or (
             self.beam_on or self.state == "beam"
         ):
 
@@ -720,6 +781,18 @@ class GolemBoss:
                 p = self.pos + self.dir * (length * i / 12.0)
 
                 out.append((p.x, p.y, 24))
+
+        if self.state == "blast" or self.blast_on:
+
+            for i in range(16):
+
+                a = math.tau * i / 16.0
+
+                out.append((
+                    self.pos.x + math.cos(a) * BLAST_RADIUS,
+                    self.pos.y + math.sin(a) * BLAST_RADIUS,
+                    28
+                ))
 
         if self.state == "sweep" and self.t >= SWEEP_WIND:
 
@@ -796,6 +869,13 @@ class GolemBoss:
         elif name == "sweep":
 
             self.state = "sweep"
+
+        elif name == "blast":
+
+            self.state = "blast"
+            self.blast_fired = False
+            self.blast_on = False
+            self.blast_hit = False
 
         elif name == "shield":
 
@@ -951,6 +1031,8 @@ class GolemBoss:
 
         sdt = dt * (PHASE2_SPEED if self.phase == 2 else 1.0)
 
+        self._check_evade(dt, target)
+
         self._update_hazards(sdt)
 
         handler = getattr(self, "_s_" + self.state)
@@ -1002,11 +1084,19 @@ class GolemBoss:
             if self.beam_t >= BEAM_TIME:
                 self.beam_on = False
 
+        if self.blast_on:
+
+            self.blast_t += dt
+
+            if self.blast_t >= BLAST_ACTIVE:
+                self.blast_on = False
+
     def _clear_hazards(self):
 
         self.waves = []
         self.rocks = []
         self.beam_on = False
+        self.blast_on = False
 
     # --- estados del patron
 
@@ -1025,6 +1115,20 @@ class GolemBoss:
 
         # pasos pesados: tiembla un poquito al pisar
         self.shake = 0.35 if math.sin(self.anim_t * 7.0) > 0.92 else 0.0
+
+        # no deja respirar: mientras camina tira rocas al jugador
+        self.chase_rock_cd -= dt
+
+        if self.chase_rock_cd <= 0:
+
+            self.chase_rock_cd = CHASE_ROCK_EVERY[self.phase - 1]
+
+            margin = ROCK_RADIUS + 4
+
+            rx = max(self.room.left + margin, min(target.x, self.room.right - margin))
+            ry = max(self.room.top + margin, min(target.y, self.room.bottom - margin))
+
+            self._spawn_rock(rx, ry)
 
         if self.t >= CHASE_TIME[self.phase - 1]:
             self._next()
@@ -1265,7 +1369,147 @@ class GolemBoss:
         self.state = "stun"
         self.t = 0.0
 
+    def _check_evade(self, dt, target):
+        """Si le sacaron mucha vida por un buen rato, se va embistiendo."""
+
+        if self.evade_cd > 0:
+            self.evade_cd -= dt
+
+        # el medidor se vacia solo
+        self.evade_meter = max(0.0, self.evade_meter - EVADE_DECAY * dt)
+
+        if self.evade_cd > 0 or self.state not in EVADE_STATES:
+            return
+
+        if self.evade_meter < self.max_hp * EVADE_FRAC[self.phase - 1]:
+            return
+
+        self._begin_evade(target)
+
+    def _begin_evade(self, target):
+
+        self.evade_meter = 0.0
+        self.evade_cd = EVADE_COOLDOWN[self.phase - 1]
+
+        half = self._half()
+
+        # el punto de la sala mas lejos del jugador (y lejos de donde esta)
+        best = None
+        best_score = -1.0
+
+        for fx in (0.12, 0.5, 0.88):
+            for fy in (0.12, 0.5, 0.88):
+
+                p = pygame.Vector2(
+                    self.room.left + half + (self.room.width - 2 * half) * fx,
+                    self.room.top + half + (self.room.height - 2 * half) * fy,
+                )
+
+                score = (
+                    p.distance_to(target)
+                    + 0.5 * p.distance_to(self.pos)
+                )
+
+                if p.distance_to(self.pos) < 90:
+                    continue
+
+                if score > best_score:
+                    best, best_score = p, score
+
+        if best is None:
+            best = pygame.Vector2(self.center)
+
+        self.evade_dest = best
+
+        want = best - self.pos
+
+        if want.length_squared() > 1.0:
+            self.dir = want.normalize()
+
+        self.state = "evade_aim"
+        self.t = 0.0
+        self.vel.update(0, 0)
+        self.shake = 0.0
+        self.sweep_angle = 0.0
+        self.ring_t = 0.0
+
+        self._emit("roar", self.pos)
+
+    def _s_evade_aim(self, dt, target):
+
+        self.t += dt
+
+        self.shake = 0.5 + 1.5 * (self.t / EVADE_AIM)
+
+        if self.t >= EVADE_AIM:
+
+            self.state = "evade_run"
+            self.t = 0.0
+            self.shake = 0.0
+
+    def _s_evade_run(self, dt, target):
+
+        self.t += dt
+
+        step = EVADE_SPEED * dt
+
+        left = self.pos.distance_to(self.evade_dest)
+
+        self.pos += self.dir * min(step, left)
+
+        touched = self._clamp()
+
+        if touched or left <= step or self.t >= EVADE_MAX:
+
+            self.state = "evade_rest"
+            self.t = 0.0
+            self.shake = 2.0
+
+            self._emit("wallhit", self.pos)
+
+    def _s_evade_rest(self, dt, target):
+
+        self.t += dt
+
+        self.shake = max(0.0, self.shake - 6.0 * dt)
+
+        if self.t >= EVADE_REST:
+
+            # sigue con el patron desde el siguiente ataque
+            self._next()
+
+    def _s_blast(self, dt, target):
+        """Carga una explosion que empuja muy lejos a quien este cerca."""
+
+        self.t += dt
+
+        if self.t < BLAST_WIND:
+
+            self.shake = 0.5 + 2.5 * (self.t / BLAST_WIND)
+
+            return
+
+        if not self.blast_fired:
+
+            self.blast_fired = True
+            self.blast_on = True
+            self.blast_t = 0.0
+            self.blast_hit = False
+            self.shake = 4.0
+            self.flash = 0.15
+            self.ring_t = 0.0
+
+            self._emit("blast", self.pos)
+
+            return
+
+        self.shake = max(0.0, self.shake - 10.0 * dt)
+
+        if self.t >= BLAST_WIND + BLAST_REST:
+            self._next()
+
     def _s_shield(self, dt, target):
+        """Invoca refuerzos y sigue peleando (ya no se encierra en el escudo)."""
 
         self.t += dt
 
@@ -1275,33 +1519,17 @@ class GolemBoss:
 
             return
 
-        if not self.summoned:
+        self.shake = 0.0
 
-            self.summoned = True
+        if self.minions < MAX_MINIONS:
+
             self.summon_request = True
-            self.shielded = True
-            self.shake = 0.0
             self.ring_t = 0.0
             self.flash = 0.15
 
             self._emit("summon", self.pos)
 
-            return
-
-        waited = self.t - SHIELD_WIND
-
-        if (
-            (self.minions <= 0 and waited >= SHIELD_MIN)
-            or waited >= SHIELD_MAX
-        ):
-
-            self.shielded = False
-            self.flash = 0.2
-            self.ring_t = 0.0
-
-            self._emit("shatter", self.pos)
-
-            self._next()
+        self._next()
 
     # --- cambio de fase y muerte
 
@@ -1310,6 +1538,8 @@ class GolemBoss:
         self.phase = 2
         self.pending_phase = False
         self.shielded = False
+        self.evade_meter = 0.0
+        self.evade_cd = EVADE_FIRST
 
         self._clear_hazards()
 
@@ -1423,7 +1653,9 @@ class GolemBoss:
 
         pose = None
 
-        if self.state in ("charge_aim", "charge_run"):
+        if self.state in (
+            "charge_aim", "charge_run", "evade_aim", "evade_run"
+        ):
             pose = self.art.poses.get("charge")
         elif self.state in ("slam", "rocks"):
             pose = self.art.poses.get("slam")
@@ -1624,6 +1856,17 @@ class GolemBoss:
 
                 pygame.draw.circle(screen, col, (sx, sy), int(r * 0.8))
 
+        # aviso de la esquiva: linea verde hacia donde se va
+        if self.state == "evade_aim":
+
+            a = self._to_screen(camera, self.pos.x, self.pos.y)
+            b = self._to_screen(
+                camera, self.evade_dest.x, self.evade_dest.y
+            )
+
+            if int(self.t * 20) % 2 == 0:
+                pygame.draw.line(screen, GREEN, a, b, max(2, int(2 * z)))
+
         # linea de la embestida
         if self.state == "charge_aim":
 
@@ -1655,10 +1898,12 @@ class GolemBoss:
 
             locked = self.t >= BEAM_AIM - BEAM_LOCK
 
-            col = (255, 255, 255) if locked else GREEN
+            col = (255, 70, 50) if locked else GREEN
+
+            width = max(2, int(z * 0.9)) if locked else max(1, int(z * 0.5))
 
             if not locked or int(self.t * 16) % 2 == 0:
-                pygame.draw.line(screen, col, a, b, max(1, int(z * 0.5)))
+                pygame.draw.line(screen, col, a, b, width)
 
         # aviso de la onda: anillo que se cierra sobre el jefe
         if self.state == "slam" and self.t < SLAM_WIND:
@@ -1689,6 +1934,42 @@ class GolemBoss:
             pygame.draw.circle(screen, STONE_DARK, (ox, oy), r + 2, w + 4)
             pygame.draw.circle(screen, (170, 178, 184), (ox, oy), r, w)
             pygame.draw.circle(screen, GREEN, (ox, oy), r, max(2, w // 4))
+
+        # explosion: aviso del area y onda de choque
+        if self.state == "blast" or self.blast_on:
+
+            cx, cy = self._to_screen(camera, self.pos.x, self.pos.y)
+
+            full = int(BLAST_RADIUS * z)
+
+            if self.blast_on:
+
+                k = self.blast_t / BLAST_ACTIVE
+
+                r = int(full * (0.4 + 1.0 * k))
+
+                pygame.draw.circle(
+                    screen, GREEN_DARK, (cx, cy), r + 6,
+                    max(6, int(10 * z * (1.0 - k)))
+                )
+                pygame.draw.circle(
+                    screen, (235, 255, 240), (cx, cy), r,
+                    max(4, int(7 * z * (1.0 - k)))
+                )
+
+            elif self.t < BLAST_WIND:
+
+                k = self.t / BLAST_WIND
+
+                blink = int(self.t * (6.0 + 14.0 * k)) % 2 == 0
+
+                col = (255, 90, 60) if blink else (255, 225, 90)
+
+                pygame.draw.circle(screen, col, (cx, cy), full, max(3, int(2.5 * z)))
+                pygame.draw.circle(
+                    screen, GREEN, (cx, cy),
+                    max(4, int(full * k)), max(2, int(2 * z))
+                )
 
         # anillo cuando se arma o se rompe algo
         if self.ring_t < 0.6:

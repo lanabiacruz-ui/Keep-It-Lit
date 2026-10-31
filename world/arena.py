@@ -4412,7 +4412,12 @@ class ArenaConfig:
                  done_text="Mapa completado! La sala se cerro para siempre",
                  gem_id="gema", gem_name="gema",
                  zone_name="", zone_tag="", hard=False, boss=False,
-                 boss_kind="pina"):
+                 boss_kind="pina", warn_text="", warn_needs=""):
+
+        # warn_text: aviso en rojo al acercarse a la puerta si todavia no
+        # se completo la arena "warn_needs" (atributo del juego, ej "arena")
+        self.warn_text = warn_text
+        self.warn_needs = warn_needs
 
         self.key = key
         self.zone_name = zone_name
@@ -4468,6 +4473,11 @@ LEFT_ARENA = ArenaConfig(
     gem_name="gema verde oscuro",
     zone_name="STONUN", zone_tag="ZONA 2", hard=True,
     boss=True, boss_kind="golem",
+    warn_text=(
+        "Es recomendable que primero completes la Zona 1 (Orkun): "
+        "la Zona 2 es mucho mas dificil"
+    ),
+    warn_needs="arena",
 )
 
 
@@ -4539,6 +4549,8 @@ class Arena:
         self.completed = False
         self.final_clear = False
         self._sealed_msg_t = -10.0
+        self._warn_msg_t = -99.0
+        self._warn_near = False
 
         self.particles = []
         self.ring_t = None
@@ -4839,7 +4851,7 @@ class Arena:
 
         if event in ("roar", "summon"):
             audio.play("alert")
-        elif event in ("split", "phase", "die"):
+        elif event in ("split", "phase", "die", "blast"):
             audio.play("explosion")
         elif event in ("merge", "wave", "rock", "shatter"):
             audio.play("hit_heavy")
@@ -4867,12 +4879,12 @@ class Arena:
             audio.play("boss_slam")
             audio.play("boss_roar")
 
-        elif event in ("wave", "rock", "wallhit", "beam", "shatter"):
+        elif event in ("wave", "rock", "wallhit", "beam", "shatter", "blast"):
 
             amp, length = {
                 "wave": (8.0, 0.5), "rock": (4.0, 0.25),
                 "wallhit": (10.0, 0.6), "beam": (6.0, 0.5),
-                "shatter": (6.0, 0.4),
+                "shatter": (6.0, 0.4), "blast": (12.0, 0.7),
             }[event]
 
             fx.shake(amp, length)
@@ -4931,13 +4943,13 @@ class Arena:
             # zona 2: solo guardianes, guardianes tiradores, golem y flashbang
             if boss.phase == 2:
                 kinds = (
-                    ["guardian"] * 4 + ["tirador"] * 4
-                    + ["golem"] * 2 + ["destello"] * 3
+                    ["guardian"] * 6 + ["tirador"] * 6
+                    + ["golem"] * 3 + ["destello"] * 4
                 )
             else:
                 kinds = (
-                    ["guardian"] * 3 + ["tirador"] * 3
-                    + ["golem"] * 1 + ["destello"] * 2
+                    ["guardian"] * 5 + ["tirador"] * 4
+                    + ["golem"] * 2 + ["destello"] * 3
                 )
 
         else:
@@ -5126,8 +5138,11 @@ class Arena:
 
                 away = pygame.Vector2(body.center) - pygame.Vector2(origin)
 
+                # algunos ataques (la explosion) empujan mucho mas que el resto
+                push = getattr(boss, "hit_push", None) or CONTACT_PUSH
+
                 if away.length_squared() > 0.01:
-                    p.kb_vel = away.normalize() * CONTACT_PUSH
+                    p.kb_vel = away.normalize() * push
 
     def _spawn_wave(self, game):
 
@@ -5469,6 +5484,41 @@ class Arena:
 
         self._gate_time += dt
 
+    WARN_COLOR = (255, 70, 60)
+    WARN_RANGE = (170, 130)     # que tan cerca de la puerta avisa
+    WARN_REPEAT = 6.0           # si te quedas cerca, repite cada tanto
+
+    def _warn_if_unprepared(self, game, p):
+        """Rojo abajo: "primero completa la zona 1" (solo la zona 2)."""
+
+        text = getattr(self.cfg, "warn_text", "")
+        needs = getattr(self.cfg, "warn_needs", "")
+
+        if not text or not needs:
+            return
+
+        other = getattr(game, needs, None)
+
+        if other is None or getattr(other, "completed", True):
+            self._warn_near = False
+            return
+
+        near = p.rect.colliderect(self.cfg.gate.inflate(*self.WARN_RANGE))
+
+        if not near:
+            self._warn_near = False
+            return
+
+        # una vez al llegar, y de nuevo si te quedas un rato
+        if (
+            not self._warn_near
+            or self._gate_time - self._warn_msg_t > self.WARN_REPEAT
+        ):
+            self._warn_near = True
+            self._warn_msg_t = self._gate_time
+
+            game.show_message(text, self.WARN_COLOR)
+
     def update(self, game, dt):
 
         self._update_fx(dt)
@@ -5495,6 +5545,8 @@ class Arena:
                     )
 
                 return
+
+            self._warn_if_unprepared(game, p)
 
             center = p.rect.center
 

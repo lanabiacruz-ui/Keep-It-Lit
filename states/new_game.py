@@ -662,6 +662,7 @@ class NewGame:
         self.debug_combat = False
 
         self.message = ""
+        self.message_color = None
         self.message_timer = 0.0
 
         self.no_light_timer = None
@@ -1561,9 +1562,11 @@ class NewGame:
             if len(effects) >= 3:
                 achievements.unlock("coctel")
 
-    def show_message(self, text):
+    def show_message(self, text, color=None):
+        """Texto de abajo. color=None es blanco; (255, 70, 60) es rojo."""
 
         self.message = text
+        self.message_color = color
         self.message_timer = MESSAGE_TIME
 
     def _max_stack(self, item_id):
@@ -5129,7 +5132,8 @@ class NewGame:
             self.item_defs,
             pygame.mouse.get_pos(),
             pygame.mouse.get_pressed()[0],
-            self.message if self.message_timer > 0 else ""
+            self.message if self.message_timer > 0 else "",
+            self.message_color
         )
 
         for arena in self.arenas:

@@ -7,13 +7,17 @@
         "slime_brillante": "2026-10-28T19:25:28",
         "exterminador": "2026-10-29T21:37:56",
         "saqueador": "2026-10-29T22:48:47",
-        "abrazo_golem": "2026-10-31T17:39:39"
+        "abrazo_golem": "2026-10-31T17:39:39",
+        "entomologo": "2026-10-31T18:02:58",
+        "desactivado": "2026-10-31T18:03:02",
+        "ojos_ciegos": "2026-10-31T18:06:04",
+        "zona_2": "2026-10-31T18:49:09"
     },
     "counters": {
-        "defeats": 13,
-        "fireballs": 2328,
-        "kills": 226,
-        "slimes": 13,
+        "defeats": 23,
+        "fireballs": 2515,
+        "kills": 274,
+        "slimes": 15,
         "chests": 46
     }
 }

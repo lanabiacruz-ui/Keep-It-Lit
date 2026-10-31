@@ -152,23 +152,55 @@ DEFAULT_DATA = {
         
         ),
     },
+
+    "jefe_pina": {
+        "nombre": "Piña Colosal",
+        "imagen": "jefe_pina.png",
+        "descripcion": (
+            "Jefe de la Zona 1 (Orkun). Aparece en la oleada 11, despues de "
+            "sobrevivir las 10 anteriores. Rueda por la sala, se agranda, se "
+            "parte en 12 pedazos que rebotan por todos lados (hay que "
+            "esquivarlos) y vuelve a juntarse. Invoca refuerzos y a la mitad "
+            "de su vida se pone mucho mas rapido. Al derrotarlo te da la gema."
+        ),
+    },
+
+    "jefe_golem": {
+        "nombre": "Golem Colosal",
+        "imagen": "jefe_golem.png",
+        "descripcion": (
+            "Jefe de la Zona 2 (Stonun) y guardian de la gema verde oscuro. "
+            "Aparece en la oleada 11, el final de la zona mas dificil. No "
+            "para de atacar: embiste, tira rocas, hace ondas que se saltan, "
+            "y en la fase 2 suma un rayo que mata de un golpe, un barrido de "
+            "brazos y una explosion que te manda lejos. Invoca guardianes, "
+            "tiradores, golems y destellos, y si le pegas muy seguido se "
+            "escapa embistiendo a otro lado."
+        ),
+    },
 }
 
 
 class EnemyEncyclopedia:
 
+    # De la mas facil a la mas dificil de encontrar (por avance en el juego):
+    #   los slimes son lo primero que se ve (desde el inicio, sin entrar a
+    #   ninguna zona; el dorado y el brillante dependen de la suerte),
+    #   despues la zona 1 con su jefe, y al final la zona 2 con el suyo.
     ORDER = (
-        "pino",
-        "tronco",
-        "mosquito",
-        "hongun",
-        "guardian",
-        "guardian_tirador",
-        "destello",
-        "golem",
-        "slime",
-        "slime2",
-        "slime3",
+        "slime",             # comun (55% de las apariciones)
+        "slime2",            # dorado (30%)
+        "slime3",            # brillante, el mas raro (15%)
+        "pino",              # zona 1, oleada 1
+        "tronco",            # zona 1, oleada 3
+        "mosquito",          # zona 1, oleada 6
+        "hongun",            # zona 1, oleada 8
+        "jefe_pina",         # zona 1, oleada 11 (jefe)
+        "guardian",          # zona 2, oleada 1
+        "guardian_tirador",  # zona 2, oleada 3
+        "destello",          # zona 2, oleada 5
+        "golem",             # zona 2, oleada 8
+        "jefe_golem",        # zona 2, oleada 11 (jefe final)
     )
 
     VISIBLE_ROWS = 8
@@ -208,6 +240,8 @@ class EnemyEncyclopedia:
         "slime": 100,
         "slime2": 100,
         "slime3": 100,
+        "jefe_pina": 1500,
+        "jefe_golem": 2500,
     }
     DEFAULT_REWARD = 10
 
