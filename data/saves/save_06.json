@@ -2,7 +2,7 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-10-31T03:48:03",
+    "last_played": "2026-10-31T14:54:09",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
     "x": 1003,
@@ -20,7 +20,7 @@
             1
         ],
         [
-            "gelea",
+            "mapa",
             1
         ],
         [
@@ -33,20 +33,20 @@
         ]
     ],
     "collected": [
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_der#0",
-        "aceite_01#0",
-        "madera_02#0",
-        "moneda5_sala_cofres#0",
         "moneda_pasillo_cabana#1",
-        "moneda_sala_central#0",
-        "moneda_sala_central#1",
-        "moneda_sala_cofres#1",
+        "aceite_01#0",
+        "moneda_pasillo_der#0",
         "moneda5_pasillo_cofres#0",
-        "moneda_pasillo_tienda#0",
         "moneda_pasillo_cofres#0",
         "moneda_sala_cofres#0",
-        "moneda_pasillo_cabana#0"
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_sala_cofres#1",
+        "madera_02#0",
+        "moneda_sala_central#0",
+        "moneda5_sala_cofres#0",
+        "moneda_sala_central#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -115,7 +115,7 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 745,
+        "items_used": 746,
         "chests_opened": 50,
         "purchases": 40,
         "fireballs": 2628,
@@ -1270,13 +1270,6 @@
             "id": "moneda",
             "x": 566,
             "y": 49,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "mapa",
-            "x": 994,
-            "y": 148,
             "map": "mapa1"
         },
         {
