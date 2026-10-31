@@ -8,6 +8,9 @@ Todos son opcionales: si falta alguno se dibuja un reemplazo con codigo.
     jefe_golem.png            cuerpo, 192x192 (o jefe_golem_anim.png: tira
                               horizontal de cuadros de 192x192)
     jefe_golem_fase2.png      cuerpo con grietas verdes, 192x192
+    jefe_golem_caminar.png    tira de caminata (fase 1): cuadros de 192x192,
+                              se usa solo mientras persigue
+    jefe_golem_fase2_caminar.png  lo mismo para la fase 2
     jefe_golem_golpe.png      cuerpo cuando recibe un golpe, 192x192
     jefe_golem_embestida.png  agachado, listo para embestir, 192x192
     jefe_golem_puno.png       brazos arriba (puno al suelo y rocas), 192x192
@@ -50,6 +53,8 @@ DEFAULT_BASE = 48.0
 PHASE2_SPEED = 1.3
 
 ANIM_FRAME = 0.18
+
+WALK_FRAME = 0.12
 
 INTRO_TIME = 1.8
 PHASE_TIME = 2.4
@@ -349,6 +354,16 @@ class GolemBossArt:
                 [_tint(f) for f in body] if self.custom
                 else [_placeholder_body(True)]
             )
+
+        walk = load_strip(folder / "jefe_golem_caminar.png")
+
+        walk2 = load_strip(folder / "jefe_golem_fase2_caminar.png")
+
+        if walk and not walk2:
+            walk2 = [_tint(f) for f in walk]
+
+        # sin tira de caminata: sigue usando la animacion normal
+        self.walk = (walk or None, walk2 or None)
 
         hit = load_image(folder / "jefe_golem_golpe.png")
 
@@ -1417,6 +1432,15 @@ class GolemBoss:
 
         if pose is not None:
             return pose[p], ("pose", self.state, p)
+
+        walk = self.art.walk[p]
+
+        if walk and self.state == "chase":
+
+            step = WALK_FRAME / (PHASE2_SPEED if p == 1 else 1.0)
+            widx = int(self.anim_t / step) % len(walk)
+
+            return walk[widx], ("walk", p, widx)
 
         return frames[idx], ("body", p, idx)
 

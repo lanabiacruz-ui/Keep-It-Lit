@@ -2,51 +2,49 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-10-31T14:54:09",
+    "last_played": "2026-10-31T17:40:47",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 1003,
-    "y": 139,
-    "coins": 1471,
+    "x": 949,
+    "y": 153,
+    "coins": 937,
     "gems": 4,
     "gems_green": 0,
     "has_match": true,
     "light": "antorcha",
-    "vida": 1.0,
-    "escudo": 1.0,
+    "vida": 0.4421226666666696,
+    "escudo": 0.0,
     "inventory": [
         [
-            "martillo",
-            1
+            "aceite",
+            3
         ],
-        [
-            "mapa",
-            1
-        ],
+        null,
         [
             "polvora",
-            15
+            12
         ],
         [
             "repelente",
-            14
+            10
         ]
     ],
     "collected": [
+        "moneda_sala_central#1",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_izq#0",
+        "madera_02#0",
+        "moneda5_sala_cofres#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_central#0",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#1",
         "aceite_01#0",
         "moneda_pasillo_der#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_sala_cofres#0",
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_sala_cofres#1",
-        "madera_02#0",
-        "moneda_sala_central#0",
-        "moneda5_sala_cofres#0",
-        "moneda_sala_central#1"
+        "moneda_pasillo_cabana#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -106,6 +104,8 @@
         }
     ],
     "enemies_seen": [
+        "golem",
+        "guardian_tirador",
         "hongun",
         "mosquito",
         "pino",
@@ -115,11 +115,11 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 746,
+        "items_used": 783,
         "chests_opened": 50,
-        "purchases": 40,
-        "fireballs": 2628,
-        "kills": 312
+        "purchases": 41,
+        "fireballs": 2770,
+        "kills": 315
     },
     "zones_seen": [
         "central",
@@ -1751,43 +1751,8 @@
         {
             "k": "item",
             "id": "repelente",
-            "x": 856,
-            "y": 131,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
             "x": 951,
             "y": 240,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 910,
-            "y": 174,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 905,
-            "y": 176,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 903,
-            "y": 175,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 909,
-            "y": 175,
             "map": "mapa1"
         },
         {
@@ -1800,22 +1765,8 @@
         {
             "k": "item",
             "id": "repelente",
-            "x": 894,
-            "y": 175,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
             "x": 843,
             "y": 151,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 892,
-            "y": 184,
             "map": "mapa1"
         },
         {
@@ -2997,43 +2948,190 @@
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 962,
-            "y": 159,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
             "x": 977,
             "y": 158,
             "map": "mapa1"
         },
         {
             "k": "item",
-            "id": "hongo_azul",
-            "x": 961,
-            "y": 152,
+            "id": "martillo",
+            "x": 1015,
+            "y": 145,
             "map": "mapa1"
         },
         {
             "k": "item",
-            "id": "hongo_azul",
-            "x": 965,
-            "y": 154,
+            "id": "polvora",
+            "x": 1014,
+            "y": 115,
             "map": "mapa1"
         },
         {
             "k": "item",
-            "id": "hongo_azul",
-            "x": 961,
-            "y": 146,
+            "id": "polvora",
+            "x": 1011,
+            "y": 114,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1032,
+            "y": 110,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1008,
+            "y": 107,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1028,
+            "y": 116,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1026,
+            "y": 105,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1021,
+            "y": 114,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1020,
+            "y": 109,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 999,
+            "y": 115,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1021,
+            "y": 114,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1030,
+            "y": 135,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1017,
+            "y": 116,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1000,
+            "y": 116,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1018,
+            "y": 129,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1034,
+            "y": 110,
             "map": "mapa1"
         },
         {
             "k": "item",
             "id": "repelente",
-            "x": 920,
-            "y": 145,
+            "x": 1026,
+            "y": 120,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1022,
+            "y": 106,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1031,
+            "y": 116,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1026,
+            "y": 103,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1030,
+            "y": 135,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1004,
+            "y": 103,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1032,
+            "y": 122,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1027,
+            "y": 125,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1033,
+            "y": 118,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "mapa",
+            "x": 1011,
+            "y": 148,
             "map": "mapa1"
         },
         {
@@ -3187,6 +3285,14 @@
             "x": 948,
             "y": 824,
             "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "antorcha",
+            "life": 1.0,
+            "x": 903,
+            "y": 167,
+            "map": "mapa1"
         }
     ],
     "ganzua_uses": 0,
@@ -3199,5 +3305,6 @@
         "slime2",
         "slime3",
         "tronco"
-    ]
+    ],
+    "boss2_intro_seen": true
 }

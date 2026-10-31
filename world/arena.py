@@ -4928,13 +4928,17 @@ class Arena:
 
         if isinstance(boss, GolemBoss):
 
-            # los de la zona 2: 1 golem, tiradores y mosquitos
-            extra = 1 if boss.phase == 2 else 0
-
-            kinds = (
-                ["golem"] + ["tirador"] * (2 + extra)
-                + ["mosquito"] * (3 + extra)
-            )
+            # zona 2: solo guardianes, guardianes tiradores, golem y flashbang
+            if boss.phase == 2:
+                kinds = (
+                    ["guardian"] * 4 + ["tirador"] * 4
+                    + ["golem"] * 2 + ["destello"] * 3
+                )
+            else:
+                kinds = (
+                    ["guardian"] * 3 + ["tirador"] * 3
+                    + ["golem"] * 1 + ["destello"] * 2
+                )
 
         else:
 
@@ -4947,6 +4951,8 @@ class Arena:
             "hongun": HONGUN_HITBOX,
             "golem": GOLEM_HITBOX,
             "tirador": GUARDIAN_HITBOX,
+            "guardian": GUARDIAN_HITBOX,
+            "destello": DESTELLO_HITBOX,
         }
 
         for i, kind in enumerate(kinds):
@@ -4993,6 +4999,10 @@ class Arena:
                 enemy = Hongun(pos[0], pos[1], spawn_delay=delay)
             elif kind == "golem":
                 enemy = Golem(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "guardian":
+                enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "destello":
+                enemy = Destello(pos[0], pos[1], spawn_delay=delay)
             elif kind == "tirador":
                 enemy = GuardianShooter(pos[0], pos[1], spawn_delay=delay)
             else:

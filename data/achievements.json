@@ -6,12 +6,13 @@
         "zona_1": "2026-10-28T19:23:17",
         "slime_brillante": "2026-10-28T19:25:28",
         "exterminador": "2026-10-29T21:37:56",
-        "saqueador": "2026-10-29T22:48:47"
+        "saqueador": "2026-10-29T22:48:47",
+        "abrazo_golem": "2026-10-31T17:39:39"
     },
     "counters": {
         "defeats": 13,
-        "fireballs": 2186,
-        "kills": 223,
+        "fireballs": 2328,
+        "kills": 226,
         "slimes": 13,
         "chests": 46
     }
