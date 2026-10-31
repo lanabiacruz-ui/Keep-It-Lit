@@ -12,7 +12,7 @@
     },
     "aceite": {
         "nombre": "Aceite",
-        "descripcion": "Deja la vida del fósforo en 75%, sin importar cuánta tenga. Además te da velocidad por 6 segundos.",
+        "descripcion": "Deja la vida del fósforo en 75%, sin importar cuánta tenga. Además, te da más velocidad durante 6 segundos.",
         "requiere_fosforo": true,
         "efectos": [
             {
@@ -28,7 +28,7 @@
     },
     "cera": {
         "nombre": "Cera",
-        "descripcion": "Ralentiza el consumo del fósforo (dura casi 3 veces más) durante 15 segundos.",
+        "descripcion": "Hace que el fósforo se consuma más despacio durante 15 segundos: dura casi 3 veces más.",
         "requiere_fosforo": true,
         "efectos": [
             {
@@ -40,7 +40,7 @@
     },
     "ganzua": {
         "nombre": "Ganzúa",
-        "descripcion": "Abre un cofre cercano sin hacer el minijuego. Dura 3 usos antes de romperse. No salta la espera de 3 minutos.",
+        "descripcion": "Abre un cofre cercano sin hacer el minijuego. Tiene 3 usos y luego se rompe. No elimina la espera de 3 minutos del cofre.",
         "usos": 3,
         "requiere_fosforo": false,
         "efectos": [
@@ -51,7 +51,7 @@
     },
     "polvora": {
         "nombre": "Pólvora",
-        "descripcion": "Durante 20 segundos tu luz quema y daña a los enemigos que alumbra.",
+        "descripcion": "Durante 20 segundos, tu luz quema y daña a los enemigos que ilumina.",
         "requiere_fosforo": true,
         "efectos": [
             {
@@ -63,7 +63,7 @@
     },
     "resina": {
         "nombre": "Resina",
-        "descripcion": "Recupera 90% de vida del fósforo de a poco (en 8 segundos): la barra sube sola hasta completarlo.",
+        "descripcion": "Recupera 90% de la vida del fósforo poco a poco, en 8 segundos: la barra sube sola hasta completarse.",
         "requiere_fosforo": true,
         "efectos": [
             {
@@ -75,7 +75,7 @@
     },
     "fosforo": {
         "nombre": "Fósforo",
-        "descripcion": "Luz básica. Al agarrarlo se equipa solo en el slot aislado (no ocupa el inventario) y dura 30 segundos.",
+        "descripcion": "Luz básica. Al recogerlo se equipa solo en la casilla aparte (no ocupa espacio del inventario) y dura 30 segundos.",
         "tipo": "luz",
         "efectos": [
             {
@@ -87,7 +87,7 @@
     },
     "vela": {
         "nombre": "Vela",
-        "descripcion": "Alumbra el doble y dura 60 segundos. Pega lento, pero cada 20 segundos entra en furia y pega rapidísimo. Es la única que rompe las puertas grises. Se equipa sola en el slot aislado.",
+        "descripcion": "Ilumina el doble que el fósforo y dura 60 segundos. Ataca lento, pero cada 20 segundos entra en furia y ataca rapidísimo. Rompe las puertas grises, algo que el fósforo no puede. Se equipa sola en la casilla aparte.",
         "tipo": "luz",
         "efectos": [
             {
@@ -99,7 +99,7 @@
     },
     "antorcha": {
         "nombre": "Antorcha",
-        "descripcion": "El doble que la vela en todo: alumbra el doble, dura 120 segundos, pega el doble de rápido y el doble de fuerte. Cada 10 segundos entra en furia durante 30 segundos y pega rapidísimo. Rompe las puertas grises. Se equipa sola en el slot aislado.",
+        "descripcion": "El doble que la vela en todo: ilumina el doble, dura 120 segundos, ataca el doble de rápido y el doble de fuerte. Cada 10 segundos entra en furia durante 30 segundos y ataca rapidísimo. Rompe las puertas grises. Se equipa sola en la casilla aparte.",
         "tipo": "luz",
         "efectos": [
             {
@@ -122,7 +122,7 @@
     },
     "repelente": {
         "nombre": "Repelente de mosquitos",
-        "descripcion": "Durante 1:45 min el área de tu luz espanta a los mosquitos (no los mata): no se te acercan ni se pegan. Los que ya tenés pegados se sueltan.",
+        "descripcion": "Durante 1:45 min, el área de tu luz espanta a los mosquitos (no los mata): no se te acercan ni se pegan. Los que ya tengas pegados se sueltan.",
         "requiere_fosforo": true,
         "efectos": [
             {
@@ -133,7 +133,7 @@
     },
     "iman": {
         "nombre": "Imán",
-        "descripcion": "Durante 7 minutos tu personaje atrae solo todos los objetos cercanos: monedas, gemas e items sueltos, sin tener que agarrarlos. Se prende y se apaga con la tecla O (apagado no gasta tiempo y te deja soltar items).",
+        "descripcion": "Durante 7 minutos, tu personaje atrae automáticamente los objetos cercanos: monedas, gemas e items sueltos, sin tener que recogerlos. Se enciende y se apaga con la tecla O (apagado no gasta tiempo y te permite soltar items).",
         "requiere_fosforo": false,
         "efectos": [
             {
@@ -144,7 +144,7 @@
     },
     "esfera": {
         "nombre": "Esfera de vidrio",
-        "descripcion": "Durante 2 minutos tu luz tiene 25% más de radio: iluminás más.",
+        "descripcion": "Durante 2 minutos, tu luz tiene 25% más de radio, así que ilumina una zona mayor.",
         "requiere_fosforo": true,
         "efectos": [
             {
@@ -156,38 +156,44 @@
     },
     "mapa": {
         "nombre": "Mapa",
-        "descripcion": "Mantené click derecho con el mapa elegido para ver la forma de la dungeon con los nombres de las zonas (no muestra tu ubicación). No se gasta",
+        "descripcion": "Mantén click derecho con el mapa elegido para ver la forma de la dungeon con los nombres de las zonas (no muestra tu ubicación). No se gasta.",
         "requiere_fosforo": false,
         "max_pila": 1,
         "efectos": []
     },
     "bolsa": {
         "nombre": "Bolsa",
-        "descripcion": "No va al inventario. Mantené click izquierdo sobre ella para arrastrarla; click derecho para ver qué tiene adentro. 4 casilleros, 15 de cada cosa por casillero.",
+        "descripcion": "No va al inventario. Mantén click izquierdo sobre ella para arrastrarla; click derecho para ver qué tiene adentro. 4 casillas, 15 de cada cosa por casilla.",
         "requiere_fosforo": false,
         "efectos": []
     },
     "cofre": {
         "nombre": "Cofre",
-        "descripcion": "Elegilo en la hotbar y hacé click en el mapa donde lo querés poner: queda fijo para siempre, así que pensá bien dónde. Click derecho sobre él para abrirlo. 8 casilleros, 15 por casillero.",
+        "descripcion": "Elígelo en la hotbar y haz click en el mapa donde quieras colocarlo: queda fijo hasta que lo recojas con el martillo, así que piensa bien dónde. Click derecho sobre él para abrirlo. 8 casillas, 15 por casilla.",
         "requiere_fosforo": false,
         "efectos": []
     },
     "faro": {
         "nombre": "Candil",
-        "descripcion": "El candil. No va al inventario: el vendedor lo escupe al piso. Mantené click izquierdo sobre él para arrastrarlo. Ilumina un poco y le devuelve vida a tu luz mientras estás cerca. Hay que alimentarlo con cera (con la cera elegida, F o click derecho cerca).",
+        "descripcion": "El candil es una lámpara antigua. No va al inventario: el vendedor lo escupe al piso. Mantén click izquierdo sobre él para arrastrarlo. Ilumina un poco y le devuelve vida a tu luz mientras estés cerca. Hay que alimentarlo con cera: elige la cera y presiona F o click derecho cerca de él.",
         "requiere_fosforo": false,
         "efectos": []
     },
     "fogata": {
         "nombre": "Fogata",
-        "descripcion": "Elegila y hacé click donde la querés poner: queda fija para siempre. Ilumina mucho, dura mucho y se alimenta con un poquito de madera (con la madera elegida, F o click derecho cerca).",
+        "descripcion": "Elígela y haz click donde quieras colocarla: queda fija hasta que la recojas con el martillo. Ilumina mucho, dura mucho y se alimenta con un poco de madera (elige la madera y presiona F o click derecho cerca de ella).",
         "requiere_fosforo": false,
         "efectos": []
     },
+    "martillo": {
+        "nombre": "Martillo",
+        "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre o una fogata que hayas colocado para recogerlo y recuperarlo como item, listo para colocarlo en otro lugar. El cofre debe estar vacío. Solo funciona con cofres y fogatas.",
+        "requiere_fosforo": false,
+        "max_pila": 1
+    },
     "gelea": {
         "nombre": "Gelea",
-        "descripcion": "Al comerla cura 15%, 45% o 88% de la vida de tu luz, al azar. Las grandes curaciones son raras. La sueltan los slimes.",
+        "descripcion": "Al comerla, cura 15%, 45% o 88% de la vida de tu luz, al azar. Las curaciones grandes son raras. La sueltan los slimes.",
         "requiere_fosforo": true,
         "efectos": [
             {

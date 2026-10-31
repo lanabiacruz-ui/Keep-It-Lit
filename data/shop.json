@@ -84,6 +84,10 @@
         {
           "id": "faro",
           "precio": 55
+        },
+        {
+          "id": "martillo",
+          "precio": 30
         }
       ]
     }

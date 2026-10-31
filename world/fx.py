@@ -47,6 +47,9 @@ class FxManager:
         self._ring_cache = {}
         self._fonts = {}
         self._emit_acc = {}
+        self._yshield_cache = {}
+        self._yblock_cd = 0.0
+        self._yblock_text_cd = 0.0
 
 
     def _font(self, size):
@@ -523,6 +526,12 @@ class FxManager:
 
     def update(self, dt):
 
+        if self._yblock_cd > 0:
+            self._yblock_cd = max(0.0, self._yblock_cd - dt)
+
+        if self._yblock_text_cd > 0:
+            self._yblock_text_cd = max(0.0, self._yblock_text_cd - dt)
+
         for p in self.particles:
 
             if p["delay"] > 0:
@@ -718,6 +727,271 @@ class FxManager:
             )
 
             screen.blit(layer, layer.get_rect(center=(int(cx), int(cy))))
+
+    def yshield_burst(self, x, y):
+
+        gold = (255, 215, 60)
+        pale = (255, 245, 190)
+        amber = (255, 175, 40)
+
+        self.flash(0.22, (90, 75, 20), 0.6)
+        self.shake(2.0, 0.14)
+
+        self._spark(x, y, 0, 0, 0.3, pale, size=16, drag=0)
+        self._ring(x, y, 4, 36, 0.45, gold, 4)
+        self._ring(x, y, 2, 24, 0.32, pale, 2, delay=0.06)
+        self._ring(x, y, 2, 48, 0.6, amber, 2, delay=0.12)
+
+        for i in range(18):
+
+            a = math.tau * i / 18 + random.uniform(-0.12, 0.12)
+
+            self._spark(
+                x, y, a, random.uniform(80, 170), random.uniform(0.3, 0.55),
+                random.choice((gold, pale, amber)),
+                size=random.uniform(1.6, 2.8), drag=4.0, streak=True
+            )
+
+        for _ in range(8):
+
+            self._spark(
+                x, y, -math.pi / 2 + random.uniform(-0.9, 0.9),
+                random.uniform(30, 80), random.uniform(0.5, 0.9),
+                pale, size=1.8, drag=2.0, grav=-30
+            )
+
+    def yshield_block(self, x, y, angle):
+
+        if self._yblock_cd > 0:
+            return
+
+        self._yblock_cd = 0.12
+
+        gold = (255, 215, 60)
+        pale = (255, 245, 190)
+        white = (255, 255, 235)
+
+        self.pulse("yshield")
+        self.shake(1.6, 0.1)
+
+        self._ring(x, y, 12, 26, 0.22, pale, 2)
+
+        ax = x + math.cos(angle) * 15
+        ay = y + math.sin(angle) * 15
+
+        self._spark(ax, ay, 0, 0, 0.14, white, size=12, drag=0)
+
+        for _ in range(9):
+
+            self._spark(
+                ax, ay, angle + random.uniform(-1.1, 1.1),
+                random.uniform(60, 140), random.uniform(0.18, 0.36),
+                random.choice((gold, pale, white)),
+                size=random.uniform(1.4, 2.4), drag=4.0, streak=True
+            )
+
+        if self._yblock_text_cd <= 0:
+
+            self._yblock_text_cd = 0.6
+
+            self.popups.append({
+                "x": x, "y": y - 22, "text": "BLOQUEADO",
+                "t": 0.0, "dur": 0.7, "color": gold,
+            })
+
+    def yshield_break(self, x, y):
+
+        gold = (255, 215, 60)
+        pale = (255, 245, 190)
+        amber = (255, 175, 40)
+
+        self.shake(1.5, 0.1)
+
+        self._spark(x, y, 0, 0, 0.2, pale, size=14, drag=0)
+        self._ring(x, y, 10, 40, 0.5, gold, 3)
+        self._ring(x, y, 6, 26, 0.35, pale, 2, delay=0.05)
+
+        for _ in range(24):
+
+            self._spark(
+                x, y, random.uniform(0, math.tau), random.uniform(70, 180),
+                random.uniform(0.5, 0.9),
+                random.choice((gold, pale, amber)),
+                size=random.uniform(2.0, 3.4), drag=2.5, grav=90,
+                streak=True
+            )
+
+    def _yshield_sprite(self, radius):
+
+        radius = max(10, int(round(radius / 3)) * 3)
+
+        spr = self._yshield_cache.get(radius)
+
+        if spr is not None:
+            return spr
+
+        if len(self._yshield_cache) > 30:
+            self._yshield_cache.clear()
+
+        pad = 18
+        size = radius * 2 + pad * 2
+        c = size // 2
+
+        spr = pygame.Surface((size, size), pygame.SRCALPHA)
+
+        for k in range(pad, 0, -1):
+
+            a = int(70 * (1 - k / pad) ** 2)
+
+            pygame.draw.circle(spr, (255, 220, 80, a), (c, c), radius + k)
+
+        for k in range(radius, 0, -1):
+
+            t = k / radius
+            a = int(16 + 84 * t ** 3)
+
+            pygame.draw.circle(spr, (255, 214, 70, a), (c, c), k)
+
+        pygame.draw.circle(
+            spr, (255, 238, 140, 235), (c, c), radius, max(2, radius // 9)
+        )
+
+        box = pygame.Rect(0, 0, radius * 2, radius * 2)
+        box.center = (c, c)
+        box = box.inflate(-int(radius * 0.5), -int(radius * 0.5))
+
+        pygame.draw.arc(
+            spr, (255, 255, 255, 220), box, 2.3, 3.2, max(2, radius // 8)
+        )
+
+        pygame.draw.circle(
+            spr, (255, 255, 255, 200),
+            (c - int(radius * 0.5), c - int(radius * 0.55)),
+            max(1, radius // 9)
+        )
+
+        self._yshield_cache[radius] = spr
+
+        return spr
+
+    def draw_yshield(self, screen, cx, cy, radius, now, left, age, flash):
+
+        pop = 1.0
+
+        if age < 0.35:
+
+            k = age / 0.35
+            pop = 1 + 2.70158 * (k - 1) ** 3 + 1.70158 * (k - 1) ** 2
+
+        r = radius * pop * (1.0 + 0.04 * math.sin(now * 6))
+
+        if left < 0.3:
+            r *= 0.82 + 0.18 * (left / 0.3)
+
+        r = max(8.0, r)
+
+        alpha = 1.0
+
+        if left < 2.0:
+
+            rate = 9 + (2.0 - left) * 9
+            alpha = 0.55 + 0.45 * (0.5 + 0.5 * math.sin(now * rate))
+
+        alpha *= 0.35 + 0.65 * min(1.0, age / 0.15)
+
+        level = max(0.25, round(alpha * 4) / 4)
+
+        px, py = int(cx), int(cy)
+
+        floor_color = (
+            int((80 + 60 * flash) * level),
+            int((62 + 50 * flash) * level),
+            int(12 * level),
+        )
+
+        floor = self.glow_sprite(r * 2.1, floor_color)
+
+        screen.blit(
+            floor, floor.get_rect(center=(px, py)),
+            special_flags=pygame.BLEND_RGB_ADD
+        )
+
+        spr = self._yshield_sprite(r)
+
+        spr.set_alpha(int(255 * alpha))
+
+        screen.blit(spr, spr.get_rect(center=(px, py)))
+
+        layer = pygame.Surface(spr.get_size(), pygame.SRCALPHA)
+
+        c = spr.get_width() // 2
+        ar = max(6, int(r) - 2)
+
+        box = pygame.Rect(0, 0, ar * 2, ar * 2)
+        box.center = (c, c)
+
+        spin = now * 2.2
+
+        for i in range(2):
+
+            a0 = spin + i * math.pi
+
+            pygame.draw.arc(
+                layer, (255, 250, 205, 210), box, a0, a0 + 0.8, 3
+            )
+            pygame.draw.arc(
+                layer, (255, 255, 255, 235), box, a0 + 0.15, a0 + 0.5, 2
+            )
+
+        layer.set_alpha(int(255 * alpha))
+
+        screen.blit(layer, layer.get_rect(center=(px, py)))
+
+        spark = self.glow_sprite(max(5, int(r * 0.4)), (255, 225, 110))
+
+        for i in range(3):
+
+            a = now * 2.6 + i * math.tau / 3
+
+            ox = int(px + math.cos(a) * r * 0.98)
+            oy = int(py + math.sin(a) * r * 0.88)
+
+            screen.blit(
+                spark, spark.get_rect(center=(ox, oy)),
+                special_flags=pygame.BLEND_RGB_ADD
+            )
+
+            pygame.draw.circle(screen, (255, 255, 235), (ox, oy), 2)
+
+        lvl = round(flash * 4) / 4
+
+        if lvl > 0:
+
+            glare = self.glow_sprite(
+                r * 1.5, (int(255 * lvl), int(240 * lvl), int(170 * lvl))
+            )
+
+            screen.blit(
+                glare, glare.get_rect(center=(px, py)),
+                special_flags=pygame.BLEND_RGB_ADD
+            )
+
+        for t, n in self.pulses:
+
+            if n != "yshield":
+                continue
+
+            k = t / 0.6
+            rr = int(r * (1.0 + 0.45 * k))
+
+            ring = pygame.Surface((rr * 2 + 8, rr * 2 + 8), pygame.SRCALPHA)
+
+            pygame.draw.circle(
+                ring, (255, 245, 190, int(200 * (1 - k))),
+                (rr + 4, rr + 4), rr, 3
+            )
+
+            screen.blit(ring, ring.get_rect(center=(px, py)))
 
     def draw_overlay(self, screen):
 

@@ -308,7 +308,7 @@ class ShopUI:
 
         if short:
             return (
-                f"Bloqueado: llegá a la oleada {need} "
+                f"Bloqueado: llega a la oleada {need} "
                 f"(vas por la {self.best_wave})"
             )
 
@@ -330,10 +330,10 @@ class ShopUI:
             return [
                 "Skin para tu personaje.",
                 "",
-                "Ya la tenés: equipala desde Skins en el menú principal."
+                "Ya la tienes: equípala desde Skins en el menú principal."
                 if owned
                 else "Al comprarla queda desbloqueada para todas tus "
-                     "partidas. Equipala desde Skins en el menú principal.",
+                     "partidas. Equípala desde Skins en el menú principal.",
             ]
 
         data = self.defs.get(item_id, {})

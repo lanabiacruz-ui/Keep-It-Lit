@@ -61,7 +61,7 @@ FOGATA_GLOW_COLOR = (200, 110, 30)
 FOGATA_EMBERS = 7
 
 FEED_HINT_ENABLED = True
-FEED_HINT_LINE2 = "En la hotbar elegí {item} y apretá F o click derecho"
+FEED_HINT_LINE2 = "En la hotbar elige {item} y presiona F o click derecho"
 
 FARO_LIGHT_FLICKER = 0.02
 FOGATA_LIGHT_FLICKER = 0.035
@@ -91,6 +91,10 @@ WORLD_SIZE = {
 }
 
 ICON_IDS = ("bolsa", "cofre", "faro", "fogata")
+
+HAMMER_ITEM = "martillo"
+
+HAMMER_TARGETS = ("cofre", "fogata")
 
 
 UI_DIR = HUD_DIR.parent / "ui"
@@ -1069,6 +1073,93 @@ class PlaceableManager:
         return True
 
 
+    def _hammer_selected(self, game):
+
+        slot = game.selected_slot
+
+        if not isinstance(slot, int) or slot >= game.hud.SLOTS:
+            return False
+
+        return game.hud.items[slot] == HAMMER_ITEM
+
+    def _use_hammer(self, game):
+
+        obj = self._under_mouse(game)
+
+        if obj is None or obj.kind not in HAMMER_TARGETS:
+            return False
+
+        if obj.container is not None and obj.container.total() > 0:
+
+            game.show_message("Vacía el cofre antes de recogerlo")
+
+            return True
+
+        slot = game._free_slot_for(obj.kind)
+
+        if slot is None:
+
+            game.show_message("Inventario lleno")
+
+            return True
+
+        if game.hud.items[slot] is None:
+
+            game.hud.items[slot] = obj.kind
+            game.hud.counts[slot] = 1
+
+        else:
+
+            game.hud.counts[slot] += 1
+
+        self.objects.remove(obj)
+
+        if self.open_obj is obj:
+            self.open_obj = None
+
+        audio.play("pickup")
+
+        game.show_message(
+            f"Recogiste {game._item_name(obj.kind)}: "
+            "ya puedes colocarlo en otro lugar"
+        )
+
+        return True
+
+    def _draw_hammer_target(self, game, screen):
+
+        if self._over_hud(game, pygame.mouse.get_pos()):
+            return
+
+        obj = self._under_mouse(game)
+
+        if obj is None or obj.kind not in HAMMER_TARGETS:
+            return
+
+        sprite = obj._sprite(game.camera.zoom)
+        dest = game.camera.apply(obj.rect)
+        lift = int(obj._lift * game.camera.zoom)
+
+        r = sprite.get_rect(midbottom=(dest.centerx, dest.bottom - lift))
+
+        blocked = obj.container is not None and obj.container.total() > 0
+
+        color = (240, 80, 70) if blocked else (255, 190, 70)
+
+        pygame.draw.rect(screen, color, r.inflate(6, 6), 2, border_radius=4)
+
+        text = "Vacía el cofre primero" if blocked else "Click: recoger"
+
+        font = self._font(20)
+
+        img = font.render(text, True, color)
+        shade = font.render(text, True, (20, 12, 4))
+
+        pos = img.get_rect(midbottom=(r.centerx, r.top - 6))
+
+        screen.blit(shade, pos.move(1, 1))
+        screen.blit(img, pos)
+
     def try_use(self, game, slot):
 
         item_id = game.hud.items[slot]
@@ -1083,7 +1174,7 @@ class PlaceableManager:
             if self._over_hud(game, mouse):
 
                 game.show_message(
-                    "Elegilo y hacé click en el mapa donde lo querés poner"
+                    "Elígelo y haz click en el mapa donde quieras colocarlo"
                 )
 
                 return True
@@ -1091,6 +1182,24 @@ class PlaceableManager:
             wx, wy = self._mouse_world(game)
 
             self._place(game, slot, item_id, wx, wy)
+
+            return True
+
+        if item_id == HAMMER_ITEM:
+
+            if self._over_hud(game, pygame.mouse.get_pos()):
+
+                game.show_message(
+                    "Elige el martillo y haz click sobre un cofre o una fogata"
+                )
+
+                return True
+
+            if not self._use_hammer(game):
+
+                game.show_message(
+                    "Acércate a un cofre o una fogata y haz click sobre ellos"
+                )
 
             return True
 
@@ -1151,6 +1260,17 @@ class PlaceableManager:
                 self._unstick(game, obj)
 
                 self.dragging = obj
+
+                return True
+
+            if (
+                obj is not None
+                and obj.kind in HAMMER_TARGETS
+                and self.open_obj is None
+                and self._hammer_selected(game)
+            ):
+
+                self._use_hammer(game)
 
                 return True
 
@@ -1233,7 +1353,7 @@ class PlaceableManager:
                 lines = [f"{name}: está llena"]
             else:
                 lines = [
-                    f"Alimentala con {item.upper()}",
+                    f"Aliméntala con {item.upper()}",
                     FEED_HINT_LINE2.format(item=item.upper()),
                 ]
 
@@ -1300,6 +1420,12 @@ class PlaceableManager:
             or getattr(game, "pause_view", None) is not None
             or getattr(game, "tutorial", None) is not None
         ):
+            return
+
+        if self._hammer_selected(game):
+
+            self._draw_hammer_target(game, screen)
+
             return
 
         held = self._held(game)

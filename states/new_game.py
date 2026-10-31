@@ -749,6 +749,11 @@ class NewGame:
 
             self.yshield_flash = 0.3
 
+            self.fx.yshield_block(
+                *self.player.rect.center,
+                random.uniform(0, math.tau)
+            )
+
             return
 
         audio.play("hurt")
@@ -1176,9 +1181,9 @@ class NewGame:
         def slot_checks(g):
 
             return [
-                ("Teclas 1 a 4 (casilleros)", "slotkey" in g.tuto_flags),
+                ("Teclas 1 a 4 (casillas)", "slotkey" in g.tuto_flags),
                 ("Tecla 5 (tu luz)", "k5" in g.tuto_flags),
-                ("Ruedita del mouse", "wheel" in g.tuto_flags),
+                ("Rueda del mouse", "wheel" in g.tuto_flags),
             ]
 
         def use_checks(g):
@@ -1192,7 +1197,7 @@ class NewGame:
         def help_checks(g):
 
             return [
-                ("ESC: pausa (volvé con ESC)", "esc" in g.tuto_flags),
+                ("ESC: pausa (vuelve con ESC)", "esc" in g.tuto_flags),
                 ("TAB: ocultar el objetivo", "tab" in g.tuto_flags),
                 ("F1: ver la ayuda", "f1" in g.tuto_flags),
             ]
@@ -1201,66 +1206,66 @@ class NewGame:
 
             {
                 "text": (
-                    "Está oscuro: buscá el fósforo del piso (te lo marca "
-                    "la flecha) y agarralo con E. Si en "
-                    f"{int(NO_LIGHT_COUNTDOWN)} segundos no tenés luz, perdés."
+                    "Está oscuro: busca el fósforo en el piso (la flecha te lo "
+                    "indica) y agárralo con E. Si en "
+                    f"{int(NO_LIGHT_COUNTDOWN)} segundos no tienes luz, pierdes."
                 ),
                 "tuto": [
-                    "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
-                    "Está oscuro. Una flecha naranja te va a guiar. Movete con W A S D hasta el fósforo del piso y agarralo con E. Tenés 10 segundos sin luz antes de perder.",
+                    "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, pierdes.",
+                    "Está oscuro. Una flecha naranja te guiará. Muévete con W A S D hasta el fósforo del piso y agárralo con E. Tienes 10 segundos sin luz antes de perder.",
                 ],
                 "target": light_point,
                 "done": lambda g: g.has_match,
             },
             {
-                "text": "Probá moverte con las cuatro teclas: W, A, S y D.",
+                "text": "Prueba a moverte con las cuatro teclas: W, A, S y D.",
                 "tuto": [
-                    "¡Ya tenés luz! Ahora vamos a practicar. MOVERTE: probá las cuatro teclas W A S D, una por una. La lista de arriba se tilda sola.",
+                    "¡Ya tienes luz! Ahora vamos a practicar. MOVERTE: prueba las cuatro teclas W A S D, una por una. La lista de arriba se marca sola.",
                 ],
                 "checks": move_checks,
                 "done": checks_done(move_checks),
             },
             {
                 "text": (
-                    "Probá atacar con click izquierdo. "
+                    "Prueba a atacar con click izquierdo. "
                     "Cada golpe gasta un poco de luz."
                 ),
                 "tuto": [
-                    "ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más. Probalo.",
+                    "ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no ataques de más. Pruébalo.",
                 ],
                 "checks": attack_checks,
                 "done": checks_done(attack_checks),
             },
             {
                 "text": (
-                    "Agarrá un objeto del piso con E (madera, resina, "
+                    "Agarra un objeto del piso con E (madera, resina, "
                     "aceite): sirven para que tu luz no se apague."
                 ),
                 "tuto": [
-                    "AGARRAR: acercate a un objeto del piso (madera, resina, aceite) y apretá E. Sirven para recuperar luz. Seguí la flecha.",
+                    "AGARRAR: acércate a un objeto del piso (madera, resina, aceite) y presiona E. Sirven para recuperar luz. Sigue la flecha.",
                 ],
                 "target": lambda g: nearest(g, item_points(g, False)),
                 "done": lambda g: g.items_picked > 0,
             },
             {
                 "text": (
-                    "Probá elegir casilleros: teclas 1 a 4, la tecla 5 "
-                    "(tu luz) y la ruedita del mouse."
+                    "Prueba a elegir casillas: teclas 1 a 4, la tecla 5 "
+                    "(tu luz) y la rueda del mouse."
                 ),
                 "tuto": [
-                    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrerlos con la RUEDITA. Probá las tres cosas.",
+                    "INVENTARIO: tienes 4 casillas (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También puedes recorrerlas con la RUEDA del mouse. Prueba las tres cosas.",
                 ],
                 "checks": slot_checks,
                 "done": checks_done(slot_checks),
             },
             {
                 "text": (
-                    "Usá un objeto (F o click derecho) y soltá otro con Q. "
-                    "Si te quedás sin objetos, agarrá más del piso."
+                    "Usa un objeto (F o click derecho) y suelta otro con Q. "
+                    "Si te quedas sin objetos, agarra más del piso."
                 ),
                 "tuto": [
-                    "USAR: elegí un casillero con un objeto y apretá F o click derecho. SOLTAR: con Q tirás el objeto elegido. Probá las dos. Podés volver a agarrar con E.",
-                    "OBJETOS: la madera suma 25% de luz, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. La GELEA (la sueltan los slimes) cura al azar. Usalos ANTES de quedarte sin luz.",
+                    "USAR: elige una casilla con un objeto y presiona F o click derecho. SOLTAR: con Q tiras el objeto elegido. Prueba las dos. Puedes volver a agarrar con E.",
+                    "OBJETOS: la madera suma 25% de luz, la resina recupera 90% poco a poco y el aceite la deja en 75% y te da velocidad. La GELEA (la sueltan los slimes) cura al azar. Úsalos ANTES de quedarte sin luz.",
                 ],
                 "target": lambda g: (
                     nearest(g, item_points(g, False))
@@ -1271,66 +1276,66 @@ class NewGame:
             },
             {
                 "text": (
-                    "Probá los botones de ayuda: ESC (pausa), TAB "
+                    "Prueba los botones de ayuda: ESC (pausa), TAB "
                     "(ocultar el objetivo) y F1 (ayuda)."
                 ),
                 "tuto": [
-                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de criaturas), TAB esconde o muestra el objetivo y F1 vuelve a mostrar la ayuda completa. Probá las tres.",
+                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de criaturas), TAB esconde o muestra el objetivo y F1 vuelve a mostrar la ayuda completa. Prueba las tres.",
                 ],
                 "checks": help_checks,
                 "done": checks_done(help_checks),
             },
             {
                 "text": (
-                    "Salí de la cabaña: pegale a la puerta con click "
+                    "Sal de la cabaña: golpea la puerta con click "
                     "izquierdo hasta romperla. Cada golpe "
                     "gasta luz."
                 ),
                 "tuto": [
-                    "PUERTAS: pegale a la puerta con tu luz (click izquierdo) hasta romperla. Cada golpe gasta luz, y cada tipo de puerta pide una luz distinta. Seguí la flecha.",
+                    "PUERTAS: golpea la puerta con tu luz (click izquierdo) hasta romperla. Cada golpe gasta luz, y cada tipo de puerta pide una luz distinta. Sigue la flecha.",
                 ],
                 "target": lambda g: door_point("cabana"),
                 "done": lambda g: "cabana" in g.doors.broken_ids,
             },
             {
-                "text": "Seguí el camino al norte hasta la sala central.",
+                "text": "Sigue el camino al norte hasta la sala central.",
                 "tuto": [
-                    "Seguí el camino hacia el norte. La flecha te lleva hasta la sala central, que conecta todo el mapa.",
+                    "Sigue el camino hacia el norte. La flecha te lleva hasta la sala central, que conecta todo el mapa.",
                 ],
                 "target": lambda g: zone_center("central"),
                 "done": lambda g: "central" in g.zones_seen,
             },
             {
                 "text": (
-                    "Juntá 10 monedas: hay tiradas por el mapa, en los "
-                    "cofres y las sueltan los slimes (matalos a golpes)."
+                    "Junta 10 monedas: hay tiradas por el mapa, en los "
+                    "cofres y las sueltan los slimes (mátalos a golpes)."
                 ),
                 "tuto": [
-                    "MONEDAS: sirven para comprar luces y objetos en la tienda. Se juntan solas al acercarte. Hay tiradas por el mapa y en los cofres. Juntá 10 siguiendo la flecha.",
-                    "SLIMES: son criaturas tranquilas que andan por la sala central y la de cofres. No te atacan: pegales con tu luz hasta matarlos. Sueltan 10 monedas y una gelea que te cura al comerla.",
+                    "MONEDAS: sirven para comprar luces y objetos en la tienda. Se juntan solas al acercarte. Hay tiradas por el mapa y en los cofres. Junta 10 siguiendo la flecha.",
+                    "SLIMES: son criaturas tranquilas que se mueven por la sala central y la de cofres. No te atacan: golpéalos con tu luz hasta matarlos. Sueltan 10 monedas y una gelea que te cura al comerla.",
                 ],
                 "target": lambda g: nearest(g, item_points(g, True)),
                 "done": lambda g: g.coins >= 10 or g.stats["purchases"] > 0,
             },
             {
                 "text": (
-                    "Andá a la tienda (al norte de la sala central) y "
-                    "apretá F cerca del vendedor para hablarle."
+                    "Ve a la tienda (al norte de la sala central) y "
+                    "presiona F cerca del vendedor para hablarle."
                 ),
                 "tuto": [
-                    "TIENDA: está al norte de la sala central. Acercate al vendedor hasta que aparezca la tecla F y apretala para abrir la tienda. Se cierra con E o ESC.",
-                    "Ahí gastás las monedas en luces, objetos y construcciones. Cada producto muestra su precio. Algunos están bloqueados hasta llegar a cierta oleada en las salas de combate.",
+                    "TIENDA: está al norte de la sala central. Acércate al vendedor hasta que aparezca la tecla F y presiónala para abrir la tienda. Se cierra con E o ESC.",
+                    "Ahí gastas las monedas en luces, objetos y construcciones. Cada producto muestra su precio. Algunos están bloqueados hasta llegar a cierta oleada en las salas de combate.",
                 ],
                 "target": lambda g: g.shopkeeper.TALK_RECT.center,
                 "done": flag("shop_opened"),
             },
             {
                 "text": (
-                    "Con la tienda abierta, hacé click con la RUEDITA del "
+                    "Con la tienda abierta, haz click con la RUEDA del "
                     "mouse sobre un producto para ver qué hace."
                 ),
                 "tuto": [
-                    "INFO: apuntá a un producto y hacé click con la ruedita del mouse (el botón del medio). Te explica qué hace y, en las luces, cuánto duran y cuánto pegan. Otro click la cierra.",
+                    "INFO: apunta a un producto y haz click con la rueda del mouse (el botón del medio). Te explica qué hace y, en las luces, cuánto duran y cuánto daño hacen. Otro click la cierra.",
                 ],
                 "target": lambda g: (
                     g.shopkeeper.TALK_RECT.center
@@ -1340,22 +1345,22 @@ class NewGame:
             },
             {
                 "text": (
-                    "Comprale algo al vendedor: elegí un objeto, la "
-                    "cantidad y apretá Comprar."
+                    "Cómprale algo al vendedor: elige un objeto, la "
+                    "cantidad y presiona Comprar."
                 ),
                 "tuto": [
-                    "COMPRAR: click en un producto lo suma al carrito, click derecho saca uno y el botón x15 suma 15 de golpe. Abajo ves el total y el tachito vacía el carrito.",
-                    "Cuando estés listo, apretá Comprar. Si no te alcanzan las monedas no cobra nada: sacá algo del carrito o juntá más. Conviene comprar un objeto (madera, cera...).",
+                    "COMPRAR: click en un producto lo suma al carrito, click derecho saca uno y el botón x15 suma 15 de golpe. Abajo ves el total y el ícono de papelera vacía el carrito.",
+                    "Cuando estés listo, presiona Comprar. Si no te alcanzan las monedas no cobra nada: saca algo del carrito o junta más. Conviene comprar un objeto (madera, cera...).",
                 ],
                 "done": lambda g: g.stats["purchases"] >= 1,
             },
             {
                 "text": (
-                    "El vendedor escupe lo que comprás: agarralo del piso "
+                    "El vendedor escupe lo que compras: agárralo del piso "
                     "con E."
                 ),
                 "tuto": [
-                    "LO COMPRADO: el vendedor lo escupe al piso, cerca de él. Acercate y apretá E para agarrarlo. Con el imán (tecla O) los objetos sueltos se juntan solos.",
+                    "LO COMPRADO: el vendedor lo escupe al piso, cerca de él. Acércate y presiona E para agarrarlo. Con el imán (tecla O) los objetos sueltos se juntan solos.",
                 ],
                 "target": lambda g: (
                     nearest(
@@ -1368,11 +1373,11 @@ class NewGame:
             },
             {
                 "text": (
-                    "Volvé a abrir la tienda (F) y apretá TAB para ir a la "
+                    "Vuelve a abrir la tienda (F) y presiona TAB para ir a la "
                     "pestaña Inventario."
                 ),
                 "tuto": [
-                    "INVENTARIO DE LA TIENDA: con TAB cambiás entre Tienda e Inventario. En Inventario armás tus casilleros y tu luz como quieras y comprás todo junto con 'Comprar inventario'. Probalo con TAB.",
+                    "INVENTARIO DE LA TIENDA: con TAB cambias entre Tienda e Inventario. En Inventario armas tus casillas y tu luz como quieras y compras todo junto con 'Comprar inventario'. Pruébalo con TAB.",
                 ],
                 "target": lambda g: (
                     g.shopkeeper.TALK_RECT.center
@@ -1382,12 +1387,12 @@ class NewGame:
             },
             {
                 "text": (
-                    "Andá a la sala de cofres (arriba a la izquierda). "
-                    "Acercate a un cofre y apretá F, después ESPACIO en la "
+                    "Ve a la sala de cofres (arriba a la izquierda). "
+                    "Acércate a un cofre y presiona F, después ESPACIO en la "
                     "zona marcada para abrirlo."
                 ),
                 "tuto": [
-                    "COFRES: están en la sala de arriba a la izquierda. Acercate y apretá F (cuenta como un golpe) y después ESPACIO cuando el marcador esté en la zona marcada.",
+                    "COFRES: están en la sala de arriba a la izquierda. Acércate y presiona F (cuenta como un golpe) y después ESPACIO cuando el marcador esté en la zona marcada.",
                     "Cada cofre se abre 10 veces seguidas y después descansa 3 minutos. Dan monedas, madera, cera, aceite... y con suerte una GANZÚA, que abre un cofre sin minijuego y dura 3 usos.",
                 ],
                 "target": lambda g: zone_center("cofres"),
@@ -1395,13 +1400,13 @@ class NewGame:
             },
             {
                 "text": (
-                    "Conseguí una vela, una luz mejor que el fósforo: "
+                    "Consigue una vela, una luz mejor que el fósforo: "
                     "solo se consigue en la tienda y cuesta 55 monedas. "
-                    "Soltá el fósforo antes (casillero de luz y Q)."
+                    "Suelta el fósforo antes (casilla de luz y Q)."
                 ),
                 "tuto": [
                     "LUCES: la vela ilumina más y dura más que el fósforo. Solo se consigue en la tienda (los cofres no la dan) y cuesta 55 monedas.",
-                    "CAMBIAR DE LUZ: solo podés tener una luz equipada. Si agarrás otra con el fósforo en la mano, no se cambia: tenés que soltar el fósforo primero. Elegí el casillero de la luz (el aislado) y apretá Q. Después agarrá la vela con E y se equipa sola.",
+                    "CAMBIAR DE LUZ: solo puedes tener una luz equipada. Si agarras otra con el fósforo en la mano, no se cambia: tienes que soltar el fósforo primero. Elige la casilla de la luz (la que está aparte) y presiona Q. Después agarra la vela con E y se equipa sola.",
                 ],
                 "target": lambda g: (
                     nearest(g, [d.rect.center for d in g.light_drops])
@@ -1413,24 +1418,24 @@ class NewGame:
             },
             {
                 "text": (
-                    "Pegale con tu vela a una puerta gris de la sala "
+                    "Golpea con tu vela una puerta gris de la sala "
                     "central para romperla."
                 ),
                 "tuto": [
-                    "PUERTAS: las puertas grises de la sala central llevan a las zonas de combate. Se rompen solo con vela o antorcha. Seguí la flecha.",
+                    "PUERTAS: las puertas grises de la sala central llevan a las zonas de combate. Se rompen solo con vela o antorcha. Sigue la flecha.",
                 ],
                 "target": lambda g: door_point("sala_der"),
                 "done": lambda g: "sala_der" in g.doors.broken_ids,
             },
             {
                 "text": (
-                    "Entrá a una zona de combate y elegí cómo "
+                    "Entra a una zona de combate y elige cómo "
                     "jugar: con escape o sin escape (premio doble)."
                 ),
                 "tuto": [
-                    "ZONAS DE COMBATE: tienen oleadas de enemigos. Antes de entrar te avisa el nombre de la zona y al entrar elegís cómo jugar.",
-                    "JUGAR CON ESCAPE: la salida queda abierta, así que si te complicás podés irte caminando y volver después. El premio es el normal. Ideal para aprender.",
-                    "JUGAR SIN ESCAPE (X2 PREMIO): la salida se cierra hasta que termines la oleada. No podés huir, pero ganás el doble de monedas. Si tu luz se apaga, perdés.",
+                    "ZONAS DE COMBATE: tienen oleadas de enemigos. Antes de entrar te avisa el nombre de la zona y al entrar eliges cómo jugar.",
+                    "JUGAR CON ESCAPE: la salida queda abierta, así que si te complicas puedes irte caminando y volver después. El premio es el normal. Ideal para aprender.",
+                    "JUGAR SIN ESCAPE (X2 PREMIO): la salida se cierra hasta que termines la oleada. No puedes huir, pero ganas el doble de monedas. Si tu luz se apaga, pierdes.",
                 ],
                 "target": lambda g: zone_center("combate"),
                 "done": lambda g: (
@@ -1443,13 +1448,13 @@ class NewGame:
             },
             {
                 "text": (
-                    "Derrotá a todos los enemigos de la oleada pegándoles "
-                    "con tu luz y juntá las monedas del premio."
+                    "Derrota a todos los enemigos de la oleada golpeándolos "
+                    "con tu luz y junta las monedas del premio."
                 ),
                 "tuto": [
-                    "COMBATE: pegales a los enemigos con tu luz hasta eliminarlos a todos. Cuando termine la oleada aparece el premio: juntá las monedas. Cada golpe gasta un poco de luz, así que no pegues al aire.",
-                    "CUIDADO: los mosquitos se te pegan y chupan tu luz; matalos rápido. Usá tus objetos (madera, cera, aceite) a tiempo para que tu luz dure más. Entre oleadas podés irte o seguir.",
-                    "PREMIOS: al terminar cada oleada ganás monedas. Al completar todas las oleadas de una zona ganás una gema, que sirve para abrir la puerta final del mapa.",
+                    "COMBATE: golpea a los enemigos con tu luz hasta eliminarlos a todos. Cuando termine la oleada aparece el premio: junta las monedas. Cada golpe gasta un poco de luz, así que no golpees al aire.",
+                    "CUIDADO: los mosquitos se te pegan y chupan tu luz; mátalos rápido. Usa tus objetos (madera, cera, aceite) a tiempo para que tu luz dure más. Entre oleadas puedes irte o seguir.",
+                    "PREMIOS: al terminar cada oleada ganas monedas. Al completar todas las oleadas de una zona ganas una gema, que sirve para abrir la puerta final del mapa.",
                 ],
                 "done": lambda g: any(
                     a.wave >= 2 or a.completed for a in g.arenas
@@ -1457,11 +1462,11 @@ class NewGame:
             },
             {
                 "text": (
-                    "Conseguí la antorcha: con G cambiás de golpe y "
-                    "lanzás una bola de fuego. ¡Probala!"
+                    "Consigue la antorcha: con G cambias de golpe y "
+                    "lanzas una bola de fuego. ¡Pruébala!"
                 ),
                 "tuto": [
-                    "ANTORCHA: se desbloquea en la tienda al llegar a la oleada 6. Con G cambiás de golpe y lanzás una bola de fuego. ¡Probala!",
+                    "ANTORCHA: se desbloquea en la tienda al llegar a la oleada 6. Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
                 ],
                 "target": lambda g: (
                     None
@@ -1472,13 +1477,14 @@ class NewGame:
             },
             {
                 "text": (
-                    "Armá una base: comprá una fogata en la tienda, "
-                    "elegila en tu casillero y hacé click en el mapa para "
+                    "Arma una base: compra una fogata en la tienda, "
+                    "elígela en tu casilla y haz click en el mapa para "
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata y candil. La bolsa y el candil salen al piso y los movés con click izquierdo mantenido. El cofre y la fogata los elegís en tu casillero y hacés click en el mapa: quedan fijos para siempre.",
-                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más chico y come cera. Ideales como base de descanso entre oleadas.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata, candil y martillo. La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo.",
+                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera. Ideales como base de descanso entre oleadas.",
+                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío o una fogata para recogerlos y colocarlos en otro lugar.",
                 ],
                 "target": lambda g: (
                     None
@@ -1495,7 +1501,7 @@ class NewGame:
             },
             {
                 "text": (
-                    "Completá Orkun (zona 1, derecha): 10 oleadas, un "
+                    "Completa Orkun (zona 1, derecha): 10 oleadas, un "
                     "jefe y una gema verde clara te esperan."
                 ),
                 "target": lambda g: zone_center("combate"),
@@ -1511,9 +1517,9 @@ class NewGame:
             },
             {
                 "text": (
-                    "Completá la enciclopedia: descubrí los "
+                    "Completa la enciclopedia: descubre las "
                     f"{len(EnemyEncyclopedia.ORDER)} criaturas del juego "
-                    "(la abrís desde la pausa con ESC)."
+                    "(la abres desde la pausa con ESC)."
                 ),
                 "done": lambda g: len(
                     set(g.discovered_enemies) & set(EnemyEncyclopedia.ORDER)
@@ -2031,6 +2037,8 @@ class NewGame:
             self.yshield_timer = self.yshield_total
             self.yshield_flash = 0.3
 
+            self.fx.yshield_burst(*self.player.rect.center)
+
         elif tipo == "escudo_sumar":
 
             self.escudo = min(
@@ -2100,15 +2108,8 @@ class NewGame:
             self.escudo = min(1.0, self.escudo + e["escudo"])
 
     def _draw_yellow_shield(self):
-        """Burbuja amarilla alrededor del jugador mientras dura el escudo."""
 
         if self.yshield_timer <= 0:
-            return
-
-        now = pygame.time.get_ticks() / 1000.0
-
-        # parpadea en el ultimo segundo y medio
-        if self.yshield_timer < 1.5 and int(now * 8) % 2 == 0:
             return
 
         zoom = self.camera.zoom
@@ -2116,25 +2117,13 @@ class NewGame:
         cx = self.player.rect.centerx * zoom - self.camera.x
         cy = self.player.rect.centery * zoom - self.camera.y
 
-        radius = max(12, int(15 * zoom * (1.0 + 0.04 * math.sin(now * 6))))
-
-        flash = min(1.0, self.yshield_flash / 0.3)
-
-        size = radius * 2 + 12
-
-        layer = pygame.Surface((size, size), pygame.SRCALPHA)
-
-        mid = size // 2
-
-        pygame.draw.circle(
-            layer, (255, 215, 60, int(55 + 80 * flash)), (mid, mid), radius
+        self.fx.draw_yshield(
+            self.screen, cx, cy, max(12, int(15 * zoom)),
+            pygame.time.get_ticks() / 1000.0,
+            self.yshield_timer,
+            self.yshield_total - self.yshield_timer,
+            min(1.0, self.yshield_flash / 0.3)
         )
-        pygame.draw.circle(
-            layer, (255, 240, 150, int(170 + 85 * flash)),
-            (mid, mid), radius, max(2, radius // 8)
-        )
-
-        self.screen.blit(layer, layer.get_rect(center=(round(cx), round(cy))))
 
     def _active_effects(self):
 
@@ -2389,6 +2378,13 @@ class NewGame:
                 pvx + math.cos(ang) * reach,
                 pvy + math.sin(ang) * reach,
                 ang, self.melee.heavy, self.melee.fury
+            )
+
+        if self.yshield_timer > 0:
+
+            self.fx.emit_aura(
+                "yshield", *self.player.rect.center, 15,
+                (255, 225, 90), dt, rate=16
             )
 
         if not self.has_match or self._light_radius_px < 8:
@@ -4164,6 +4160,10 @@ class NewGame:
         if self.yshield_timer > 0:
 
             self.yshield_timer = max(0.0, self.yshield_timer - dt)
+
+            if self.yshield_timer <= 0:
+
+                self.fx.yshield_break(*self.player.rect.center)
 
         if self.yshield_flash > 0:
 
