@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 from core.audio_manager import audio
+from core import story
 
 
 PANELS = {
@@ -430,6 +431,10 @@ class Comic:
 
         self.max_focus = index
 
+        # pagina 2, tercer panel: ya no hay gato en la escena
+        if self.page == 1 and index >= 2:
+            story.set_cat_gone()
+
         panel = self.panels[index]
 
         self.flash[index] = panel["flash"]
@@ -471,6 +476,7 @@ class Comic:
         if self.phase == "overview":
 
             if self.page + 1 >= len(self.sources):
+                story.set_cat_gone()
                 return "done"
 
             self.phase = "out"
@@ -501,6 +507,7 @@ class Comic:
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_ESCAPE:
+                story.set_cat_gone()
                 return "done"
 
             if event.key in (

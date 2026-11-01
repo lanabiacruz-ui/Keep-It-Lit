@@ -11,13 +11,14 @@
         "entomologo": "2026-10-31T18:02:58",
         "desactivado": "2026-10-31T18:03:02",
         "ojos_ciegos": "2026-10-31T18:06:04",
-        "zona_2": "2026-10-31T18:49:09"
+        "zona_2": "2026-10-31T18:49:09",
+        "region_1": "2026-10-31T22:30:21"
     },
     "counters": {
         "defeats": 25,
-        "fireballs": 2515,
+        "fireballs": 2553,
         "kills": 274,
-        "slimes": 16,
+        "slimes": 19,
         "chests": 46
     }
 }

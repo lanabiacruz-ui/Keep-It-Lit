@@ -5,12 +5,17 @@ from pathlib import Path
 import pygame
 
 from core.audio_manager import audio
+from core import story
 
 
 BG_W = 745
 BG_H = 421
 
 CAT_RECT = (552, 262, 126, 76)
+
+# Parche sin gato: esquina de la imagen de referencia 1669x942
+PATCH_ORIGIN = (1232, 578)
+PATCH_REF = (1669, 942)
 
 WINDOWS = [
     (257, 1, 99, 55),
@@ -329,6 +334,79 @@ class MainMenu:
 
             self.live_cats[name] = self._extract_cat(image)
 
+    def _load_cat_patch(self, name):
+        """Parche con el escritorio sin gato (assets/maps/ui/sin_gato_*.png).
+
+        Tapa al gato dibujado en el fondo cuando ya no esta en la historia."""
+
+        patches = getattr(self, "_cat_patches", None)
+
+        if patches is None:
+            patches = self._cat_patches = {}
+
+        if name in patches:
+            return patches[name]
+
+        patch = None
+
+        path = (
+            Path(__file__).resolve().parent.parent
+            / "assets"
+            / "maps"
+            / "ui"
+            / f"sin_gato_{name}.png"
+        )
+
+        try:
+
+            image = pygame.image.load(str(path)).convert_alpha()
+
+            # el parche esta en coordenadas de la imagen de 1669x942
+            x0, y0 = PATCH_ORIGIN
+
+            kx = self.width / PATCH_REF[0]
+            ky = self.height / PATCH_REF[1]
+
+            size = (
+                max(1, round(image.get_width() * kx)),
+                max(1, round(image.get_height() * ky))
+            )
+
+            patch = (
+                pygame.transform.smoothscale(image, size),
+                (round(x0 * kx), round(y0 * ky))
+            )
+
+        except (pygame.error, FileNotFoundError, OSError):
+            patch = None
+
+        patches[name] = patch
+
+        return patch
+
+    def _draw_cat_or_patch(self, now, name, cat=None):
+
+        if not story.cat_gone():
+
+            self._draw_cat(now, cat)
+
+            return
+
+        patch = self._load_cat_patch(name)
+
+        if patch is None:
+            return
+
+        surface, pos = patch
+
+        if self._tint is not None:
+
+            surface = surface.copy()
+
+            surface.fill(self._tint, special_flags=pygame.BLEND_RGBA_MULT)
+
+        self.screen.blit(surface, pos)
+
     def draw_live(self, background, dim=0):
 
         """Anima gato y hojas por encima de otra pantalla.
@@ -353,10 +431,12 @@ class MainMenu:
 
             self._tint = (level, level, level, 255)
 
-        cat = self.live_cats.get(LIVE_CAT_SOURCE.get(background))
+        source = LIVE_CAT_SOURCE.get(background)
+
+        cat = self.live_cats.get(source)
 
         if cat is not None:
-            self._draw_cat(now, cat)
+            self._draw_cat_or_patch(now, source, cat)
 
         self._draw_leaves()
 
@@ -501,7 +581,7 @@ class MainMenu:
             (0, 0)
         )
 
-        self._draw_cat(now)
+        self._draw_cat_or_patch(now, "menu")
         self._draw_leaves()
 
         self._draw_monitor(now)
@@ -513,24 +593,6 @@ class MainMenu:
                 self.draw_option(i)
 
             self._draw_press(now)
-
-        controls = self.small_font.render(
-            "W/S o ↑/↓  •  ENTER seleccionar  •  ESC salir",
-            True,
-            (235, 242, 255)
-        )
-
-        controls_rect = controls.get_rect(
-            bottomright=(
-                self.width - 18,
-                self.height - 15
-            )
-        )
-
-        self.screen.blit(
-            controls,
-            controls_rect
-        )
 
         self._draw_intro(now)
 
@@ -569,22 +631,14 @@ class MainMenu:
 
         bob = math.sin(now * 7) * 2.5
 
-        arrow = self.font.render(
-            "▶",
-            True,
-            (255, 255, 255)
-        )
+        ax = round(rect.left + 12 + bob)
+        ay = rect.centery
+        r = max(5, rect.height // 5)
 
-        arrow_rect = arrow.get_rect(
-            midleft=(
-                rect.left + 10 + bob,
-                rect.centery
-            )
-        )
-
-        self.screen.blit(
-            arrow,
-            arrow_rect
+        pygame.draw.polygon(
+            self.screen,
+            (255, 255, 255),
+            [(ax - r // 2, ay - r), (ax - r // 2, ay + r), (ax + r, ay)]
         )
 
 

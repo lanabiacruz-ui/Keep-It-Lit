@@ -2,26 +2,26 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-10-31T21:47:44",
+    "last_played": "2026-10-31T22:37:20",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 953,
-    "y": 142,
-    "coins": 103910,
+    "x": 994,
+    "y": 166,
+    "coins": 103770,
     "gems": 4,
-    "gems_green": 2,
+    "gems_green": 1,
     "has_match": true,
     "light": "antorcha",
-    "vida": 0.7738373333333372,
-    "escudo": 0.25,
+    "vida": 1.0,
+    "escudo": 0.75,
     "inventory": [
         [
             "aceite",
-            14
+            11
         ],
         [
             "hongo_azul",
-            10
+            9
         ],
         [
             "polvora",
@@ -33,14 +33,14 @@
         ]
     ],
     "collected": [
+        "moneda_pasillo_tienda#0",
         "moneda_pasillo_der#0",
+        "moneda_pasillo_izq#0",
+        "moneda_sala_central#0",
+        "moneda_sala_central#1",
         "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_izq#0",
-        "moneda_sala_central#1",
-        "moneda_pasillo_cabana#0",
-        "moneda_sala_central#0"
+        "moneda_pasillo_cabana#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
@@ -53,6 +53,7 @@
         "hub_arriba",
         "hub_derecha",
         "hub_izquierda",
+        "puerta_final",
         "sala_der",
         "sala_izq",
         "sup_central_abajo",
@@ -60,10 +61,7 @@
         "sup_izq_central",
         "sup_izq_sala"
     ],
-    "final_door_slots": {
-        "clara": true,
-        "oscura": false
-    },
+    "final_door_slots": {},
     "current_map": "mapa1",
     "chests": {
         "cofre_02": {
@@ -115,10 +113,10 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1294,
+        "items_used": 1305,
         "chests_opened": 50,
-        "purchases": 69,
-        "fireballs": 2957,
+        "purchases": 70,
+        "fireballs": 2995,
         "kills": 363
     },
     "zones_seen": [
@@ -4309,13 +4307,6 @@
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 951,
-            "y": 170,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
             "x": 963,
             "y": 169,
             "map": "mapa1"
@@ -4325,20 +4316,6 @@
             "id": "hongo_azul",
             "x": 939,
             "y": 167,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 954,
-            "y": 166,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 942,
-            "y": 172,
             "map": "mapa1"
         },
         {
@@ -4381,13 +4358,6 @@
             "id": "hongo_azul",
             "x": 958,
             "y": 164,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 944,
-            "y": 168,
             "map": "mapa1"
         },
         {
@@ -4722,13 +4692,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 968,
-            "y": 169,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 986,
             "y": 170,
             "map": "mapa1"
@@ -4822,13 +4785,6 @@
             "id": "aceite",
             "x": 920,
             "y": 163,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 940,
-            "y": 165,
             "map": "mapa1"
         },
         {
@@ -5557,13 +5513,6 @@
             "id": "hongo_azul",
             "x": 944,
             "y": 163,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 947,
-            "y": 168,
             "map": "mapa1"
         },
         {
@@ -6848,6 +6797,55 @@
             "map": "mapa1"
         },
         {
+            "k": "item",
+            "id": "gelea",
+            "x": 986,
+            "y": 591,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1007,
+            "y": 577,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 977,
+            "y": 575,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1022,
+            "y": 583,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 1026,
+            "y": 600,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 789,
+            "y": 519,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 755,
+            "y": 529,
+            "map": "mapa1"
+        },
+        {
             "k": "light",
             "id": "fosforo",
             "life": 0.7285666666666456,
@@ -6930,14 +6928,6 @@
         {
             "k": "light",
             "id": "fosforo",
-            "life": 0.9664666666666663,
-            "x": 1001,
-            "y": 176,
-            "map": "mapa1"
-        },
-        {
-            "k": "light",
-            "id": "fosforo",
             "life": 0.9392333333333314,
             "x": 935,
             "y": 836,
@@ -6989,14 +6979,6 @@
             "life": 0.9555000000000005,
             "x": 964,
             "y": 908,
-            "map": "mapa1"
-        },
-        {
-            "k": "light",
-            "id": "antorcha",
-            "life": 1.0,
-            "x": 1002,
-            "y": 173,
             "map": "mapa1"
         },
         {
@@ -7101,6 +7083,30 @@
             "life": 0.9385333333333339,
             "x": 944,
             "y": 858,
+            "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "antorcha",
+            "life": 1.0,
+            "x": 991,
+            "y": 165,
+            "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "antorcha",
+            "life": 1.0,
+            "x": 956,
+            "y": 152,
+            "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 1.0,
+            "x": 1033,
+            "y": 134,
             "map": "mapa1"
         }
     ],

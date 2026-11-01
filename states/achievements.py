@@ -31,7 +31,31 @@ class AchievementsMenu:
 
     # Contador "Logros 4/20" arriba a la izquierda, en la barra de la tablet
     HEADER_POS = (492, 221)
-    HEADER_BAR_W = 170
+    # Mas corta que antes: la barra llegaba hasta la llamita del titulo
+    # "Keep it Lit" (que empieza en x=630) y la tapaba.
+    HEADER_BAR_W = 112
+
+    # Distribucion para la tablet de la pausa. Todo queda DENTRO de la linea
+    # fina del marco (x 481..1209, y 277..505): filas, barra de scroll y los
+    # numeros de arriba/abajo. Por eso las filas son un poco mas finitas.
+    TABLET_PANEL = (490, 282, 1205, 501)
+    TABLET_ROW_H = 50
+    TABLET_ROW_STEP = 54
+    TABLET_ROW_W = 692
+    TABLET_ROW_X = 3
+    TABLET_TRACK_W = 8
+    TABLET_TRACK_GAP = 6
+
+    # Distribucion para el monitor del menu principal. El marco fino del
+    # monitor va de x=470..1220 (y 280..525): filas + barra de scroll quedan
+    # centradas en el (centro x=845) y adentro de la linea.
+    MONITOR_PANEL = (487, 292, 1203, 514)
+    MONITOR_ROW_H = 52
+    MONITOR_ROW_STEP = 56
+    MONITOR_ROW_W = 700
+    MONITOR_ROW_X = 0
+    MONITOR_TRACK_W = 8
+    MONITOR_TRACK_GAP = 8
 
     # Hueco libre entre las dos manos (solo con la tablet de la pausa):
     # ahi va el cuadro con el detalle completo del logro elegido.
@@ -84,6 +108,32 @@ class AchievementsMenu:
                 (self.width, self.height)
             )
 
+        # la tablet de la pausa (con manos) usa otra distribucion
+        self.tablet = self.hands is not None
+
+        if self.tablet:
+            self.row_h_src = self.TABLET_ROW_H
+            self.step_src = self.TABLET_ROW_STEP
+            self.row_w_src = self.TABLET_ROW_W
+            self.row_x_off = self.TABLET_ROW_X
+            self.track_w_src = self.TABLET_TRACK_W
+            self.track_gap_src = self.TABLET_TRACK_GAP
+            panel_box = self.TABLET_PANEL
+        else:
+            self.row_h_src = self.MONITOR_ROW_H
+            self.step_src = self.MONITOR_ROW_STEP
+            self.row_w_src = self.MONITOR_ROW_W
+            self.row_x_off = self.MONITOR_ROW_X
+            self.track_w_src = self.MONITOR_TRACK_W
+            self.track_gap_src = self.MONITOR_TRACK_GAP
+            panel_box = self.MONITOR_PANEL
+
+        # mascara de las manos: sirve para saber que filas quedan tapadas
+        self.hands_mask = None
+
+        if self.hands is not None:
+            self.hands_mask = pygame.mask.from_surface(self.hands, 40)
+
         self._fonts = {}
         self._text_cache = {}
 
@@ -93,15 +143,15 @@ class AchievementsMenu:
         self.small_size = max(16, round(24 * self.sy))
 
         self.close_rect = self._box(self.CLOSE_BOX)
-        self.panel = self._box(self.PANEL)
+        self.panel = self._box(panel_box)
 
         self.rows = achievements.rows()
 
         self.ui_dir = ui_dir
 
-        self.step = max(1, round(self.ROW_STEP * self.sy))
-        self.row_h = max(1, round(self.ROW_H * self.sy))
-        self.row_w = max(1, round(self.ROW_W * self.sx))
+        self.step = max(1, round(self.step_src * self.sy))
+        self.row_h = max(1, round(self.row_h_src * self.sy))
+        self.row_w = max(1, round(self.row_w_src * self.sx))
 
         # +0.25: con el redondeo del escalado 3.98 filas cuentan como 4
         self.visible_rows = max(1, int(self.panel.height / self.step + 0.25))
@@ -114,14 +164,38 @@ class AchievementsMenu:
 
         self.selected = 0
 
+        # la barra va pegada a las filas, adentro del marco
+        track_x = (
+            self.panel.left
+            + round(self.row_x_off * self.sx)
+            + self.row_w
+            + round(self.track_gap_src * self.sx)
+        )
+        track_w = max(6, round(self.track_w_src * self.sx))
+
         self.track = pygame.Rect(
-            self.panel.right + round(6 * self.sx),
+            track_x,
             self.panel.top,
-            max(6, round(9 * self.sx)),
+            track_w,
             self.panel.height,
         )
 
-        row_size = (self.ROW_W, self.ROW_H)
+        # la mano derecha tapa la parte de abajo: la barra termina justo
+        # antes de que empiece la mano, asi no se superpone
+        if self.hands is not None:
+
+            for y in range(self.track.top, self.track.bottom):
+
+                if self.hands.get_at((self.track.centerx, y)).a > 40:
+
+                    self.track.height = max(
+                        round(40 * self.sy),
+                        y - 4 - self.track.top
+                    )
+
+                    break
+
+        row_size = (self.row_w_src, self.row_h_src)
 
         self.row_img = self._load_optional("logro_fila.png", row_size)
 
@@ -568,12 +642,10 @@ class AchievementsMenu:
                 border_radius=max(6, rect.height // 3)
             )
 
-        # ---- icono dentro de un circulo ----
+        # ---- icono (sin circulo: el arte ya trae su propio marco) ----
         radius = rect.height // 2 - 5
 
         center = (rect.left + radius + round(10 * self.sx), rect.centery)
-
-        pygame.draw.circle(self.screen, NAVY_ICON, center, radius)
 
         icon = self.icons.get((row["id"], unlocked))
 
@@ -588,14 +660,6 @@ class AchievementsMenu:
         else:
 
             self._draw_padlock(center, (150, 170, 210))
-
-        pygame.draw.circle(
-            self.screen,
-            GOLD if unlocked else RING_LOCKED,
-            center,
-            radius,
-            width=2
-        )
 
         # ---- textos ----
         text_x = center[0] + radius + round(12 * self.sx)
@@ -745,6 +809,43 @@ class AchievementsMenu:
                 (bar.left, bar.top, max(bar_h, fill_w), bar_h),
                 border_radius=bar_h // 2
             )
+
+    def _selected_hidden(self):
+        """True si las manos tapan la fila elegida (no se puede leer)."""
+
+        if self.hands_mask is None:
+            return False
+
+        top = round(
+            self.panel.top + self.selected * self.step - self.scroll_f + 2
+        )
+
+        rect = pygame.Rect(
+            self.panel.left + round(self.row_x_off * self.sx),
+            top,
+            self.row_w,
+            self.row_h
+        )
+
+        # fila fuera de la vista: no hay nada que mostrar
+        if rect.bottom <= self.panel.top or rect.top >= self.panel.bottom:
+            return False
+
+        width, height = self.hands_mask.get_size()
+
+        # puntos sobre la zona del texto (titulo y descripcion)
+        for fy in (0.25, 0.75):
+
+            y = rect.top + int(rect.height * fy)
+
+            for x in range(rect.left + 40, rect.right - 20, 12):
+
+                if 0 <= x < width and 0 <= y < height:
+
+                    if self.hands_mask.get_at((x, y)):
+                        return True
+
+        return False
 
     def _draw_detail(self):
         """Cuadro con el logro elegido completo, en el hueco entre las manos."""
@@ -900,7 +1001,7 @@ class AchievementsMenu:
         for i, row in enumerate(self.rows):
 
             rect = pygame.Rect(
-                self.panel.left + round(6 * self.sx),
+                self.panel.left + round(self.row_x_off * self.sx),
                 round(self.panel.top + i * self.step - self.scroll_f + 2),
                 self.row_w,
                 height
@@ -913,15 +1014,17 @@ class AchievementsMenu:
 
         self.screen.set_clip(previous_clip)
 
+        # la barra va antes que las manos: si algo se cruza, queda debajo
+        self._draw_scrollbar()
+
         # las manos van por encima de las filas
         if self.hands is not None:
             self.screen.blit(self.hands, (0, 0))
 
-        self._draw_scrollbar()
-
         self._draw_header()
 
-        if self.hands is not None and self.rows:
+        # el detalle solo aparece si la fila elegida esta tapada por las manos
+        if self.hands is not None and self.rows and self._selected_hidden():
             self._draw_detail()
 
         self._draw_hint()
