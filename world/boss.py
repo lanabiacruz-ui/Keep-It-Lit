@@ -10,10 +10,12 @@ Sprites propios (carpeta assets/maps/combate/), todos PNG con fondo transparente
     jefe_pina_fragmentos.png    tira de 12 cuadros (uno por fragmento)
                                 o jefe_pina_fragmento.png (uno solo para todos)
 
-El tamaño en el juego sale del tamaño de TU imagen: se dibuja a pixeles reales
-(zoom x4 del juego = REF_ZOOM). Solo se escala mientras el jefe se agranda o se
-achica, que es parte de su ataque. Si falta algun archivo se dibuja un
-reemplazo provisorio.
+El tamaño en el juego NO depende de la resolucion de tu imagen: el cuerpo mide
+BASE_SIZE y cada fragmento FRAG_SIZE (unidades de mundo, ver mas abajo). Podes
+dibujar los pngs a 160px, 640px o lo que quieras: se escalan a ese tamaño (con
+suavizado si la imagen es mas grande). El tamaño tambien cambia mientras el
+jefe se agranda o se achica, que es parte de su ataque. Si falta algun archivo
+se dibuja un reemplazo provisorio.
 
 Patron (se repite en bucle):
     rodar -> agrandarse -> mantener -> achicarse -> centro -> dividirse en 12
@@ -41,8 +43,14 @@ BOSS_HP = 360.0
 # El juego dibuja con zoom x4: 1 unidad de mundo = 4 pixeles de sprite.
 REF_ZOOM = 4
 
-# Si no hay sprite propio: tamanos (en unidades de mundo) del reemplazo.
-DEFAULT_BASE = 40.0
+# Tamano del jefe en el juego (unidades de mundo; 1 unidad = 4 px en pantalla
+# con el zoom normal). Es fijo: no sale del tamano del png. Para hacerlo mas
+# grande o chico cambia estos dos numeros, no la imagen.
+BASE_SIZE = 40.0     # cuerpo (equivale a un png de 160px a escala 1:1)
+FRAG_SIZE = 14.0     # cada fragmento (equivale a 56px a escala 1:1)
+
+# Si no hay sprite propio: tamano (en unidades de mundo) de los fragmentos
+# del reemplazo provisorio.
 DEFAULT_FRAG = 18.0
 
 # Cuanto se agranda (multiplo de su tamano normal) y tope respecto a la sala.
@@ -219,6 +227,8 @@ class BossArt:
             or load_strip(folder / "jefe_pina_fragmento.png")
         )
 
+        custom_frags = bool(frags)
+
         if not frags:
             frags = [_placeholder_frag(i) for i in range(FRAG_COUNT)]
 
@@ -230,8 +240,9 @@ class BossArt:
         self.frags = frags
         self.frags_hit = [_flash(f) for f in frags]
 
-        self.base_size = body[0].get_width() / float(REF_ZOOM)
-        self.frag_size = frags[0].get_width() / float(REF_ZOOM)
+        # tamano fijo en el juego, sin importar la resolucion de los pngs
+        self.base_size = BASE_SIZE
+        self.frag_size = FRAG_SIZE if custom_frags else DEFAULT_FRAG
 
 
 # ------------------------------------------------------------------ fragmentos
@@ -1069,7 +1080,12 @@ class PinaBoss:
             img = hit_img if hit_img is not None else frames
 
             if img.get_width() != px:
-                img = pygame.transform.scale(img, (px, px))
+
+                if img.get_width() > px:
+                    # imagen mas grande que en pantalla: suavizar al achicar
+                    img = pygame.transform.smoothscale(img, (px, px))
+                else:
+                    img = pygame.transform.scale(img, (px, px))
 
             self._cache[ck] = img
 

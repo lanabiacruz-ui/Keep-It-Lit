@@ -37,11 +37,23 @@ class Camera:
         self._fx = 0.0
         self._fy = 0.0
 
-    def update(self, player, dt=None):
-
+    def update(self, player, dt=None, focus=None):
+        """focus = (mundo_x, mundo_y, k, ancla_y) desvia la camara hacia
+        ese punto: k=0 sigue al jugador, k=1 mira al punto (que queda a
+        `ancla_y` de la altura de la pantalla)."""
 
         target_x = player.rect.centerx * self.zoom - self.screen_width / 2
         target_y = player.rect.centery * self.zoom - self.screen_height / 2
+
+        if focus is not None and focus[2] > 0.0:
+
+            fwx, fwy, k, anchor = focus
+
+            focus_x = fwx * self.zoom - self.screen_width / 2
+            focus_y = fwy * self.zoom - self.screen_height * anchor
+
+            target_x += (focus_x - target_x) * k
+            target_y += (focus_y - target_y) * k
 
 
         max_x = max(0, self.scaled_width - self.screen_width)

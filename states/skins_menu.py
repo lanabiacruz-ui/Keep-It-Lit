@@ -47,11 +47,26 @@ class SkinsMenu:
             / "ui"
         )
 
-        image = pygame.image.load(ui_dir / background).convert()
+        # convert_alpha: la tablet tiene fondo transparente, asi se ve el
+        # juego detras en vez de negro
+        image = pygame.image.load(ui_dir / background).convert_alpha()
 
         self.background = pygame.transform.smoothscale(
             image, (self.width, self.height)
         )
+
+        # capa con SOLO las manos: se dibuja encima de las tarjetas
+        self.hands = None
+
+        hands_path = ui_dir / "tablet_manos.png"
+
+        if background.startswith("tablet") and hands_path.exists():
+
+            hands = pygame.image.load(hands_path).convert_alpha()
+
+            self.hands = pygame.transform.smoothscale(
+                hands, (self.width, self.height)
+            )
 
         self.name_size = max(14, round(21 * self.sy))
         self.name_min = max(11, round(16 * self.sy))
@@ -752,6 +767,10 @@ class SkinsMenu:
             self._draw_card(i, rect)
 
         self.screen.set_clip(previous_clip)
+
+        # las manos van por encima de las tarjetas
+        if self.hands is not None:
+            self.screen.blit(self.hands, (0, 0))
 
         self._draw_scrollbar()
 

@@ -978,7 +978,6 @@ class NewGame:
         pygame.K_5: "k5",
         pygame.K_ESCAPE: "esc",
         pygame.K_TAB: "tab",
-        pygame.K_F1: "f1",
     }
 
     def _record_tuto_input(self, event):
@@ -1006,8 +1005,7 @@ class NewGame:
 
             elif event.key in (
                 pygame.K_ESCAPE,
-                pygame.K_TAB,
-                pygame.K_F1
+                pygame.K_TAB
             ):
                 name = self.TUTO_KEYS.get(event.key)
 
@@ -1034,7 +1032,7 @@ class NewGame:
 
         self.tuto_seen = set(range(200))
 
-        self.show_message("Tutorial sacado. Con F1 volvés a ver la ayuda")
+        self.show_message("Tutorial sacado")
 
         self._save()
 
@@ -1215,7 +1213,6 @@ class NewGame:
             return [
                 ("ESC: pausa (vuelve con ESC)", "esc" in g.tuto_flags),
                 ("TAB: ocultar el objetivo", "tab" in g.tuto_flags),
-                ("F1: ver la ayuda", "f1" in g.tuto_flags),
             ]
 
         return [
@@ -1292,11 +1289,11 @@ class NewGame:
             },
             {
                 "text": (
-                    "Prueba los botones de ayuda: ESC (pausa), TAB "
-                    "(ocultar el objetivo) y F1 (ayuda)."
+                    "Prueba los botones de ayuda: ESC (pausa) y TAB "
+                    "(ocultar el objetivo)."
                 ),
                 "tuto": [
-                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de criaturas), TAB esconde o muestra el objetivo y F1 vuelve a mostrar la ayuda completa. Prueba las tres.",
+                    "AYUDA: ESC abre la pausa (ahí está la enciclopedia de criaturas) y TAB esconde o muestra el objetivo. Prueba las dos.",
                 ],
                 "checks": help_checks,
                 "done": checks_done(help_checks),
@@ -2270,6 +2267,23 @@ class NewGame:
                 dt
             )
 
+    def _cinematic_focus(self):
+
+        # vista epica: mientras entra el jefe la camara lo mira a el
+        for arena in self.arenas:
+
+            cinematic = getattr(arena, "cinematic", None)
+
+            if cinematic is None or not cinematic.active:
+                continue
+
+            focus = cinematic.camera_focus()
+
+            if focus is not None:
+                return focus
+
+        return None
+
     def cinematic_lock(self):
 
         # mientras entra o cae el jefe, el jugador mira (no se mueve ni pega)
@@ -2471,6 +2485,11 @@ class NewGame:
                 )
 
             else:
+
+                # el reflector del jefe es enorme: sin resplandor (cada
+                # tamano nuevo seria un sprite gigante y trabaria la intro)
+                if radius > 400:
+                    continue
 
                 self.light.add_glow(
                     self.screen, self.camera, wx, wy,
@@ -3794,17 +3813,6 @@ class NewGame:
 
                 self.debug_combat = not self.debug_combat
 
-            elif event.key == pygame.K_F1:
-
-                if self.state == "playing":
-
-                    self.tutorial = Tutorial(
-                        (self.width, self.height),
-                        can_skip=self.objectives is not None
-                    )
-
-                    return None
-
             elif event.key == pygame.K_F5:
 
                 self._spawn_dummy()
@@ -4349,7 +4357,8 @@ class NewGame:
 
 
         self.camera.update(
-            self.player
+            self.player,
+            focus=self._cinematic_focus()
         )
 
 

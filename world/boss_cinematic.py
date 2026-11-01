@@ -39,6 +39,20 @@ BOSS_SUB = "Esquivá sus fragmentos y pegale cuando esté entera"
 
 BAR_FRACTION = 0.115
 
+# vista epica: la camara viaja hasta el jefe y lo mira mientras sube.
+# Los textos van arriba (27% de la pantalla), asi que el jefe se encuadra
+# mas abajo (60%) para que no se tapen.
+PAN_IN_FIRST = 1.7
+PAN_IN_SHORT = 0.9
+PAN_OUT = BARS_OUT
+FOCUS_ANCHOR_Y = 0.60
+
+# reflector que lo ilumina (en pixeles de pantalla = zoom * mundo): sin
+# esto el jefe sube casi a oscuras y no se lo ve
+SPOT_BASE = 30.0
+SPOT_GROW = 100.0
+SPOT_STEP = 16
+
 GOLD = (255, 214, 120)
 GOLD_DARK = (60, 28, 6)
 WHITE_WARM = (255, 240, 214)
@@ -87,6 +101,10 @@ class BossCinematic:
         self._fonts = {}
         self._glow = {}
 
+        # jefe que se esta presentando (para encuadrarlo e iluminarlo)
+        self.boss_ref = None
+        self.zoom = 4.0
+
     # ------------------------------------------------------------ control
 
     def cancel(self):
@@ -96,6 +114,7 @@ class BossCinematic:
         self.closing = None
         self.title = None
         self.title_t = None
+        self.boss_ref = None
 
     def _begin(self, mode):
 
@@ -133,11 +152,67 @@ class BossCinematic:
 
         self.first = first
 
+        self.boss_ref = boss
+        self.zoom = float(getattr(game.camera, "zoom", 4))
+
         self.title_len = self.title_time(first)
 
         if first:
             # la entrada completa: silencio, tension y golpe (9.8 s)
             music.stinger("boss_intro")
+
+    def camera_focus(self):
+        """(x, y, k, ancla) para Camera.update, o None si no hay que desviar.
+
+        Viaja del jugador al jefe, se queda mirandolo mientras sube y suena
+        el titulo, y vuelve al jugador cuando se van las barras."""
+
+        boss = self.boss_ref
+
+        if not self.active or self.mode != "intro" or boss is None:
+            return None
+
+        pan_in = PAN_IN_FIRST if self.first else PAN_IN_SHORT
+
+        k = _ease_in_out(self.t / pan_in)
+
+        if self.closing is not None:
+            k *= 1.0 - _ease_in_out(self.closing / PAN_OUT)
+
+        if k <= 0.0:
+            return None
+
+        return (boss.pos.x, boss.pos.y, k, FOCUS_ANCHOR_Y)
+
+    def spotlight(self):
+        """Fuente de luz (x, y, radio_px) sobre el jefe durante la entrada."""
+
+        boss = self.boss_ref
+
+        if not self.active or self.mode != "intro" or boss is None:
+            return None
+
+        if boss.spawning:
+            total = max(0.01, boss.intro_time)
+            rise = 1.0 - max(0.0, boss.spawn_t) / total
+        else:
+            rise = 1.0
+
+        level = _ease_out(self.t / 0.8)
+
+        if self.closing is not None:
+            level *= 1.0 - _ease_in_out(self.closing / PAN_OUT)
+
+        grow = 0.25 + 0.75 * _ease_out(rise)
+
+        radius = self.zoom * (SPOT_BASE + SPOT_GROW * grow) * level
+
+        if radius < SPOT_STEP:
+            return None
+
+        radius = int(round(radius / SPOT_STEP)) * SPOT_STEP
+
+        return (boss.pos.x, boss.pos.y, radius)
 
     def start_victory(self, game):
 

@@ -29,7 +29,7 @@ TUTORIAL_PAGES = [
     "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. La DORADA vale 1, la AZUL vale 5 y la ROJA vale 10. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
     "ENCICLOPEDIA: en la pausa (ESC) está la enciclopedia de criaturas. Apretá COBRAR en cada criatura descubierta para llevarte monedas de regalo (una sola vez por criatura).",
     "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
-    "AYUDA: ESC abre la pausa y F1 vuelve a mostrar este tutorial. ¡Mucha suerte y que tu luz nunca se apague!",
+    "AYUDA: ESC abre la pausa. ¡Mucha suerte y que tu luz nunca se apague!",
 ]
 
 TEXT_COLOR = (25, 60, 150)

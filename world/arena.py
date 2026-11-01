@@ -4688,6 +4688,12 @@ class Arena:
 
                 sources.extend(enemy.lights())
 
+        # entrada del jefe: un reflector para que se lo vea subir
+        spot = self.cinematic.spotlight()
+
+        if spot is not None:
+            sources.append(spot)
+
         for blast in self.blasts:
 
             k = blast["t"] / HONGUN_BLAST_TIME
