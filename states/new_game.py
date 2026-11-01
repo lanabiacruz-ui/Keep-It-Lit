@@ -56,6 +56,8 @@ from ui.objectives import Objectives
 from states.pause_menu import PauseMenu
 from states.enemy_enciclopedia import EnemyEncyclopedia
 from states.settings import Settings
+from states.skins_menu import SkinsMenu
+from states.achievements import AchievementsMenu
 
 
 MATCH_POS = (818, 1002)
@@ -326,6 +328,8 @@ class NewGame:
         self.pause_menu = PauseMenu(self.screen)
         self.pause_settings = None
         self.enemy_encyclopedia = None
+        self.pause_skins = None
+        self.pause_achievements = None
         self.pause_view = None
 
         self.effects_bar = EffectsBar((self.width, self.height))
@@ -3488,11 +3492,60 @@ class NewGame:
 
                 self.pause_view = "enemies"
 
+            elif result == "skins":
+
+                self.pause_skins = SkinsMenu(
+                    self.screen,
+                    background="tablet_ajustes.png"
+                )
+
+                self.pause_view = "skins"
+
+            elif result == "achievements":
+
+                self.pause_achievements = AchievementsMenu(
+                    self.screen,
+                    background="tablet_ajustes.png"
+                )
+
+                self.pause_view = "achievements"
+
             elif result == "back":
 
                 self._save()
 
                 return "menu"
+
+            return None
+
+
+        if self.pause_view == "skins":
+
+            result = self.pause_skins.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                # la skin se aplica al personaje en el momento
+                self.player.load_skin()
+
+                self.pause_view = "pause"
+                self.pause_skins = None
+
+            return None
+
+
+        if self.pause_view == "achievements":
+
+            result = self.pause_achievements.handle_event(
+                event
+            )
+
+            if result == "back":
+
+                self.pause_view = "pause"
+                self.pause_achievements = None
 
             return None
 
@@ -3977,6 +4030,18 @@ class NewGame:
             elif self.pause_view == "enemies":
 
                 self.enemy_encyclopedia.update(
+                    dt
+                )
+
+            elif self.pause_view == "skins":
+
+                self.pause_skins.update(
+                    dt
+                )
+
+            elif self.pause_view == "achievements":
+
+                self.pause_achievements.update(
                     dt
                 )
 
@@ -5179,6 +5244,12 @@ class NewGame:
 
         elif self.pause_view == "enemies":
             self.enemy_encyclopedia.draw()
+
+        elif self.pause_view == "skins":
+            self.pause_skins.draw()
+
+        elif self.pause_view == "achievements":
+            self.pause_achievements.draw()
 
         menu_arena = self._menu_arena()
 

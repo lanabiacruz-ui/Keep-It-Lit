@@ -106,6 +106,20 @@ class Player:
         self.grabbed = False
         self.grab_lift = 0.0
 
+        self.load_skin(skin)
+
+    def load_skin(self, skin=None):
+
+        """Carga (o recarga) las hojas de sprites de la skin.
+
+        Sin argumento usa la skin equipada, asi se puede llamar de nuevo
+        despues de elegir otra desde el menu de pausa.
+        """
+
+        self._sprite_cache = {}
+        self._feet_cache = {}
+        self._shadow_cache = {}
+
         base = Path(__file__).resolve().parent.parent
         player_dir = base / "assets" / "maps" / "player"
 

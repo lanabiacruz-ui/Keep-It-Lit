@@ -20,8 +20,8 @@ class PasswordMenu:
     INPUT_BOX = (747, 365, 1002, 391)
     CLOSE_BOX = (1025, 299, 1042, 315)
 
-    LABEL_COVER_BOX = (745, 314, 1004, 346)
-    LABEL_CENTER = (875, 330)
+    LABEL_COVER_BOX = (748, 319, 1004, 350)
+    LABEL_CENTER = (875, 333)
 
     def __init__(self, screen, mode="set"):
 

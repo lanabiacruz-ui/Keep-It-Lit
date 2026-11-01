@@ -10,11 +10,22 @@ class PauseMenu:
     IMG_W = 1637
     IMG_H = 961
 
+    # Coordenadas sobre pantallaesc_skins.png (se genera con
+    # tools/make_pause_panel.py a partir de pantallaesc.png)
     BUTTONS = {
-        "settings": (569, 402, 1063, 480),
-        "enemies": (569, 514, 1063, 592),
-        "back": (569, 627, 1063, 705),
+        "settings": (569, 345, 1063, 423),
+        "enemies": (569, 457, 1063, 535),
+        "skins": (569, 568, 802, 646),
+        "achievements": (828, 568, 1063, 646),
+        "back": (569, 681, 1063, 759),
     }
+
+    # Botones cuyo texto NO esta en la imagen (se dibuja por codigo).
+    # Vacio porque "Skins" y "Logros" ya van escritos en el png.
+    # Si hiciera falta de nuevo: {"skins": "Skins", "achievements": "Logros"}
+    LABELS = {}
+
+    LABEL_COLOR = (74, 79, 90)
 
     def __init__(self, screen):
         self.screen = screen
@@ -28,12 +39,17 @@ class PauseMenu:
             / "assets"
             / "maps"
             / "hud"
-            / "pantallaesc.png"
+            / "pantallaesc_skins.png"
         )
 
         self.background = pygame.image.load(image_path).convert_alpha()
 
         self.resize()
+
+    def _make_label_font(self):
+        font = pygame.font.Font(None, max(20, round(52 * self.sy)))
+        font.set_italic(True)
+        return font
 
     def resize(self):
         self.width, self.height = self.screen.get_size()
@@ -45,6 +61,8 @@ class PauseMenu:
 
         self.sx = self.width / self.IMG_W
         self.sy = self.height / self.IMG_H
+
+        self.label_font = self._make_label_font()
 
         self.button_rects = {}
 
@@ -83,8 +101,18 @@ class PauseMenu:
             (0, 0)
         )
 
+        self._draw_labels()
+
         if self.pending_enemies > 0:
             self._draw_pending_badge()
+
+    def _draw_labels(self):
+        for key, text in self.LABELS.items():
+            rect = self.button_rects[key]
+
+            surf = self.label_font.render(text, True, self.LABEL_COLOR)
+
+            self.screen.blit(surf, surf.get_rect(center=rect.center))
 
     def _draw_pending_badge(self):
         rect = self.button_rects["enemies"]
