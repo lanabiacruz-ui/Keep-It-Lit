@@ -127,40 +127,55 @@ class PlayerLight:
         )
 
     def _soft_rect(self, w, h, feather, strength):
+        """Rectangulo iluminado con degradado suave y esquinas redondeadas.
 
-        strength = max(0.0, min(1.0, strength))
+        La zona central resta toda la oscuridad; el borde hace una transicion
+        gradual hacia la oscuridad exterior, tambien en las cuatro esquinas.
+        """
+        w = max(1, int(w))
+        h = max(1, int(h))
+        feather = max(1, int(feather))
+        strength = max(0.0, min(1.0, float(strength)))
 
-        key = (w, h, feather, int(round(strength * 10)))
+        peak = int(self.darkness_alpha * strength)
+        key = (w, h, feather, peak)
 
-        if key not in self._soft_cache:
+        cached = self._soft_cache.get(key)
+        if cached is not None:
+            return cached
 
-            peak = int(self.darkness_alpha * round(strength * 10) / 10)
+        surf = pygame.Surface(
+            (w + feather * 2, h + feather * 2),
+            pygame.SRCALPHA
+        )
 
-            surf = pygame.Surface(
-                (w + feather * 2, h + feather * 2),
-                pygame.SRCALPHA
+        # Se dibuja desde el borde exterior hacia el interior. Cada capa
+        # aumenta suavemente la opacidad que se resta de la oscuridad.
+        for i in range(feather, -1, -1):
+            t = 1.0 - (i / float(feather))
+            smooth = t * t * (3.0 - 2.0 * t)
+            alpha = max(0, min(255, int(peak * smooth)))
+
+            rect = pygame.Rect(
+                feather - i,
+                feather - i,
+                w + i * 2,
+                h + i * 2
+            )
+            radius = min(max(1, feather // 2), rect.width // 2, rect.height // 2)
+
+            pygame.draw.rect(
+                surf,
+                (0, 0, 0, alpha),
+                rect,
+                border_radius=radius
             )
 
-            surf.fill((0, 0, 0, peak), pygame.Rect(feather, feather, w, h))
+        if len(self._soft_cache) > 180:
+            self._soft_cache.clear()
 
-            for i in range(feather):
-
-                t = i / feather
-                t = t * t * (3 - 2 * t)
-
-                ring = pygame.Rect(
-                    i, i,
-                    w + (feather - i) * 2,
-                    h + (feather - i) * 2
-                )
-
-                pygame.draw.rect(
-                    surf, (0, 0, 0, int(peak * t)), ring, width=1
-                )
-
-            self._soft_cache[key] = surf
-
-        return self._soft_cache[key]
+        self._soft_cache[key] = surf
+        return surf
 
     def draw(self, screen, camera, sources, lit_rects=()):
 
@@ -213,3 +228,4 @@ class PlayerLight:
             self._darkness,
             (0, 0)
         )
+
