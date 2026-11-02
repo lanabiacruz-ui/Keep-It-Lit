@@ -1,3 +1,4 @@
+import math
 import pygame
 from pathlib import Path
 
@@ -89,6 +90,12 @@ class Player:
         self.dust = wa.DustPuffs()
 
         self.jump_t = 0.0            # >0 mientras esta en el aire (solo visual)
+
+        # --- emotes (solo visual) ---
+        self.emote = None
+        self.emote_t = 0.0
+        self._emote_jumps = 0
+        self._emote_fonts = {}
 
         self._sprite_cache = {}
         self._feet_cache = {}
@@ -246,6 +253,149 @@ class Player:
         self._emit_dust(2, 0.8)
 
         return True
+
+    EMOTE_TIME = {
+        "saludo": 1.1,
+        "six_seven": 1.8,
+        "dab": 1.1,
+    }
+
+    EMOTE_TEXT = {
+        "saludo": "¡Hola!",
+        "six_seven": "6 7",
+        "dab": "DAB",
+    }
+
+    def play_emote(self, emote_id):
+        """Hace un emote: saludo (con saltito), six_seven o dab."""
+
+        if emote_id not in self.EMOTE_TIME or self.grabbed:
+            return False
+
+        self.emote = emote_id
+        self.emote_t = self.EMOTE_TIME[emote_id]
+        self._emote_jumps = 0
+
+        if emote_id == "saludo":
+            self.jump_t = 0.0
+            self.jump()
+            self._emote_jumps = 1
+
+        return True
+
+    def stop_emote(self):
+
+        self.emote = None
+        self.emote_t = 0.0
+
+    def _emote_elapsed(self):
+
+        if self.emote is None:
+            return 0.0
+
+        return self.EMOTE_TIME[self.emote] - self.emote_t
+
+    def _update_emote(self, dt):
+
+        if self.emote is None:
+            return
+
+        # si se mueve o lo golpean, se corta el emote
+        if self.moving or self.hurt_timer > 0 or self.grabbed:
+            self.stop_emote()
+            return
+
+        self.emote_t -= dt
+
+        if self.emote_t <= 0:
+            self.stop_emote()
+            return
+
+        if (
+            self.emote == "saludo"
+            and self._emote_jumps < 2
+            and self.jump_t <= 0
+        ):
+            self.jump()
+            self._emote_jumps += 1
+
+    def _emote_lift(self):
+        """Altura extra (pixeles del mundo) segun el emote activo."""
+
+        if self.emote == "six_seven":
+
+            t = self._emote_elapsed()
+
+            return abs(math.sin(t * math.pi * 2.6)) * 4.0
+
+        return 0.0
+
+    def _emote_font(self, size):
+
+        font = self._emote_fonts.get(size)
+
+        if font is None:
+            font = pygame.font.Font(None, size)
+            self._emote_fonts[size] = font
+
+        return font
+
+    def _draw_emote_bubble(self, screen, anchor_x, top_y, zoom):
+
+        total = self.EMOTE_TIME[self.emote]
+        t = self._emote_elapsed()
+
+        # aparece y se desvanece
+        fade = min(1.0, t / 0.15, self.emote_t / 0.25)
+        alpha = int(255 * max(0.0, fade))
+
+        size = max(22, int(30 * zoom))
+        font = self._emote_font(size)
+
+        if self.emote == "six_seven":
+
+            # el 6 y el 7 suben y bajan en contrafase
+            wave = math.sin(t * math.pi * 5.2)
+            amp = size * 0.25
+
+            six = font.render("6", True, (30, 24, 20))
+            seven = font.render("7", True, (30, 24, 20))
+
+            gap = size // 3
+            w = six.get_width() + seven.get_width() + gap
+            h = six.get_height()
+
+            content = pygame.Surface((w, h + int(amp * 2)), pygame.SRCALPHA)
+            content.blit(six, (0, int(amp - wave * amp)))
+            content.blit(seven, (six.get_width() + gap, int(amp + wave * amp)))
+
+        else:
+
+            text = self.EMOTE_TEXT[self.emote]
+            content = font.render(text, True, (30, 24, 20))
+
+        pad = max(6, size // 4)
+        box = pygame.Surface(
+            (content.get_width() + pad * 2, content.get_height() + pad * 2),
+            pygame.SRCALPHA
+        )
+
+        pygame.draw.rect(
+            box, (250, 246, 235, 235), box.get_rect(), border_radius=10
+        )
+        pygame.draw.rect(
+            box, (60, 50, 40, 255), box.get_rect(), 2, border_radius=10
+        )
+
+        box.blit(content, (pad, pad))
+        box.set_alpha(alpha)
+
+        rise = int(min(1.0, t / 0.2) * 6)
+
+        screen.blit(
+            box,
+            box.get_rect(midbottom=(anchor_x, top_y - 4 - rise))
+        )
 
     @property
     def jump_height(self):
@@ -457,6 +607,7 @@ class Player:
                 self._emit_dust(3, 1.0)    # aterrizaje
 
         self._update_walk(dt)
+        self._update_emote(dt)
 
     # ------------------------------------------------------------------
     # Animacion de caminata
@@ -691,7 +842,11 @@ class Player:
         self._draw_dust(screen, camera)
 
         lift = int(
-            (max(0.0, self.grab_lift) + self.jump_height) * camera.zoom
+            (
+                max(0.0, self.grab_lift)
+                + self.jump_height
+                + self._emote_lift()
+            ) * camera.zoom
         )
 
         sw = base.get_width()
@@ -731,7 +886,26 @@ class Player:
 
             sprite.set_alpha(140)
 
-        screen.blit(
-            sprite,
-            (anchor[0] + ofs_x, anchor[1] + ofs_y - lift)
-        )
+        pos = (anchor[0] + ofs_x, anchor[1] + ofs_y - lift)
+
+        if self.emote == "dab":
+
+            # inclinacion del cuerpo, entra y sale suave
+            t = self._emote_elapsed()
+            k = min(1.0, t / 0.15, self.emote_t / 0.20)
+            side = -1 if self.direction == "left" else 1
+            angle = -side * 22 * max(0.0, k)
+
+            center = sprite.get_rect(topleft=pos).center
+            sprite = pygame.transform.rotate(sprite, angle)
+            pos = sprite.get_rect(center=center).topleft
+
+        screen.blit(sprite, pos)
+
+        if self.emote is not None:
+            self._draw_emote_bubble(
+                screen,
+                anchor[0],
+                min(pos[1], anchor[1] - int(self.image_rect.height * camera.zoom * 0.9)),
+                camera.zoom
+            )

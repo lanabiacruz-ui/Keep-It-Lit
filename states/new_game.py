@@ -3671,6 +3671,12 @@ class NewGame:
                 return None
 
             if self.emote_wheel.handle_event(event):
+
+                chosen = self.emote_wheel.pop_selected()
+
+                if chosen:
+                    self.player.play_emote(chosen)
+
                 return None
 
         elif (

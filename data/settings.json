@@ -19,6 +19,15 @@
         "equipped": 53
     },
     "skin": "entomologo",
-    "skins_owned": [
+    "skins_owned": [],
+    "emote_wheel": [
+        null,
+        null,
+        null,
+        "enojo",
+        null,
+        null,
+        null,
+        null
     ]
 }
