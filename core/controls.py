@@ -52,6 +52,7 @@ DEFAULTS = {
     "use": pygame.K_f,
     "magnet": pygame.K_o,
     "attack_mode": pygame.K_g,
+    "emotes": pygame.K_h,
     "slot1": pygame.K_1,
     "slot2": pygame.K_2,
     "slot3": pygame.K_3,

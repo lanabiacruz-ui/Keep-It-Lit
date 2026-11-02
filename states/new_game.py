@@ -44,6 +44,7 @@ from world.placeables import PlaceableManager
 from world.dungeon_map import DungeonMapView
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
+from ui.emote_wheel import EmoteWheel
 from ui.chest_minigame import ChestMinigame
 from core import skins as skin_lib
 
@@ -672,7 +673,7 @@ class NewGame:
         self.no_light_timer = None
 
         self.selected_slot = "equipped"
-
+        self.emote_wheel = EmoteWheel(self.screen)
         self.state = "playing"
 
         self.fade_alpha = 0
@@ -3660,7 +3661,27 @@ class NewGame:
 
             return None
 
+        if self.emote_wheel.active:
 
+            if (
+                event.type == pygame.KEYDOWN
+                and controls.matches("emotes", event.key)
+            ):
+                self.emote_wheel.close()
+                return None
+
+            if self.emote_wheel.handle_event(event):
+                return None
+
+        elif (
+            event.type == pygame.KEYDOWN
+            and controls.matches("emotes", event.key)
+            and self.state == "playing"
+        ):
+
+            self.emote_wheel.open()
+
+            return None
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_ESCAPE:
@@ -5240,7 +5261,7 @@ class NewGame:
         if self.debug_items:
 
             self._draw_debug_items()
-
+        self.emote_wheel.draw(self.screen)
         if self.pause_view == "pause":
             self.pause_menu.pending_enemies = len(
                 (self.discovered_enemies & set(EnemyEncyclopedia.ORDER))
