@@ -1,4 +1,14 @@
+import sys
+import ctypes
 import pygame
+
+# Windows: darle al juego su propio ID para que la barra de tareas
+# no lo agrupe con Python y muestre el ícono del juego.
+if sys.platform == "win32":
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("keepitlit.juego.1")
+    except Exception:
+        pass
 
 from states.main_menu import MainMenu
 from states.menu_carga import MenuCarga
@@ -26,6 +36,27 @@ audio.preload()
 ANCHO = 1280
 ALTO = 720
 
+# Ícono de la ventana y de la barra de tareas
+import os
+_BASE = os.path.dirname(os.path.abspath(__file__))
+_ICONOS = [
+    os.path.join(_BASE, "assets", "logo.png"),                       # tu logo
+    os.path.join(_BASE, "assets", "maps", "hud", "icon_vela.png"),   # respaldo
+]
+
+
+def poner_icono():
+    for ruta in _ICONOS:
+        try:
+            pygame.display.set_icon(pygame.image.load(ruta))
+            print("Icono cargado:", ruta)
+            return
+        except (pygame.error, FileNotFoundError) as e:
+            print("No se pudo cargar el icono:", ruta, "->", e)
+
+
+poner_icono()  # antes de set_mode
+
 _flags = pygame.SCALED
 
 if load_settings().get("fullscreen"):
@@ -35,6 +66,8 @@ try:
     screen = pygame.display.set_mode((ANCHO, ALTO), _flags)
 except pygame.error:
     screen = pygame.display.set_mode((ANCHO, ALTO))
+
+poner_icono()  # otra vez, ya con la ventana creada
 
 pygame.display.set_caption(
     "Keep It Lit"

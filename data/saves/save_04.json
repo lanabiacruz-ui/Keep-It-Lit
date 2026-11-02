@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-10-31T22:33:39",
+    "last_played": "2026-11-02T07:42:12",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
     "x": 949,
     "y": 154,
-    "coins": 101505,
+    "coins": 96505,
     "gems": 0,
     "gems_green": 0,
     "has_match": true,
@@ -21,11 +21,11 @@
         null
     ],
     "collected": [
-        "madera_05#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#1",
+        "madera_05#0",
+        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#0",
+        "moneda_pasillo_tienda#0",
         "madera_10#0"
     ],
     "item_seed": 757481128,
@@ -73,7 +73,7 @@
     "stats": {
         "items_used": 11,
         "chests_opened": 4,
-        "purchases": 1,
+        "purchases": 2,
         "fireballs": 0,
         "kills": 40
     },
