@@ -95,7 +95,7 @@ class Player:
         self.emote = None
         self.emote_t = 0.0
         self._emote_jumps = 0
-        self._emote_fonts = {}
+        self._emote_cache = {}
 
         self._sprite_cache = {}
         self._feet_cache = {}
@@ -126,6 +126,7 @@ class Player:
         self._sprite_cache = {}
         self._feet_cache = {}
         self._shadow_cache = {}
+        self._emote_cache = {}
 
         base = Path(__file__).resolve().parent.parent
         player_dir = base / "assets" / "maps" / "player"
@@ -255,16 +256,28 @@ class Player:
         return True
 
     EMOTE_TIME = {
-        "saludo": 1.1,
-        "six_seven": 1.8,
-        "dab": 1.1,
+        "saludo": 1.4,
+        "six_seven": 2.4,
+        "dab": 1.2,
     }
 
-    EMOTE_TEXT = {
-        "saludo": "¡Hola!",
-        "six_seven": "6 7",
-        "dab": "DAB",
-    }
+    # --- brazos de los emotes -------------------------------------------
+    # Los brazos del sprite quedan pegados al cuerpo, asi que para los
+    # emotes se borran del cuadro "de frente" y se dibujan brazos propios
+    # (mismo color y trazo) que se mueven. Las coordenadas estan en pixeles
+    # de la hoja del personaje (celda de 190x214).
+    EMOTE_PAD_X = 45        # margen a los costados (para brazos estirados)
+    EMOTE_PAD_Y = 10
+    ARM_RADIUS = 12
+    ARM_OUTLINE = 6
+    ARM_SS = 3              # supersampling para que el trazo se vea suave
+    ARM_OUTLINE_COLOR = (20, 18, 18)
+
+    # (hombro, codo, mano) del brazo izquierdo y derecho, colgando
+    ARMS_REST = (
+        ((50, 134), (36, 148), (30, 162)),
+        ((144, 134), (158, 148), (164, 162)),
+    )
 
     def play_emote(self, emote_id):
         """Hace un emote: saludo (con saltito), six_seven o dab."""
@@ -275,6 +288,9 @@ class Player:
         self.emote = emote_id
         self.emote_t = self.EMOTE_TIME[emote_id]
         self._emote_jumps = 0
+
+        # los emotes se hacen de frente, asi se ven los brazos
+        self.direction = "down"
 
         if emote_id == "saludo":
             self.jump_t = 0.0
@@ -319,6 +335,17 @@ class Player:
             self.jump()
             self._emote_jumps += 1
 
+    def _emote_blend(self):
+        """0..1: entra y sale suave del emote."""
+
+        if self.emote is None:
+            return 0.0
+
+        t = self._emote_elapsed()
+        k = max(0.0, min(1.0, t / 0.18, self.emote_t / 0.20))
+
+        return k * k * (3.0 - 2.0 * k)
+
     def _emote_lift(self):
         """Altura extra (pixeles del mundo) segun el emote activo."""
 
@@ -326,76 +353,249 @@ class Player:
 
             t = self._emote_elapsed()
 
-            return abs(math.sin(t * math.pi * 2.6)) * 4.0
+            # un saltito por cada brazada
+            return abs(math.sin(t * math.pi * 2.0 * 2.6)) * 3.5 * self._emote_blend()
 
         return 0.0
 
-    def _emote_font(self, size):
+    def _emote_arms(self):
+        """Posicion de los brazos ahora: ((hombro, codo, mano), (...)) o None."""
 
-        font = self._emote_fonts.get(size)
+        if self.emote is None:
+            return None
 
-        if font is None:
-            font = pygame.font.Font(None, size)
-            self._emote_fonts[size] = font
-
-        return font
-
-    def _draw_emote_bubble(self, screen, anchor_x, top_y, zoom):
-
-        total = self.EMOTE_TIME[self.emote]
         t = self._emote_elapsed()
-
-        # aparece y se desvanece
-        fade = min(1.0, t / 0.15, self.emote_t / 0.25)
-        alpha = int(255 * max(0.0, fade))
-
-        size = max(22, int(30 * zoom))
-        font = self._emote_font(size)
+        k = self._emote_blend()
+        rest_l, rest_r = self.ARMS_REST
 
         if self.emote == "six_seven":
 
-            # el 6 y el 7 suben y bajan en contrafase
-            wave = math.sin(t * math.pi * 5.2)
-            amp = size * 0.25
+            # las manos suben y bajan al reves, una y otra vez
+            s = math.sin(t * math.pi * 2.0 * 2.6)
 
-            six = font.render("6", True, (30, 24, 20))
-            seven = font.render("7", True, (30, 24, 20))
+            target_l = ((50, 134), (34, 152), (66, 142 + 24 * s))
+            target_r = ((144, 134), (160, 152), (128, 142 - 24 * s))
 
-            gap = size // 3
-            w = six.get_width() + seven.get_width() + gap
-            h = six.get_height()
+        elif self.emote == "dab":
 
-            content = pygame.Surface((w, h + int(amp * 2)), pygame.SRCALPHA)
-            content.blit(six, (0, int(amp - wave * amp)))
-            content.blit(seven, (six.get_width() + gap, int(amp + wave * amp)))
+            # un brazo doblado tapando la cara, el otro estirado hacia arriba
+            target_l = ((50, 134), (48, 104), (104, 92))
+            target_r = ((144, 134), (166, 112), (186, 86))
 
         else:
 
-            text = self.EMOTE_TEXT[self.emote]
-            content = font.render(text, True, (30, 24, 20))
+            # saludo: la mano derecha saluda moviendose de lado a lado
+            w = math.sin(t * math.pi * 2.0 * 3.2)
 
-        pad = max(6, size // 4)
-        box = pygame.Surface(
-            (content.get_width() + pad * 2, content.get_height() + pad * 2),
+            target_l = rest_l
+            target_r = ((144, 134), (168 + 4 * w, 112), (174 + 12 * w, 82))
+
+        def lerp_arm(a, b):
+
+            return tuple(
+                (
+                    a[i][0] + (b[i][0] - a[i][0]) * k,
+                    a[i][1] + (b[i][1] - a[i][1]) * k,
+                )
+                for i in range(3)
+            )
+
+        return (lerp_arm(rest_l, target_l), lerp_arm(rest_r, target_r))
+
+    def _emote_offset(self):
+        """Donde cae la celda de la hoja (190x214) dentro de la celda del juego."""
+
+        ox = (self.CELL_WIDTH - SHEET_CELL[0]) // 2
+        oy = self.CELL_HEIGHT - self.BOTTOM_MARGIN - SHEET_CELL[1]
+
+        return ox, oy
+
+    def _emote_template(self, height):
+        """Cuerpo de frente SIN brazos, con margen, ya a la escala de pantalla."""
+
+        cached = self._emote_cache.get(height)
+
+        if cached is not None:
+            return cached
+
+        frames = self.frames["down"]
+        src = frames[min(self.IDLE_FRAME, len(frames) - 1)]
+
+        ox, oy = self._emote_offset()
+        pad_x = self.EMOTE_PAD_X
+        pad_y = self.EMOTE_PAD_Y
+
+        body = src.copy()
+
+        # borra los brazos pegados al cuerpo (los costados del torso)
+        arm_top = 126 + oy
+        arm_h = 44
+
+        body.fill((0, 0, 0, 0), pygame.Rect(0, arm_top, 51 + ox, arm_h))
+        body.fill(
+            (0, 0, 0, 0),
+            pygame.Rect(147 + ox, arm_top, self.CELL_WIDTH, arm_h)
+        )
+
+        canvas = pygame.Surface(
+            (self.CELL_WIDTH + pad_x * 2, self.CELL_HEIGHT + pad_y),
             pygame.SRCALPHA
         )
+        canvas.blit(body, (pad_x, pad_y))
 
-        pygame.draw.rect(
-            box, (250, 246, 235, 235), box.get_rect(), border_radius=10
+        # color de los brazos: el del brazo original de esta skin (mediana de
+        # la zona del brazo sin contar el trazo oscuro), asi respeta mangas
+        samples = []
+
+        for yy in range(134, 160, 2):
+            for xx in range(26, 47, 2):
+
+                x = xx + ox
+                y = yy + oy
+
+                if 0 <= x < src.get_width() and 0 <= y < src.get_height():
+
+                    c = src.get_at((x, y))
+
+                    if c[3] > 200 and c[0] + c[1] + c[2] > 150:
+                        samples.append((c[0], c[1], c[2]))
+
+        if not samples:
+
+            # skin muy oscura: se acepta cualquier pixel opaco de la zona
+            for yy in range(134, 160, 2):
+                for xx in range(26, 47, 2):
+
+                    x = xx + ox
+                    y = yy + oy
+
+                    if 0 <= x < src.get_width() and 0 <= y < src.get_height():
+
+                        c = src.get_at((x, y))
+
+                        if c[3] > 200:
+                            samples.append((c[0], c[1], c[2]))
+
+        if samples:
+            samples.sort(key=lambda c: c[0] + c[1] + c[2])
+            fill = samples[len(samples) // 2]
+        else:
+            fill = (172, 191, 200)
+
+        # color del trazo: el pixel mas oscuro del borde de la cabeza
+        outline = self.ARM_OUTLINE_COLOR
+        darkest = None
+        y = 70 + oy
+
+        for x in range(18 + ox, 40 + ox):
+
+            if 0 <= x < src.get_width() and 0 <= y < src.get_height():
+
+                c = src.get_at((x, y))
+
+                if c[3] > 200 and (
+                    darkest is None
+                    or c[0] + c[1] + c[2] < darkest[0] + darkest[1] + darkest[2]
+                ):
+                    darkest = (c[0], c[1], c[2])
+
+        if darkest is not None:
+            outline = darkest
+
+        scale = height / self.CELL_HEIGHT
+
+        template = pygame.transform.smoothscale(
+            canvas,
+            (
+                max(1, round(canvas.get_width() * scale)),
+                max(1, round(canvas.get_height() * scale)),
+            )
         )
-        pygame.draw.rect(
-            box, (60, 50, 40, 255), box.get_rect(), 2, border_radius=10
-        )
 
-        box.blit(content, (pad, pad))
-        box.set_alpha(alpha)
+        cached = (template, scale, fill, outline)
+        self._emote_cache[height] = cached
 
-        rise = int(min(1.0, t / 0.2) * 6)
+        return cached
 
-        screen.blit(
-            box,
-            box.get_rect(midbottom=(anchor_x, top_y - 4 - rise))
-        )
+    @staticmethod
+    def _draw_capsule(surface, color, p, q, r):
+
+        dx = q[0] - p[0]
+        dy = q[1] - p[1]
+        dist = math.hypot(dx, dy)
+
+        if dist > 0.01:
+
+            nx = -dy / dist * r
+            ny = dx / dist * r
+
+            pygame.draw.polygon(
+                surface,
+                color,
+                [
+                    (p[0] + nx, p[1] + ny),
+                    (q[0] + nx, q[1] + ny),
+                    (q[0] - nx, q[1] - ny),
+                    (p[0] - nx, p[1] - ny),
+                ]
+            )
+
+        for c in (p, q):
+            pygame.draw.circle(
+                surface, color, (round(c[0]), round(c[1])), max(1, round(r))
+            )
+
+    def _emote_base(self, height):
+        """Cuadro de frente con los brazos del emote dibujados, o None."""
+
+        arms = self._emote_arms()
+
+        if arms is None or not self.frames.get("down"):
+            return None
+
+        template, scale, fill, outline = self._emote_template(height)
+
+        ss = self.ARM_SS
+        w, h = template.get_size()
+        ox, oy = self._emote_offset()
+
+        layer = pygame.Surface((w * ss, h * ss), pygame.SRCALPHA)
+
+        def pt(p):
+            return (
+                (p[0] + ox + self.EMOTE_PAD_X) * scale * ss,
+                (p[1] + oy + self.EMOTE_PAD_Y) * scale * ss,
+            )
+
+        # primero todos los contornos y despues los rellenos,
+        # asi las articulaciones quedan unidas sin lineas en el medio
+        line_color = outline
+
+        for is_outline in (True, False):
+
+            r = self.ARM_RADIUS + (self.ARM_OUTLINE if is_outline else 0)
+            color = line_color if is_outline else fill
+
+            for shoulder, elbow, hand in arms:
+
+                s_pt, e_pt, h_pt = pt(shoulder), pt(elbow), pt(hand)
+
+                self._draw_capsule(layer, color, s_pt, e_pt, r * scale * ss)
+                self._draw_capsule(layer, color, e_pt, h_pt, r * scale * ss)
+
+                pygame.draw.circle(
+                    layer,
+                    color,
+                    (round(h_pt[0]), round(h_pt[1])),
+                    max(1, round((r + 3) * scale * ss))
+                )
+
+        layer = pygame.transform.smoothscale(layer, (w, h))
+
+        out = template.copy()
+        out.blit(layer, (0, 0))
+
+        return out
 
     @property
     def jump_height(self):
@@ -814,6 +1014,17 @@ class Player:
 
         key, base = self._scaled_frame(frames, height)
 
+        shadow_src_w = base.get_width()
+
+        # durante un emote se usa el cuadro de frente con brazos propios
+        emote_base = None
+
+        if self.emote is not None:
+            emote_base = self._emote_base(height)
+
+            if emote_base is not None:
+                base = emote_base
+
         pose = wa.walk_pose(
             self.walk_phase,
             self.walk_blend,
@@ -826,7 +1037,11 @@ class Player:
 
         feet = None
 
-        if self.direction in ("up", "down") and wa.FOOT_LIFT > 0:
+        if (
+            emote_base is None
+            and self.direction in ("up", "down")
+            and wa.FOOT_LIFT > 0
+        ):
 
             feet = self._feet_cache.get(key)
 
@@ -849,7 +1064,7 @@ class Player:
             ) * camera.zoom
         )
 
-        sw = base.get_width()
+        sw = shadow_src_w
 
         k = pose["contact"]
 
@@ -890,22 +1105,11 @@ class Player:
 
         if self.emote == "dab":
 
-            # inclinacion del cuerpo, entra y sale suave
-            t = self._emote_elapsed()
-            k = min(1.0, t / 0.15, self.emote_t / 0.20)
-            side = -1 if self.direction == "left" else 1
-            angle = -side * 22 * max(0.0, k)
+            # el cuerpo se inclina hacia el brazo doblado (entra y sale suave)
+            angle = 12 * self._emote_blend()
 
             center = sprite.get_rect(topleft=pos).center
             sprite = pygame.transform.rotate(sprite, angle)
             pos = sprite.get_rect(center=center).topleft
 
         screen.blit(sprite, pos)
-
-        if self.emote is not None:
-            self._draw_emote_bubble(
-                screen,
-                anchor[0],
-                min(pos[1], anchor[1] - int(self.image_rect.height * camera.zoom * 0.9)),
-                camera.zoom
-            )

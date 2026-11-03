@@ -18,8 +18,12 @@
         "slot4": 52,
         "equipped": 53
     },
-    "skin": "entomologo",
-    "skins_owned": [],
+    "skin": "pago_1",
+    "skins_owned": [
+        "pago_2",
+        "pago_3",
+        "pago_1"
+    ],
     "emote_wheel": [
         null,
         null,
