@@ -29,6 +29,7 @@ SOUNDS = {
     "door_resist": (0.60, 0.15),
     "door_break":  (0.90, 0.20),
     "chest_open":  (0.80, 0.30),
+    "chest_win":   (0.85, 0.40),
     "buy":         (0.75, 0.20),
     "wave_clear":  (0.80, 0.50),
     "click":       (0.50, 0.03),
