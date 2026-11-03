@@ -268,6 +268,27 @@ def chest_open():
     return mix(creak, sparkle)
 
 
+def chest_win():
+    thump = sine(sweep(140, 55, 0.2), 0.2) * env(int(SR * 0.2), 0.002, 16) * 0.9
+    arp = mix(*[
+        delay(note(f, 0.7, 5.0, (1.0, 0.45, 0.2)), 0.07 * i)
+        for i, f in enumerate((523, 659, 784, 1047, 1319, 1568))
+    ])
+    chord = delay(
+        mix(
+            note(1047, 1.0, 3.5, (1.0, 0.4)),
+            note(1319, 1.0, 3.5, (1.0, 0.4)),
+            note(1568, 1.0, 3.5, (1.0, 0.4)),
+        ),
+        0.42,
+    )
+    shimmer = mix(*[
+        delay(note(f, 0.5, 9.0, (1.0,)), 0.5 + 0.05 * i) * 0.35
+        for i, f in enumerate((2093, 2637, 3136, 2637, 3136, 4186))
+    ])
+    return mix(thump, arp, chord * 0.7, shimmer)
+
+
 def buy():
     return mix(coin() * 0.8, delay(coin_big(), 0.14))
 
@@ -613,7 +634,7 @@ SOUNDS = {
     "enemy_die": enemy_die, "fireball": fireball, "shot": shot,
     "explosion": explosion, "flashbang": flashbang,
     "door_hit": door_hit, "door_resist": door_resist,
-    "door_break": door_break, "chest_open": chest_open, "buy": buy,
+    "door_break": door_break, "chest_open": chest_open, "chest_win": chest_win, "buy": buy,
     "wave_clear": wave_clear, "click": click, "light_out": light_out,
     "alert": alert, "mosquito": mosquito,
     "ui_confirm": ui_confirm, "ui_back": ui_back, "slot": slot,

@@ -3855,8 +3855,13 @@ class NewGame:
 
             elif event.key == pygame.K_SPACE and self.state == "playing":
 
-                # saltito: esquiva las ondas y el barrido del jefe de la zona 2
-                self.player.jump()
+                # atrapado en una trampa: el espacio llena la barra y no salta
+                if not any(
+                    a.consume_space(self) for a in self.arenas
+                ):
+
+                    # saltito: esquiva las ondas y el barrido del jefe de la zona 2
+                    self.player.jump()
 
             elif controls.slot_for(event.key) is not None:
 

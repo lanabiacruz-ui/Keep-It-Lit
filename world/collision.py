@@ -149,6 +149,46 @@ class CollisionMap:
             )
 
         # --------------------------------------------------
+        # MASCARA DE PISO DEL MAPA 1
+        # --------------------------------------------------
+        #
+        # Los rects de `walkable` quedaron mas chicos que el piso
+        # dibujado (paredes invisibles). Esta mascara sale de
+        # tools/make_collision_mask.py y sigue el borde real de las
+        # paredes. Si no existe el PNG, se usan solo los rects.
+
+        self.map1_floor_mask = None
+        self._map1_blocked_mask = None
+        self._fill_masks = {}
+
+        try:
+
+            floor_image = pygame.image.load(
+                str(
+                    base
+                    / "assets"
+                    / "maps"
+                    / "region_01"
+                    / "mapa_colision.png"
+                )
+            )
+
+            floor_mask = pygame.mask.from_surface(floor_image)
+
+            blocked = floor_mask.copy()
+            blocked.invert()
+
+            self.map1_floor_mask = floor_mask
+            self._map1_blocked_mask = blocked
+
+        except (pygame.error, FileNotFoundError) as error:
+
+            print(
+                f"[colisiones] No se pudo cargar "
+                f"la mascara del mapa 1: {error}"
+            )
+
+        # --------------------------------------------------
         # PUNTOS DE APARICION
         # --------------------------------------------------
 
@@ -182,6 +222,26 @@ class CollisionMap:
             and self.world_width >= 1900
         )
 
+    def _uses_floor_mask(self):
+
+        return (
+            self.map1_floor_mask is not None
+            and not self._is_map2()
+            and self.map1_floor_mask.get_size()
+            == (self.world_width, self.world_height)
+        )
+
+    def _filled(self, width, height):
+
+        key = (width, height)
+        mask = self._fill_masks.get(key)
+
+        if mask is None:
+            mask = pygame.mask.Mask(key, fill=True)
+            self._fill_masks[key] = mask
+
+        return mask
+
     # ------------------------------------------------------
     # COMPROBAR SI UN PUNTO ES TRANSITABLE
     # ------------------------------------------------------
@@ -209,13 +269,17 @@ class CollisionMap:
                 if self.map2_wall_mask.get_at((px, py)):
                     return False
 
-        # Comprobacion original del mapa 1 y de las
-        # zonas transitables configuradas.
+        # Comprobacion del mapa 1 y de las zonas transitables.
 
         pt = self._pt
         pt.topleft = (int(x), int(y))
 
-        if pt.collidelist(self.walkable) == -1:
+        if self._uses_floor_mask():
+
+            if not self.map1_floor_mask.get_at((int(x), int(y))):
+                return False
+
+        elif pt.collidelist(self.walkable) == -1:
             return False
 
         if pt.collidelist(self.obstacles) != -1:
@@ -264,6 +328,15 @@ class CollisionMap:
                 ) is not None:
 
                     return False
+
+        if self._uses_floor_mask():
+
+            if self._map1_blocked_mask.overlap(
+                self._filled(rect.width, rect.height),
+                rect.topleft
+            ) is not None:
+
+                return False
 
         door_rects = (
 

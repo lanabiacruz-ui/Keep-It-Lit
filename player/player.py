@@ -113,6 +113,9 @@ class Player:
         self.grabbed = False
         self.grab_lift = 0.0
 
+        # atrapado en una trampa de la arena: no se mueve
+        self.trapped = False
+
         self.load_skin(skin)
 
     def load_skin(self, skin=None):
@@ -769,7 +772,7 @@ class Player:
 
     def update(self, dt, collision_map):
 
-        if self.grabbed:
+        if self.grabbed or self.trapped:
 
             result = (False, None)
 

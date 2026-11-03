@@ -8,6 +8,7 @@ from core.achievements import achievements
 from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
+from world.traps import ArenaTraps
 from world.items import (
     WorldItem, coin_id_for, split_coins, get_gem_icon, get_green_gem_icon
 )
@@ -4412,12 +4413,15 @@ class ArenaConfig:
                  done_text="Mapa completado! La sala se cerro para siempre",
                  gem_id="gema", gem_name="gema",
                  zone_name="", zone_tag="", hard=False, boss=False,
-                 boss_kind="pina", warn_text="", warn_needs=""):
+                 boss_kind="pina", warn_text="", warn_needs="", traps=0):
 
         # warn_text: aviso en rojo al acercarse a la puerta si todavia no
         # se completo la arena "warn_needs" (atributo del juego, ej "arena")
         self.warn_text = warn_text
         self.warn_needs = warn_needs
+
+        # cantidad de trampas que aparecen en cada oleada (0 = ninguna)
+        self.traps = traps
 
         self.key = key
         self.zone_name = zone_name
@@ -4473,6 +4477,7 @@ LEFT_ARENA = ArenaConfig(
     gem_name="gema verde oscuro",
     zone_name="STONUN", zone_tag="ZONA 2", hard=True,
     boss=True, boss_kind="golem",
+    traps=4,
     warn_text=(
         "Es recomendable que primero completes la Zona 1 (Orkun): "
         "la Zona 2 es mucho mas dificil"
@@ -4533,6 +4538,9 @@ class Arena:
 
         # entrada y derrota "epicas" del jefe (barras, titulo, musica)
         self.cinematic = BossCinematic()
+
+        # trampas de la sala (solo si la config las pide)
+        self.traps = ArenaTraps(self.cfg.traps)
 
         self.blasts = []
         self.mosquito_alert = False
@@ -4714,6 +4722,11 @@ class Arena:
 
         return sources
 
+
+    def consume_space(self, game):
+        """True si el ESPACIO se gasto en zafarse de una trampa."""
+
+        return self.traps.press_space(game)
 
     def _open_menu(self, game):
 
@@ -5154,6 +5167,10 @@ class Arena:
 
         self._hits_at_wave_start = getattr(game, "hits_taken", 0)
 
+        # trampas nuevas (todas armadas) al empezar cada oleada
+        if self.cfg.traps:
+            self.traps.reset(game, self.cfg.room, self.cfg.gate)
+
         if self._is_boss_wave():
 
             self._spawn_boss(game)
@@ -5418,6 +5435,7 @@ class Arena:
     def _end_run(self, game):
 
         self._release_player(game)
+        self.traps.clear(game)
         self._credit_leftover(game)
         self._open_gate(game)
 
@@ -5616,6 +5634,11 @@ class Arena:
                 game.save_progress()
 
             return
+
+        if self.cfg.traps:
+            self.traps.update(
+                game, dt, can_trigger=self.state == self.WAVE
+            )
 
         if self.state == self.WAVE:
             self._update_wave(game, dt)
@@ -6049,6 +6072,9 @@ class Arena:
 
     def draw_world(self, screen, camera):
 
+        # las trampas van en el piso, debajo de todo lo demas
+        self.traps.draw_world(screen, camera)
+
         view = screen.get_rect().inflate(320, 320)
 
         for enemy in self.enemies:
@@ -6203,6 +6229,8 @@ class Arena:
         screen.blit(glow, glow.get_rect(center=(cx, cy)))
 
     def draw_hud(self, screen):
+
+        self.traps.draw_hud(screen)
 
         if not self.active:
             return

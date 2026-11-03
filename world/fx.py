@@ -321,6 +321,116 @@ class FxManager:
             "t": 0.0, "dur": 0.9, "color": color,
         })
 
+    def damage_number(self, x, y, amount, heavy=False, fury=False):
+        """Numero de dano que salta hacia arriba y cae (estilo arcade)."""
+
+        try:
+            value = float(amount)
+        except (TypeError, ValueError):
+            return
+
+        if value <= 0:
+            return
+
+        text = str(int(value)) if value == int(value) else f"{value:.1f}"
+
+        if heavy:
+            color = (225, 150, 255)
+            size = 12.0
+            text += "!"
+        elif fury:
+            color = (255, 120, 70)
+            size = 9.5
+        else:
+            color = (255, 240, 200)
+            size = 8.5
+
+        self.popups.append({
+            "x": x + random.uniform(-6, 6),
+            "y": y - 10,
+            "text": text,
+            "t": 0.0,
+            "dur": 0.75 if heavy else 0.6,
+            "color": color,
+            "vx": random.uniform(-26, 26),
+            "vy": random.uniform(-135, -105) if heavy else random.uniform(-110, -85),
+            "grav": 340.0,
+            "size": size,
+            "pop": 0.12,
+        })
+
+        if len(self.popups) > 60:
+            del self.popups[:10]
+
+    def gem(self, x, y, color=(120, 210, 255), value=1):
+        """Destello al juntar una gema."""
+
+        white = (240, 255, 255)
+
+        for _ in range(14):
+
+            a = random.uniform(0, math.tau)
+
+            self._spark(
+                x, y, a, random.uniform(40, 130), random.uniform(0.35, 0.75),
+                random.choice((color, white)),
+                size=random.uniform(1.6, 2.8), drag=2.6, grav=-30,
+                streak=True,
+            )
+
+        self._spark(x, y, 0, 0, 0.22, white, size=14, drag=0)
+        self._spark(x, y, 0, 0, 0.40, color, size=24, drag=0)
+        self._ring(x, y, 2, 24, 0.36, color, 2)
+        self._ring(x, y, 2, 38, 0.5, white, 2, delay=0.06)
+
+        self.popups.append({
+            "x": x, "y": y - 8, "text": f"+{int(value)}",
+            "t": 0.0, "dur": 1.0, "color": color,
+        })
+
+    def chest_burst(self, x, y):
+        """Explosion dorada al abrir un cofre."""
+
+        gold = (255, 215, 90)
+        white = (255, 252, 225)
+        hot = (255, 160, 50)
+
+        for _ in range(34):
+
+            a = -math.pi / 2 + random.uniform(-1.5, 1.5)
+
+            self._spark(
+                x, y - 4, a, random.uniform(80, 260), random.uniform(0.5, 1.0),
+                random.choice((gold, white, hot)),
+                size=random.uniform(1.8, 3.2), drag=2.2, grav=260,
+                streak=True,
+            )
+
+        for _ in range(10):
+
+            self._spark(
+                x + random.uniform(-10, 10), y - random.uniform(0, 8),
+                -math.pi / 2 + random.uniform(-0.3, 0.3),
+                random.uniform(120, 200), random.uniform(0.7, 1.1),
+                white, size=2.6, drag=1.6, grav=40,
+            )
+
+        self._spark(x, y, 0, 0, 0.25, white, size=26, drag=0)
+        self._spark(x, y, 0, 0, 0.55, gold, size=44, drag=0)
+
+        self._ring(x, y, 3, 34, 0.32, white, 3)
+        self._ring(x, y, 3, 58, 0.50, gold, 3, delay=0.05)
+        self._ring(x, y, 3, 82, 0.70, hot, 2, delay=0.12)
+
+        self.flash(0.18, (255, 235, 170), 0.35)
+        self.shake(2.5, 0.16)
+
+        self.popups.append({
+            "x": x, "y": y - 16, "text": "\u00a1CAJA ABIERTA!",
+            "t": 0.0, "dur": 1.3, "color": gold,
+            "size": 8.5,
+        })
+
     def wave_start(self, cx, cy, wave, room=None, enemy_positions=()):
 
         reach = 190
@@ -556,6 +666,11 @@ class FxManager:
         for p in self.popups:
             p["t"] += dt
 
+            if "vy" in p:
+                p["x"] += p["vx"] * dt
+                p["y"] += p["vy"] * dt
+                p["vy"] += p["grav"] * dt
+
         self.popups = [p for p in self.popups if p["t"] < p["dur"]]
 
         for p in self.pulses:
@@ -679,9 +794,20 @@ class FxManager:
             k = p["t"] / p["dur"]
 
             sx = int(p["x"] * z - camera.x)
-            sy = int((p["y"] - 14 * k) * z - camera.y)
 
-            font = self._font(max(18, int(7 * z)))
+            if "vy" in p:
+                sy = int(p["y"] * z - camera.y)
+            else:
+                sy = int((p["y"] - 14 * k) * z - camera.y)
+
+            base = p.get("size", 7)
+
+            pop = p.get("pop", 0.0)
+
+            if pop and p["t"] < pop:
+                base *= 1.0 + 0.55 * (1.0 - p["t"] / pop)
+
+            font = self._font(max(18, int(base * z)))
 
             txt = font.render(p["text"], True, p["color"])
             shade = font.render(p["text"], True, (20, 10, 0))

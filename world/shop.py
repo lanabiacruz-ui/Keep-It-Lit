@@ -138,7 +138,10 @@ class Shopkeeper:
 
     TALK_RECT = pygame.Rect(902, 100, 92, 40).inflate(44, 60)
 
-    ZONE = pygame.Rect(840, 30, 215, 140)
+    # Cubre todo el piso de la tienda (x 851-1041, y 36-178), esquinas de
+    # abajo incluidas, mas un poco de la boca del pasillo. Antes llegaba
+    # solo hasta y=170 y en las esquinas de abajo se perdia la luz.
+    ZONE = pygame.Rect(840, 30, 215, 160)
 
     ZONE_FEATHER = 22
 

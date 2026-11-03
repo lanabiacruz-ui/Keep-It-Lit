@@ -1,12 +1,15 @@
 {
     "unlocked": {
         "dragon_monedas": "2026-11-02T22:15:19",
-        "slime_brillante": "2026-11-02T22:15:27"
+        "slime_brillante": "2026-11-02T22:15:27",
+        "coctel": "2026-11-03T19:19:07",
+        "ojos_ciegos": "2026-11-03T19:20:42"
     },
     "counters": {
-        "defeats": 0,
+        "defeats": 3,
         "fireballs": 4,
         "slimes": 1,
-        "chests": 1
+        "chests": 4,
+        "kills": 1
     }
 }
