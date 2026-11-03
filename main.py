@@ -27,6 +27,7 @@ from ui.zoom_transition import ZoomTransition
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
+from core.accessibility import show_fps
 from core.music_manager import music
 from core.sound_events import watcher
 
@@ -74,6 +75,7 @@ pygame.display.set_caption(
 )
 
 clock = pygame.time.Clock()
+fps_font = pygame.font.Font(None, 28)
 STARTUP_SOUND_HOLD = 2.6
 
 startup = Startup(screen, duration=STARTUP_SOUND_HOLD)
@@ -602,6 +604,12 @@ while running:
         if transition is not None:
             transition.draw(screen)
 
+
+    if show_fps():
+        fps_text = fps_font.render(f"{clock.get_fps():.0f} FPS", True, (255, 255, 255))
+        fps_shadow = fps_font.render(f"{clock.get_fps():.0f} FPS", True, (0, 0, 0))
+        screen.blit(fps_shadow, (13, 11))
+        screen.blit(fps_text, (11, 9))
 
     pygame.display.flip()
 

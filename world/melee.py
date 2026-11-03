@@ -36,8 +36,8 @@ COMBO_HITS = 3
 COMBO_WINDOW = 0.9
 HEAVY_DAMAGE_MULT = 2
 
-HEAVY_COLOR = (200, 100, 255)
-HEAVY_CORE = (255, 235, 255)
+HEAVY_COLOR = (90, 170, 255)
+HEAVY_CORE = (225, 245, 255)
 HEAVY_RADIUS_MULT = 1.35
 GLOW_TIME_HEAVY = 0.30
 IMPACT_TIME = 0.35
@@ -393,7 +393,9 @@ class Melee:
 
         outer = OUTER_RADIUS * (HEAVY_RADIUS_MULT if heavy else 1.0)
 
-        size = int(outer * 2 * zoom) + 4
+        pad = int(6 * zoom)
+
+        size = int(outer * 2 * zoom) + 4 + pad * 2
         center = size / 2
 
         layer = pygame.Surface((size, size), pygame.SRCALPHA)
@@ -414,9 +416,35 @@ class Melee:
         elif heavy:
             color = HEAVY_COLOR
             core = HEAVY_CORE
+        elif self.kind == "antorcha":
+            color = (255, 150, 45)
+            core = (255, 240, 180)
         else:
             color = (255, 195, 100)
             core = (255, 250, 220)
+
+        if self.fury or heavy or self.kind == "antorcha":
+
+            halo_out = r_out + 4 * zoom
+
+            for i in range(segments):
+
+                a0 = back + (angle - back) * i / segments
+                a1 = back + (angle - back) * (i + 1) / segments
+
+                t = (i + 1) / segments
+
+                alpha = int(70 * strength * t ** 1.8)
+
+                if alpha <= 0:
+                    continue
+
+                pts = (
+                    arc_points(center, center, halo_out, a0, a1, 2)
+                    + arc_points(center, center, r_in, a1, a0, 2)
+                )
+
+                pygame.draw.polygon(layer, (*color, alpha), pts)
 
         for i in range(segments):
 
@@ -572,6 +600,12 @@ class Melee:
             pygame.draw.circle(
                 layer, (*HEAVY_COLOR, alpha), (c, c), radius,
                 max(2, round(1.5 * camera.zoom))
+            )
+
+            pygame.draw.circle(
+                layer, (*HEAVY_CORE, int(alpha * 0.6)), (c, c),
+                max(1, int(radius * 0.6)),
+                max(1, round(camera.zoom * 0.8))
             )
 
             for i in range(8):

@@ -107,6 +107,19 @@ DEFAULT_DATA = {
         ),
     },
 
+    "trampa": {
+        "nombre": "Piedrosil",
+        "imagen": "trampa_activa.png",
+        "descripcion": (
+            "Trampa escondida de la Zona 2 (Stonun). Aparece en la sala al "
+            "empezar cada oleada, en los lugares por donde mas se camina, y "
+            "cuanto mas avanzas, mas hay. Si la pisas te atrapa y te deja "
+            "quieto: tienes que apretar ESPACIO muchas veces para soltarte, "
+            "y mientras tanto los enemigos siguen atacando. Una vez usada ya "
+            "no vuelve a funcionar."
+        ),
+    },
+
     "golem": {
         "nombre": "Golem",
         "imagen": "golem_icono.png",
@@ -197,6 +210,7 @@ class EnemyEncyclopedia:
         "hongun",            # zona 1, oleada 8
         "jefe_pina",         # zona 1, oleada 11 (jefe)
         "guardian",          # zona 2, oleada 1
+        "trampa",            # zona 2, oleada 1 (al pisarla)
         "guardian_tirador",  # zona 2, oleada 3
         "destello",          # zona 2, oleada 5
         "golem",             # zona 2, oleada 8
@@ -237,6 +251,7 @@ class EnemyEncyclopedia:
         "guardian_tirador": 800,
         "destello": 900,
         "golem": 1000,
+        "trampa": 600,
         "slime": 100,
         "slime2": 100,
         "slime3": 100,

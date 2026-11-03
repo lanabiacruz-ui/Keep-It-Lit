@@ -8,7 +8,7 @@ from core.achievements import achievements
 from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
-from world.traps import ArenaTraps
+from world.traps import ArenaTraps, TRAP_MAX
 from world.items import (
     WorldItem, coin_id_for, split_coins, get_gem_icon, get_green_gem_icon
 )
@@ -5163,13 +5163,25 @@ class Arena:
                 if away.length_squared() > 0.01:
                     p.kb_vel = away.normalize() * push
 
+    def _trap_count(self):
+
+        base = self.cfg.traps
+
+        if self._is_boss_wave():
+            return min(TRAP_MAX, base + 1)
+
+        return min(TRAP_MAX, base + (self.wave - 1) // 2)
+
     def _spawn_wave(self, game):
 
         self._hits_at_wave_start = getattr(game, "hits_taken", 0)
 
         # trampas nuevas (todas armadas) al empezar cada oleada
         if self.cfg.traps:
-            self.traps.reset(game, self.cfg.room, self.cfg.gate)
+            self.traps.reset(
+                game, self.cfg.room, self.cfg.gate,
+                count=self._trap_count()
+            )
 
         if self._is_boss_wave():
 

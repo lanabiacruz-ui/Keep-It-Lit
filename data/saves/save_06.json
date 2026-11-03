@@ -2,25 +2,43 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-03T19:37:11",
+    "last_played": "2026-11-03T20:15:45",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 984,
-    "y": 944,
-    "coins": 94341,
+    "x": 918,
+    "y": 154,
+    "coins": 93461,
     "gems": 4,
     "gems_green": 1,
     "has_match": true,
-    "light": "fosforo",
-    "vida": 0.4588000000000033,
-    "escudo": 0.0,
+    "light": "antorcha",
+    "vida": 0.9032813333333326,
+    "escudo": 0.5,
     "inventory": [
-        null,
-        null,
-        null,
-        null
+        [
+            "aceite",
+            9
+        ],
+        [
+            "hongo_azul",
+            5
+        ],
+        [
+            "polvora",
+            15
+        ],
+        [
+            "repelente",
+            15
+        ]
     ],
-    "collected": [],
+    "collected": [
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#1"
+    ],
     "item_seed": 757481128,
     "arena_wave": 11,
     "arena_completed": false,
@@ -92,14 +110,15 @@
         "slime",
         "slime2",
         "slime3",
+        "trampa",
         "tronco"
     ],
     "stats": {
-        "items_used": 1339,
+        "items_used": 1377,
         "chests_opened": 54,
-        "purchases": 75,
-        "fireballs": 2999,
-        "kills": 364
+        "purchases": 77,
+        "fireballs": 3008,
+        "kills": 368
     },
     "zones_seen": [
         "central",
@@ -7808,6 +7827,272 @@
             "map": "mapa1"
         },
         {
+            "k": "item",
+            "id": "aceite",
+            "x": 364,
+            "y": 682,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 327,
+            "y": 727,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 289,
+            "y": 748,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 383,
+            "y": 716,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 328,
+            "y": 675,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 312,
+            "y": 700,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 363,
+            "y": 690,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 377,
+            "y": 723,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 359,
+            "y": 671,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 328,
+            "y": 723,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 353,
+            "y": 715,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 309,
+            "y": 733,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 353,
+            "y": 715,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 363,
+            "y": 704,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 368,
+            "y": 689,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 352,
+            "y": 716,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 405,
+            "y": 734,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 349,
+            "y": 708,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 331,
+            "y": 671,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 320,
+            "y": 740,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 338,
+            "y": 734,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 420,
+            "y": 749,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 324,
+            "y": 689,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 341,
+            "y": 673,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 385,
+            "y": 717,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 301,
+            "y": 743,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 385,
+            "y": 750,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 346,
+            "y": 721,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 378,
+            "y": 737,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 339,
+            "y": 747,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 361,
+            "y": 714,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 374,
+            "y": 712,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 349,
+            "y": 664,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 336,
+            "y": 675,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 340,
+            "y": 712,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 304,
+            "y": 736,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 370,
+            "y": 751,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 338,
+            "y": 738,
+            "map": "mapa1"
+        },
+        {
             "k": "light",
             "id": "fosforo",
             "life": 0.7285666666666456,
@@ -7885,14 +8170,6 @@
             "life": 0.1828999999999848,
             "x": 943,
             "y": 777,
-            "map": "mapa1"
-        },
-        {
-            "k": "light",
-            "id": "fosforo",
-            "life": 0.9392333333333314,
-            "x": 935,
-            "y": 836,
             "map": "mapa1"
         },
         {
@@ -8086,6 +8363,30 @@
             "x": 1002,
             "y": 153,
             "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 0.10520000000000407,
+            "x": 941,
+            "y": 665,
+            "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 0.931066666666667,
+            "x": 936,
+            "y": 877,
+            "map": "mapa1"
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 1.0,
+            "x": 888,
+            "y": 167,
+            "map": "mapa1"
         }
     ],
     "ganzua_uses": 0,
@@ -8103,6 +8404,7 @@
         "slime",
         "slime2",
         "slime3",
+        "trampa",
         "tronco"
     ],
     "boss2_intro_seen": true,

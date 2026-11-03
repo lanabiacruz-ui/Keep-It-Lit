@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.accessibility import flash_safe, flash_level, tutorial_hints
 from core.audio_manager import audio
 from core.controls import controls, SLOT_ACTIONS
 from core.achievements import achievements
@@ -436,11 +437,13 @@ class NewGame:
 
             self.tuto_seen.add(0)
 
-            self.tutorial = Tutorial(
-                (self.width, self.height),
-                pages=objective_list[0]["tuto"],
-                can_skip=True
-            )
+            if tutorial_hints():
+
+                self.tutorial = Tutorial(
+                    (self.width, self.height),
+                    pages=objective_list[0]["tuto"],
+                    can_skip=True
+                )
 
         self.coins = int(self.save_data.get("coins", 0))
 
@@ -1059,7 +1062,7 @@ class NewGame:
 
         pages = obj.objectives[idx].get("tuto")
 
-        if pages and self.tutorial is None:
+        if pages and self.tutorial is None and tutorial_hints():
 
             self.tutorial = Tutorial(
                 (self.width, self.height), pages=pages, can_skip=True
@@ -2410,7 +2413,7 @@ class NewGame:
             self.fx.swing_sparks(
                 pvx + math.cos(ang) * reach,
                 pvy + math.sin(ang) * reach,
-                ang, self.melee.heavy, self.melee.fury
+                ang, self.melee.heavy, self.melee.fury, self.light_type
             )
 
         if self.yshield_timer > 0:
@@ -2498,18 +2501,29 @@ class NewGame:
                     0.28 + 0.05 * math.sin(t * 31 + i)
                 )
 
-    def _hit_target(self, target, damage, free=False):
+    def _hit_target(self, target, damage, free=False, fire_heavy=None):
 
         light = light_stats(self.light_type)
 
         tx, ty = target.rect.center
         px, py = self.player.rect.center
 
+        is_fire = fire_heavy is not None
+
+        if is_fire:
+            hit_heavy = bool(fire_heavy)
+        else:
+            hit_heavy = bool(
+                (self.melee.heavy or damage >= 2) and not self.melee.fury
+            )
+
         self.fx.hit(
             tx, ty,
             angle=math.atan2(ty - py, tx - px),
-            heavy=bool((self.melee.heavy or damage >= 2) and not self.melee.fury),
-            fury=bool(self.melee.fury),
+            heavy=hit_heavy,
+            fury=bool(self.melee.fury) and not hit_heavy,
+            light=self.light_type,
+            fire=is_fire,
         )
 
         if isinstance(target, Door):
@@ -2601,6 +2615,35 @@ class NewGame:
             return
 
         w, h = self.screen.get_size()
+
+        if flash_safe():
+
+            self._flash_soft = getattr(self, "_flash_soft", None)
+
+            if self._flash_soft is None or self._flash_soft.get_size() != (w, h):
+
+                self._flash_soft = pygame.Surface((w, h))
+
+            k = min(1.0, flash_level() / 0.85)
+
+            self._flash_soft.fill((
+                int(96 + 159 * k), int(98 + 157 * k), int(110 + 145 * k)
+            ))
+
+            elapsed = FLASH_TOTAL - self.flash_t
+
+            if elapsed < 0.4:
+                alpha = int(210 * elapsed / 0.4)
+            elif self.flash_t > FLASH_FADE:
+                alpha = 210
+            else:
+                alpha = int(210 * self.flash_t / FLASH_FADE)
+
+            self._flash_soft.set_alpha(alpha)
+
+            self.screen.blit(self._flash_soft, (0, 0))
+
+            return
 
         elapsed = FLASH_TOTAL - self.flash_t
 
@@ -2698,6 +2741,8 @@ class NewGame:
 
         audio.play("fireball")
 
+        self.fx.muzzle(x, y, angle, heavy)
+
         fury = self.melee.fury
 
         base_cooldown = FIRE_HEAVY_COOLDOWN if heavy else FIRE_COOLDOWN
@@ -2775,9 +2820,20 @@ class NewGame:
 
             if hit is not None:
 
-                self._hit_target(hit, ball.damage, free=True)
+                self._hit_target(
+                    hit, ball.damage, free=True, fire_heavy=ball.heavy
+                )
+
+            if not ball.dead:
+
+                self.fx.fire_trail(
+                    ball.x, ball.y, ball.angle, ball.heavy, self.melee.fury
+                )
 
             if ball.dead:
+
+                if hit is None:
+                    self.fx.fire_burst(ball.x, ball.y, ball.heavy)
 
                 self.fire_bursts.append(
                     FireBurst(ball.x, ball.y, ball.heavy)
@@ -5017,9 +5073,10 @@ class NewGame:
 
                 self._flicker_time += 0.02
 
-                flicker = 0.55 + 0.45 * abs(
-                    math.sin(self._flicker_time * 18)
-                )
+                calm = 0.78 + 0.22 * math.sin(self._flicker_time * 5)
+                wild = 0.55 + 0.45 * abs(math.sin(self._flicker_time * 18))
+
+                flicker = calm + (wild - calm) * flash_level()
 
                 radius *= flicker
 

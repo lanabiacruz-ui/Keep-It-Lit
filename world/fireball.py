@@ -21,7 +21,7 @@ FIRE_LIGHT_RADIUS = 80
 
 STEP = 3.0
 
-BURST_TIME = 0.22
+BURST_TIME = 0.30
 
 HEAVY_SIZE_MULT = 1.7
 
@@ -132,11 +132,14 @@ class Fireball:
 
         self.left = FIRE_RANGE
         self.dead = False
+        self.age = 0.0
 
     def update(self, dt, targets, walkable):
 
         if self.dead:
             return None
+
+        self.age += dt
 
         dist = math.hypot(self.vx, self.vy) * dt
 
@@ -190,9 +193,22 @@ class Fireball:
         sx = self.x * camera.zoom - camera.x
         sy = self.y * camera.zoom - camera.y
 
+        pulse = 0.85 + 0.15 * math.sin(self.age * 40)
+
+        if not self.heavy:
+
+            r = int(FIRE_SIZE * camera.zoom * 1.25 * pulse)
+
+            halo = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+
+            pygame.draw.circle(halo, (255, 120, 40, 60), (r, r), r)
+            pygame.draw.circle(halo, (255, 210, 110, 90), (r, r), int(r * 0.6))
+
+            screen.blit(halo, halo.get_rect(center=(int(sx), int(sy))))
+
         if self.heavy:
 
-            r = int(FIRE_SIZE * HEAVY_SIZE_MULT * camera.zoom * 0.9)
+            r = int(FIRE_SIZE * HEAVY_SIZE_MULT * camera.zoom * 1.0 * pulse)
 
             halo = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
 
@@ -230,31 +246,57 @@ class FireBurst:
 
         scale = 1.8 if self.heavy else 1.0
 
-        radius = int((3 + 9 * k) * scale * camera.zoom)
+        radius = int((3 + 11 * (1 - (1 - k) ** 2)) * scale * camera.zoom)
 
-        size = radius * 2 + 4
+        size = radius * 2 + 12
 
         layer = pygame.Surface((size, size), pygame.SRCALPHA)
 
-        alpha = int(220 * (1.0 - k))
+        c = size // 2
+
+        alpha = int(230 * (1.0 - k))
 
         ring = HEAVY_BURST if self.heavy else (255, 150, 50)
         core = HEAVY_BURST_CORE if self.heavy else (255, 230, 150)
 
         pygame.draw.circle(
             layer,
-            (*ring, alpha),
-            (size // 2, size // 2),
-            radius,
-            max(2, int(radius * 0.35))
+            (*ring, int(alpha * 0.35)),
+            (c, c),
+            radius
         )
 
         pygame.draw.circle(
             layer,
-            (*core, int(alpha * 0.8)),
-            (size // 2, size // 2),
-            max(1, int(radius * 0.45))
+            (*ring, alpha),
+            (c, c),
+            radius,
+            max(2, int(radius * 0.3))
         )
+
+        pygame.draw.circle(
+            layer,
+            (*core, int(alpha * 0.85)),
+            (c, c),
+            max(1, int(radius * 0.45 * (1.0 - k) + 1))
+        )
+
+        rays = 12 if self.heavy else 8
+
+        for i in range(rays):
+
+            ang = math.tau * i / rays + k * 0.6
+
+            r0 = radius * 0.55
+            r1 = radius * (1.0 + 0.35 * (i % 2))
+
+            pygame.draw.line(
+                layer,
+                (*core, int(alpha * 0.9)),
+                (c + math.cos(ang) * r0, c + math.sin(ang) * r0),
+                (c + math.cos(ang) * r1, c + math.sin(ang) * r1),
+                max(1, int(camera.zoom * 0.6))
+            )
 
         sx = self.x * camera.zoom - camera.x
         sy = self.y * camera.zoom - camera.y

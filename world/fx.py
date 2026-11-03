@@ -3,6 +3,8 @@ import random
 
 import pygame
 
+from core.accessibility import flash_level
+
 _GLOW_STEPS = (3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96)
 
 COIN_COLORS = {
@@ -159,43 +161,99 @@ class FxManager:
             "t": -delay, "dur": dur, "color": color, "width": width,
         })
 
-    def hit(self, x, y, angle=None, heavy=False, color=None, fury=False):
+    PALETTES = {
+        "normal": ((255, 190, 80), (255, 245, 220), (255, 120, 40)),
+        "torch": ((255, 165, 55), (255, 250, 225), (255, 95, 30)),
+        "fury": ((255, 100, 45), (255, 225, 160), (225, 45, 30)),
+        "heavy": ((110, 185, 255), (235, 248, 255), (40, 110, 255)),
+    }
+
+    def _embers(self, x, y, count, color, speed=(25, 70), life=(0.5, 1.0),
+                lift=60, size=(1.6, 2.6), spread=0.9):
+
+        for _ in range(count):
+
+            self._spark(
+                x + random.uniform(-3, 3), y + random.uniform(-2, 2),
+                -math.pi / 2 + random.uniform(-spread, spread),
+                random.uniform(*speed), random.uniform(*life),
+                color, size=random.uniform(*size), drag=1.5, grav=-lift,
+            )
+
+    def hit(self, x, y, angle=None, heavy=False, color=None, fury=False,
+            light=None, fire=False):
+
+        torch = light == "antorcha" and not fire
+
+        if heavy:
+            kind = "heavy"
+        elif fury:
+            kind = "fury"
+        elif torch:
+            kind = "torch"
+        else:
+            kind = "normal"
+
+        base_color, core, hot = self.PALETTES[kind]
 
         if color is None:
-            color = (190, 110, 255) if heavy else (255, 190, 80)
-
-        core = (255, 245, 220) if not heavy else (255, 235, 255)
-        hot = (255, 120, 40) if not heavy else (140, 70, 255)
+            color = base_color
 
         base = angle if angle is not None else random.uniform(0, math.tau)
 
-        n = 26 if heavy else 15
+        power = 1.6 if heavy else (1.25 if torch else 1.0)
 
-        if fury:
-            n = 14
-        spread = math.pi * (1.3 if heavy else 0.85)
+        n = 11 if fury else int(14 * power)
+
+        spread = math.pi * (1.6 if fire else (1.3 if heavy else 0.85))
 
         for _ in range(n):
 
             a = base + random.uniform(-spread / 2, spread / 2)
-            sp = random.uniform(90, 300 if heavy else 220)
+            sp = random.uniform(90, 300 if heavy else 240)
 
             self._spark(
                 x, y, a, sp, random.uniform(0.2, 0.5),
                 random.choice((color, core, hot)),
-                size=random.uniform(1.5, 3.0), drag=3.2, streak=True,
+                size=random.uniform(1.5, 3.2), drag=3.2, streak=True,
             )
 
-        for i in range(3 if fury else (7 if heavy else 4)):
+        for _ in range(3 if fury else (7 if heavy else 4)):
 
             a = base + random.uniform(-0.6, 0.6)
 
             self._spark(
-                x, y, a, random.uniform(260, 420), 0.16,
+                x, y, a, random.uniform(260, 430), 0.16,
                 core, size=2.4, drag=6.0, streak=True,
             )
 
-        for _ in range(2 if fury else (8 if heavy else 4)):
+        if not fire:
+
+            lines = 2 if heavy else 1
+
+            for i in range(lines):
+
+                tilt = (i - (lines - 1) / 2) * 0.9
+
+                for sign in (-1, 1):
+
+                    self._spark(
+                        x, y, base + math.pi / 2 * sign + tilt,
+                        random.uniform(330, 440), 0.13,
+                        core, size=2.8, drag=5.0, streak=True,
+                    )
+
+        if heavy:
+
+            for i in range(8):
+
+                self._spark(
+                    x, y, math.tau * i / 8 + random.uniform(-0.1, 0.1),
+                    random.uniform(260, 340), 0.2,
+                    core, size=2.2, drag=7.0, streak=True,
+                )
+
+        for _ in range(2 if fury else (6 if heavy else 3)):
 
             a = base + random.uniform(-1.4, 1.4)
 
@@ -204,12 +262,27 @@ class FxManager:
                 hot, size=random.uniform(1.8, 3.0), drag=2.0, grav=260,
             )
 
-        self._spark(x, y, 0, 0, 0.16, core, size=22 if heavy else 15, drag=0)
-        self._spark(x, y, 0, 0, 0.30, color, size=30 if heavy else 20, drag=0)
+        if fury:
+            self._embers(x, y, 5, hot, speed=(30, 90), life=(0.4, 0.8), lift=90)
+        elif heavy:
+            self._embers(x, y, 7, color, lift=40, size=(1.4, 2.4))
+        elif torch:
+            self._embers(x, y, 5, hot)
+        else:
+            self._embers(x, y, 2, hot, life=(0.35, 0.7))
 
-        self._ring(x, y, 3, 30 if heavy else 20, 0.26, core, 3)
+        self._spark(x, y, 0, 0, 0.16, core, size=26 if heavy else (18 if torch else 15), drag=0)
+        self._spark(x, y, 0, 0, 0.30, color, size=34 if heavy else (24 if torch else 20), drag=0)
 
-        self._ring(x, y, 2, 46 if heavy else 30, 0.38, color, 2, delay=0.04)
+        if fury:
+            self._spark(x, y, 0, 0, 0.22, hot, size=26, drag=0)
+
+        self._ring(x, y, 3, 32 if heavy else (24 if torch else 20), 0.26, core, 3)
+
+        self._ring(x, y, 2, 50 if heavy else (36 if torch else 30), 0.38, color, 2, delay=0.04)
+
+        if heavy:
+            self._ring(x, y, 2, 66, 0.46, hot, 2, delay=0.09)
 
         if fury:
             return
@@ -218,16 +291,20 @@ class FxManager:
 
         self.shake(5.0 if heavy else 2.0, 0.2 if heavy else 0.11)
 
-    def swing_sparks(self, x, y, angle, heavy=False, fury=False):
+    def swing_sparks(self, x, y, angle, heavy=False, fury=False, light=None):
+
+        torch = light == "antorcha"
 
         if heavy:
-            colors = ((200, 110, 255), (255, 235, 255))
+            colors = self.PALETTES["heavy"][:2]
         elif fury:
             colors = ((255, 110, 45), (255, 210, 120))
+        elif torch:
+            colors = ((255, 160, 50), (255, 245, 200))
         else:
             colors = ((255, 195, 100), (255, 245, 210))
 
-        for _ in range(1 if fury else (3 if heavy else 2)):
+        for _ in range(1 if fury else (3 if (heavy or torch) else 2)):
 
             a = angle - math.pi / 2 + random.uniform(-0.9, 0.9)
 
@@ -236,6 +313,75 @@ class FxManager:
                 random.choice(colors), size=random.uniform(1.4, 2.6),
                 drag=3.0, streak=True,
             )
+
+        if (fury or torch or heavy) and random.random() < 0.55:
+
+            self._embers(
+                x, y, 1, colors[0], speed=(20, 55), life=(0.4, 0.8),
+                lift=70, size=(1.4, 2.2), spread=0.6,
+            )
+
+    def fire_trail(self, x, y, angle, heavy=False, fury=False):
+
+        if heavy:
+            colors = self.PALETTES["heavy"]
+        elif fury:
+            colors = self.PALETTES["fury"]
+        else:
+            colors = self.PALETTES["torch"]
+
+        back = angle + math.pi
+
+        for _ in range(2 if heavy else 1):
+
+            self._spark(
+                x, y, back + random.uniform(-0.5, 0.5),
+                random.uniform(10, 45), random.uniform(0.14, 0.3),
+                random.choice(colors), size=random.uniform(1.6, 2.8),
+                drag=3.0,
+            )
+
+        if random.random() < 0.5:
+
+            self._embers(
+                x, y, 1, colors[0], speed=(10, 30), life=(0.3, 0.6),
+                lift=40, size=(1.4, 2.0), spread=0.7,
+            )
+
+    def fire_burst(self, x, y, heavy=False):
+
+        color, core, hot = self.PALETTES["heavy" if heavy else "torch"]
+
+        for _ in range(22 if heavy else 14):
+
+            self._spark(
+                x, y, random.uniform(0, math.tau), random.uniform(90, 260),
+                random.uniform(0.2, 0.45), random.choice((color, core, hot)),
+                size=random.uniform(1.5, 3.0), drag=3.4, streak=True,
+            )
+
+        self._embers(x, y, 8 if heavy else 5, hot, lift=50)
+
+        self._spark(x, y, 0, 0, 0.18, core, size=24 if heavy else 16, drag=0)
+        self._spark(x, y, 0, 0, 0.32, color, size=34 if heavy else 24, drag=0)
+
+        self._ring(x, y, 3, 34 if heavy else 22, 0.26, core, 3)
+        self._ring(x, y, 2, 54 if heavy else 36, 0.4, color, 2, delay=0.04)
+
+    def muzzle(self, x, y, angle, heavy=False):
+
+        color, core, hot = self.PALETTES["heavy" if heavy else "torch"]
+
+        for _ in range(8 if heavy else 5):
+
+            self._spark(
+                x, y, angle + random.uniform(-0.45, 0.45),
+                random.uniform(120, 260), random.uniform(0.12, 0.22),
+                random.choice((color, core, hot)),
+                size=random.uniform(1.4, 2.6), drag=5.0, streak=True,
+            )
+
+        self._spark(x, y, 0, 0, 0.1, core, size=14 if heavy else 10, drag=0)
 
     def player_hurt(self, x, y):
 
@@ -335,7 +481,7 @@ class FxManager:
         text = str(int(value)) if value == int(value) else f"{value:.1f}"
 
         if heavy:
-            color = (225, 150, 255)
+            color = (150, 215, 255)
             size = 12.0
             text += "!"
         elif fury:
@@ -473,6 +619,8 @@ class FxManager:
         self.title = [0.0, f"OLEADA {wave}", (255, 225, 150)]
 
     def flash(self, dur, color=(255, 255, 255), strength=1.0):
+
+        strength *= flash_level()
 
         self.flash_t = dur
         self.flash_dur = dur

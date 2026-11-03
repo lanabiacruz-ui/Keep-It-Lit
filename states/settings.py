@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pygame
 
+from core import accessibility
 from core.audio_manager import audio
 from core.controls import controls, GROUPS
 from core.music_manager import music
@@ -88,13 +89,13 @@ class Settings:
     LEFT = 508
     RIGHT = 1188
 
-    ROW_Y = (322, 376, 430)
+    ROW_Y = (302, 342, 382, 422, 462, 502)
     LABEL_X = 512
     TRACK_X = 730
     TRACK_W = 330
     VALUE_X = 1084
-    TOGGLE_SIZE = (84, 42)
-    CONTROLS_BTN = (186, 44)
+    TOGGLE_SIZE = (68, 34)
+    CONTROLS_BTN = (160, 34)
 
     TOP_Y = 302
     NAV_BTN = (118, 32)
@@ -140,6 +141,9 @@ class Settings:
         self.music_value = values["music_volume"]
         self.sfx_value = values["sfx_volume"]
         self.fullscreen = values["fullscreen"]
+        self.flash_value = accessibility.flash_level()
+        self.hints_on = accessibility.tutorial_hints()
+        self.fps_on = accessibility.show_fps()
 
         music.set_volume(self.music_value)
         audio.set_sfx_volume(self.sfx_value)
@@ -165,7 +169,7 @@ class Settings:
 
         self.tracks = {}
 
-        for index, name in enumerate(("music", "sfx")):
+        for name, index in (("music", 0), ("sfx", 1), ("flash", 3)):
 
             self.tracks[name] = pygame.Rect(
                 round(self.TRACK_X * self.sx),
@@ -183,6 +187,20 @@ class Settings:
         self.toggle_rect = pygame.Rect(
             round(self.TRACK_X * self.sx),
             round(self.ROW_Y[2] * self.sy) - toggle_h // 2,
+            toggle_w,
+            toggle_h
+        )
+
+        self.hints_rect = pygame.Rect(
+            round(self.TRACK_X * self.sx),
+            round(self.ROW_Y[4] * self.sy) - toggle_h // 2,
+            toggle_w,
+            toggle_h
+        )
+
+        self.fps_rect = pygame.Rect(
+            round(self.TRACK_X * self.sx),
+            round(self.ROW_Y[5] * self.sy) - toggle_h // 2,
             toggle_w,
             toggle_h
         )
@@ -396,6 +414,10 @@ class Settings:
             self.music_value = value
             music.set_volume(value)
 
+        elif name == "flash":
+
+            self.flash_value = value
+
         else:
 
             self.sfx_value = value
@@ -445,7 +467,10 @@ class Settings:
                 name = self.dragging
                 self.dragging = None
 
-                self._save_volumes()
+                if name == "flash":
+                    accessibility.set_flash_level(self.flash_value)
+                else:
+                    self._save_volumes()
 
                 if name == "sfx":
                     audio.play("coin")
@@ -515,7 +540,7 @@ class Settings:
 
             for name, track in self.tracks.items():
 
-                if track.inflate(0, track.height).collidepoint(pos):
+                if track.inflate(0, 8).collidepoint(pos):
 
                     self.dragging = name
 
@@ -526,6 +551,20 @@ class Settings:
             if self.toggle_rect.collidepoint(pos):
 
                 self._toggle_fullscreen()
+                return None
+
+            if self.hints_rect.collidepoint(pos):
+
+                self.hints_on = not self.hints_on
+                accessibility.set_tutorial_hints(self.hints_on)
+
+                return None
+
+            if self.fps_rect.collidepoint(pos):
+
+                self.fps_on = not self.fps_on
+                accessibility.set_show_fps(self.fps_on)
+
                 return None
 
             if self.controls_rect.collidepoint(pos):
@@ -653,12 +692,15 @@ class Settings:
 
         rows = (
             ("Música", "music", self.music_value),
-            ("Efectos", "sfx", self.sfx_value),
+            ("Sonido", "sfx", self.sfx_value),
+            ("Flashes", "flash", self.flash_value),
         )
 
-        for index, (label, name, value) in enumerate(rows):
+        row_index = {"music": 0, "sfx": 1, "flash": 3}
 
-            y = round(self.ROW_Y[index] * self.sy)
+        for label, name, value in rows:
+
+            y = round(self.ROW_Y[row_index[name]] * self.sy)
 
             self._text(
                 self.font,
@@ -743,6 +785,35 @@ class Settings:
             mouse,
             "Controles"
         )
+
+        for index, (label, flag, rect) in enumerate((
+            ("Avisos tutorial", self.hints_on, self.hints_rect),
+            ("Mostrar FPS", self.fps_on, self.fps_rect),
+        )):
+
+            y = round(self.ROW_Y[4 + index] * self.sy)
+
+            self._text(
+                self.font,
+                label,
+                self.TEXT,
+                midleft=(round(self.LABEL_X * self.sx), y)
+            )
+
+            toggle = self.img_on if flag else self.img_off
+
+            if toggle is not None:
+
+                self.screen.blit(toggle, rect)
+
+            else:
+
+                pygame.draw.rect(
+                    self.screen,
+                    (90, 190, 110) if flag else (120, 120, 130),
+                    rect,
+                    border_radius=rect.height // 2
+                )
 
     def _draw_controls(self, mouse):
 
