@@ -105,6 +105,9 @@ class Player:
         self.has_torch = False
         self.torch_kind = "fosforo"
 
+        # opacidad del cuerpo (255 = normal; baja con la pocion de invisibilidad)
+        self.ghost_alpha = 255
+
         self.hurt_timer = 0.0
         self.invuln_timer = 0.0
         self.kb_vel = pygame.Vector2()
@@ -1114,5 +1117,8 @@ class Player:
             center = sprite.get_rect(topleft=pos).center
             sprite = pygame.transform.rotate(sprite, angle)
             pos = sprite.get_rect(center=center).topleft
+
+        if self.ghost_alpha < 255:
+            sprite.set_alpha(self.ghost_alpha)
 
         screen.blit(sprite, pos)

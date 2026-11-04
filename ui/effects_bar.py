@@ -24,6 +24,10 @@ EFFECTS = {
     "iman":      {"label": "Iman",      "color": (226, 76, 88)},
     "esfera":    {"label": "Esfera",    "color": (96, 190, 240)},
     "escudo_amarillo": {"label": "Escudo", "color": (255, 215, 60)},
+    "pocion_ascua": {"label": "Ascua", "color": (230, 70, 55)},
+    "pocion_invisibilidad": {"label": "Invisible", "color": (150, 100, 225)},
+    "pocion_velocidad": {"label": "Velocidad", "color": (72, 196, 240)},
+    "pocion_ira": {"label": "Ira", "color": (255, 140, 40)},
     "mosquito": {"label": "Mosquito cerca!", "color": (255, 120, 110),
                  "alert": True},
 }

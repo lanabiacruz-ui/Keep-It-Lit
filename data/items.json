@@ -227,5 +227,61 @@
     "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo. Elige un objeto y haz click sobre el tacho para borrar una unidad; Ctrl+click borra toda la casilla. No se traga fogatas, cofres, candiles, tachos ni martillos, ni la luz equipada.",
     "requiere_fosforo": false,
     "efectos": []
+  },
+  "pocion_ascua": {
+    "nombre": "Poción de ascua",
+    "descripcion": "Queda armada 3 minutos. Si tu luz se apaga en ese tiempo, se reenciende sola con 60% de vida y la poción se gasta.",
+    "tipo": "pocion",
+    "requiere_fosforo": false,
+    "max_pila": 1,
+    "efectos": [
+      {
+        "tipo": "pocion_ascua",
+        "duracion": 180,
+        "vida": 0.6
+      }
+    ]
+  },
+  "pocion_invisibilidad": {
+    "nombre": "Poción de invisibilidad",
+    "descripcion": "20 segundos invisible: los enemigos no te ven ni a vos ni a tu luz. Se rompe si atacás con golpe o bola de fuego.",
+    "tipo": "pocion",
+    "requiere_fosforo": false,
+    "max_pila": 1,
+    "efectos": [
+      {
+        "tipo": "pocion_invisibilidad",
+        "duracion": 20
+      }
+    ]
+  },
+  "pocion_velocidad": {
+    "nombre": "Poción de velocidad",
+    "descripcion": "Velocidad x1.6 durante 10 segundos, pero tu luz se gasta un 25% más rápido.",
+    "tipo": "pocion",
+    "requiere_fosforo": false,
+    "max_pila": 1,
+    "efectos": [
+      {
+        "tipo": "pocion_velocidad",
+        "multiplicador": 1.6,
+        "duracion": 10,
+        "consumo": 1.25
+      }
+    ]
+  },
+  "pocion_ira": {
+    "nombre": "Poción de ira",
+    "descripcion": "15 segundos con +50% de daño y golpes sin costo de luz, también con bolas de fuego.",
+    "tipo": "pocion",
+    "requiere_fosforo": false,
+    "max_pila": 1,
+    "efectos": [
+      {
+        "tipo": "pocion_ira",
+        "duracion": 15,
+        "dano": 1.5
+      }
+    ]
   }
 }

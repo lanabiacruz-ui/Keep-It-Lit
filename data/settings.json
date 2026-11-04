@@ -1,7 +1,7 @@
 {
     "music_volume": 0.018,
     "sfx_volume": 0.0,
-    "fullscreen": false,
+    "fullscreen": true,
     "controls": {
         "up": 119,
         "down": 115,
@@ -34,7 +34,7 @@
         null,
         null
     ],
-    "flash_level": 0.0,
-    "show_fps": true,
+    "flash_level": 1.0,
+    "show_fps": false,
     "tutorial_hints": true
 }
