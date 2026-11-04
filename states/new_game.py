@@ -123,6 +123,7 @@ FLASH_EXPAND = 0.18
 FLASH_HOLD = 1.5
 FLASH_FADE = 2.5
 FLASH_TOTAL = FLASH_HOLD + FLASH_FADE
+FLASH_SAFE_COLOR = (112, 114, 124)
 
 DARKNESS_ALPHA = 225
 
@@ -496,6 +497,7 @@ class NewGame:
         self.flash_t = 0.0
         self.flash_pos = (0.0, 0.0)
         self._flash_surf = None
+        self._flash_surf_color = None
 
         for arena in self.arenas:
 
@@ -2384,7 +2386,7 @@ class NewGame:
 
         for target in self.melee.new_hits(targets, pivot):
 
-            if self.melee.heavy and not self.melee.fury:
+            if self.melee.heavy:
                 self.melee.add_impact(target.rect.center)
 
             self._hit_target(
@@ -2513,8 +2515,11 @@ class NewGame:
         if is_fire:
             hit_heavy = bool(fire_heavy)
         else:
+            # En furia solo el 3er golpe del combo es "fuerte" (azul); la
+            # antorcha hace 2 de dano base y no tiene que pintar todo azul.
             hit_heavy = bool(
-                (self.melee.heavy or damage >= 2) and not self.melee.fury
+                self.melee.heavy
+                or (damage >= 2 and not self.melee.fury)
             )
 
         self.fx.hit(
@@ -2616,34 +2621,11 @@ class NewGame:
 
         w, h = self.screen.get_size()
 
-        if flash_safe():
-
-            self._flash_soft = getattr(self, "_flash_soft", None)
-
-            if self._flash_soft is None or self._flash_soft.get_size() != (w, h):
-
-                self._flash_soft = pygame.Surface((w, h))
-
-            k = min(1.0, flash_level() / 0.85)
-
-            self._flash_soft.fill((
-                int(96 + 159 * k), int(98 + 157 * k), int(110 + 145 * k)
-            ))
-
-            elapsed = FLASH_TOTAL - self.flash_t
-
-            if elapsed < 0.4:
-                alpha = int(210 * elapsed / 0.4)
-            elif self.flash_t > FLASH_FADE:
-                alpha = 210
-            else:
-                alpha = int(210 * self.flash_t / FLASH_FADE)
-
-            self._flash_soft.set_alpha(alpha)
-
-            self.screen.blit(self._flash_soft, (0, 0))
-
-            return
+        # Con "Flashes" apagado el destello es GRIS en vez de blanco, pero
+        # tapa la pantalla exactamente igual (misma expansion, mismo tiempo
+        # en opaco y mismo desvanecido). Asi nadie ve mas que el resto:
+        # solo cambia el color, no cuanto se ve del juego.
+        color = FLASH_SAFE_COLOR if flash_safe() else (255, 255, 255)
 
         elapsed = FLASH_TOTAL - self.flash_t
 
@@ -2658,15 +2640,20 @@ class NewGame:
             radius = int((0.05 + 0.95 * k) * math.hypot(w, h))
 
             pygame.draw.circle(
-                self.screen, (255, 255, 255), (cx, cy), max(1, radius)
+                self.screen, color, (cx, cy), max(1, radius)
             )
 
             return
 
-        if self._flash_surf is None or self._flash_surf.get_size() != (w, h):
+        if (
+            self._flash_surf is None
+            or self._flash_surf.get_size() != (w, h)
+            or self._flash_surf_color != color
+        ):
 
             self._flash_surf = pygame.Surface((w, h))
-            self._flash_surf.fill((255, 255, 255))
+            self._flash_surf.fill(color)
+            self._flash_surf_color = color
 
         if self.flash_t > FLASH_FADE:
             alpha = 255
@@ -2887,6 +2874,10 @@ class NewGame:
                 chest.show_open()
 
                 audio.play("chest_open")
+
+                # explosion dorada al abrir (fx.chest_burst existia pero
+                # nadie la llamaba)
+                self.fx.chest_burst(*chest.rect.center)
 
         self.minigame = None
         self.minigame_chest = None

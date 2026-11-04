@@ -18,6 +18,7 @@ GROUPS = [
             ("down", "Abajo"),
             ("left", "Izquierda"),
             ("right", "Derecha"),
+            ("emotes", "Baile"),
         ],
     ),
     (

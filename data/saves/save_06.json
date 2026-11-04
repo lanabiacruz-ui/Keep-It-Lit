@@ -2,22 +2,22 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-03T20:15:45",
+    "last_played": "2026-11-03T21:01:36",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 918,
-    "y": 154,
-    "coins": 93461,
+    "x": 976,
+    "y": 162,
+    "coins": 93517,
     "gems": 4,
     "gems_green": 1,
     "has_match": true,
     "light": "antorcha",
-    "vida": 0.9032813333333326,
+    "vida": 1.0,
     "escudo": 0.5,
     "inventory": [
         [
             "aceite",
-            9
+            5
         ],
         [
             "hongo_azul",
@@ -33,11 +33,17 @@
         ]
     ],
     "collected": [
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_der#0",
+        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#1",
+        "moneda_sala_central#1",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_cofres#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_cofres#1",
         "moneda_pasillo_izq#0",
-        "moneda_pasillo_tienda#1"
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_tienda#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
@@ -65,7 +71,7 @@
             "usos": 8
         },
         "cofre_02": {
-            "usos": 4
+            "usos": 1
         },
         "cofre_03": {
             "usos": 3
@@ -114,10 +120,10 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1377,
-        "chests_opened": 54,
+        "items_used": 1381,
+        "chests_opened": 57,
         "purchases": 77,
-        "fireballs": 3008,
+        "fireballs": 3018,
         "kills": 368
     },
     "zones_seen": [
@@ -2495,20 +2501,6 @@
         {
             "k": "item",
             "id": "moneda",
-            "x": 578,
-            "y": 199,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
-            "x": 585,
-            "y": 207,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
             "x": 471,
             "y": 44,
             "map": "mapa1"
@@ -2585,23 +2577,9 @@
         },
         {
             "k": "item",
-            "id": "moneda",
-            "x": 338,
-            "y": 164,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "aceite",
             "x": 385,
             "y": 148,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
-            "x": 519,
-            "y": 201,
             "map": "mapa1"
         },
         {
@@ -2630,13 +2608,6 @@
             "id": "moneda",
             "x": 367,
             "y": 194,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "moneda",
-            "x": 346,
-            "y": 168,
             "map": "mapa1"
         },
         {
@@ -6757,13 +6728,6 @@
         },
         {
             "k": "item",
-            "id": "moneda_10",
-            "x": 1026,
-            "y": 600,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "gelea",
             "x": 789,
             "y": 519,
@@ -8090,6 +8054,188 @@
             "id": "repelente",
             "x": 338,
             "y": 738,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1045,
+            "y": 457,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1010,
+            "y": 394,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 1030,
+            "y": 429,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1020,
+            "y": 549,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1003,
+            "y": 568,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1038,
+            "y": 597,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1237,
+            "y": 502,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1256,
+            "y": 553,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 1247,
+            "y": 481,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 537,
+            "y": 218,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 557,
+            "y": 214,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 549,
+            "y": 222,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 588,
+            "y": 191,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 588,
+            "y": 206,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 574,
+            "y": 219,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 497,
+            "y": 42,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "hongo_amarillo",
+            "x": 498,
+            "y": 87,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 481,
+            "y": 45,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 505,
+            "y": 43,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 475,
+            "y": 90,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 457,
+            "y": 71,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "resina",
+            "x": 457,
+            "y": 88,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 470,
+            "y": 68,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 470,
+            "y": 73,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 511,
+            "y": 44,
+            "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 521,
+            "y": 59,
             "map": "mapa1"
         },
         {

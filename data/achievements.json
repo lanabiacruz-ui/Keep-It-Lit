@@ -10,9 +10,9 @@
     },
     "counters": {
         "defeats": 4,
-        "fireballs": 13,
-        "slimes": 1,
-        "chests": 4,
+        "fireballs": 23,
+        "slimes": 5,
+        "chests": 7,
         "kills": 8
     }
 }

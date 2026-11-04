@@ -203,7 +203,7 @@ class FxManager:
 
         power = 1.6 if heavy else (1.25 if torch else 1.0)
 
-        n = 11 if fury else int(14 * power)
+        n = 17 if fury else int(14 * power)
 
         spread = math.pi * (1.6 if fire else (1.3 if heavy else 0.85))
 
@@ -218,7 +218,7 @@ class FxManager:
                 size=random.uniform(1.5, 3.2), drag=3.2, streak=True,
             )
 
-        for _ in range(3 if fury else (7 if heavy else 4)):
+        for _ in range(5 if fury else (7 if heavy else 4)):
 
             a = base + random.uniform(-0.6, 0.6)
 
@@ -263,7 +263,7 @@ class FxManager:
             )
 
         if fury:
-            self._embers(x, y, 5, hot, speed=(30, 90), life=(0.4, 0.8), lift=90)
+            self._embers(x, y, 8, hot, speed=(30, 90), life=(0.4, 0.8), lift=90)
         elif heavy:
             self._embers(x, y, 7, color, lift=40, size=(1.4, 2.4))
         elif torch:
@@ -275,7 +275,7 @@ class FxManager:
         self._spark(x, y, 0, 0, 0.30, color, size=34 if heavy else (24 if torch else 20), drag=0)
 
         if fury:
-            self._spark(x, y, 0, 0, 0.22, hot, size=26, drag=0)
+            self._spark(x, y, 0, 0, 0.22, hot, size=30, drag=0)
 
         self._ring(x, y, 3, 32 if heavy else (24 if torch else 20), 0.26, core, 3)
 
@@ -283,6 +283,9 @@ class FxManager:
 
         if heavy:
             self._ring(x, y, 2, 66, 0.46, hot, 2, delay=0.09)
+
+        if fury:
+            self._ring(x, y, 2, 44, 0.34, hot, 2, delay=0.07)
 
         if fury:
             return

@@ -42,6 +42,11 @@ HEAVY_RADIUS_MULT = 1.35
 GLOW_TIME_HEAVY = 0.30
 IMPACT_TIME = 0.35
 
+# Calidad de la estela: se dibuja al doble de resolucion y se reduce con
+# suavizado (sin bordes dentados), mas un resplandor difuso por detras.
+TRAIL_SS = 2
+TRAIL_SEGMENTS = 36
+
 SPRITE_HEAD_ANGLE = -45
 SPRITE_STICK_PX = 23
 
@@ -373,7 +378,7 @@ class Melee:
                 round(original.get_width() * scale * zoom)
             )
 
-            self._sprite = pygame.transform.scale(original, (size, size))
+            self._sprite = pygame.transform.smoothscale(original, (size, size))
             self._sprite_zoom = zoom
 
         return self._sprite
@@ -386,122 +391,149 @@ class Melee:
             y * camera.zoom - camera.y
         )
 
+    @staticmethod
+    def _mix(c1, c2, k):
+
+        return (
+            int(c1[0] + (c2[0] - c1[0]) * k),
+            int(c1[1] + (c2[1] - c1[1]) * k),
+            int(c1[2] + (c2[2] - c1[2]) * k),
+        )
+
+    def _trail_palette(self, heavy):
+
+        # El golpe fuerte (el 3ro del combo) es AZUL tambien en furia.
+        if heavy:
+            return HEAVY_COLOR, HEAVY_CORE, (35, 95, 235)
+
+        if self.fury:
+            return (255, 105, 40), (255, 235, 175), (205, 40, 25)
+
+        if self.kind == "antorcha":
+            return (255, 150, 45), (255, 240, 180), (220, 80, 20)
+
+        return (255, 195, 100), (255, 250, 220), (240, 140, 50)
+
     def _draw_trail(self, screen, camera, pivot, angle, strength,
                     heavy=False):
 
         zoom = camera.zoom
+        ss = TRAIL_SS
 
         outer = OUTER_RADIUS * (HEAVY_RADIUS_MULT if heavy else 1.0)
 
-        pad = int(6 * zoom)
+        pad = int(8 * zoom)
 
         size = int(outer * 2 * zoom) + 4 + pad * 2
-        center = size / 2
+        big = size * ss
+        center = big / 2
 
-        layer = pygame.Surface((size, size), pygame.SRCALPHA)
-
-        trail = math.radians(TRAIL_DEGREES)
+        trail = math.radians(TRAIL_DEGREES * (1.2 if heavy else 1.0))
 
         back = max(self.start_angle, angle - trail)
 
-        segments = 20 if self.fury else 24
+        segments = TRAIL_SEGMENTS
 
-        r_in = (INNER_RADIUS + 2) * zoom
-        r_out = outer * zoom
+        color, core, deep = self._trail_palette(heavy)
+        mid = self._mix(color, core, 0.55)
 
-        if self.fury:
-            heavy = False
-            color = (255, 110, 45)
-            core = (255, 230, 170)
-        elif heavy:
-            color = HEAVY_COLOR
-            core = HEAVY_CORE
-        elif self.kind == "antorcha":
-            color = (255, 150, 45)
-            core = (255, 240, 180)
-        else:
-            color = (255, 195, 100)
-            core = (255, 250, 220)
+        r_in = (INNER_RADIUS + 2) * zoom * ss
+        r_out = outer * zoom * ss
 
-        if self.fury or heavy or self.kind == "antorcha":
+        # ---- resplandor difuso (baja resolucion + agrandado = blur) ----
+        glow_size = max(8, size // 2)
+        glow = pygame.Surface((glow_size, glow_size), pygame.SRCALPHA)
+        g_center = glow_size / 2
+        g_scale = glow_size / big
 
-            halo_out = r_out + 4 * zoom
-
-            for i in range(segments):
-
-                a0 = back + (angle - back) * i / segments
-                a1 = back + (angle - back) * (i + 1) / segments
-
-                t = (i + 1) / segments
-
-                alpha = int(70 * strength * t ** 1.8)
-
-                if alpha <= 0:
-                    continue
-
-                pts = (
-                    arc_points(center, center, halo_out, a0, a1, 2)
-                    + arc_points(center, center, r_in, a1, a0, 2)
-                )
-
-                pygame.draw.polygon(layer, (*color, alpha), pts)
+        halo_out = r_out + 7 * zoom * ss
+        halo_in = r_in - 2 * zoom * ss
 
         for i in range(segments):
 
             a0 = back + (angle - back) * i / segments
-            a1 = back + (angle - back) * (i + 1) / segments
+            a1 = back + (angle - back) * (i + 1) / segments + 0.02
 
             t = (i + 1) / segments
 
-            alpha = int(
-                (235 if heavy else 190) * strength * t ** 1.6
-            )
+            alpha = int((120 if heavy else 95) * strength * t ** 1.7)
 
             if alpha <= 0:
                 continue
 
-            thick = 0.30 + 0.70 * t
+            pts = (
+                arc_points(g_center, g_center, halo_out * g_scale, a0, a1, 2)
+                + arc_points(g_center, g_center, halo_in * g_scale, a1, a0, 2)
+            )
+
+            pygame.draw.polygon(glow, (*color, alpha), pts)
+
+        tiny = pygame.transform.smoothscale(
+            glow, (max(2, glow_size // 3), max(2, glow_size // 3))
+        )
+        glow = pygame.transform.smoothscale(tiny, (size, size))
+
+        # ---- cuerpo de la estela (alta resolucion) ----
+        layer = pygame.Surface((big, big), pygame.SRCALPHA)
+
+        for i in range(segments):
+
+            a0 = back + (angle - back) * i / segments
+            a1 = back + (angle - back) * (i + 1) / segments + 0.02
+
+            t = (i + 1) / segments
+
+            alpha = int((245 if heavy else 205) * strength * t ** 1.4)
+
+            if alpha <= 0:
+                continue
+
+            thick = 0.26 + 0.74 * t ** 0.8
             seg_in = r_out - (r_out - r_in) * thick
+            width = r_out - seg_in
 
-            pts = (
-                arc_points(center, center, r_out, a0, a1, 2)
-                + arc_points(center, center, seg_in, a1, a0, 2)
+            bands = (
+                (0.00, deep, 0.55),
+                (0.22, color, 1.00),
+                (0.55, mid, 1.00),
+                (0.80, core, 0.95),
             )
 
-            pygame.draw.polygon(layer, (*color, alpha), pts)
+            for start, band_color, mult in bands:
 
-            core_in = r_out - (r_out - seg_in) * 0.45
+                inner = seg_in + width * start
 
-            pts = (
-                arc_points(center, center, r_out, a0, a1, 2)
-                + arc_points(center, center, core_in, a1, a0, 2)
-            )
+                pts = (
+                    arc_points(center, center, r_out, a0, a1, 3)
+                    + arc_points(center, center, inner, a1, a0, 3)
+                )
 
-            pygame.draw.polygon(
-                layer, (*core, int(alpha * 0.85)), pts
-            )
+                pygame.draw.polygon(
+                    layer, (*band_color, int(alpha * mult)), pts
+                )
 
+        # borde delantero brillante
         edge = [
-            (center + math.cos(back + (angle - back) * k / 20) * r_out,
-             center + math.sin(back + (angle - back) * k / 20) * r_out)
-            for k in range(21)
+            (center + math.cos(back + (angle - back) * k / 28) * r_out,
+             center + math.sin(back + (angle - back) * k / 28) * r_out)
+            for k in range(29)
         ]
 
-        if len(edge) > 1:
-            pygame.draw.lines(
-                layer, (*core, int(200 * strength)), False, edge,
-                max(1, round(zoom * 0.5))
-            )
+        pygame.draw.lines(
+            layer, (*core, int(215 * strength)), False, edge,
+            max(1, round(zoom * 0.6 * ss))
+        )
 
-        tip_x = center + math.cos(angle) * r_out * 0.92
-        tip_y = center + math.sin(angle) * r_out * 0.92
+        # punta: destello con degradado
+        tip_x = center + math.cos(angle) * r_out * 0.94
+        tip_y = center + math.sin(angle) * r_out * 0.94
 
-        for rad, a in ((9, 55), (6, 110), (3, 230)):
+        for rad, a in ((11, 40), (8, 85), (5, 150), (2.6, 245)):
 
             pygame.draw.circle(
                 layer, (*core, int(a * strength)),
                 (round(tip_x), round(tip_y)),
-                max(2, round(rad * zoom * 0.5))
+                max(2, round(rad * zoom * 0.5 * ss))
             )
 
         if heavy:
@@ -515,12 +547,31 @@ class Melee:
                  center + math.sin(angle) * r_in),
                 (center + math.cos(angle) * r_out,
                  center + math.sin(angle) * r_out),
-                max(2, round(2 * zoom)),
+                max(2, round(2 * zoom * ss)),
             )
+
+            # destello en cruz en la punta
+            flare = 9 * zoom * ss
+
+            for da in (0.0, math.pi / 2):
+
+                pygame.draw.line(
+                    layer,
+                    (*HEAVY_CORE, int(200 * strength)),
+                    (tip_x - math.cos(angle + da) * flare,
+                     tip_y - math.sin(angle + da) * flare),
+                    (tip_x + math.cos(angle + da) * flare,
+                     tip_y + math.sin(angle + da) * flare),
+                    max(1, round(zoom * ss * 0.8)),
+                )
+
+        body = pygame.transform.smoothscale(layer, (size, size))
+
+        glow.blit(body, (0, 0))
 
         px, py = self._to_screen(camera, pivot[0], pivot[1])
 
-        screen.blit(layer, layer.get_rect(center=(round(px), round(py))))
+        screen.blit(glow, glow.get_rect(center=(round(px), round(py))))
 
     def draw(self, screen, camera, pivot):
 
@@ -531,13 +582,13 @@ class Melee:
             angle = self.current_angle
 
             self._draw_trail(
-                screen, camera, pivot, angle, 1.0,
-                self.heavy and not self.fury
+                screen, camera, pivot, angle, 1.0, self.heavy
             )
 
-            sprite = pygame.transform.rotate(
+            sprite = pygame.transform.rotozoom(
                 self._get_sprite(camera.zoom),
-                self._head_angle() - math.degrees(angle)
+                self._head_angle() - math.degrees(angle),
+                1.0
             )
 
             distance = INNER_RADIUS + STICK_LENGTH / 2 + 2
@@ -548,18 +599,29 @@ class Melee:
                 pivot[1] + math.sin(angle) * distance
             )
 
-            if self.heavy and not self.fury:
+            if self.heavy or self.fury:
 
-                radius = round(11 * camera.zoom)
+                if self.heavy:
+                    outer_c, inner_c = HEAVY_COLOR, HEAVY_CORE
+                else:
+                    outer_c, inner_c = (255, 120, 40), (255, 225, 160)
 
-                halo = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                radius = round(12 * camera.zoom)
 
-                pygame.draw.circle(
-                    halo, (*HEAVY_COLOR, 90), (radius, radius), radius
+                halo = pygame.Surface(
+                    (radius * 2, radius * 2), pygame.SRCALPHA
                 )
+
+                for k in range(5, 0, -1):
+
+                    pygame.draw.circle(
+                        halo, (*outer_c, 22 + 14 * (5 - k)),
+                        (radius, radius), max(2, radius * k // 5)
+                    )
+
                 pygame.draw.circle(
-                    halo, (*HEAVY_CORE, 120), (radius, radius),
-                    max(2, radius // 2)
+                    halo, (*inner_c, 130), (radius, radius),
+                    max(2, radius // 3)
                 )
 
                 screen.blit(

@@ -17,6 +17,10 @@ class SkinsMenu:
     # Las tarjetas van ADENTRO de este rectangulo, con margen.
     PANEL = (480, 270, 1238, 510)
 
+    # Menu principal (monitor, mapaajustes.png): la linea interior del marco
+    # arranca mas abajo (y~284), asi que las tarjetas bajan para no tocarla.
+    PANEL_MONITOR = (480, 292, 1238, 514)
+
     PAD = 10          # margen entre la linea de la tablet y las tarjetas
     BAR_W = 8         # ancho de la barra de scroll
 
@@ -77,7 +81,10 @@ class SkinsMenu:
         )
 
         self.close_rect = self._box(self.CLOSE_BOX)
-        self.panel = self._box(self.PANEL)
+        self.panel = self._box(
+            self.PANEL if background.startswith("tablet")
+            else self.PANEL_MONITOR
+        )
 
         self.skins = list(skin_lib.SKINS)
 
