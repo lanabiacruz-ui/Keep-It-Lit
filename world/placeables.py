@@ -101,7 +101,56 @@ HAMMER_ITEM = "martillo"
 HAMMER_TARGETS = ("cofre", "fogata", "tacho")
 
 # lo que el tacho NO se traga (para no perder algo caro por un click mal puesto)
-TRASH_PROTECTED = ("fogata", "cofre", "faro", "tacho", "martillo")
+TRASH_PROTECTED = ("faro", "tacho", "martillo")
+
+
+def _trash_slot(self, game):
+
+    slot = game.selected_slot
+
+    if not isinstance(slot, int) or slot >= game.hud.SLOTS:
+        return None
+
+    return slot
+
+
+def _use_trash(self, game, obj, whole):
+
+    slot = self._trash_slot(game)
+
+    if slot is None:
+        game.show_message("La luz equipada no se tira al tacho")
+        return True
+
+    item_id = game.hud.items[slot]
+
+    if item_id is None:
+        game.show_message("Elige un objeto y haz click sobre el tacho")
+        return True
+
+    if item_id in TRASH_PROTECTED:
+        game.show_message(f"{game._item_name(item_id)} no se puede tirar al tacho")
+        return True
+
+    n = max(1, int(game.hud.counts[slot])) if whole else 1
+
+    for _ in range(n):
+        game._take_one(slot)
+
+    audio.play("pickup")
+
+    try:
+        game.fx.poof(*obj.rect.center)
+    except Exception:
+        pass
+
+    game.show_message(
+        f"Tiraste {n} × {game._item_name(item_id)}"
+        if n > 1
+        else f"Tiraste {game._item_name(item_id)}"
+    )
+
+    return True
 
 # distancia a la que una bolsa / cofre recibe lo que soltas o agarras
 DEPOSIT_RANGE = REACH

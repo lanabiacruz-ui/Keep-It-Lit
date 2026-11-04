@@ -35,6 +35,6 @@
         null
     ],
     "flash_level": 1.0,
-    "show_fps": false,
+    "show_fps": true,
     "tutorial_hints": true
 }

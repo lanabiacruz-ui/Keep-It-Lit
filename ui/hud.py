@@ -62,7 +62,6 @@ class Hud:
     ):
 
         w, h = screen_size
-
         def load(name):
             return pygame.image.load(
                 str(HUD_DIR / name)
@@ -149,7 +148,7 @@ class Hud:
             (x0 + i * (slot_size + gap), y)
             for i in range(self.SLOTS)
         ]
-
+        
         # marcos de pociones, a la derecha de la hotbar
         px0 = self.bar_rect.right + self.POTION_GAP
 
