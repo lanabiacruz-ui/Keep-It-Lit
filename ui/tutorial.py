@@ -24,7 +24,7 @@ TUTORIAL_PAGES = [
     "MOVERTE: W A S D. SALTAR: ESPACIO (sirve para esquivar los ataques de los jefes). ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más.",
     "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Las luces (fósforo, vela, antorcha) se equipan solas, y solo podés llevar una. Con Q soltás lo seleccionado y con CTRL + Q soltás TODO el inventario (la luz equipada no se suelta).",
     "OBJETOS EN EL PISO: lo que soltás con Q o CTRL + Q, la luz que soltás, lo que escupe la tienda y lo que se cae al morir se esfuma a los 5 MINUTOS (parpadea los últimos 30 segundos y el tiempo solo corre en el mapa donde quedó). Si soltás algo junto a una BOLSA o un COFRE, va adentro y ahí no vence nunca.",
-    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
+    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4), 2 marcos de pociones (teclas 5 y 6) y la tecla 7 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
     "USAR OBJETOS: elegí el casillero (con 1-4 o la ruedita) y apretá F o click derecho. Mantené click izquierdo sobre un casillero para ver qué hace.",
     "RECUPERAR LUZ: la madera suma 25%, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
     "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. La DORADA vale 1, la AZUL vale 5 y la ROJA vale 10. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",

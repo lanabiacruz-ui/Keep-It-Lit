@@ -1034,7 +1034,7 @@ class NewGame:
         pygame.K_2: "slotkey",
         pygame.K_3: "slotkey",
         pygame.K_4: "slotkey",
-        pygame.K_5: "k5",
+        pygame.K_7: "k5",
         pygame.K_ESCAPE: "esc",
         pygame.K_TAB: "tab",
     }
@@ -1255,7 +1255,8 @@ class NewGame:
 
             return [
                 ("Teclas 1 a 4 (casillas)", "slotkey" in g.tuto_flags),
-                ("Tecla 5 (tu luz)", "k5" in g.tuto_flags),
+                ("Teclas 5 y 6 (pociones)", "slotkey" in g.tuto_flags),
+                ("Tecla 7 (tu luz)", "k5" in g.tuto_flags),
                 ("Rueda del mouse", "wheel" in g.tuto_flags),
             ]
 
@@ -1321,11 +1322,11 @@ class NewGame:
             },
             {
                 "text": (
-                    "Prueba a elegir casillas: teclas 1 a 4, la tecla 5 "
-                    "(tu luz) y la rueda del mouse."
+                    "Prueba a elegir casillas: teclas 1 a 4, 5 y 6 "
+                    "(pociones), la tecla 7 (tu luz) y la rueda del mouse."
                 ),
                 "tuto": [
-                    "INVENTARIO: tienes 4 casillas (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También puedes recorrerlas con la RUEDA del mouse. Prueba las tres cosas.",
+                    "INVENTARIO: tienes 4 casillas (teclas 1 al 4), 2 marcos de pociones (teclas 5 y 6) y la tecla 7 elige tu luz equipada. También puedes recorrerlo todo con la RUEDA del mouse. Prueba las tres cosas.",
                 ],
                 "checks": slot_checks,
                 "done": checks_done(slot_checks),
@@ -4082,7 +4083,8 @@ class NewGame:
             and event.y != 0
         ):
 
-            order = list(range(self.hud.SLOTS)) + ["equipped"]
+            # 1-4 items, 5 y 6 pociones, 7 luz equipada
+            order = list(range(self.hud.TOTAL_SLOTS)) + ["equipped"]
 
             try:
                 i = order.index(self.selected_slot)

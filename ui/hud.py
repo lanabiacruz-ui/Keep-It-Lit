@@ -39,11 +39,13 @@ class Hud:
 
     SLOTS = 4
 
-    # Marcos de pociones: casilleros 5 y 6 del inventario (a la derecha de
+    # Marcos de pociones: casilleros 5 y 6 (teclas 5 y 6) (a la derecha de
     # la hotbar). Solo aceptan pociones y ninguna otra cosa cae ahi.
     POTION_SLOTS = 2
     TOTAL_SLOTS = SLOTS + POTION_SLOTS
-    POTION_GAP = 14
+    POTION_GAP = 22
+    POTION_PAD = 8          # margen del panel violeta alrededor de los marcos
+    ATTACK_SCALE = 0.5      # tamano del cartel de la G (antes 0.75)
 
     VIDA_BBOX = (7, 7, 248, 41)
     ESCUDO_BBOX = (2, 6, 185, 34)
@@ -155,22 +157,47 @@ class Hud:
         for k in range(self.POTION_SLOTS):
             self.slot_pos.append((px0 + k * (slot_size + gap), y))
 
-        self.potions_right = (
+        slots_right = (
             px0 + self.POTION_SLOTS * slot_size
             + (self.POTION_SLOTS - 1) * gap
         )
+
+        # panel violeta que agrupa los dos marcos de pociones
+        pad = self.POTION_PAD
+
+        self.potion_panel_rect = pygame.Rect(
+            px0 - pad,
+            self.bar_rect.top,
+            slots_right - px0 + pad * 2,
+            self.bar_rect.height
+        )
+
+        panel_img = self._load_optional("hud_pociones.png")
+
+        self.potion_panel = (
+            pygame.transform.smoothscale(
+                panel_img, self.potion_panel_rect.size
+            )
+            if panel_img is not None else None
+        )
+
+        self.potions_right = self.potion_panel_rect.right
 
         self.equipped_rect = self.equipped_frame.get_rect(
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
         )
 
         self.attack_panels = {
-            "golpe": scaled(load("hud_antorcha_golpe.png"), 0.75),
-            "fuego": scaled(load("hud_antorcha_fuego.png"), 0.75),
+            "golpe": scaled(
+                load("hud_antorcha_golpe.png"), self.ATTACK_SCALE
+            ),
+            "fuego": scaled(
+                load("hud_antorcha_fuego.png"), self.ATTACK_SCALE
+            ),
         }
 
         self.attack_panel_rect = self.attack_panels["golpe"].get_rect(
-            bottomleft=(self.potions_right + 12, self.bar_rect.bottom)
+            bottomleft=(self.potions_right + 10, self.bar_rect.bottom)
         )
 
 
@@ -652,6 +679,9 @@ class Hud:
             )
 
         screen.blit(self.bar, self.bar_rect)
+
+        if self.potion_panel is not None:
+            screen.blit(self.potion_panel, self.potion_panel_rect)
 
         for i, (x, y) in enumerate(self.slot_pos):
 

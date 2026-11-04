@@ -4556,6 +4556,8 @@ class Arena:
 
     def __init__(self, screen_size, cfg=None):
 
+        self._invis_decoy = None
+
         self.cfg = cfg or RIGHT_ARENA
 
         self.size = screen_size
@@ -5714,25 +5716,43 @@ class Arena:
             if getattr(game, "placeables", None) is not None else ()
         )
 
+        invisible = bool(getattr(game, "invisible", False))
+
+        if invisible:
+
+            if self._invis_decoy is None:
+                self._invis_decoy = tuple(target)
+
+        else:
+            self._invis_decoy = None
+
         for enemy in list(self.enemies):
+
+            if invisible and not isinstance(enemy, BOSS_TYPES):
+                e_target = self._invis_decoy
+                e_on, e_light = False, 0.0
+            else:
+                e_target = target
+                e_on, e_light = light_on, light_world
+
             if isinstance(enemy, BOSS_TYPES):
                 self._update_boss(game, enemy, dt, target, body)
             elif isinstance(enemy, Mosquito):
-                enemy.update(dt, target, game.collision_map, light_on, light_world, repel, lamp_zones)
+                enemy.update(dt, e_target, game.collision_map, e_on, e_light, repel, lamp_zones)
                 if enemy.attached and enemy.damage_t <= 0.0:
                     game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
             elif isinstance(enemy, GuardianShooter):
-                enemy.update(dt, target, game.collision_map, light_on, light_world)
+                enemy.update(dt, e_target, game.collision_map, e_on, e_light)
                 new_shots = enemy.take_shots()
                 if new_shots:
                     audio.play("shot")
                 self.shots.extend(new_shots)
             elif isinstance(enemy, Golem):
-                enemy.update(dt, target, game.collision_map, others=self.enemies)
+                enemy.update(dt, e_target, game.collision_map, others=self.enemies)
                 self._golem_step(game, enemy, body, dt)
             elif isinstance(enemy, Guardian):
-                enemy.update(dt, target, game.collision_map, light_on, light_world)
+                enemy.update(dt, e_target, game.collision_map, e_on, e_light)
                 if enemy.swing_hits(body.center):
                     if p.hurt(enemy.pos):
                         game.take_damage(GUARDIAN_DAMAGE)
@@ -5741,8 +5761,8 @@ class Arena:
                             p.kb_vel = away.normalize() * GUARDIAN_KNOCKBACK
             else:
                 if enemy.fixed:
-                    enemy.light_radius = light_world
-                enemy.update(dt, target, game.collision_map, self.enemies)
+                    enemy.light_radius = e_light
+                enemy.update(dt, e_target, game.collision_map, self.enemies)
                 if enemy.fixed:
                     new_shots = enemy.take_shots()
                     if new_shots:

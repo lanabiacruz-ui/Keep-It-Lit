@@ -2,11 +2,11 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-04T11:44:05",
+    "last_played": "2026-11-04T20:52:20",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 899,
-    "y": 133,
+    "x": 950,
+    "y": 156,
     "coins": 91721,
     "gems": 4,
     "gems_green": 1,
@@ -38,19 +38,19 @@
         null
     ],
     "collected": [
-        "moneda_sala_central#0",
+        "moneda5_pasillo_cofres#0",
+        "madera_01#0",
+        "moneda_sala_central#1",
+        "moneda_sala_cofres#1",
         "moneda_pasillo_tienda#0",
         "moneda_pasillo_cabana#1",
-        "moneda_sala_cofres#1",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_cofres#0",
         "moneda_pasillo_cofres#0",
-        "moneda_pasillo_tienda#1",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_cabana#0",
         "moneda_pasillo_izq#0",
         "moneda_pasillo_der#0",
-        "moneda_pasillo_cabana#0",
-        "madera_01#0",
-        "moneda_sala_central#1"
+        "moneda_sala_central#0",
+        "moneda_pasillo_tienda#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
@@ -8004,7 +8004,7 @@
             "x": 914,
             "y": 137,
             "map": "mapa1",
-            "ttl": 103.5
+            "ttl": 40.3
         },
         {
             "k": "light",

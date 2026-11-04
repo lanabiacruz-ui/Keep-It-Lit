@@ -60,12 +60,13 @@ DEFAULTS = {
     "slot2": pygame.K_2,
     "slot3": pygame.K_3,
     "slot4": pygame.K_4,
-    "equipped": pygame.K_5,
-    "potion1": pygame.K_6,
-    "potion2": pygame.K_7,
+    "equipped": pygame.K_7,
+    "potion1": pygame.K_5,
+    "potion2": pygame.K_6,
 }
 
-# los dos ultimos son los marcos de pociones (casilleros 5 y 6 del inventario)
+# teclas: 1-4 items, 5 y 6 pociones, 7 luz equipada
+# (los dos ultimos son los marcos de pociones: casilleros 5 y 6 del inventario)
 SLOT_ACTIONS = ("slot1", "slot2", "slot3", "slot4", "potion1", "potion2")
 
 FIXED_KEYS = {
@@ -163,7 +164,14 @@ class Controls:
                     loaded[action] = value
 
         if len(set(loaded.values())) != len(loaded):
-            return
+
+            # guardados viejos: la luz usaba el 5 y ahora es de las pociones.
+            # Se reponen solo esas teclas para no perder el resto.
+            for action in ("equipped", "potion1", "potion2"):
+                loaded[action] = DEFAULTS[action]
+
+            if len(set(loaded.values())) != len(loaded):
+                return
 
         self.keys = loaded
 

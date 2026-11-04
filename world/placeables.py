@@ -1223,7 +1223,10 @@ class PlaceableManager:
         if game.hud.slot_at(pos) is not None:
             return True
 
-        for name in ("equipped_rect", "menu_button_rect", "attack_panel_rect"):
+        for name in (
+            "equipped_rect", "menu_button_rect", "attack_panel_rect",
+            "potion_panel_rect"
+        ):
 
             r = getattr(game.hud, name, None)
 

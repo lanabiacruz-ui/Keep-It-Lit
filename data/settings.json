@@ -1,6 +1,6 @@
 {
     "music_volume": 0.018,
-    "sfx_volume": 0.0,
+    "sfx_volume": 0.031,
     "fullscreen": true,
     "controls": {
         "up": 119,
@@ -16,7 +16,7 @@
         "slot2": 50,
         "slot3": 51,
         "slot4": 52,
-        "equipped": 53
+        "equipped": 55
     },
     "skin": "pago_3",
     "skins_owned": [

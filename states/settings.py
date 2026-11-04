@@ -146,10 +146,13 @@ class Settings:
     NAV_GAP = 24
     COL_X = (508, 736, 964)
     COL_W = 216
-    GROUP_Y = 334
-    KEY_TOP = 346
-    KEY_STEP = 24
-    KEY_SIZE = (78, 22)
+    # 6 filas por columna (Inventario tiene 6): el paso y el alto de las
+    # teclas son chicos para que la ultima fila termine antes de los botones
+    # Regresar / Restablecer (NAV_Y).
+    GROUP_Y = 332
+    KEY_TOP = 344
+    KEY_STEP = 20
+    KEY_SIZE = (78, 19)
 
     TEXT = (244, 248, 255)
     TEXT_DIM = (176, 198, 232)
