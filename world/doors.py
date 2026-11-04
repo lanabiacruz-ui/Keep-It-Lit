@@ -12,7 +12,12 @@ DOOR_TYPES = {
     "verde": {"hits": 6, "cost": 0.05},
     "gris": {"hits": 4, "cost": 0.05},
     "azul": {"hits": 8, "cost": 0.05},
+    # puerta de oro de la Zona 2: no se rompe a golpes, se abre con la llave
+    # dorada que suelta el jefe de la Zona 1 (ver states/new_game.py)
+    "oro": {"hits": None, "cost": 0.0},
 }
+
+GOLD_DOOR_ID = "sala_izq"
 
 DOOR_LAYOUT = [
     ("sup_izq_central",       "comun", "v",    838,  138, 40),
@@ -24,7 +29,7 @@ DOOR_LAYOUT = [
     ("hub_derecha",           "comun", "v",    1090, 520, 44),
     ("hub_abajo",             "comun", "h",    943,  642, 44),
     ("cabana",                "comun", "h",    941,  877, 36),
-    ("sala_izq",              "gris",  "v",    682,  518, 45),
+    ("sala_izq",              "oro",   "v",    682,  518, 45),
     ("sala_der",              "gris",  "v",    1214, 519, 45),
 ]
 
@@ -58,6 +63,14 @@ PALETTES = {
         "band": (56, 56, 60),
         "band_light": (106, 106, 112),
         "knob": (66, 66, 70),
+    },
+    "oro": {
+        "base": (200, 150, 40),
+        "light": (255, 226, 120),
+        "dark": (120, 82, 16),
+        "band": (92, 60, 14),
+        "band_light": (232, 178, 52),
+        "knob": (255, 238, 150),
     },
     "azul": {
         "base": (50, 76, 132),
@@ -215,7 +228,7 @@ def _build_vertical(kind, length, cracks):
 
     bands = [4, h - 7]
 
-    if kind == "gris":
+    if kind in ("gris", "oro"):
         _draw_slab(surf, pal, rng, bands)
     else:
         _draw_planks(surf, pal, rng, bands + [h // 2])
@@ -226,7 +239,7 @@ def _build_vertical(kind, length, cracks):
     for y in bands:
         _draw_band(surf, pal, y)
 
-    if kind == "azul":
+    if kind in ("azul", "oro"):
         _draw_lock(surf, pal)
     else:
         _draw_handle(surf, pal)
@@ -296,6 +309,7 @@ def _get_door_image(kind, orient, length, cracks):
 class Door:
 
     precise_hit = True
+    is_gold = False
 
     def __init__(self, door_id, kind, orient, x, y, length=56):
 
@@ -303,6 +317,7 @@ class Door:
         self.kind = kind
         self.orient = orient
         self.length = length
+        self.is_gold = kind == "oro"
 
         data = DOOR_TYPES[kind]
 
@@ -422,6 +437,15 @@ class DoorManager:
     def blocking_rects(self):
 
         return [d.rect for d in self.doors]
+
+    def gold_door(self):
+        """La puerta de oro de la Zona 2 (None si ya esta abierta)."""
+
+        for door in self.doors:
+            if getattr(door, "is_gold", False) and not door.broken:
+                return door
+
+        return None
 
     def update(self, dt):
 

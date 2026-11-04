@@ -21,7 +21,7 @@ FRAME_CROP = None
 TUTORIAL_PAGES = [
 
     "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
-    "MOVERTE: W A S D. SALTAR: ESPACIO (sirve para esquivar las ondas y el barrido de brazos del jefe de la zona 2). ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más.",
+    "MOVERTE: W A S D. SALTAR: ESPACIO (sirve para esquivar los ataques de los jefes). ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más.",
     "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Las luces (fósforo, vela, antorcha) se equipan solas, y solo podés llevar una. Con Q soltás lo seleccionado y con CTRL + Q soltás TODO el inventario (la luz equipada no se suelta).",
     "OBJETOS EN EL PISO: lo que soltás con Q o CTRL + Q, la luz que soltás, lo que escupe la tienda y lo que se cae al morir se esfuma a los 5 MINUTOS (parpadea los últimos 30 segundos y el tiempo solo corre en el mapa donde quedó). Si soltás algo junto a una BOLSA o un COFRE, va adentro y ahí no vence nunca.",
     "INVENTARIO: tenés 4 casilleros (teclas 1 al 4) y la tecla 5 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
@@ -29,7 +29,7 @@ TUTORIAL_PAGES = [
     "RECUPERAR LUZ: la madera suma 25%, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
     "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. La DORADA vale 1, la AZUL vale 5 y la ROJA vale 10. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
     "ENCICLOPEDIA: en la pausa (ESC) está la enciclopedia de criaturas. Apretá COBRAR en cada criatura descubierta para llevarte monedas de regalo (una sola vez por criatura).",
-    "SALAS DE COMBATE: tienen oleadas de enemigos. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
+    "SALAS DE COMBATE: tienen oleadas de enemigos. Empezá por la ZONA 1 (Orkun, a la derecha): su jefe suelta una llave dorada que abre la puerta de oro de la ZONA 2. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
     "AYUDA: ESC abre la pausa. ¡Mucha suerte y que tu luz nunca se apague!",
 ]
 

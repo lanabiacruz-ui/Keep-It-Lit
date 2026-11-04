@@ -4461,12 +4461,11 @@ class ArenaConfig:
                  done_text="Mapa completado! La sala se cerro para siempre",
                  gem_id="gema", gem_name="gema",
                  zone_name="", zone_tag="", hard=False, boss=False,
-                 boss_kind="pina", warn_text="", warn_needs="", traps=0):
+                 boss_kind="pina", key_id="", traps=0):
 
-        # warn_text: aviso en rojo al acercarse a la puerta si todavia no
-        # se completo la arena "warn_needs" (atributo del juego, ej "arena")
-        self.warn_text = warn_text
-        self.warn_needs = warn_needs
+        # key_id: item que suelta el jefe al morir, junto con la gema
+        # ("llave_oro" = llave dorada de la puerta de la Zona 2)
+        self.key_id = key_id
 
         # cantidad de trampas que aparecen en cada oleada (0 = ninguna)
         self.traps = traps
@@ -4500,6 +4499,7 @@ RIGHT_ARENA = ArenaConfig(
     WAVE_COMPOSITION, WAVE_REWARDS, LAST_WAVE,
     "arena_wave", "arena_completed",
     zone_name="ORKUN", zone_tag="ZONA 1", boss=True,
+    key_id="llave_oro",
 )
 
 
@@ -4526,11 +4526,6 @@ LEFT_ARENA = ArenaConfig(
     zone_name="STONUN", zone_tag="ZONA 2", hard=True,
     boss=True, boss_kind="golem",
     traps=4,
-    warn_text=(
-        "Es recomendable que primero completes la Zona 1 (Orkun): "
-        "la Zona 2 es mucho mas dificil"
-    ),
-    warn_needs="arena",
 )
 
 
@@ -4605,8 +4600,6 @@ class Arena:
         self.completed = False
         self.final_clear = False
         self._sealed_msg_t = -10.0
-        self._warn_msg_t = -99.0
-        self._warn_near = False
 
         self.particles = []
         self.ring_t = None
@@ -5424,6 +5417,26 @@ class Arena:
             self.reward_coins.append(gem)
             game.world_items.append(gem)
 
+            if self.cfg.key_id:
+
+                # el jefe tambien suelta una llave (la de la puerta de oro)
+                key = WorldItem(self.cfg.key_id, cx, cy)
+                key.value = 1
+                key.sparkle = True
+
+                key.start_fly(
+                    (cx, cy), self._coin_target(game, cx, cy),
+                    delay=0.45, height=30, duration=0.7
+                )
+
+                self.reward_coins.append(key)
+                game.world_items.append(key)
+
+                game.show_message(
+                    "El jefe solto una llave dorada: abre la puerta de oro "
+                    "de la Zona 2"
+                )
+
             self.final_clear = True
             self.completed = True
             self.banner_t = BANNER_TIME_FINAL
@@ -5459,6 +5472,8 @@ class Arena:
                 self._add_gem(
                     game, getattr(coin, "value", 1), coin.item_id
                 )
+            elif coin.item_id == "llave_oro":
+                game.add_gold_key(getattr(coin, "value", 1))
             else:
                 game.add_coins(getattr(coin, "value", 1))
 
@@ -5568,41 +5583,6 @@ class Arena:
 
         self._gate_time += dt
 
-    WARN_COLOR = (255, 70, 60)
-    WARN_RANGE = (170, 130)     # que tan cerca de la puerta avisa
-    WARN_REPEAT = 6.0           # si te quedas cerca, repite cada tanto
-
-    def _warn_if_unprepared(self, game, p):
-        """Rojo abajo: "primero completa la zona 1" (solo la zona 2)."""
-
-        text = getattr(self.cfg, "warn_text", "")
-        needs = getattr(self.cfg, "warn_needs", "")
-
-        if not text or not needs:
-            return
-
-        other = getattr(game, needs, None)
-
-        if other is None or getattr(other, "completed", True):
-            self._warn_near = False
-            return
-
-        near = p.rect.colliderect(self.cfg.gate.inflate(*self.WARN_RANGE))
-
-        if not near:
-            self._warn_near = False
-            return
-
-        # una vez al llegar, y de nuevo si te quedas un rato
-        if (
-            not self._warn_near
-            or self._gate_time - self._warn_msg_t > self.WARN_REPEAT
-        ):
-            self._warn_near = True
-            self._warn_msg_t = self._gate_time
-
-            game.show_message(text, self.WARN_COLOR)
-
     def update(self, game, dt):
 
         self._update_fx(dt)
@@ -5629,8 +5609,6 @@ class Arena:
                     )
 
                 return
-
-            self._warn_if_unprepared(game, p)
 
             center = p.rect.center
 

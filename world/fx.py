@@ -427,6 +427,9 @@ class FxManager:
         if item.item_id in ("gema", "gema_verde"):
             return (120, 210, 255) if item.item_id == "gema" else (110, 255, 160)
 
+        if item.item_id == "llave_oro":
+            return (255, 215, 90)
+
         if item.item_id.startswith("moneda"):
             return COIN_COLORS.get(
                 10 if value >= 10 else 5 if value >= 5 else 1

@@ -205,8 +205,36 @@ def _green_gem_placeholder():
     return surf
 
 
+def _key_placeholder():
+
+    surf = pygame.Surface((64, 64), pygame.SRCALPHA)
+
+    pygame.draw.circle(surf, (235, 176, 40), (20, 20), 14)
+    pygame.draw.circle(surf, (52, 34, 8), (20, 20), 6)
+    pygame.draw.circle(surf, (52, 34, 8), (20, 20), 14, 3)
+    pygame.draw.line(surf, (235, 176, 40), (28, 28), (56, 56), 6)
+    pygame.draw.rect(surf, (235, 176, 40), (44, 46, 10, 6))
+
+    return surf
+
+
 _gem_cache = None
 _green_gem_cache = None
+_key_cache = None
+
+
+def get_key_icon():
+    """Icono de la llave dorada (abre la puerta de oro de la Zona 2)."""
+
+    global _key_cache
+
+    if _key_cache is None:
+
+        icon = load_icon("llave_oro")
+
+        _key_cache = icon if icon is not None else _key_placeholder()
+
+    return _key_cache
 
 
 def get_green_gem_icon():
@@ -289,9 +317,21 @@ class WorldItem(MatchItem):
         elif item_id == "gema_verde":
             self.original = get_green_gem_icon()
 
+        elif item_id == "llave_oro":
+            self.original = get_key_icon()
+
         self.auto = item_id in (
-            "moneda", "moneda_5", "moneda_10", "gema", "gema_verde"
+            "moneda", "moneda_5", "moneda_10", "gema", "gema_verde",
+            "llave_oro",
         )
+
+        if item_id == "llave_oro":
+
+            # un poco mas grande que una gema para que se vea bien
+            center = self.rect.center
+            self.WORLD_SIZE = 22
+            self.rect = pygame.Rect(0, 0, 22, 22)
+            self.rect.center = center
 
         self.fly = None
         self._lift = 0.0
