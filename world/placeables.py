@@ -1082,12 +1082,23 @@ class PlaceableManager:
 
         for _, obj in sorted(cands, key=lambda c: c[0]):
 
-            if obj.container.add(item_id, CONTAINER_STACK):
+            if obj.container.add(item_id, self._stack_limit(game, item_id)):
                 return obj
 
         return None
 
+    @staticmethod
+    def _stack_limit(game, item_id):
+        """Cuantas unidades caben por casillero: las pociones no se apilan."""
+
+        if game._is_potion(item_id):
+            return 1
+
+        return CONTAINER_STACK
+
     def can_deposit(self, game, item_id):
+
+        limit = self._stack_limit(game, item_id)
 
         for obj in self.objects:
 
@@ -1100,7 +1111,7 @@ class PlaceableManager:
             for s in obj.container.slots:
 
                 if s is None or (
-                    s[0] == item_id and s[1] < CONTAINER_STACK
+                    s[0] == item_id and s[1] < limit
                 ):
                     return True
 
@@ -1868,7 +1879,7 @@ class PlaceableManager:
 
         want = 1 if one else game.hud.counts[slot]
 
-        limit = CONTAINER_STACK
+        limit = self._stack_limit(game, item_id)
 
         moved = 0
 

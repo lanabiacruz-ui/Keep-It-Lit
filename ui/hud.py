@@ -39,6 +39,12 @@ class Hud:
 
     SLOTS = 4
 
+    # Marcos de pociones: casilleros 5 y 6 del inventario (a la derecha de
+    # la hotbar). Solo aceptan pociones y ninguna otra cosa cae ahi.
+    POTION_SLOTS = 2
+    TOTAL_SLOTS = SLOTS + POTION_SLOTS
+    POTION_GAP = 14
+
     VIDA_BBOX = (7, 7, 248, 41)
     ESCUDO_BBOX = (2, 6, 185, 34)
 
@@ -74,6 +80,13 @@ class Hud:
         self.bar = scaled(load("hud_hotbar.png"), scale)
         self.slot = scaled(load("hud_slot.png"), scale)
         self.slot_select = scaled(load("hud_slot_select.png"), scale)
+
+        self.potion_slot = self._load_scaled_or(
+            "hud_pocion_slot.png", self.slot
+        )
+        self.potion_slot_select = self._load_scaled_or(
+            "hud_pocion_slot_select.png", self.slot_select
+        )
 
         self.equipped_frame = scaled(
             load("hud_item_equipado.png"),
@@ -111,9 +124,9 @@ class Hud:
 
         self.equipped = None
 
-        self.items = [None] * self.SLOTS
+        self.items = [None] * self.TOTAL_SLOTS
 
-        self.counts = [0] * self.SLOTS
+        self.counts = [0] * self.TOTAL_SLOTS
         self.selected = None
 
         slot_size = self.slot.get_width()
@@ -137,6 +150,17 @@ class Hud:
             for i in range(self.SLOTS)
         ]
 
+        # marcos de pociones, a la derecha de la hotbar
+        px0 = self.bar_rect.right + self.POTION_GAP
+
+        for k in range(self.POTION_SLOTS):
+            self.slot_pos.append((px0 + k * (slot_size + gap), y))
+
+        self.potions_right = (
+            px0 + self.POTION_SLOTS * slot_size
+            + (self.POTION_SLOTS - 1) * gap
+        )
+
         self.equipped_rect = self.equipped_frame.get_rect(
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
         )
@@ -147,7 +171,7 @@ class Hud:
         }
 
         self.attack_panel_rect = self.attack_panels["golpe"].get_rect(
-            bottomleft=(self.bar_rect.right + 12, self.bar_rect.bottom)
+            bottomleft=(self.potions_right + 12, self.bar_rect.bottom)
         )
 
 
@@ -262,6 +286,20 @@ class Hud:
         self.equipped = name
 
 
+    def _load_scaled_or(self, name, fallback):
+        """Imagen de HUD escalada al tamano de casillero (o la de respaldo)."""
+
+        img = self._load_optional(name)
+
+        if img is None:
+            return fallback
+
+        return pygame.transform.smoothscale(img, fallback.get_size())
+
+    def is_potion_slot(self, i):
+
+        return isinstance(i, int) and self.SLOTS <= i < self.TOTAL_SLOTS
+
     @staticmethod
     def _load_optional(name):
 
@@ -299,7 +337,7 @@ class Hud:
 
     def slot_at(self, pos):
 
-        for i in range(self.SLOTS):
+        for i in range(self.TOTAL_SLOTS):
             if self.slot_rect(i).collidepoint(pos):
                 return i
 
@@ -618,7 +656,14 @@ class Hud:
 
         for i, (x, y) in enumerate(self.slot_pos):
 
-            img = self.slot_select if i == self.selected else self.slot
+            if self.is_potion_slot(i):
+                img = (
+                    self.potion_slot_select if i == self.selected
+                    else self.potion_slot
+                )
+            else:
+                img = self.slot_select if i == self.selected else self.slot
+
             screen.blit(img, (x, y))
 
             icon = (

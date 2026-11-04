@@ -5603,6 +5603,21 @@ class Arena:
 
             game.show_message(text, self.WARN_COLOR)
 
+    @staticmethod
+    def _blind_target(enemy):
+        """Punto falso al que mira un enemigo que no ve al jugador."""
+
+        vel = pygame.Vector2(getattr(enemy, "vel", (0, 0)))
+
+        if vel.length_squared() > 1.0:
+            direction = vel.normalize()
+        else:
+            direction = pygame.Vector2(1, 0).rotate(
+                (id(enemy) % 360)
+            )
+
+        return pygame.Vector2(enemy.pos) + direction * 240
+
     def update(self, game, dt):
 
         self._update_fx(dt)
@@ -5726,7 +5741,12 @@ class Arena:
         target = p.rect.center
         body = pygame.Rect(0, 0, 10, 16)
         body.midbottom = (p.rect.centerx, p.rect.bottom)
-        light_on = bool(game.has_match)
+
+        # Pocion de invisibilidad: los enemigos normales no te ven ni a vos
+        # ni a tu luz. Los jefes la ignoran (para no romper sus cinematicas).
+        blind = bool(getattr(game, "invisible", False))
+
+        light_on = bool(game.has_match) and not blind
         light_world = game._light_radius() / game.camera.zoom if light_on else 0.0
         repel = light_on and game.repel_timer > 0
 
@@ -5736,7 +5756,21 @@ class Arena:
             if getattr(game, "placeables", None) is not None else ()
         )
 
+        real_target = target
+
         for enemy in list(self.enemies):
+
+            target = real_target
+
+            if blind and not isinstance(enemy, BOSS_TYPES):
+
+                # un mosquito pegado se suelta; el resto "no te ve" y sigue
+                # de largo en la direccion en que ya iba
+                if isinstance(enemy, Mosquito) and enemy.attached:
+                    enemy._detach(pygame.Vector2(real_target))
+
+                target = self._blind_target(enemy)
+
             if isinstance(enemy, BOSS_TYPES):
                 self._update_boss(game, enemy, dt, target, body)
             elif isinstance(enemy, Mosquito):
@@ -5786,6 +5820,8 @@ class Arena:
 
         if self.mosquito_alert and not was_alert:
             audio.play("alert")
+
+        target = real_target
 
         bounce_enemies(
             [e for e in self.enemies if not isinstance(e, BOSS_TYPES)],

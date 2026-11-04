@@ -113,6 +113,10 @@ FLICKER_THRESHOLD = 0.25
 
 FIRE_DAMAGE = 2
 FIRE_COST = 0.02
+
+# pociones
+POTION_GHOST_ALPHA = 105      # opacidad del jugador invisible (0-255)
+POTION_ASCUA_LIFE = 0.60      # vida con la que el ascua reenciende la luz
 FIRE_COOLDOWN = 0.45
 FIRE_FURY_SPEED = 2.0
 FIRE_MUZZLE = 8.0
@@ -528,7 +532,7 @@ class NewGame:
 
         saved_inv = self.save_data.get("inventory", [])
 
-        for i in range(self.hud.SLOTS):
+        for i in range(self.hud.TOTAL_SLOTS):
 
             if i >= len(saved_inv):
                 break
@@ -566,8 +570,18 @@ class NewGame:
 
             if item_id in self.item_defs and count > 0:
 
-                self.hud.items[i] = item_id
-                self.hud.counts[i] = min(
+                dest = i
+
+                # las pociones solo van a sus marcos y nada mas cae ahi
+                if self._is_potion(item_id) != self.hud.is_potion_slot(i):
+
+                    dest = self._free_slot_for(item_id)
+
+                    if dest is None:
+                        continue
+
+                self.hud.items[dest] = item_id
+                self.hud.counts[dest] = min(
                     count,
                     self._max_stack(item_id)
                 )
@@ -658,6 +672,25 @@ class NewGame:
         self.sphere_timer = 0.0
         self.sphere_total = 1.0
         self.sphere_mult = 1.0
+
+        # pociones
+        self.oil_mult = 1.0
+
+        self.ascua_timer = 0.0
+        self.ascua_total = 1.0
+        self.ascua_life = POTION_ASCUA_LIFE
+
+        self.invis_timer = 0.0
+        self.invis_total = 1.0
+
+        self.pspeed_timer = 0.0
+        self.pspeed_total = 1.0
+        self.pspeed_mult = 1.0
+        self.pspeed_burn = 1.0
+
+        self.ira_timer = 0.0
+        self.ira_total = 1.0
+        self.ira_mult = 1.5
 
         self.coin_gain = 0
         self.coin_gain_timer = 0.0
@@ -960,6 +993,20 @@ class NewGame:
         self.player.set_torch(False)
 
     def _burn_out(self):
+
+        # Poción de ascua: la luz se reenciende sola y la poción se gasta
+        if self.ascua_timer > 0 and self.has_match:
+
+            self.ascua_timer = 0.0
+            self.vida = max(0.01, float(self.ascua_life))
+
+            self.regen_left = 0.0
+
+            self._potion_fx((255, 110, 60))
+
+            self.show_message("¡Ascua! Tu luz se reencendió")
+
+            return
 
         audio.play("light_out")
 
@@ -1695,7 +1742,11 @@ class NewGame:
                 box = self.placeables.deposit(self, item_id)
 
                 if box is None:
-                    self.show_message("Inventario lleno")
+
+                    self.show_message(
+                        "Marcos de pociones llenos"
+                        if self._is_potion(item_id) else "Inventario lleno"
+                    )
                     return
 
                 self.items_picked += 1
@@ -1762,7 +1813,21 @@ class NewGame:
         self.coin_gain += amount
         self.coin_gain_timer = COIN_GAIN_TIME
 
+    def _is_potion(self, item_id):
+
+        return self.item_defs.get(item_id, {}).get("tipo") == "pocion"
+
     def _free_slot_for(self, item_id):
+
+        # las pociones solo entran en los 2 marcos de pociones (sin apilar)
+        if self._is_potion(item_id):
+
+            for i in range(self.hud.SLOTS, self.hud.TOTAL_SLOTS):
+
+                if self.hud.items[i] is None:
+                    return i
+
+            return None
 
         limit = self._max_stack(item_id)
 
@@ -1834,7 +1899,7 @@ class NewGame:
 
         dropped = 0
 
-        for slot in range(self.hud.SLOTS):
+        for slot in range(self.hud.TOTAL_SLOTS):
 
             item_id = self.hud.items[slot]
 
@@ -2011,6 +2076,13 @@ class NewGame:
                 f"Comiste una gelea: curaste {round(self.last_heal * 100)}%"
             )
 
+        elif item_id == "pocion_ascua":
+
+            self.show_message(
+                "Ascua armada: si tu luz se apaga, se reenciende sola "
+                f"({round(self.ascua_total / 60)} min)"
+            )
+
         else:
 
             self.show_message(
@@ -2057,11 +2129,66 @@ class NewGame:
 
         elif tipo == "velocidad":
 
-            self.player.movement.speed_mult = float(
-                e.get("multiplicador", 1.0)
-            )
+            self.oil_mult = float(e.get("multiplicador", 1.0))
             self.speed_total = float(e.get("duracion", 10.0))
             self.speed_timer = self.speed_total
+            self._refresh_speed()
+
+        elif tipo == "pocion_ascua":
+
+            if self.ascua_timer > 0:
+
+                self.show_message("Ya tenés el ascua armada")
+                return False
+
+            self.ascua_total = float(e.get("duracion", 180.0))
+            self.ascua_timer = self.ascua_total
+            self.ascua_life = float(e.get("vida", POTION_ASCUA_LIFE))
+
+            self._potion_fx((255, 90, 60))
+
+            self.show_message("Ascua armada: tu luz se reenciende sola")
+
+        elif tipo == "pocion_invisibilidad":
+
+            if self.invis_timer > 0:
+
+                self.show_message("Ya estás invisible")
+                return False
+
+            self.invis_total = float(e.get("duracion", 20.0))
+            self.invis_timer = self.invis_total
+
+            self._potion_fx((170, 120, 240))
+
+        elif tipo == "pocion_velocidad":
+
+            if self.pspeed_timer > 0:
+
+                self.show_message("Ya tenés la velocidad activa")
+                return False
+
+            self.pspeed_mult = float(e.get("multiplicador", 1.6))
+            self.pspeed_burn = float(e.get("consumo", 1.25))
+            self.pspeed_total = float(e.get("duracion", 10.0))
+            self.pspeed_timer = self.pspeed_total
+
+            self._refresh_speed()
+
+            self._potion_fx((90, 205, 245))
+
+        elif tipo == "pocion_ira":
+
+            if self.ira_timer > 0:
+
+                self.show_message("Ya estás con la ira activa")
+                return False
+
+            self.ira_mult = float(e.get("dano", 1.5))
+            self.ira_total = float(e.get("duracion", 15.0))
+            self.ira_timer = self.ira_total
+
+            self._potion_fx((255, 150, 50))
 
         elif tipo == "consumo_lento":
 
@@ -2153,9 +2280,10 @@ class NewGame:
 
         if "velocidad" in e:
 
-            self.player.movement.speed_mult = e["velocidad"]
+            self.oil_mult = float(e["velocidad"])
             self.speed_total = e.get("duracion", 10.0)
             self.speed_timer = self.speed_total
+            self._refresh_speed()
 
         if "consumo" in e:
 
@@ -2173,6 +2301,79 @@ class NewGame:
         if "escudo" in e:
 
             self.escudo = min(1.0, self.escudo + e["escudo"])
+
+    def _potion_fx(self, color):
+
+        self.fx.potion_burst(*self.player.rect.center, color)
+
+        audio.play("pickup")
+
+    @property
+    def invisible(self):
+
+        return self.invis_timer > 0
+
+    def _refresh_speed(self):
+        """Velocidad real = la MAYOR entre el aceite y la pocion (no se pisan)."""
+
+        mult = 1.0
+
+        if self.speed_timer > 0:
+            mult = max(mult, self.oil_mult)
+
+        if self.pspeed_timer > 0:
+            mult = max(mult, self.pspeed_mult)
+
+        self.player.movement.speed_mult = mult
+
+    def _break_invis(self):
+        """Atacar (golpe o bola de fuego) rompe la invisibilidad."""
+
+        if self.invis_timer <= 0:
+            return
+
+        self.invis_timer = 0.0
+
+        self.fx.potion_burst(*self.player.rect.center, (170, 120, 240))
+
+        self.show_message("¡Se rompió la invisibilidad!")
+
+    def _clear_potion_effects(self):
+
+        self.ascua_timer = 0.0
+        self.invis_timer = 0.0
+        self.pspeed_timer = 0.0
+        self.ira_timer = 0.0
+
+        self._refresh_speed()
+
+    def _update_potions(self, dt):
+
+        if self.ascua_timer > 0:
+            self.ascua_timer = max(0.0, self.ascua_timer - dt)
+
+        if self.invis_timer > 0:
+
+            self.invis_timer = max(0.0, self.invis_timer - dt)
+
+            if self.invis_timer <= 0:
+                self.fx.potion_burst(
+                    *self.player.rect.center, (170, 120, 240)
+                )
+
+        if self.pspeed_timer > 0:
+
+            self.pspeed_timer = max(0.0, self.pspeed_timer - dt)
+
+            if self.pspeed_timer <= 0:
+                self._refresh_speed()
+
+        if self.ira_timer > 0:
+            self.ira_timer = max(0.0, self.ira_timer - dt)
+
+        self.player.ghost_alpha = (
+            POTION_GHOST_ALPHA if self.invis_timer > 0 else 255
+        )
 
     def _draw_yellow_shield(self):
 
@@ -2230,6 +2431,22 @@ class NewGame:
 
         if self.sphere_timer > 0:
             active["esfera"] = self.sphere_timer / self.sphere_total
+
+        if self.ascua_timer > 0:
+            active["pocion_ascua"] = self.ascua_timer / self.ascua_total
+
+        if self.invis_timer > 0:
+            active["pocion_invisibilidad"] = (
+                self.invis_timer / self.invis_total
+            )
+
+        if self.pspeed_timer > 0:
+            active["pocion_velocidad"] = (
+                self.pspeed_timer / self.pspeed_total
+            )
+
+        if self.ira_timer > 0:
+            active["pocion_ira"] = self.ira_timer / self.ira_total
 
         if self.has_match and any(
             getattr(a, "mosquito_alert", False) for a in self.arenas
@@ -2371,7 +2588,9 @@ class NewGame:
 
         audio.play("swing")
 
-        if not self.melee.fury:
+        self._break_invis()
+
+        if not self.melee.fury and self.ira_timer <= 0:
 
             self.vida -= light_stats(
                 self.light_type
@@ -2553,6 +2772,15 @@ class NewGame:
 
         light = light_stats(self.light_type)
 
+        # Ira: +50% de dano y los golpes no gastan luz. "base_damage" se usa
+        # para decidir si el golpe se pinta como fuerte (no cambia con la ira).
+        base_damage = damage
+
+        if self.ira_timer > 0:
+
+            damage = damage * self.ira_mult
+            free = True
+
         tx, ty = target.rect.center
         px, py = self.player.rect.center
 
@@ -2565,7 +2793,7 @@ class NewGame:
             # antorcha hace 2 de dano base y no tiene que pintar todo azul.
             hit_heavy = bool(
                 self.melee.heavy
-                or (damage >= 2 and not self.melee.fury)
+                or (base_damage >= 2 and not self.melee.fury)
             )
 
         self.fx.hit(
@@ -2642,7 +2870,7 @@ class NewGame:
         else:
 
             audio.play(
-                "hit_heavy" if self.melee.heavy or damage >= 2 else "hit"
+                "hit_heavy" if self.melee.heavy or base_damage >= 2 else "hit"
             )
 
             target.take_damage(damage)
@@ -2796,7 +3024,9 @@ class NewGame:
         self.count_stat("fireballs")
         achievements.add_counter("fireballs")
 
-        if not fury:
+        self._break_invis()
+
+        if not fury and self.ira_timer <= 0:
 
             self.vida -= FIRE_COST * (
                 FIRE_HEAVY_COST_MULT if heavy else 1.0
@@ -3233,7 +3463,7 @@ class NewGame:
         inventory = []
 
         for i in range(
-            self.hud.SLOTS
+            self.hud.TOTAL_SLOTS
         ):
 
             item_id = self.hud.items[i]
@@ -3494,7 +3724,7 @@ class NewGame:
 
             lst.append(it)
 
-        for i in range(self.hud.SLOTS):
+        for i in range(self.hud.TOTAL_SLOTS):
 
             item_id = self.hud.items[i]
             count = self.hud.counts[i]
@@ -3532,9 +3762,11 @@ class NewGame:
 
         self._force_home = True
 
-        for i in range(self.hud.SLOTS):
+        for i in range(self.hud.TOTAL_SLOTS):
             self.hud.items[i] = None
             self.hud.counts[i] = 0
+
+        self._clear_potion_effects()
 
         # los objetos del mapa vuelven a aparecer
         self.collected = set()
@@ -3978,7 +4210,7 @@ class NewGame:
 
                 slot = controls.slot_for(event.key)
 
-                if slot < self.hud.SLOTS:
+                if slot < self.hud.TOTAL_SLOTS:
                     self.selected_slot = slot
 
             elif controls.matches("equipped", event.key):
@@ -4372,6 +4604,7 @@ class NewGame:
                 burn = (
                     self.base_burn
                     * self.burn_factor
+                    * (self.pspeed_burn if self.pspeed_timer > 0 else 1.0)
                 )
 
                 self.vida -= (
@@ -4389,6 +4622,8 @@ class NewGame:
             dt
         )
 
+        self._update_potions(dt)
+
 
         if self.speed_timer > 0:
 
@@ -4397,7 +4632,8 @@ class NewGame:
             if self.speed_timer <= 0:
 
                 self.speed_timer = 0
-                self.player.movement.speed_mult = 1.0
+                self.oil_mult = 1.0
+                self._refresh_speed()
 
         if self.burn_timer > 0:
 
@@ -4679,7 +4915,7 @@ class NewGame:
         if not isinstance(self.selected_slot, int):
             return None
 
-        if not 0 <= self.selected_slot < self.hud.SLOTS:
+        if not 0 <= self.selected_slot < self.hud.TOTAL_SLOTS:
             return None
 
         return self.hud.items[self.selected_slot]

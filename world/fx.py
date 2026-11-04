@@ -554,6 +554,27 @@ class FxManager:
             "t": 0.0, "dur": 1.0, "color": color,
         })
 
+    def potion_burst(self, x, y, color):
+        """Burbujas y destello al tomar una pocion."""
+
+        light = tuple(min(255, c + 70) for c in color)
+        white = (255, 252, 240)
+
+        for _ in range(22):
+
+            a = -math.pi / 2 + random.uniform(-1.3, 1.3)
+
+            self._spark(
+                x, y - 6, a, random.uniform(50, 170), random.uniform(0.45, 0.9),
+                random.choice((color, light, white)),
+                size=random.uniform(1.8, 3.0), drag=2.0, grav=-30,
+                streak=False,
+            )
+
+        self._spark(x, y, 0, 0, 0.30, light, size=30, drag=0)
+        self._ring(x, y, 3, 36, 0.40, color, 3)
+        self._ring(x, y, 3, 56, 0.55, light, 2, delay=0.06)
+
     def chest_burst(self, x, y):
         """Explosion dorada al abrir un cofre."""
 

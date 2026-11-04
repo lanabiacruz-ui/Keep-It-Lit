@@ -29,6 +29,7 @@ GROUPS = [
             ("use", "Usar / Tienda"),
             ("magnet", "Imán"),
             ("attack_mode", "Modo de ataque"),
+            ("equipped", "Luz equipada"),
         ],
     ),
     (
@@ -38,7 +39,8 @@ GROUPS = [
             ("slot2", "Casillero 2"),
             ("slot3", "Casillero 3"),
             ("slot4", "Casillero 4"),
-            ("equipped", "Luz equipada"),
+            ("potion1", "Poción 1"),
+            ("potion2", "Poción 2"),
         ],
     ),
 ]
@@ -59,9 +61,12 @@ DEFAULTS = {
     "slot3": pygame.K_3,
     "slot4": pygame.K_4,
     "equipped": pygame.K_5,
+    "potion1": pygame.K_6,
+    "potion2": pygame.K_7,
 }
 
-SLOT_ACTIONS = ("slot1", "slot2", "slot3", "slot4")
+# los dos ultimos son los marcos de pociones (casilleros 5 y 6 del inventario)
+SLOT_ACTIONS = ("slot1", "slot2", "slot3", "slot4", "potion1", "potion2")
 
 FIXED_KEYS = {
     pygame.K_UP,

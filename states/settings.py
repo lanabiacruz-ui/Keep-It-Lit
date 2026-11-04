@@ -134,8 +134,8 @@ class Settings:
         "TOP_Y": 292,
         "GROUP_Y": 318,
         "KEY_TOP": 332,
-        "KEY_STEP": 23,
-        "KEY_SIZE": (78, 20),
+        "KEY_STEP": 21,
+        "KEY_SIZE": (78, 18),
         "NAV_Y": 486,
         "NAV_CX": 872,
     }
