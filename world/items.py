@@ -15,6 +15,86 @@ HUD_DIR = (
 )
 
 
+# ---- vencimiento de lo que queda en el piso ----------------------------
+# Solo vencen los items con "expire_left" (lo que soltas con Q / Ctrl+Q, la
+# luz que soltas, lo que escupe la tienda y lo que se suelta al morir).
+# Los items del mapa y los de cofres / enemigos no tienen ese atributo.
+GROUND_LIFETIME = 300.0   # 5 minutos
+GROUND_BLINK = 30.0       # parpadea los ultimos 30 s
+GROUND_FADE = 0.7         # duracion del efecto al esfumarse
+
+
+def set_expiry(item, seconds=GROUND_LIFETIME):
+    """Marca un item del piso para que se esfume pasado `seconds`."""
+
+    item.expire_left = max(0.0, float(seconds))
+
+    return item
+
+
+def is_vanishing(item):
+
+    return getattr(item, "vanish_t", None) is not None
+
+
+def tick_expiry(items, dt, fx=None):
+    """Descuenta el tiempo de los items de `items` (una lista del mapa actual).
+
+    Solo corre para la lista que le pasan: los items de otro mapa no
+    avanzan. Cuando se acaba el tiempo arranca el efecto y despues se
+    saca de la lista.
+    """
+
+    for it in list(items):
+
+        vt = getattr(it, "vanish_t", None)
+
+        if vt is not None:
+
+            it.vanish_t = vt - dt
+
+            if it.vanish_t <= 0:
+                items.remove(it)
+
+            continue
+
+        left = getattr(it, "expire_left", None)
+
+        if left is None or getattr(it, "fly", None) is not None:
+            continue
+
+        left -= dt
+
+        if left > 0:
+            it.expire_left = left
+            continue
+
+        it.expire_left = 0.0
+        it.vanish_t = GROUND_FADE
+
+        if fx is not None:
+            fx.poof(*it.rect.center)
+
+
+def _blink_hidden(item):
+    """True si en este instante el item parpadeante esta "apagado"."""
+
+    left = getattr(item, "expire_left", None)
+
+    if left is None or left > GROUND_BLINK:
+        return False
+
+    # parpadea cada vez mas rapido a medida que se acaba
+    if left > 15:
+        period = 0.8
+    elif left > 5:
+        period = 0.5
+    else:
+        period = 0.25
+
+    return int(left / (period / 2)) % 2 == 1
+
+
 class MatchItem:
 
     WORLD_SIZE = 14           
@@ -290,7 +370,7 @@ class WorldItem(MatchItem):
 
     def is_near(self, player):
 
-        if self.fly is not None:
+        if self.fly is not None or is_vanishing(self):
             return False
 
         return super().is_near(player)
@@ -363,11 +443,40 @@ class WorldItem(MatchItem):
             )
         )
 
+    def _draw_vanish(self, screen, camera):
+
+        k = 1.0 - max(0.0, self.vanish_t) / GROUND_FADE
+
+        sprite = self._get_sprite(camera.zoom)
+
+        grow = 1.0 + 0.45 * k
+
+        w = max(2, int(sprite.get_width() * grow))
+        h = max(2, int(sprite.get_height() * grow))
+
+        spr = pygame.transform.smoothscale(sprite, (w, h))
+        spr.set_alpha(int(255 * (1.0 - k) ** 1.5))
+
+        dest = camera.apply(self.rect)
+
+        rise = int(10 * k * camera.zoom)
+
+        screen.blit(
+            spr, spr.get_rect(center=(dest.centerx, dest.centery - rise))
+        )
+
     def draw(self, screen, camera):
 
         f = self.fly
 
         if f is not None and f["delay"] > 0:
+            return
+
+        if is_vanishing(self):
+            self._draw_vanish(screen, camera)
+            return
+
+        if f is None and _blink_hidden(self):
             return
 
         if f is not None and f.get("fancy"):
@@ -456,10 +565,11 @@ class LightItem(MatchItem):
     update_fly = WorldItem.update_fly
     _draw_fancy_flight = WorldItem._draw_fancy_flight
     draw = WorldItem.draw
+    _draw_vanish = WorldItem._draw_vanish
 
     def is_near(self, player):
 
-        if self.fly is not None:
+        if self.fly is not None or is_vanishing(self):
             return False
 
         return super().is_near(player)

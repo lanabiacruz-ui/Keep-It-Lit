@@ -25,7 +25,11 @@ from world.items import (
     get_green_gem_icon,
     load_item_defs,
     load_spawn_zones,
-    make_spawn_items
+    make_spawn_items,
+    set_expiry,
+    tick_expiry,
+    is_vanishing,
+    GROUND_LIFETIME
 )
 from world.melee import Melee, TrainingDummy
 from world.fireball import Fireball, FireBurst
@@ -939,11 +943,13 @@ class NewGame:
         x, y = self.player.rect.center
 
         self.light_drops.append(
-            LightItem(
-                self.light_type,
-                x,
-                y,
-                life=self.vida
+            set_expiry(
+                LightItem(
+                    self.light_type,
+                    x,
+                    y,
+                    life=self.vida
+                )
             )
         )
 
@@ -1283,7 +1289,7 @@ class NewGame:
                     "Si te quedas sin objetos, agarra más del piso."
                 ),
                 "tuto": [
-                    "USAR: elige una casilla con un objeto y presiona F o click derecho. SOLTAR: con Q tiras el objeto elegido. Prueba las dos. Puedes volver a agarrar con E.",
+                    "USAR: elige una casilla con un objeto y presiona F o click derecho. SOLTAR: con Q tiras el objeto elegido (junto a una bolsa o un cofre va adentro). Prueba las dos. Puedes volver a agarrar con E, pero lo que queda en el piso se esfuma a los 5 minutos.",
                     "OBJETOS: la madera suma 25% de luz, la resina recupera 90% poco a poco y el aceite la deja en 75% y te da velocidad. La GELEA (la sueltan los slimes) cura al azar. Úsalos ANTES de quedarte sin luz.",
                 ],
                 "target": lambda g: (
@@ -1501,9 +1507,9 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo.",
-                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera. Ideales como base de descanso entre oleadas.",
-                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío o una fogata para recogerlos y colocarlos en otro lugar.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
+                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera, pero mientras está encendido los mosquitos no entran en su luz. El TACHO borra objetos: elige uno y haz click sobre él (Ctrl+click borra toda la casilla).",
+                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío, una fogata o un tacho para recogerlos y colocarlos en otro lugar.",
                 ],
                 "target": lambda g: (
                     None
@@ -1683,27 +1689,46 @@ class NewGame:
             slot = self._free_slot_for(item_id)
 
             if slot is None:
-                self.show_message("Inventario lleno")
-                return
 
-            if self.hud.items[slot] is None:
+                # inventario lleno: si hay una bolsa o un cofre al lado,
+                # va adentro
+                box = self.placeables.deposit(self, item_id)
 
-                self.hud.items[slot] = item_id
-                self.hud.counts[slot] = 1
+                if box is None:
+                    self.show_message("Inventario lleno")
+                    return
+
+                self.items_picked += 1
+
+                self.tuto_flags.add("picked")
+
+                audio.play("pickup")
+
+                self.show_message(
+                    f"{self._item_name(item_id)} guardado en "
+                    f"{'la bolsa' if box.kind == 'bolsa' else 'el cofre'}"
+                )
 
             else:
 
-                self.hud.counts[slot] += 1
+                if self.hud.items[slot] is None:
 
-            self.items_picked += 1
+                    self.hud.items[slot] = item_id
+                    self.hud.counts[slot] = 1
 
-            self.tuto_flags.add("picked")
+                else:
 
-            audio.play("pickup")
+                    self.hud.counts[slot] += 1
 
-            self.show_message(
-                f"Agarraste {self._item_name(item_id)}"
-            )
+                self.items_picked += 1
+
+                self.tuto_flags.add("picked")
+
+                audio.play("pickup")
+
+                self.show_message(
+                    f"Agarraste {self._item_name(item_id)}"
+                )
 
         for attr in ("key", "uid", "spawn_id", "id"):
 
@@ -1765,13 +1790,29 @@ class NewGame:
 
         x, y = self.player.rect.center
 
-        self.world_items.append(
-            WorldItem(
-                item_id,
-                x + random.randint(-12, 12),
-                y + random.randint(-12, 12)
+        # al lado de una bolsa o un cofre: lo que soltas va adentro
+        box = self.placeables.deposit(self, item_id)
+
+        if box is not None:
+
+            audio.play("pickup")
+
+            self.show_message(
+                f"{self._item_name(item_id)} guardado en "
+                f"{'la bolsa' if box.kind == 'bolsa' else 'el cofre'}"
             )
-        )
+
+        else:
+
+            self.world_items.append(
+                set_expiry(
+                    WorldItem(
+                        item_id,
+                        x + random.randint(-12, 12),
+                        y + random.randint(-12, 12)
+                    )
+                )
+            )
 
         self._take_one(slot)
 
@@ -1802,13 +1843,18 @@ class NewGame:
 
             for _ in range(max(1, int(self.hud.counts[slot]))):
 
-                self.world_items.append(
-                    WorldItem(
-                        item_id,
-                        x + random.randint(-18, 18),
-                        y + random.randint(-18, 18)
+                # primero a la bolsa / cofre de al lado; si no hay lugar, al piso
+                if self.placeables.deposit(self, item_id) is None:
+
+                    self.world_items.append(
+                        set_expiry(
+                            WorldItem(
+                                item_id,
+                                x + random.randint(-18, 18),
+                                y + random.randint(-18, 18)
+                            )
+                        )
                     )
-                )
 
                 dropped += 1
 
@@ -3330,6 +3376,9 @@ class NewGame:
 
                 it.death_drop = True
 
+                if e.get("ttl") is not None:
+                    set_expiry(it, e["ttl"])
+
             except Exception as error:
 
                 print(f"[drops] No se pudo cargar un item: {error}")
@@ -3356,19 +3405,31 @@ class NewGame:
 
             x, y = fly["dst"] if fly is not None else it.rect.center
 
+            # ya se esta esfumando: no se guarda
+            if is_vanishing(it):
+                continue
+
+            left = getattr(it, "expire_left", None)
+
             if isinstance(it, LightItem):
 
-                out.append({
+                entry = {
                     "k": "light", "id": it.kind, "life": float(it.life),
                     "x": int(x), "y": int(y), "map": map_name,
-                })
+                }
 
             else:
 
-                out.append({
+                entry = {
                     "k": "item", "id": it.item_id,
                     "x": int(x), "y": int(y), "map": map_name,
-                })
+                }
+
+            # tiempo que le queda en el piso (los demas items no vencen)
+            if left is not None:
+                entry["ttl"] = round(float(left), 1)
+
+            out.append(entry)
 
         return out
 
@@ -3419,6 +3480,9 @@ class NewGame:
         def launch(it, lst):
 
             it.death_drop = True
+
+            # lo que se suelta al morir tambien se esfuma a los 5 minutos
+            set_expiry(it)
 
             it.start_fly(
                 (cx, cy),
@@ -4511,6 +4575,10 @@ class NewGame:
             if getattr(drop, "fly", None) is not None:
                 drop.update_fly(dt)
 
+        # lo que quedo en el piso de ESTE mapa se va esfumando
+        tick_expiry(self.light_drops, dt, self.fx)
+        tick_expiry(self.world_items, dt, self.fx)
+
         px, py = self.player.rect.center
 
         magnet_on = self._magnet_active()
@@ -4654,10 +4722,16 @@ class NewGame:
 
         item_id = item.item_id
 
+        if is_vanishing(item):
+            return False
+
         if item_id in COIN_VALUES or item_id in ("gema", "gema_verde"):
             return True
 
-        return self._free_slot_for(item_id) is not None
+        return (
+            self._free_slot_for(item_id) is not None
+            or self.placeables.can_deposit(self, item_id)
+        )
 
     def _magnet_release(self, item):
 

@@ -33,12 +33,15 @@ CONTAINER_STACK = 15
 
 PLACE_RANGE = 72
 
-FARO_MAX = 90.0
-FARO_START = 30.0
-FARO_PER_CERA = 25.0
+# Candil: numeros puestos a ojo, hay que probarlos jugando.
+# Dura mas para alcanzar en una sala de combate, y mientras esta encendido
+# los mosquitos no entran en su luz ni se te pegan si estas adentro.
+FARO_MAX = 240.0
+FARO_START = 90.0
+FARO_PER_CERA = 30.0
 FARO_RADIUS = 140
 FOGATA_HEAL = 0.06
-FARO_HEAL = 0.015
+FARO_HEAL = 0.02
 
 FOGATA_MAX = 900.0
 FOGATA_START = 300.0
@@ -81,20 +84,27 @@ FUEL_PER_ITEM = {
     "fogata": FOGATA_PER_MADERA,
 }
 
-PLACE_ITEMS = ("cofre", "faro", "fogata")
+PLACE_ITEMS = ("cofre", "faro", "fogata", "tacho")
 
 WORLD_SIZE = {
     "bolsa": (16, 16),
     "cofre": (22, 18),
     "faro": (14, 16),
     "fogata": (20, 18),
+    "tacho": (16, 18),
 }
 
-ICON_IDS = ("bolsa", "cofre", "faro", "fogata")
+ICON_IDS = ("bolsa", "cofre", "faro", "fogata", "tacho")
 
 HAMMER_ITEM = "martillo"
 
-HAMMER_TARGETS = ("cofre", "fogata")
+HAMMER_TARGETS = ("cofre", "fogata", "tacho")
+
+# lo que el tacho NO se traga (para no perder algo caro por un click mal puesto)
+TRASH_PROTECTED = ("fogata", "cofre", "faro", "tacho", "martillo")
+
+# distancia a la que una bolsa / cofre recibe lo que soltas o agarras
+DEPOSIT_RANGE = REACH
 
 
 UI_DIR = HUD_DIR.parent / "ui"
@@ -112,6 +122,17 @@ PANEL_COLS = 4
 PANEL_MARGIN_X = 24
 PANEL_TOP = 56
 PANEL_BOTTOM = 32
+
+
+_CAP_FONT = []
+
+
+def _cap_font():
+
+    if not _CAP_FONT:
+        _CAP_FONT.append(pygame.font.Font(None, 22))
+
+    return _CAP_FONT[0]
 
 
 def _sprite_path(kind, suffix=""):
@@ -323,7 +344,39 @@ def _draw_fogata(W, H, flame=False):
     return s
 
 
+def _draw_tacho(W, H):
+
+    s = pygame.Surface((W, H), pygame.SRCALPHA)
+
+    lw = max(1, W // 24)
+    dark = (52, 56, 62)
+
+    body = [
+        (W * .16, H * .22), (W * .84, H * .22),
+        (W * .74, H * .96), (W * .26, H * .96),
+    ]
+
+    pygame.draw.polygon(s, (112, 118, 126), body)
+
+    for fx in (.36, .50, .64):
+        pygame.draw.line(
+            s, (82, 88, 96),
+            (W * fx, H * .30), (W * (.5 + (fx - .5) * .8), H * .90), lw
+        )
+
+    pygame.draw.polygon(s, dark, body, lw)
+
+    rim = pygame.Rect(int(W * .10), int(H * .12), int(W * .80), int(H * .16))
+
+    pygame.draw.ellipse(s, (150, 156, 164), rim)
+    pygame.draw.ellipse(s, dark, rim, lw)
+    pygame.draw.ellipse(s, (36, 38, 42), rim.inflate(-int(W * .22), -int(H * .08)))
+
+    return s
+
+
 _DRAWERS = {
+    "tacho": _draw_tacho,
     "bolsa": _draw_bolsa,
     "cofre": _draw_cofre,
     "faro": lambda W, H: _draw_faro(W, H, lit=True),
@@ -352,6 +405,10 @@ class Container:
     def total(self):
 
         return sum(s[1] for s in self.slots if s)
+
+    def capacity_total(self, stack_limit):
+
+        return len(self.slots) * stack_limit
 
     def add(self, item_id, stack_limit):
 
@@ -611,8 +668,30 @@ class Placeable:
         if self.near and self.uses_fuel:
             self._draw_fuel_bar(screen, r)
 
+        if self.near and self.container is not None:
+            self._draw_capacity(screen, r)
+
     def draw_extras(self, screen, r, clock):
         pass
+
+    def _draw_capacity(self, screen, r):
+
+        total = self.container.total()
+        cap = self.container.capacity_total(CONTAINER_STACK)
+
+        color = (255, 120, 90) if total >= cap else (255, 232, 170)
+
+        font = _cap_font()
+
+        text = f"{total}/{cap}"
+
+        img = font.render(text, True, color)
+        shade = font.render(text, True, (20, 12, 4))
+
+        pos = img.get_rect(midbottom=(r.centerx, r.top - 3))
+
+        screen.blit(shade, pos.move(1, 1))
+        screen.blit(img, pos)
 
     def _draw_fuel_bar(self, screen, r):
 
@@ -667,6 +746,13 @@ class Chest(Placeable):
     kind = "cofre"
     draggable = False
     container_slots = CHEST_SLOTS
+
+
+class Trash(Placeable):
+
+    # fijo, como el cofre: se recoge con el martillo
+    kind = "tacho"
+    draggable = False
 
 
 class Lighthouse(Placeable):
@@ -843,6 +929,7 @@ KINDS = {
     "cofre": Chest,
     "faro": Lighthouse,
     "fogata": Campfire,
+    "tacho": Trash,
 }
 
 
@@ -980,6 +1067,61 @@ class PlaceableManager:
     def spawn_bag(self, x, y, src=None, delay=0.0, collision_map=None):
 
         return self.spawn("bolsa", x, y, src=src, delay=delay)
+
+    def deposit(self, game, item_id):
+        """Guarda 1 unidad en la bolsa / cofre mas cercano con lugar.
+
+        Devuelve el contenedor o None si no hay ninguno al lado.
+        """
+
+        cands = [
+            (self._dist(game, o), o) for o in self.objects
+            if o.container is not None and o.fly is None
+            and self._dist(game, o) <= DEPOSIT_RANGE
+        ]
+
+        for _, obj in sorted(cands, key=lambda c: c[0]):
+
+            if obj.container.add(item_id, CONTAINER_STACK):
+                return obj
+
+        return None
+
+    def can_deposit(self, game, item_id):
+
+        for obj in self.objects:
+
+            if (
+                obj.container is None or obj.fly is not None
+                or self._dist(game, obj) > DEPOSIT_RANGE
+            ):
+                continue
+
+            for s in obj.container.slots:
+
+                if s is None or (
+                    s[0] == item_id and s[1] < CONTAINER_STACK
+                ):
+                    return True
+
+        return False
+
+    def mosquito_zones(self, game):
+        """(x, y, radio) de cada candil encendido, en coordenadas del mundo."""
+
+        zones = []
+
+        for obj in self.objects:
+
+            if obj.kind != "faro" or obj.fly is not None or not obj.lit:
+                continue
+
+            zones.append((
+                obj.rect.centerx, obj.rect.centery,
+                obj.heal_range(game.camera.zoom)
+            ))
+
+        return zones
 
     def _spot_free(self, game, rect):
 
@@ -1126,6 +1268,104 @@ class PlaceableManager:
 
         return True
 
+    def _trash_slot(self, game):
+
+        slot = game.selected_slot
+
+        if not isinstance(slot, int) or slot >= game.hud.SLOTS:
+            return None
+
+        return slot
+
+    def _use_trash(self, game, obj, whole):
+
+        slot = self._trash_slot(game)
+
+        if slot is None:
+
+            game.show_message("La luz equipada no se tira al tacho")
+
+            return True
+
+        item_id = game.hud.items[slot]
+
+        if item_id is None:
+
+            game.show_message("Elige un objeto y haz click sobre el tacho")
+
+            return True
+
+        if item_id in TRASH_PROTECTED:
+
+            game.show_message(
+                f"{game._item_name(item_id)} no se puede tirar al tacho"
+            )
+
+            return True
+
+        n = max(1, int(game.hud.counts[slot])) if whole else 1
+
+        for _ in range(n):
+            game._take_one(slot)
+
+        audio.play("pickup")
+
+        try:
+            game.fx.poof(*obj.rect.center)
+        except Exception:
+            pass
+
+        game.show_message(
+            f"Tiraste {n} × {game._item_name(item_id)}"
+            if n > 1 else f"Tiraste {game._item_name(item_id)}"
+        )
+
+        return True
+
+    def _draw_trash_target(self, game, screen):
+
+        if self._over_hud(game, pygame.mouse.get_pos()):
+            return
+
+        obj = self._under_mouse(game)
+
+        if obj is None or obj.kind != "tacho":
+            return
+
+        slot = self._trash_slot(game)
+
+        if slot is None or game.hud.items[slot] is None:
+            return
+
+        item_id = game.hud.items[slot]
+
+        sprite = obj._sprite(game.camera.zoom)
+        dest = game.camera.apply(obj.rect)
+
+        r = sprite.get_rect(midbottom=(dest.centerx, dest.bottom))
+
+        blocked = item_id in TRASH_PROTECTED
+
+        color = (240, 80, 70) if blocked else (255, 190, 70)
+
+        pygame.draw.rect(screen, color, r.inflate(6, 6), 2, border_radius=4)
+
+        text = (
+            "No se puede tirar" if blocked
+            else "Click: tirar 1  ·  Ctrl+click: tirar todo"
+        )
+
+        font = self._font(20)
+
+        img = font.render(text, True, color)
+        shade = font.render(text, True, (20, 12, 4))
+
+        pos = img.get_rect(midbottom=(r.centerx, r.top - 6))
+        pos.clamp_ip(screen.get_rect())
+
+        screen.blit(shade, pos.move(1, 1))
+        screen.blit(img, pos)
+
     def _draw_hammer_target(self, game, screen):
 
         if self._over_hud(game, pygame.mouse.get_pos()):
@@ -1190,7 +1430,7 @@ class PlaceableManager:
             if self._over_hud(game, pygame.mouse.get_pos()):
 
                 game.show_message(
-                    "Elige el martillo y haz click sobre un cofre o una fogata"
+                    "Elige el martillo y haz click sobre un cofre, una fogata o un tacho"
                 )
 
                 return True
@@ -1198,7 +1438,7 @@ class PlaceableManager:
             if not self._use_hammer(game):
 
                 game.show_message(
-                    "Acércate a un cofre o una fogata y haz click sobre ellos"
+                    "Acércate a un cofre, una fogata o un tacho y haz click sobre ellos"
                 )
 
             return True
@@ -1273,6 +1513,16 @@ class PlaceableManager:
                 self._use_hammer(game)
 
                 return True
+
+            if (
+                obj is not None
+                and obj.kind == "tacho"
+                and self.open_obj is None
+            ):
+
+                whole = bool(pygame.key.get_mods() & pygame.KMOD_CTRL)
+
+                return self._use_trash(game, obj, whole)
 
             held = self._held(game)
 
@@ -1427,6 +1677,8 @@ class PlaceableManager:
             self._draw_hammer_target(game, screen)
 
             return
+
+        self._draw_trash_target(game, screen)
 
         held = self._held(game)
 

@@ -371,6 +371,23 @@ class FxManager:
         self._ring(x, y, 3, 34 if heavy else 22, 0.26, core, 3)
         self._ring(x, y, 2, 54 if heavy else 36, 0.4, color, 2, delay=0.04)
 
+    def poof(self, x, y):
+        """Efecto suave cuando un item del piso se esfuma."""
+
+        for _ in range(10):
+
+            self._spark(
+                x + random.uniform(-4, 4), y + random.uniform(-3, 3),
+                -math.pi / 2 + random.uniform(-1.2, 1.2),
+                random.uniform(15, 55), random.uniform(0.4, 0.8),
+                random.choice(((200, 220, 255), (235, 242, 255))),
+                size=random.uniform(1.4, 2.6), drag=2.2, grav=-35,
+            )
+
+        self._spark(x, y, 0, 0, 0.3, (225, 236, 255), size=16, drag=0)
+
+        self._ring(x, y, 2, 18, 0.35, (200, 220, 255), 2)
+
     def muzzle(self, x, y, angle, heavy=False):
 
         color, core, hot = self.PALETTES["heavy" if heavy else "torch"]

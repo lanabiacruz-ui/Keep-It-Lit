@@ -82,6 +82,10 @@
           "precio": 45
         },
         {
+          "id": "tacho",
+          "precio": 15
+        },
+        {
           "id": "fogata",
           "precio": 100
         },

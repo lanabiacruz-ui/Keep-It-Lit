@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pygame
 
-from world.items import WorldItem, LightItem, HUD_DIR
+from world.items import WorldItem, LightItem, HUD_DIR, set_expiry
 from world.lights import LIGHTS
 
 
@@ -317,6 +317,9 @@ class Shopkeeper:
                 item = LightItem(item_id, *self.MOUTH)
             else:
                 item = WorldItem(item_id, *self.MOUTH)
+
+            # lo que escupe la tienda tambien se esfuma a los 5 minutos
+            set_expiry(item)
 
             landing = self._landing_point(collision_map)
 

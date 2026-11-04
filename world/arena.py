@@ -1414,8 +1414,51 @@ class Mosquito(Enemy):
         self.heading = away.normalize()
         self.turn_t = random.uniform(*MOSQUITO_TURN_TIME)
 
+    def _lamp_block(self, target, zones, dt, collision_map):
+        """Candil encendido: el mosquito no entra en su luz y, si estaba
+        pegado a vos y entras en la luz, se suelta."""
+
+        if self.attached:
+
+            for zx, zy, zr in zones:
+
+                if math.hypot(target.x - zx, target.y - zy) <= zr:
+
+                    self._detach(target)
+                    self.rest_t = max(self.rest_t, MOSQUITO_REPEL_REST)
+
+                    return True
+
+            return False
+
+        for zx, zy, zr in zones:
+
+            away = self.pos - pygame.Vector2(zx, zy)
+            dist = away.length()
+
+            if dist > zr:
+                continue
+
+            if dist < 0.01:
+                away = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+            else:
+                away = away / dist
+
+            self.alert = False
+            self.returning = False
+            self.phase = "leave"
+            self.rest_t = max(self.rest_t, MOSQUITO_REPEL_REST)
+            self.flee_t = max(self.flee_t, MOSQUITO_REPEL_FLEE)
+            self.heading = away
+
+            self._wander(dt, collision_map, MOSQUITO_FLEE_SPEED, turn=False)
+
+            return True
+
+        return False
+
     def update(self, dt, target, collision_map, light_on, light_radius,
-               repel=False):
+               repel=False, lamp_zones=()):
 
         target = pygame.Vector2(target)
         self.last_target = target.copy()
@@ -1431,6 +1474,11 @@ class Mosquito(Enemy):
 
 
         if repel and self._repelled(target, light_radius, dt, collision_map):
+            return
+
+        if lamp_zones and self._lamp_block(
+            target, lamp_zones, dt, collision_map
+        ):
             return
 
 
@@ -5682,11 +5730,17 @@ class Arena:
         light_world = game._light_radius() / game.camera.zoom if light_on else 0.0
         repel = light_on and game.repel_timer > 0
 
+        # zonas de los candiles encendidos: los mosquitos no entran
+        lamp_zones = (
+            game.placeables.mosquito_zones(game)
+            if getattr(game, "placeables", None) is not None else ()
+        )
+
         for enemy in list(self.enemies):
             if isinstance(enemy, BOSS_TYPES):
                 self._update_boss(game, enemy, dt, target, body)
             elif isinstance(enemy, Mosquito):
-                enemy.update(dt, target, game.collision_map, light_on, light_world, repel)
+                enemy.update(dt, target, game.collision_map, light_on, light_world, repel, lamp_zones)
                 if enemy.attached and enemy.damage_t <= 0.0:
                     game.take_damage(MOSQUITO_DAMAGE)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL

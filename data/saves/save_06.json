@@ -2,30 +2,27 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-03T21:01:36",
+    "last_played": "2026-11-04T01:11:02",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 976,
-    "y": 162,
-    "coins": 93517,
+    "x": 892,
+    "y": 158,
+    "coins": 93336,
     "gems": 4,
     "gems_green": 1,
     "has_match": true,
     "light": "antorcha",
     "vida": 1.0,
-    "escudo": 0.5,
+    "escudo": 0.75,
     "inventory": [
+        null,
         [
-            "aceite",
-            5
+            "polvora",
+            6
         ],
         [
             "hongo_azul",
-            5
-        ],
-        [
-            "polvora",
-            15
+            7
         ],
         [
             "repelente",
@@ -33,17 +30,19 @@
         ]
     ],
     "collected": [
-        "moneda_pasillo_der#0",
-        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#1",
-        "moneda_sala_central#1",
-        "moneda_sala_cofres#0",
         "moneda_pasillo_cofres#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_cofres#1",
-        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#0"
+        "moneda_sala_central#1",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_der#0",
+        "moneda_sala_cofres#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_izq#0",
+        "madera_01#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
@@ -92,13 +91,47 @@
             "x": 1013,
             "y": 169,
             "slots": [
+                [
+                    "aceite",
+                    8
+                ],
                 null,
                 null,
                 null,
                 null,
                 null,
                 null,
-                null,
+                null
+            ]
+        },
+        {
+            "t": "faro",
+            "x": 1035,
+            "y": 152,
+            "fuel": 36.0
+        },
+        {
+            "t": "tacho",
+            "x": 1030,
+            "y": 72
+        },
+        {
+            "t": "bolsa",
+            "x": 957,
+            "y": 162,
+            "slots": [
+                [
+                    "aceite",
+                    15
+                ],
+                [
+                    "cera",
+                    2
+                ],
+                [
+                    "aceite",
+                    4
+                ],
                 null
             ]
         }
@@ -120,9 +153,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1381,
+        "items_used": 1393,
         "chests_opened": 57,
-        "purchases": 77,
+        "purchases": 80,
         "fireballs": 3018,
         "kills": 368
     },
@@ -3305,13 +3338,6 @@
         },
         {
             "k": "item",
-            "id": "aceite",
-            "x": 1015,
-            "y": 124,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "hongo_azul",
             "x": 966,
             "y": 124,
@@ -3382,20 +3408,6 @@
         },
         {
             "k": "item",
-            "id": "polvora",
-            "x": 955,
-            "y": 147,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 947,
-            "y": 154,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "aceite",
             "x": 940,
             "y": 151,
@@ -3413,13 +3425,6 @@
             "id": "hongo_azul",
             "x": 994,
             "y": 142,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 960,
-            "y": 166,
             "map": "mapa1"
         },
         {
@@ -4138,13 +4143,6 @@
         },
         {
             "k": "item",
-            "id": "cera",
-            "x": 1003,
-            "y": 133,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "madera",
             "x": 997,
             "y": 143,
@@ -4155,13 +4153,6 @@
             "id": "madera",
             "x": 1003,
             "y": 134,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "madera",
-            "x": 1001,
-            "y": 120,
             "map": "mapa1"
         },
         {
@@ -4209,13 +4200,6 @@
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 963,
-            "y": 169,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
             "x": 939,
             "y": 167,
             "map": "mapa1"
@@ -4244,20 +4228,6 @@
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 933,
-            "y": 174,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 949,
-            "y": 167,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
             "x": 958,
             "y": 164,
             "map": "mapa1"
@@ -4267,48 +4237,6 @@
             "id": "hongo_azul",
             "x": 978,
             "y": 168,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 936,
-            "y": 163,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 915,
-            "y": 154,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 917,
-            "y": 153,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 926,
-            "y": 152,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 924,
-            "y": 155,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 919,
-            "y": 161,
             "map": "mapa1"
         },
         {
@@ -4363,13 +4291,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 941,
-            "y": 162,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 1003,
             "y": 159,
             "map": "mapa1"
@@ -4393,13 +4314,6 @@
             "id": "aceite",
             "x": 1024,
             "y": 161,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 916,
-            "y": 159,
             "map": "mapa1"
         },
         {
@@ -4440,27 +4354,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 924,
-            "y": 160,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 928,
-            "y": 162,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 904,
-            "y": 161,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 960,
             "y": 171,
             "map": "mapa1"
@@ -4489,13 +4382,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 914,
-            "y": 152,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 989,
             "y": 157,
             "map": "mapa1"
@@ -4510,13 +4396,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 964,
-            "y": 168,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 988,
             "y": 162,
             "map": "mapa1"
@@ -4526,13 +4405,6 @@
             "id": "aceite",
             "x": 1008,
             "y": 175,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 962,
-            "y": 168,
             "map": "mapa1"
         },
         {
@@ -4580,13 +4452,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 928,
-            "y": 162,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 1006,
             "y": 168,
             "map": "mapa1"
@@ -4601,13 +4466,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 927,
-            "y": 164,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 991,
             "y": 159,
             "map": "mapa1"
@@ -4617,13 +4475,6 @@
             "id": "aceite",
             "x": 986,
             "y": 169,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 907,
-            "y": 157,
             "map": "mapa1"
         },
         {
@@ -4678,20 +4529,6 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 929,
-            "y": 162,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 920,
-            "y": 163,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 1004,
             "y": 161,
             "map": "mapa1"
@@ -4713,22 +4550,8 @@
         {
             "k": "item",
             "id": "aceite",
-            "x": 895,
-            "y": 165,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
             "x": 1004,
             "y": 151,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 891,
-            "y": 155,
             "map": "mapa1"
         },
         {
@@ -4742,13 +4565,6 @@
             "k": "item",
             "id": "aceite",
             "x": 996,
-            "y": 164,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 940,
             "y": 164,
             "map": "mapa1"
         },
@@ -5384,41 +5200,6 @@
         },
         {
             "k": "item",
-            "id": "hongo_azul",
-            "x": 950,
-            "y": 162,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 951,
-            "y": 164,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 952,
-            "y": 160,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 944,
-            "y": 165,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 944,
-            "y": 163,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
             "id": "polvora",
             "x": 937,
             "y": 154,
@@ -5427,36 +5208,8 @@
         {
             "k": "item",
             "id": "polvora",
-            "x": 876,
-            "y": 146,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
             "x": 865,
             "y": 129,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 884,
-            "y": 150,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 880,
-            "y": 145,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 878,
-            "y": 145,
             "map": "mapa1"
         },
         {
@@ -5513,13 +5266,6 @@
             "id": "polvora",
             "x": 887,
             "y": 141,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 883,
-            "y": 150,
             "map": "mapa1"
         },
         {
@@ -5821,13 +5567,6 @@
             "id": "repelente",
             "x": 576,
             "y": 557,
-            "map": "mapa1"
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 894,
-            "y": 157,
             "map": "mapa1"
         },
         {
@@ -8237,6 +7976,86 @@
             "x": 521,
             "y": 59,
             "map": "mapa1"
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 1006,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 75.8
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 987,
+            "y": 151,
+            "map": "mapa1",
+            "ttl": 76.0
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 997,
+            "y": 163,
+            "map": "mapa1",
+            "ttl": 76.2
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 944,
+            "y": 171,
+            "map": "mapa1",
+            "ttl": 76.3
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 965,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 76.5
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 1017,
+            "y": 169,
+            "map": "mapa1",
+            "ttl": 77.0
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 958,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 77.2
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 1004,
+            "y": 155,
+            "map": "mapa1",
+            "ttl": 77.9
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 1016,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 78.3
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 943,
+            "y": 175,
+            "map": "mapa1",
+            "ttl": 78.6
         },
         {
             "k": "light",
