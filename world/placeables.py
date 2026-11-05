@@ -1332,13 +1332,25 @@ class PlaceableManager:
         return True
 
     def _trash_slot(self, game):
+        """Casillero que se tira: items, pociones o la luz equipada."""
 
         slot = game.selected_slot
 
-        if not isinstance(slot, int) or slot >= game.hud.SLOTS:
+        if slot == "equipped":
+            return slot
+
+        if not isinstance(slot, int) or not 0 <= slot < game.hud.TOTAL_SLOTS:
             return None
 
         return slot
+
+    def _trash_item(self, game, slot):
+        """id de lo que hay en ese casillero (la luz equipada incluida)."""
+
+        if slot == "equipped":
+            return game.light_type if game.has_match else None
+
+        return game.hud.items[slot]
 
     def _use_trash(self, game, obj, whole):
 
@@ -1346,11 +1358,11 @@ class PlaceableManager:
 
         if slot is None:
 
-            game.show_message("La luz equipada no se tira al tacho")
+            game.show_message("Elige un objeto y haz click sobre el tacho")
 
             return True
 
-        item_id = game.hud.items[slot]
+        item_id = self._trash_item(game, slot)
 
         if item_id is None:
 
@@ -1366,10 +1378,18 @@ class PlaceableManager:
 
             return True
 
-        n = max(1, int(game.hud.counts[slot])) if whole else 1
+        if slot == "equipped":
 
-        for _ in range(n):
-            game._take_one(slot)
+            n = 1
+
+            game._trash_light()
+
+        else:
+
+            n = max(1, int(game.hud.counts[slot])) if whole else 1
+
+            for _ in range(n):
+                game._take_one(slot)
 
         audio.play("pickup")
 
@@ -1397,10 +1417,13 @@ class PlaceableManager:
 
         slot = self._trash_slot(game)
 
-        if slot is None or game.hud.items[slot] is None:
+        if slot is None:
             return
 
-        item_id = game.hud.items[slot]
+        item_id = self._trash_item(game, slot)
+
+        if item_id is None:
+            return
 
         sprite = obj._sprite(game.camera.zoom)
         dest = game.camera.apply(obj.rect)
@@ -1415,6 +1438,7 @@ class PlaceableManager:
 
         text = (
             "No se puede tirar" if blocked
+            else "Click: tirar la luz" if slot == "equipped"
             else "Click: tirar 1  ·  Ctrl+click: tirar todo"
         )
 

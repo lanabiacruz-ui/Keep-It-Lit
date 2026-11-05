@@ -325,14 +325,6 @@ class WorldItem(MatchItem):
             "llave_oro",
         )
 
-        if item_id == "llave_oro":
-
-            # un poco mas grande que una gema para que se vea bien
-            center = self.rect.center
-            self.WORLD_SIZE = 22
-            self.rect = pygame.Rect(0, 0, 22, 22)
-            self.rect.center = center
-
         self.fly = None
         self._lift = 0.0
 

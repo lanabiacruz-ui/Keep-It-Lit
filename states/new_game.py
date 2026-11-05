@@ -1009,6 +1009,15 @@ class NewGame:
 
         self.player.set_torch(False)
 
+    def _trash_light(self):
+        """Tira la luz equipada al tacho: desaparece, no queda en el piso."""
+
+        self.has_match = False
+
+        self.hud.equip(None)
+
+        self.player.set_torch(False)
+
     def _burn_out(self):
 
         # Poción de ascua: la luz se reenciende sola y la poción se gasta
@@ -1811,6 +1820,50 @@ class NewGame:
         if item in self.world_items:
             self.world_items.remove(item)
 
+    def add_gold_key(self, amount=1):
+        """Entrega la llave dorada como item; si no hay lugar, cae al piso."""
+
+        for _ in range(max(1, int(amount))):
+
+            slot = self._free_slot_for("llave_oro")
+
+            if slot is None:
+
+                x, y = self.player.rect.center
+
+                self.world_items.append(WorldItem("llave_oro", x, y))
+
+                self.show_message(
+                    "Inventario lleno: la llave dorada quedó en el piso"
+                )
+
+                continue
+
+            if self.hud.items[slot] is None:
+
+                self.hud.items[slot] = "llave_oro"
+                self.hud.counts[slot] = 1
+
+            else:
+
+                self.hud.counts[slot] += 1
+
+            audio.play("pickup")
+
+    def _take_gold_key(self):
+        """Gasta una llave dorada de la hotbar (la que sea, no hace falta
+        tenerla elegida)."""
+
+        for slot, item_id in enumerate(self.hud.items):
+
+            if item_id == "llave_oro":
+
+                self._take_one(slot)
+
+                return True
+
+        return False
+
     def add_coins(self, amount):
 
         amount = int(amount)
@@ -1864,6 +1917,54 @@ class NewGame:
 
         return None
 
+    # tamano con el que un item suelto choca con paredes, puertas y mesas
+    DROP_BOX = 12
+
+    def _drop_landing(self, reach):
+        """Donde cae un item que soltas: sale hacia un lado al azar y se
+        frena contra la primera pared (o puerta, o mesa) que encuentra, asi
+        nunca queda adentro de algo ni en un lugar al que no se pueda ir."""
+
+        px, py = self.player.rect.center
+
+        probe = pygame.Rect(0, 0, self.DROP_BOX, self.DROP_BOX)
+
+        best = (px, py)
+        best_d = -1.0
+
+        for _ in range(8):
+
+            angle = random.uniform(0, math.tau)
+            want = random.uniform(0.35, 1.0) * reach
+
+            dx, dy = math.cos(angle), math.sin(angle)
+
+            last = (px, py)
+            d = 2.0
+
+            while d <= want:
+
+                x, y = px + dx * d, py + dy * d
+
+                probe.center = (int(x), int(y))
+
+                if not self.collision_map.can_move(probe):
+                    break
+
+                last = (x, y)
+                d += 2.0
+
+            reached = math.hypot(last[0] - px, last[1] - py)
+
+            # sirve la primera direccion que llega casi donde queria
+            if reached >= want * 0.8:
+                return last
+
+            if reached > best_d:
+                best, best_d = last, reached
+
+        return best
+
     def drop_item(self, slot):
 
         item_id = self.hud.items[slot]
@@ -1887,14 +1988,10 @@ class NewGame:
 
         else:
 
+            lx, ly = self._drop_landing(16)
+
             self.world_items.append(
-                set_expiry(
-                    WorldItem(
-                        item_id,
-                        x + random.randint(-12, 12),
-                        y + random.randint(-12, 12)
-                    )
-                )
+                set_expiry(WorldItem(item_id, lx, ly))
             )
 
         self._take_one(slot)
@@ -1929,14 +2026,10 @@ class NewGame:
                 # primero a la bolsa / cofre de al lado; si no hay lugar, al piso
                 if self.placeables.deposit(self, item_id) is None:
 
+                    lx, ly = self._drop_landing(26)
+
                     self.world_items.append(
-                        set_expiry(
-                            WorldItem(
-                                item_id,
-                                x + random.randint(-18, 18),
-                                y + random.randint(-18, 18)
-                            )
-                        )
+                        set_expiry(WorldItem(item_id, lx, ly))
                     )
 
                 dropped += 1
@@ -1978,6 +2071,13 @@ class NewGame:
 
             self.show_message(
                 "Mantené click derecho para ver el mapa"
+            )
+            return
+
+        if item_id == "llave_oro":
+
+            self.show_message(
+                "Golpea la puerta de oro con tu luz para abrirla"
             )
             return
 
@@ -2825,7 +2925,26 @@ class NewGame:
 
         if isinstance(target, Door):
 
-            if not target.breakable:
+            if getattr(target, "is_gold", False) and not target.broken:
+
+                if self._take_gold_key():
+
+                    target.broken = True
+
+                    audio.play("door_break")
+
+                    self.show_message("¡Abriste la puerta de oro!")
+
+                else:
+
+                    target.resist()
+                    audio.play("door_resist")
+
+                    self.show_message(
+                        "Necesitas la llave dorada del jefe de la Zona 1"
+                    )
+
+            elif not target.breakable:
 
                 target.resist()
                 audio.play("door_resist")

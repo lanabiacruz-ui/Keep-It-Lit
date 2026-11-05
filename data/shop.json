@@ -71,6 +71,27 @@
       ]
     },
     {
+      "nombre": "Pociones",
+      "items": [
+        {
+          "id": "pocion_ascua",
+          "precio": 90
+        },
+        {
+          "id": "pocion_invisibilidad",
+          "precio": 110
+        },
+        {
+          "id": "pocion_velocidad",
+          "precio": 95
+        },
+        {
+          "id": "pocion_ira",
+          "precio": 100
+        }
+      ]
+    },
+    {
       "nombre": "Construcción",
       "items": [
         {
@@ -93,15 +114,6 @@
           "id": "faro",
           "precio": 55
         }
-            ]
-    },
-    {
-      "nombre": "Pociones",
-      "items": [
-        { "id": "pocion_ascua", "precio": 90 },
-        { "id": "pocion_invisibilidad", "precio": 110 },
-        { "id": "pocion_velocidad", "precio": 95 },
-        { "id": "pocion_ira", "precio": 100 }
       ]
     }
   ]

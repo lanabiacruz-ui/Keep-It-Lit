@@ -12,7 +12,7 @@ from world.lights import LIGHTS
 from ui.shop_plan import (
     KIND_ITEM, KIND_LIGHT, KIND_POTION,
     kind_range, light_index, plan_cap, plan_delivery,
-    sanitize_draft, total_slots,
+    sanitize_draft, slot_kind, total_slots,
 )
 
 
@@ -48,6 +48,9 @@ IMAGES = {
     "inv_empty": "tienda_slot_vacio.png",
     # boton "x15" al lado del +  (opcional: si falta se dibuja por codigo)
     "bulk": "tienda_x15.png",
+    # globito que aparece al pasar el mouse por un casillero de la hotbar
+    # (opcional: si falta se dibuja por codigo)
+    "tip": "tienda_tooltip.png",
 }
 
 # sprites del HUD que se reutilizan para dibujar la hotbar de la tienda
@@ -64,7 +67,7 @@ HUD_IMAGES = {
 }
 
 OPTIONAL_IMAGES = (
-    "info", "tab", "tab_on", "inv_panel", "inv_empty", "bulk",
+    "info", "tab", "tab_on", "inv_panel", "inv_empty", "bulk", "tip",
     *HUD_IMAGES,
 )
 
@@ -133,6 +136,19 @@ HOTBAR_LIGHT = 64
 HOTBAR_GROUP_GAP = 18
 POP_TIME = 0.22
 
+C_SELECT = (125, 211, 252)
+
+# Globito de los casilleros: tamaño fijo de la imagen tienda_tooltip.png y
+# margen interno donde se escribe el texto (el resto es marco)
+TIP_W = 260
+TIP_H = 116
+TIP_PAD_X = 20
+TIP_PAD_Y = 18
+
+# Cuadro de compra de la pestaña Inventario (a la derecha de la hotbar)
+INV_BOX_GAP = 12
+INV_BTN_H = 34
+
 C_SHADOW = (12, 14, 22)
 
 # La bolsa y el candil no se guardan en un casillero: salen al piso
@@ -155,8 +171,6 @@ def skin_of(item_id):
 
     return skin_lib.get(item_id[len(skin_lib.SHOP_PREFIX):])
 
-INV_ROW_STEP = 44
-
 # Cantidad que suma el boton "x15" de cada fila
 BULK_AMOUNT = 15
 BULK_SIZE = (32, 20)
@@ -170,6 +184,7 @@ class ShopUI:
 
     LIST_W = 570
     COLS = 3
+    INV_COLS = 4
     CARD_W = 182
     CARD_H = 104
     GAP = 12
@@ -245,6 +260,10 @@ class ShopUI:
 
         self.tab = "shop"
 
+        # casillero elegido en la hotbar: ahi van los productos que tocas
+        # (None = automatico: el mismo item o el primer lugar libre)
+        self.sel_slot = None
+
         self.message = ""
         self.message_timer = 0.0
 
@@ -279,10 +298,11 @@ class ShopUI:
 
         inv_top = self.hotbar_rect.bottom + 8
 
+        # en la pestaña Inventario la lista de productos ocupa todo el ancho
         self.list_rect_inv = pygame.Rect(
             self.list_rect_shop.x,
             inv_top,
-            self.LIST_W,
+            self.panel.w - self.PAD * 2,
             self.list_rect_shop.bottom - inv_top
         )
 
@@ -308,17 +328,55 @@ class ShopUI:
 
         self.total_pos_y = foot_top + 14
 
-        self.trash_rect = pygame.Rect(0, 0, 40, 40)
-        self.trash_rect.bottomright = (
+        self.trash_rect_shop = pygame.Rect(0, 0, 40, 40)
+        self.trash_rect_shop.bottomright = (
             self.cart_rect.right - 16,
             self.cart_rect.bottom - 16
         )
 
-        self.buy_rect = pygame.Rect(
+        self.buy_rect_shop = pygame.Rect(
             self.cart_rect.x + 16,
-            self.trash_rect.y,
-            self.trash_rect.x - 8 - (self.cart_rect.x + 16),
+            self.trash_rect_shop.y,
+            self.trash_rect_shop.x - 8 - (self.cart_rect.x + 16),
             40
+        )
+
+        # cuadro de compra de la pestaña Inventario: total, comprar y tacho
+        box_x = self.hotbar_rect.right + INV_BOX_GAP
+
+        self.inv_box = pygame.Rect(
+            box_x,
+            self.hotbar_rect.y,
+            self.panel.right - self.PAD - box_x,
+            HOTBAR_H
+        )
+
+        self.inv_trash_rect = pygame.Rect(0, 0, INV_BTN_H, INV_BTN_H)
+        self.inv_trash_rect.bottomright = (
+            self.inv_box.right - 10,
+            self.inv_box.y + 32 + INV_BTN_H
+        )
+
+        self.inv_buy_rect = pygame.Rect(
+            self.inv_box.x + 10,
+            self.inv_trash_rect.y,
+            self.inv_trash_rect.x - 8 - (self.inv_box.x + 10),
+            INV_BTN_H
+        )
+
+        self.inv_box_plate = pygame.Surface(
+            self.inv_box.size, pygame.SRCALPHA
+        )
+
+        plate = self.inv_box_plate.get_rect()
+
+        pygame.draw.rect(
+            self.inv_box_plate, (16, 20, 31, 150), plate, border_radius=14
+        )
+
+        pygame.draw.rect(
+            self.inv_box_plate, (10, 13, 21, 230), plate,
+            width=2, border_radius=14
         )
 
         self.coin_pill = pygame.Rect(
@@ -362,6 +420,34 @@ class ShopUI:
         return (
             self.list_rect_inv if self.tab == "inv" else self.list_rect_shop
         )
+
+    @property
+    def buy_rect(self):
+
+        return self.inv_buy_rect if self.tab == "inv" else self.buy_rect_shop
+
+    @property
+    def trash_rect(self):
+
+        return (
+            self.inv_trash_rect if self.tab == "inv"
+            else self.trash_rect_shop
+        )
+
+    @property
+    def cards(self):
+
+        return self._layouts[self.tab][0]
+
+    @property
+    def labels(self):
+
+        return self._layouts[self.tab][1]
+
+    @property
+    def content_h(self):
+
+        return self._layouts[self.tab][2]
 
     @property
     def arrow_center(self):
@@ -604,6 +690,14 @@ class ShopUI:
         if kind == KIND_LIGHT:
             return self.light_idx
 
+        # si elegiste un casillero de ese tipo, va ahi
+        if (
+            self.sel_slot is not None
+            and slot_kind(self.sel_slot, self.inv_slots, self.potion_slots)
+            == kind
+        ):
+            return self.sel_slot
+
         lo, hi = kind_range(kind, self.inv_slots, self.potion_slots)
 
         for n in range(lo, hi):
@@ -625,8 +719,12 @@ class ShopUI:
 
         slot = self.inventory[n]
 
-        if slot is None or slot[0] != item_id:
+        if slot is None:
             return False
+
+        # el casillero tiene otra cosa
+        if slot[0] != item_id:
+            return True
 
         return slot[1] >= plan_cap(self.kind_of(item_id))
 
@@ -680,6 +778,9 @@ class ShopUI:
         slot = self.inventory[slot_index]
 
         if slot is not None and slot[0] != item_id:
+
+            self._flash("Ese casillero ya tiene otra cosa: vacialo primero")
+
             return
 
         current = 0 if slot is None else slot[1]
@@ -742,39 +843,6 @@ class ShopUI:
 
         return self.inv_total() if self.tab == "inv" else self.total()
 
-    def _inv_rows(self):
-        """Filas del resumen: solo los casilleros que tienen algo."""
-
-        rows = []
-
-        shown = 0
-
-        for n, slot in enumerate(self.inventory):
-
-            if slot is None:
-                continue
-
-            y = (
-                self.rows_rect.y + shown * INV_ROW_STEP
-                - int(self.cart_scroll)
-            )
-
-            shown += 1
-
-            row = pygame.Rect(
-                self.rows_rect.x, y, self.rows_rect.width, INV_ROW_STEP - 2
-            )
-
-            bulk = pygame.Rect(
-                row.right - 6 - BULK_SIZE[0], row.y + 11, *BULK_SIZE
-            )
-            plus = pygame.Rect(bulk.x - 24, row.y + 11, 20, 20)
-            minus = pygame.Rect(plus.x - 24, row.y + 11, 20, 20)
-
-            rows.append((n, slot, row, minus, plus, bulk))
-
-        return rows
-
     def _slot_at(self, pos):
 
         for n, rect in enumerate(self.slot_rects):
@@ -812,28 +880,27 @@ class ShopUI:
 
         slot = self.inventory[n]
 
-        if slot is None:
+        if button == 1:
+
+            if slot is not None and self._clear_rect(
+                self.slot_rects[n]
+            ).collidepoint(pos):
+
+                self.inventory[n] = None
+
+                return
+
+            # click izquierdo: elegir casillero (otra vez: volver a auto)
+            self.sel_slot = None if self.sel_slot == n else n
+
             return
 
-        if button == 1 and self._clear_rect(self.slot_rects[n]).collidepoint(
-            pos
-        ):
-
-            self.inventory[n] = None
-            self.cart_scroll = min(self.cart_scroll, self._cart_max_scroll())
-
+        if slot is None:
             return
 
         step = 5 if pygame.key.get_mods() & pygame.KMOD_SHIFT else 1
 
-        if button == 1:
-
-            if n != self.light_idx:
-                self.inv_add(slot[0], slot_index=n, amount=step)
-
-        else:
-
-            self.inv_remove(slot_index=n, amount=step)
+        self.inv_remove(slot_index=n, amount=step)
 
     def set_tab(self, tab):
 
@@ -965,36 +1032,47 @@ class ShopUI:
 
     def _layout(self):
 
-        self.labels = []
-        self.cards = []
+        self._layouts = {
+            "shop": self._build_cards(self.COLS, self.CARD_W),
+            "inv": self._build_cards(
+                self.INV_COLS,
+                (self.list_rect_inv.w - (self.INV_COLS - 1) * self.GAP)
+                // self.INV_COLS
+            ),
+        }
+
+    def _build_cards(self, cols, card_w):
+
+        labels = []
+        cards = []
 
         y = 0
 
         for sec in self.catalog:
 
-            self.labels.append((y, sec["nombre"]))
+            labels.append((y, sec["nombre"]))
 
             y += 30
 
             for i, it in enumerate(sec["items"]):
 
-                col = i % self.COLS
-                row = i // self.COLS
+                col = i % cols
+                row = i // cols
 
                 rect = pygame.Rect(
-                    col * (self.CARD_W + self.GAP),
+                    col * (card_w + self.GAP),
                     y + row * (self.CARD_H + self.GAP),
-                    self.CARD_W,
+                    card_w,
                     self.CARD_H
                 )
 
-                self.cards.append((rect, it["id"]))
+                cards.append((rect, it["id"]))
 
-            rows = math.ceil(len(sec["items"]) / self.COLS)
+            rows = math.ceil(len(sec["items"]) / cols)
 
             y += rows * (self.CARD_H + self.GAP) + 6
 
-        self.content_h = y
+        return cards, labels, y
 
     def _cart_rows(self):
 
@@ -1020,11 +1098,9 @@ class ShopUI:
 
     def _cart_max_scroll(self):
 
+        # la pestaña Inventario no tiene lista de filas
         if self.tab == "inv":
-
-            shown = sum(1 for slot in self.inventory if slot is not None)
-
-            return max(0, shown * INV_ROW_STEP - self.rows_rect.height)
+            return 0
 
         return max(
             0, len(self.cart) * self.ROW_H - self.rows_rect.height
@@ -1177,7 +1253,7 @@ class ShopUI:
 
                 return None
 
-            if self.cart_rect.collidepoint(pos):
+            if self.tab == "shop" and self.cart_rect.collidepoint(pos):
 
                 self.cart_scroll = max(
                     0,
@@ -1283,32 +1359,6 @@ class ShopUI:
             return None
 
         if self.tab == "inv":
-
-            if self.rows_rect.collidepoint(pos):
-
-                for n, slot, _, minus, plus, bulk in self._inv_rows():
-
-                    if slot is None:
-                        continue
-
-                    if (
-                        bulk.collidepoint(pos)
-                        and self.kind_of(slot[0]) == KIND_ITEM
-                    ):
-                        self.inv_add(
-                            slot[0], slot_index=n, amount=BULK_AMOUNT
-                        )
-                        return None
-
-                    if minus.collidepoint(pos):
-                        self.inv_remove(slot_index=n)
-                        return None
-
-                    if plus.collidepoint(pos) and n != self.light_idx:
-                        self.inv_add(slot[0], slot_index=n)
-                        return None
-
-                return None
 
             if self.trash_rect.collidepoint(pos):
 
@@ -1724,13 +1774,7 @@ class ShopUI:
 
     def _draw_cart(self, screen, mouse):
 
-        cart_img = None
-
-        if self.tab == "inv":
-            cart_img = self._img("inv_panel", self.cart_rect.size)
-
-        if cart_img is None:
-            cart_img = self._img("cart", self.cart_rect.size)
+        cart_img = self._img("cart", self.cart_rect.size)
 
         if cart_img is not None:
 
@@ -1752,23 +1796,11 @@ class ShopUI:
 
         self._text(
             screen, self.name_font,
-            "Inventario" if self.tab == "inv" else "Carrito", C_TEXT,
+            "Carrito", C_TEXT,
             midleft=(self.cart_rect.x + 46, self.cart_rect.y + 25)
         )
 
-        if self.tab == "inv":
-
-            filled = sum(1 for slot in self.inventory if slot is not None)
-
-            self._text(
-                screen, self.tiny_font,
-                f"{filled}/{self.total_slots} casilleros", C_MUTED,
-                midright=(self.cart_rect.right - 16, self.cart_rect.y + 25)
-            )
-
-            self._draw_inv_rows(screen, mouse)
-
-        elif not self.cart:
+        if not self.cart:
 
             lines = self._wrap(
                 self.small_font,
@@ -1866,18 +1898,26 @@ class ShopUI:
             (self.cart_rect.right - 12, foot_top)
         )
 
+        self._draw_footer(
+            screen, mouse, self.cart_rect, self.total_pos_y + 10,
+            self.total_pos_y + 32
+        )
+
+    def _draw_footer(self, screen, mouse, area, total_y, note_y):
+        """Total, aviso, boton de comprar y tacho (carrito e inventario)."""
+
         total = self.active_total()
 
         self._text(
             screen, self.small_font, "Total", C_MUTED,
-            midleft=(self.cart_rect.x + 16, self.total_pos_y + 10)
+            midleft=(area.x + 16, total_y)
         )
 
         self._draw_coin_amount(
             screen,
             total,
             C_RED if total > self.coins else C_TEXT,
-            (self.cart_rect.right - 16, self.total_pos_y + 10)
+            (area.right - 16, total_y)
         )
 
         if self.message_timer > 0:
@@ -1885,10 +1925,10 @@ class ShopUI:
             self._text(
                 screen,
                 self._fit_font(
-                    self.message, self.cart_rect.w - 16, 20, min_size=12
+                    self.message, area.w - 16, 20, min_size=12
                 ),
                 self.message, C_RED,
-                midtop=(self.cart_rect.centerx, self.total_pos_y + 32)
+                midtop=(area.centerx, note_y)
             )
 
         if self.tab == "inv" and self.message_timer <= 0:
@@ -1902,10 +1942,10 @@ class ShopUI:
                 self._text(
                     screen,
                     self._fit_font(
-                        note, self.cart_rect.w - 16, 22, min_size=12
+                        note, area.w - 16, 22, min_size=12
                     ),
                     note, C_BADGE,
-                    midtop=(self.cart_rect.centerx, self.total_pos_y + 32)
+                    midtop=(area.centerx, note_y)
                 )
 
         enabled = total > 0
@@ -1989,129 +2029,6 @@ class ShopUI:
                 self.trash_rect,
                 C_TEXT if has_items else C_MUTED
             )
-
-    def _draw_inv_rows(self, screen, mouse):
-
-        rows = self._inv_rows()
-
-        if not rows:
-
-            lines = self._wrap(
-                self.small_font,
-                "Tocá un producto para llenar la hotbar de arriba.",
-                self.rows_rect.width - 20
-            )
-
-            for n, line in enumerate(lines):
-
-                self._text(
-                    screen, self.small_font, line, C_MUTED,
-                    midtop=(
-                        self.rows_rect.centerx,
-                        self.rows_rect.y + 24 + n * 22
-                    )
-                )
-
-            return
-
-        per_slot = self.delivery()["per_slot"]
-
-        screen.set_clip(self.rows_rect)
-
-        for n, slot, row, minus, plus, bulk in rows:
-
-            row_img = self._img("row", row.size)
-
-            if row_img is not None:
-                screen.blit(row_img, row.topleft)
-            else:
-                pygame.draw.rect(
-                    screen, C_PANEL, row, border_radius=8
-                )
-                pygame.draw.rect(
-                    screen, C_BORDER, row, width=1, border_radius=8
-                )
-
-            item_id, qty = slot
-
-            kind = self.kind_of(item_id)
-
-            icon = self._icon(item_id, 28)
-
-            if icon is not None:
-                screen.blit(
-                    icon, icon.get_rect(midleft=(row.x + 4, row.centery))
-                )
-
-            row_name = self.item_name(item_id)
-
-            self._text(
-                screen,
-                self._fit_font(row_name, minus.x - row.x - 44, 23),
-                row_name, C_TEXT,
-                topleft=(row.x + 40, row.y + 4)
-            )
-
-            price = self.prices[item_id]
-
-            placed, floor = per_slot.get(n, (qty, 0))
-
-            if kind == KIND_LIGHT:
-                detail, color = (
-                    "Luz  ·  sale al piso" if self.has_light
-                    else f"Luz  ·  {price} monedas"
-                ), (C_BADGE if self.has_light else C_MUTED)
-            elif floor > 0:
-                detail, color = f"{placed} + {floor} al piso", C_BADGE
-            else:
-                detail, color = f"{qty} × {price} = {qty * price}", C_MUTED
-
-            self._text(
-                screen, self.tiny_font, detail, color,
-                topleft=(row.x + 40, row.y + 22)
-            )
-
-            buttons = []
-
-            if kind == KIND_ITEM:
-                self._draw_bulk_button(screen, bulk, mouse)
-
-            buttons.append((minus, "-", "minus"))
-
-            if kind != KIND_LIGHT:
-                buttons.append((plus, "+", "plus"))
-
-            for rect, symbol, key in buttons:
-
-                hover = rect.collidepoint(mouse)
-
-                btn_img = self._img(
-                    key, rect.size, shade=40 if hover else 0
-                )
-
-                if btn_img is not None:
-
-                    screen.blit(btn_img, rect.topleft)
-
-                    continue
-
-                pygame.draw.rect(
-                    screen,
-                    C_CARD_HOVER if hover else C_PANEL,
-                    rect,
-                    border_radius=5
-                )
-
-                pygame.draw.rect(
-                    screen, C_BORDER, rect, width=1, border_radius=5
-                )
-
-                self._text(
-                    screen, self.small_font, symbol, C_TEXT,
-                    center=rect.center
-                )
-
-        screen.set_clip(None)
 
     # ---------- hotbar de la pestaña Inventario ----------
 
@@ -2315,28 +2232,45 @@ class ShopUI:
                     )
                 )
 
-        font = self._font_for(22)
+        max_w = TIP_W - TIP_PAD_X * 2
 
-        imgs = [font.render(text, True, color) for text, color in lines]
+        imgs = [
+            self._fit_font(text, max_w, 22, min_size=14).render(
+                text, True, color
+            )
+            for text, color in lines
+        ]
 
-        width = max(img.get_width() for img in imgs) + 20
-        height = sum(img.get_height() for img in imgs) + 16 + 2 * len(imgs)
+        box = pygame.Rect(0, 0, TIP_W, TIP_H)
 
-        box = pygame.Rect(0, 0, width, height)
-
-        box.midtop = (self.slot_rects[n].centerx, self.slot_rects[n].bottom + 10)
+        box.midtop = (
+            self.slot_rects[n].centerx, self.slot_rects[n].bottom + 10
+        )
         box.clamp_ip(self.panel)
 
-        pygame.draw.rect(screen, C_PANEL, box, border_radius=8)
-        pygame.draw.rect(screen, C_BADGE, box, width=1, border_radius=8)
+        tip_img = self._img("tip", box.size)
 
-        y = box.y + 8
+        if tip_img is not None:
+
+            screen.blit(tip_img, box.topleft)
+
+        else:
+
+            pygame.draw.rect(screen, C_PANEL, box, border_radius=8)
+            pygame.draw.rect(screen, C_BADGE, box, width=1, border_radius=8)
+
+        # el texto va centrado en vertical dentro del margen
+        gap = 2
+
+        text_h = sum(img.get_height() for img in imgs) + gap * (len(imgs) - 1)
+
+        y = box.y + TIP_PAD_Y + max(0, (TIP_H - TIP_PAD_Y * 2 - text_h) // 2)
 
         for img in imgs:
 
-            screen.blit(img, (box.x + 10, y))
+            screen.blit(img, (box.x + TIP_PAD_X, y))
 
-            y += img.get_height() + 2
+            y += img.get_height() + gap
 
     def _draw_hotbar(self, screen, mouse):
 
@@ -2386,17 +2320,39 @@ class ShopUI:
         for n in range(self.total_slots):
             self._draw_slot(screen, n, n == hover_n, per_slot, mouse)
 
-        if kind is not None and target is not None:
+        if self.sel_slot is not None:
 
             pygame.draw.rect(
-                screen,
-                C_RED if self._slot_full(target, hover_id) else C_BADGE,
-                self.slot_rects[target].inflate(6, 6),
-                width=2, border_radius=12
+                screen, C_SELECT,
+                self.slot_rects[self.sel_slot].inflate(8, 8),
+                width=3, border_radius=12
             )
+
+        if kind is not None and target is not None:
+
+            blocked = self._slot_full(target, hover_id)
+
+            # si el destino es el casillero elegido y se puede, ya se ve
+            if blocked or target != self.sel_slot:
+
+                pygame.draw.rect(
+                    screen,
+                    C_RED if blocked else C_BADGE,
+                    self.slot_rects[target].inflate(6, 6),
+                    width=2, border_radius=12
+                )
 
         if hover_n is not None:
             self._draw_slot_tip(screen, hover_n, per_slot)
+
+    def _draw_inv_box(self, screen, mouse):
+
+        screen.blit(self.inv_box_plate, self.inv_box.topleft)
+
+        self._draw_footer(
+            screen, mouse, self.inv_box, self.inv_box.y + 17,
+            self.inv_box.y + 71
+        )
 
     def _draw_tabs(self, screen, mouse):
 
@@ -2635,8 +2591,9 @@ class ShopUI:
 
         if self.tab == "inv":
             self._draw_hotbar(screen, mouse)
-
-        self._draw_cart(screen, mouse)
+            self._draw_inv_box(screen, mouse)
+        else:
+            self._draw_cart(screen, mouse)
 
         if self.info_id is not None:
             self._draw_info(screen, self.info_id)
@@ -2644,9 +2601,10 @@ class ShopUI:
         if self.tab == "inv":
 
             help_text = (
-                "Click: sumar  ·  x15: sumar 15  ·  Click derecho: restar  ·  "
-                "Rueda sobre un casillero: ±1  ·  Shift: de a 5  ·  "
-                "Click en la rueda: info  ·  Tab: cambiar  ·  E / Esc: cerrar"
+                "Click en un casillero: elegirlo  ·  Click en un producto: "
+                "sumar  ·  x15: sumar 15  ·  Click derecho: restar  ·  "
+                "Rueda sobre un casillero: ±1  ·  Tab: cambiar  ·  "
+                "E / Esc: cerrar"
             )
 
         else:

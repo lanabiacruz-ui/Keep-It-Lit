@@ -15,6 +15,8 @@ TRACKS = {
     "ambiente": {"fade_in": 5.0, "fade_out": 2.5, "gain": 1.0},
     "combate": {"fade_in": 0.9, "fade_out": 2.0, "gain": 1.0},
     "jefe": {"fade_in": 0.6, "fade_out": 1.2, "gain": 1.0},
+    # musica relax de la tienda (se genera con tools/make_shop_music.py)
+    "tienda": {"fade_in": 2.0, "fade_out": 1.2, "gain": 1.0},
 }
 
 

@@ -152,6 +152,10 @@ def desired_music():
         and game.state == "playing"
     ):
 
+        # con la tienda abierta suena la musica tranquila
+        if game.shop is not None:
+            return "tienda"
+
         # durante la entrada y la derrota del jefe suena solo la escena
         if any(
             getattr(a, "cinematic", None) is not None and a.cinematic.active
