@@ -58,6 +58,7 @@ from ui.tutorial import Tutorial
 from ui.guide import Guide
 from ui.Zone_banner import ZoneBanner
 from ui.achievement_toast import AchievementToast
+from ui.shop_unlock_toast import ShopUnlockToast
 from ui.objectives import Objectives
 from states.pause_menu import PauseMenu
 from states.enemy_enciclopedia import EnemyEncyclopedia
@@ -227,6 +228,15 @@ class NewGame:
         self._defeat_counted = False
         self.width, self.height = screen.get_size()
         self.achievement_toast = AchievementToast((self.width, self.height))
+        self.shop_unlock_toast = ShopUnlockToast((self.width, self.height))
+
+        # items de la tienda que ya estaban desbloqueados (para avisar solo
+        # los nuevos); se llena la primera vez que se chequea
+        self._shop_seen = None
+
+        # prueba (F6): los golpes y bolas de fuego hacen 1000 de dano a los
+        # enemigos y jefes
+        self.debug_dano = False
 
         self.world_map = WorldMap()
         self.collision_map = CollisionMap()
@@ -2874,6 +2884,9 @@ class NewGame:
                 "hit_heavy" if self.melee.heavy or base_damage >= 2 else "hit"
             )
 
+            if self.debug_dano:
+                damage = 1000
+
             target.take_damage(damage)
 
 
@@ -3179,6 +3192,38 @@ class NewGame:
         zone = SHOP_UNLOCK_ZONES.get(item_id)
 
         return self.zone_wave(zone) if zone else self.best_wave()
+
+    def _shop_unlocked_now(self):
+
+        """Ids de la tienda que ya se pueden comprar por la oleada."""
+
+        return {
+            item_id
+            for item_id, need in SHOP_UNLOCK_WAVES.items()
+            if self._unlock_wave(item_id) >= need
+        }
+
+    def _check_shop_unlocks(self):
+
+        """Muestra el cartel gris cuando llegas a la oleada que desbloquea
+        un item nuevo de la tienda."""
+
+        now = self._shop_unlocked_now()
+
+        if self._shop_seen is None:
+            # primera vez: lo que ya tenias no cuenta como nuevo
+            self._shop_seen = now
+            return
+
+        new = [i for i in SHOP_UNLOCK_WAVES if i in now - self._shop_seen]
+
+        if new:
+
+            self.shop_unlock_toast.push(
+                [(i, self._item_name(i)) for i in new]
+            )
+
+        self._shop_seen = now
 
     def shop_locks(self):
 
@@ -4188,6 +4233,22 @@ class NewGame:
             elif event.key == pygame.K_F5:
 
                 self._spawn_dummy()
+
+            elif event.key == pygame.K_F6:
+
+                # PRUEBA: dano x1000 (mata al jefe de un golpe)
+                self.debug_dano = not self.debug_dano
+
+                self.show_message(
+                    "PRUEBA: dano x1000 " + ("ACTIVADO" if self.debug_dano else "desactivado")
+                )
+
+            elif event.key == pygame.K_F7:
+
+                # PRUEBA: muestra el cartel de "nuevo item en la tienda"
+                self.shop_unlock_toast.push(
+                    [(i, self._item_name(i)) for i in ("ganzua",)]
+                )
 
             elif event.key == pygame.K_F8:
 
@@ -5295,6 +5356,9 @@ class NewGame:
         self.camera.y -= shake_y
 
         self.achievement_toast.draw(self.screen)
+
+        self._check_shop_unlocks()
+        self.shop_unlock_toast.draw(self.screen)
 
     def _draw_scene(self):
 

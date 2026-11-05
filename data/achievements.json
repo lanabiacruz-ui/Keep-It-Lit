@@ -6,14 +6,18 @@
         "ojos_ciegos": "2026-11-03T19:20:42",
         "desactivado": "2026-11-03T20:00:42",
         "entomologo": "2026-11-03T20:11:03",
-        "abrazo_golem": "2026-11-03T20:12:00"
+        "abrazo_golem": "2026-11-03T20:12:00",
+        "derribapuertas": "2026-11-04T21:22:54",
+        "pirotecnico": "2026-11-04T21:26:57",
+        "intocable": "2026-11-04T21:35:51",
+        "zona_1": "2026-11-04T21:35:56"
     },
     "counters": {
-        "defeats": 4,
-        "fireballs": 36,
+        "defeats": 5,
+        "fireballs": 227,
         "slimes": 9,
         "chests": 7,
-        "kills": 34,
-        "doors": 7
+        "kills": 157,
+        "doors": 14
     }
 }

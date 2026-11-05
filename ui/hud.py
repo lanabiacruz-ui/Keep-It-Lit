@@ -131,13 +131,25 @@ class Hud:
         self.selected = None
 
         slot_size = self.slot.get_width()
-        gap = 6
-        total = self.SLOTS * slot_size + (self.SLOTS - 1) * gap
+        gap = 6                 # separacion de los marcos de pociones
+        bar_gap = 0             # separacion de los slots de la hotbar
+        total = self.SLOTS * slot_size + (self.SLOTS - 1) * bar_gap
+
+        # Altura de referencia: la del panel violeta de pociones. El hotbar
+        # y el cartel de la G se escalan para que su parte VISIBLE (sin los
+        # margenes transparentes) mida exactamente lo mismo.
+        ref_h = self.bar.get_height()
+
+        vis_h = self.bar.get_bounding_rect(min_alpha=21).height
+        bar_full_h = max(1, round(ref_h * ref_h / vis_h))
 
         self.bar = pygame.transform.smoothscale(
             self.bar,
-            (total + 12, self.bar.get_height())
+            (self.SLOTS * slot_size + (self.SLOTS - 1) * gap + 12, bar_full_h)
         )
+
+        # franja visible del hotbar (arriba/abajo) ya escalado
+        bar_vis = self.bar.get_bounding_rect(min_alpha=21)
 
         self.bar_rect = self.bar.get_rect(
             midbottom=(w // 2, h - 12)
@@ -147,7 +159,7 @@ class Hud:
         y = self.bar_rect.centery - slot_size // 2
 
         self.slot_pos = [
-            (x0 + i * (slot_size + gap), y)
+            (x0 + i * (slot_size + bar_gap), y)
             for i in range(self.SLOTS)
         ]
         
@@ -167,9 +179,9 @@ class Hud:
 
         self.potion_panel_rect = pygame.Rect(
             px0 - pad,
-            self.bar_rect.top,
+            self.bar_rect.top + bar_vis.top,
             slots_right - px0 + pad * 2,
-            self.bar_rect.height
+            ref_h
         )
 
         panel_img = self._load_optional("hud_pociones.png")
@@ -187,17 +199,28 @@ class Hud:
             midright=(self.bar_rect.left - 12, self.bar_rect.centery)
         )
 
+        def attack_img(name):
+            img = load(name)
+            vis = img.get_bounding_rect(min_alpha=21)
+            k = ref_h / vis.height
+            return pygame.transform.smoothscale(
+                img,
+                (round(img.get_width() * k), round(img.get_height() * k))
+            )
+
         self.attack_panels = {
-            "golpe": scaled(
-                load("hud_antorcha_golpe.png"), self.ATTACK_SCALE
-            ),
-            "fuego": scaled(
-                load("hud_antorcha_fuego.png"), self.ATTACK_SCALE
-            ),
+            "golpe": attack_img("hud_antorcha_golpe.png"),
+            "fuego": attack_img("hud_antorcha_fuego.png"),
         }
 
-        self.attack_panel_rect = self.attack_panels["golpe"].get_rect(
-            bottomleft=(self.potions_right + 10, self.bar_rect.bottom)
+        _atk = self.attack_panels["golpe"]
+        _atk_vis = _atk.get_bounding_rect(min_alpha=21)
+
+        self.attack_panel_rect = _atk.get_rect(
+            topleft=(
+                self.potions_right + 10,
+                self.potion_panel_rect.top - _atk_vis.top
+            )
         )
 
 
