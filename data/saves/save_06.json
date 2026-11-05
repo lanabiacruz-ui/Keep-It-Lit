@@ -2,55 +2,40 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-04T21:37:27",
+    "last_played": "2026-11-04T22:10:40",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 879,
-    "y": 156,
+    "x": 944,
+    "y": 146,
     "coins": 92831,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
-    "light": "antorcha",
-    "vida": 0.936886666666665,
+    "light": "fosforo",
+    "vida": 1.0,
     "escudo": 1.0,
     "inventory": [
-        [
-            "llave_oro",
-            1
-        ],
-        [
-            "repelente",
-            2
-        ],
-        [
-            "polvora",
-            15
-        ],
-        [
-            "repelente",
-            15
-        ],
-        [
-            "pocion_velocidad",
-            1
-        ],
+        null,
+        null,
+        null,
+        null,
+        null,
         null
     ],
     "collected": [
-        "madera_01#0",
         "moneda_pasillo_tienda#1",
-        "moneda_sala_central#1",
-        "moneda_pasillo_cabana#1",
-        "moneda_sala_cofres#1",
-        "moneda_pasillo_cofres#0",
-        "moneda_pasillo_der#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_pasillo_cabana#0",
         "moneda_sala_cofres#0",
+        "moneda_pasillo_izq#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_der#0",
+        "moneda_pasillo_cabana#0",
         "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_cofres#0",
         "moneda_sala_central#0",
-        "moneda_pasillo_izq#0"
+        "madera_01#0",
+        "moneda_sala_central#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -66,7 +51,8 @@
         "puerta_final",
         "sala_der",
         "sup_central_abajo",
-        "sup_der_sala"
+        "sup_der_sala",
+        "sup_izq_central"
     ],
     "final_door_slots": {},
     "current_map": "mapa1",
@@ -142,7 +128,7 @@
                 ],
                 [
                     "polvora",
-                    3
+                    15
                 ]
             ]
         }
@@ -181,19 +167,24 @@
     "shop_inventory": [
         [
             "aceite",
-            15
-        ],
-        [
-            "hongo_azul",
-            15
+            30
         ],
         [
             "polvora",
             15
         ],
+        null,
         [
             "repelente",
             15
+        ],
+        [
+            "pocion_invisibilidad",
+            1
+        ],
+        [
+            "pocion_velocidad",
+            1
         ],
         [
             "antorcha",
@@ -7912,214 +7903,6 @@
             "map": "mapa1"
         },
         {
-            "k": "item",
-            "id": "aceite",
-            "x": 1317,
-            "y": 443,
-            "map": "mapa1",
-            "ttl": 232.4
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1297,
-            "y": 450,
-            "map": "mapa1",
-            "ttl": 232.6
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1298,
-            "y": 445,
-            "map": "mapa1",
-            "ttl": 232.8
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1303,
-            "y": 447,
-            "map": "mapa1",
-            "ttl": 233.0
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1314,
-            "y": 452,
-            "map": "mapa1",
-            "ttl": 233.1
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1301,
-            "y": 443,
-            "map": "mapa1",
-            "ttl": 233.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1317,
-            "y": 437,
-            "map": "mapa1",
-            "ttl": 233.6
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1302,
-            "y": 433,
-            "map": "mapa1",
-            "ttl": 233.8
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1309,
-            "y": 450,
-            "map": "mapa1",
-            "ttl": 234.0
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1318,
-            "y": 454,
-            "map": "mapa1",
-            "ttl": 234.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1315,
-            "y": 441,
-            "map": "mapa1",
-            "ttl": 234.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1302,
-            "y": 441,
-            "map": "mapa1",
-            "ttl": 234.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1296,
-            "y": 448,
-            "map": "mapa1",
-            "ttl": 234.7
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 1315,
-            "y": 491,
-            "map": "mapa1",
-            "ttl": 238.8
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1323,
-            "y": 487,
-            "map": "mapa1",
-            "ttl": 240.3
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 773,
-            "y": 509,
-            "map": "mapa1",
-            "ttl": 249.6
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 781,
-            "y": 522,
-            "map": "mapa1",
-            "ttl": 249.8
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 765,
-            "y": 526,
-            "map": "mapa1",
-            "ttl": 250.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 763,
-            "y": 517,
-            "map": "mapa1",
-            "ttl": 250.1
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 783,
-            "y": 514,
-            "map": "mapa1",
-            "ttl": 250.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 776,
-            "y": 526,
-            "map": "mapa1",
-            "ttl": 250.6
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 782,
-            "y": 523,
-            "map": "mapa1",
-            "ttl": 250.8
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 769,
-            "y": 514,
-            "map": "mapa1",
-            "ttl": 251.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 777,
-            "y": 521,
-            "map": "mapa1",
-            "ttl": 251.2
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 781,
-            "y": 525,
-            "map": "mapa1",
-            "ttl": 251.4
-        },
-        {
-            "k": "item",
-            "id": "repelente",
-            "x": 766,
-            "y": 524,
-            "map": "mapa1",
-            "ttl": 274.4
-        },
-        {
             "k": "light",
             "id": "fosforo",
             "life": 0.7285666666666456,
@@ -8229,14 +8012,6 @@
             "life": 0.8186999999999999,
             "x": 922,
             "y": 170,
-            "map": "mapa1"
-        },
-        {
-            "k": "light",
-            "id": "fosforo",
-            "life": 1.0,
-            "x": 945,
-            "y": 142,
             "map": "mapa1"
         },
         {

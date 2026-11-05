@@ -54,6 +54,13 @@ from ui.chest_minigame import ChestMinigame
 from core import skins as skin_lib
 
 from ui.shop_ui import ShopUI
+from ui.shop_plan import (
+    KIND_ITEM,
+    KIND_LIGHT,
+    KIND_POTION,
+    plan_delivery,
+    sanitize_draft,
+)
 from ui.tutorial import Tutorial
 from ui.guide import Guide
 from ui.Zone_banner import ZoneBanner
@@ -3268,7 +3275,10 @@ class NewGame:
             lock_zones=self.shop_lock_zones(),
             inventory=self.shop_inventory,
             max_stack=self._max_stack,
-            inv_slots=self.hud.SLOTS
+            inv_slots=self.hud.SLOTS,
+            potion_slots=self.hud.POTION_SLOTS,
+            held=(list(self.hud.items), list(self.hud.counts)),
+            has_light=self.has_match
         )
 
     def _close_shop(self):
@@ -3396,37 +3406,41 @@ class NewGame:
         self._close_shop()
 
 
+    def _shop_kind(self, item_id):
+
+        if item_id in LIGHTS:
+            return KIND_LIGHT
+
+        if self._is_potion(item_id):
+            return KIND_POTION
+
+        return KIND_ITEM
+
     def _buy_inventory(self, slots):
 
         locks = self.shop_locks()
 
-        def valid(slot):
-            return bool(
-                slot and slot[0] not in locks
-                and slot[0] in self.shop_prices
+        n_items = self.hud.SLOTS
+        n_potions = self.hud.POTION_SLOTS
+
+        # El plan llega con la forma del HUD: items, pociones y al final
+        # la luz. Se limpia de nuevo por si algo cambio desde que se armo.
+        draft = sanitize_draft(
+            slots, n_items, n_potions, self._shop_kind,
+            lambda item_id: (
+                isinstance(item_id, str)
+                and item_id in self.shop_prices
+                and item_id not in locks
+                and item_id not in ("bolsa", "faro")
+                and not is_skin_item(item_id)
             )
-
-        # los primeros casilleros son los del HUD, el ultimo es la luz
-        wanted = [
-            (slot[0], int(slot[1]))
-            for slot in slots[:self.hud.SLOTS]
-            if valid(slot)
-        ]
-
-        light = None
-
-        if len(slots) > self.hud.SLOTS and valid(slots[self.hud.SLOTS]):
-            light = slots[self.hud.SLOTS][0]
-
-        if light not in LIGHTS:
-            light = None
-
-        total = sum(
-            self.shop_prices[item_id] * qty for item_id, qty in wanted
         )
 
-        if light is not None:
-            total += self.shop_prices[light]
+        total = sum(
+            self.shop_prices[slot[0]] * slot[1]
+            for slot in draft
+            if slot
+        )
 
         if total <= 0:
             return
@@ -3435,65 +3449,55 @@ class NewGame:
             self._shop_notice("No te alcanzan las monedas")
             return
 
-        # Primero se prueba si entra todo en los casilleros reales,
-        # asi no se cobra una compra que no se puede entregar.
-        items = list(self.hud.items)
-        counts = list(self.hud.counts)
-
-        for item_id, qty in wanted:
-
-            limit = self._max_stack(item_id)
-
-            for _ in range(qty):
-
-                spot = None
-
-                for i in range(self.hud.SLOTS):
-                    if items[i] == item_id and counts[i] < limit:
-                        spot = i
-                        break
-
-                if spot is None:
-                    for i in range(self.hud.SLOTS):
-                        if items[i] is None:
-                            spot = i
-                            break
-
-                if spot is None:
-                    self._shop_notice(
-                        "Tu inventario está lleno: soltá o usá items antes de comprar"
-                    )
-                    return
-
-                items[spot] = item_id
-                counts[spot] += 1
+        # En cada casillero entra una pila (completando las que ya tenes)
+        # y lo que no entra sale por la boca del vendedor al piso.
+        result = plan_delivery(
+            draft, self.hud.items, self.hud.counts,
+            n_items, n_potions, self._max_stack, self._shop_kind
+        )
 
         self.coins -= total
 
-        for i in range(self.hud.SLOTS):
-            self.hud.items[i] = items[i]
-            self.hud.counts[i] = counts[i]
+        for i in range(n_items + n_potions):
+            self.hud.items[i] = result["items"][i]
+            self.hud.counts[i] = result["counts"][i]
+
+        spill = list(result["drops"])
+        light = result["light"]
 
         if light is not None:
 
             if self.has_match:
 
                 # ya tenes una luz en la mano: la nueva sale por la boca
-                for item in self.shopkeeper.spit(
-                    [light], self.collision_map
-                ):
-                    self.light_drops.append(item)
+                spill.append(light)
 
             else:
 
                 self.equip_match(light, 1.0)
+
+        for item in (
+            self.shopkeeper.spit(spill, self.collision_map)
+            if spill else []
+        ):
+
+            if isinstance(item, LightItem):
+                self.light_drops.append(item)
+            else:
+                self.world_items.append(item)
 
         if self.shop is not None:
             self.shop.coins = int(self.coins)
 
         audio.play("buy")
 
-        self.show_message("Inventario comprado")
+        if spill:
+            self.show_message(
+                f"Inventario comprado: {len(spill)} "
+                f"{'cayó' if len(spill) == 1 else 'cayeron'} al piso"
+            )
+        else:
+            self.show_message("Inventario comprado")
 
         self.count_stat("purchases")
 
