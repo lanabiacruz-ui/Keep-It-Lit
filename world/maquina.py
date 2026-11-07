@@ -200,8 +200,8 @@ def collect(game, state):
 # Panel (mismo estilo gris que el del yunque)
 # ---------------------------------------------------------------------------
 
-PANEL_W = 520
-PANEL_H = 360
+PANEL_W = 580
+PANEL_H = 410
 
 PANEL_FILE = "maquina_panel.png"
 
@@ -220,34 +220,44 @@ class MachinePanel(AnvilPanel):
 
         inner_w = PANEL_W - 2 * MARGIN
 
-        gap = 6
-        size = min(36, (inner_w - gap * (MAX_GEL - 1)) // MAX_GEL)
+        # tarjeta oscura que agrupa casilleros + barra + monedas listas
+        card = pygame.Rect(panel.x + MARGIN, panel.y + 112, inner_w, 188)
+
+        pad = 16
+        gap = 8
+        size = min(38, (inner_w - 2 * pad - gap * (MAX_GEL - 1)) // MAX_GEL)
         total = MAX_GEL * size + (MAX_GEL - 1) * gap
-        x0 = panel.x + MARGIN + (inner_w - total) // 2
+        x0 = card.x + (card.w - total) // 2
 
         slots = [
-            pygame.Rect(x0 + i * (size + gap), panel.y + 134, size, size)
+            pygame.Rect(x0 + i * (size + gap), card.y + 40, size, size)
             for i in range(MAX_GEL)
         ]
 
-        bar = pygame.Rect(panel.x + MARGIN, panel.y + 186, inner_w, 26)
+        bar = pygame.Rect(card.x + pad, card.y + 94, card.w - 2 * pad, 28)
 
-        collect_btn = pygame.Rect(
-            panel.right - MARGIN - 132, panel.y + 226, 132, 38
-        )
+        collect_btn = pygame.Rect(0, 0, 140, 38)
+        collect_btn.midright = (card.right - pad, card.y + 150)
 
-        bw = 132
+        bw = 140
+        bh = 40
         bgap = (inner_w - 3 * bw) // 2
-        by = panel.y + 284
+        by = card.bottom + 16
 
         return {
             "panel": panel,
+            "card": card,
             "slots": slots,
             "bar": bar,
             "collect": collect_btn,
-            "put1": pygame.Rect(panel.x + MARGIN, by, bw, 36),
-            "putall": pygame.Rect(panel.x + MARGIN + bw + bgap, by, bw, 36),
-            "take": pygame.Rect(panel.x + MARGIN + 2 * (bw + bgap), by, bw, 36),
+            "put1": pygame.Rect(panel.x + MARGIN, by, bw, bh),
+            "putall": pygame.Rect(
+                panel.x + MARGIN + bw + bgap, by, bw, bh
+            ),
+            "take": pygame.Rect(
+                panel.x + MARGIN + 2 * (bw + bgap), by, bw, bh
+            ),
+            "footer": panel.bottom - 30,
         }
 
     # ---- eventos ----
@@ -296,6 +306,7 @@ class MachinePanel(AnvilPanel):
 
         lay = self.layout(game)
         panel = lay["panel"]
+        card = lay["card"]
         state = obj.m
 
         mouse = pygame.mouse.get_pos()
@@ -308,32 +319,41 @@ class MachinePanel(AnvilPanel):
             pygame.draw.rect(screen, C_PANEL, panel, border_radius=16)
             pygame.draw.rect(screen, C_EDGE, panel, 4, border_radius=16)
 
-        title = self._font(52).render("Máquina", True, C_LIGHT)
-        screen.blit(title, title.get_rect(midtop=(panel.centerx, panel.y + 26)))
+        # ---- encabezado ----
+        title = self._font(54).render("Máquina", True, C_LIGHT)
+        shade = self._font(54).render("Máquina", True, C_EDGE)
+
+        t_rect = title.get_rect(midtop=(panel.centerx, panel.y + 22))
+        screen.blit(shade, t_rect.move(0, 3))
+        screen.blit(title, t_rect)
 
         sub = self._font(23).render(
             f"{GEL_PER_COIN} geleas = 1 moneda de gelea  ·  "
             f"{int(SECONDS_PER_COIN)} s cada una",
             True, C_LIGHT,
         )
-        screen.blit(sub, sub.get_rect(midtop=(panel.centerx, panel.y + 78)))
+        screen.blit(sub, sub.get_rect(midtop=(panel.centerx, panel.y + 80)))
+
+        # ---- tarjeta central ----
+        pygame.draw.rect(screen, (84, 92, 102), card, border_radius=12)
+        pygame.draw.rect(screen, C_EDGE, card, 2, border_radius=12)
 
         # geleas adentro (izquierda) y geleas en tu hotbar (derecha)
-        label = self._font(24).render(
+        label = self._font(25).render(
             f"Geleas adentro  {state.gel}/{MAX_GEL}", True, C_LIGHT
         )
-        screen.blit(label, (panel.x + MARGIN, panel.y + 106))
+        screen.blit(label, label.get_rect(midleft=(card.x + 16, card.y + 20)))
 
-        hotbar = self._font(26).render(
+        hotbar = self._font(27).render(
             str(count_item(game, GEL_ITEM)), True, C_LIGHT
         )
-        hb_rect = hotbar.get_rect(
-            midright=(panel.right - MARGIN, panel.y + 116)
-        )
+        hb_rect = hotbar.get_rect(midright=(card.right - 16, card.y + 20))
         screen.blit(hotbar, hb_rect)
 
         gel = self._item_icon(GEL_ITEM, 26)
-        screen.blit(gel, gel.get_rect(midright=(hb_rect.left - 4, hb_rect.centery)))
+        screen.blit(
+            gel, gel.get_rect(midright=(hb_rect.left - 5, hb_rect.centery))
+        )
 
         # casilleros de la cola
         icon_size = max(8, lay["slots"][0].w - 8)
@@ -382,24 +402,26 @@ class MachinePanel(AnvilPanel):
         text = self._fit(status, 22, C_LIGHT, bar.w - 16)
         shade = self._fit(status, 22, (0, 0, 0), bar.w - 16)
 
-        screen.blit(shade, shade.get_rect(center=(bar.centerx + 1, bar.centery + 1)))
+        screen.blit(
+            shade, shade.get_rect(center=(bar.centerx + 1, bar.centery + 1))
+        )
         screen.blit(text, text.get_rect(center=bar.center))
 
-        # monedas listas
+        # monedas listas (izquierda) y boton de cobrar (derecha)
         cy = lay["collect"].centery
 
-        ready_label = self._font(26).render("Listas:", True, C_LIGHT)
-        r1 = ready_label.get_rect(midleft=(panel.x + MARGIN, cy))
+        ready_label = self._font(27).render("Listas:", True, C_LIGHT)
+        r1 = ready_label.get_rect(midleft=(card.x + 16, cy))
         screen.blit(ready_label, r1)
 
         coin = self._item_icon("moneda_gelea", 34)
         r2 = coin.get_rect(midleft=(r1.right + 10, cy))
         screen.blit(coin, r2)
 
-        amount = self._font(38).render(f"x{state.ready}", True, C_LIGHT)
+        amount = self._font(40).render(f"x{state.ready}", True, C_LIGHT)
         screen.blit(amount, amount.get_rect(midleft=(r2.right + 8, cy)))
 
-        # botones
+        # ---- botones ----
         have = count_item(game, GEL_ITEM)
         can_put = state.gel < MAX_GEL and have > 0
 
@@ -408,7 +430,16 @@ class MachinePanel(AnvilPanel):
         self._button(screen, lay["putall"], "Poner todas", can_put, mouse)
         self._button(screen, lay["take"], "Sacar", state.gel > 0, mouse)
 
-        hint = self._font(22).render(
-            "ESC para cerrar  ·  trabaja sola mientras juegas", True, C_LIGHT
+        # ---- pie: separador + ayuda (con su propio espacio) ----
+        fy = lay["footer"]
+
+        pygame.draw.line(
+            screen, C_EDGE,
+            (panel.x + MARGIN, fy - 16), (panel.right - MARGIN, fy - 16), 2,
         )
-        screen.blit(hint, hint.get_rect(center=(panel.centerx, panel.bottom - 38)))
+
+        hint = self._font(22).render(
+            "ESC para cerrar  ·  trabaja sola mientras juegas",
+            True, (214, 218, 222),
+        )
+        screen.blit(hint, hint.get_rect(center=(panel.centerx, fy + 4)))

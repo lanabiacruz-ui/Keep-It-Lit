@@ -16,9 +16,12 @@ HUD_DIR = (
 
 
 # ---- vencimiento de lo que queda en el piso ----------------------------
-# Solo vencen los items con "expire_left" (lo que soltas con Q / Ctrl+Q, la
-# luz que soltas, lo que escupe la tienda y lo que se suelta al morir).
-# Los items del mapa y los de cofres / enemigos no tienen ese atributo.
+# TODO item suelto en el piso vence: lo que soltas con Q / Ctrl+Q, las luces,
+# lo que escupe la tienda, lo que se suelta al morir, los drops de enemigos,
+# cofres y jefes. tick_expiry le pone el reloj a cualquiera que no lo tenga.
+# Unicas excepciones (ver _never_expires): el fosforo inicial, los items que
+# nacen fijos en el mapa (spawn_id: si se esfumaran no volverian) y las
+# recompensas de jefe (gemas y llave dorada: sin ellas no se puede avanzar).
 GROUND_LIFETIME = 300.0   # 5 minutos
 GROUND_BLINK = 30.0       # parpadea los ultimos 30 s
 GROUND_FADE = 0.7         # duracion del efecto al esfumarse
@@ -30,6 +33,25 @@ def set_expiry(item, seconds=GROUND_LIFETIME):
     item.expire_left = max(0.0, float(seconds))
 
     return item
+
+
+def _never_expires(item):
+
+    if getattr(item, "initial", False):
+        return True
+
+    # recompensas de jefe (gemas y llave): sin ellas no se avanza
+    if getattr(item, "item_id", None) in ("llave_oro", "gema", "gema_verde"):
+        return True
+
+    # item puesto por el mapa (no soltado): no se pierde para siempre
+    if (
+        getattr(item, "spawn_id", None) is not None
+        and not getattr(item, "death_drop", False)
+    ):
+        return True
+
+    return False
 
 
 def is_vanishing(item):
@@ -59,6 +81,13 @@ def tick_expiry(items, dt, fx=None):
             continue
 
         left = getattr(it, "expire_left", None)
+
+        if left is None and not _never_expires(it):
+
+            # item suelto que nadie marco (drop de enemigo, cofre, jefe...):
+            # empieza a vencer como los demas
+            set_expiry(it)
+            left = it.expire_left
 
         if left is None or getattr(it, "fly", None) is not None:
             continue

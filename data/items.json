@@ -187,7 +187,7 @@
   },
   "martillo": {
     "nombre": "Martillo",
-    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata, un tacho o un yunque que hayas colocado para recogerlo y recuperarlo como item, listo para colocarlo en otro lugar. El cofre debe estar vacío. Solo funciona con cofres, fogatas, tachos y yunques.",
+    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata, un tacho o un yunque que hayas colocado para soltarlo en el piso (no pasa al inventario): arrástralo con click izquierdo mantenido y al soltarlo queda fijo otra vez. Si el cofre o la máquina tienen cosas adentro, caen al piso. Solo funciona con cofres, fogatas, tachos y yunques.",
     "requiere_fosforo": false,
     "max_pila": 1
   },
@@ -224,7 +224,7 @@
   },
   "tacho": {
     "nombre": "Tacho",
-    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo. Elige un objeto y haz click sobre el tacho para borrar una unidad; Ctrl+click borra toda la casilla. No se traga fogatas, cofres, candiles, tachos, yunques ni martillos, ni la luz equipada.",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo. Elige un objeto y haz click sobre el tacho para borrar una unidad; Ctrl+click borra toda la casilla. Se traga todo, hasta la luz equipada. Candiles, bolsas y cualquier objeto que hayas soltado con el martillo también: arrástralo y suéltalo junto al tacho (la bolsa y el cofre deben estar vacíos; con el martillo se vacían solos).",
     "requiere_fosforo": false,
     "efectos": []
   },
@@ -293,7 +293,7 @@
   },
   "maquina": {
     "nombre": "Máquina de gelea",
-    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la recojas con el martillo (vacía) y también la puedes tirar al tacho. Click derecho sobre ella para abrirla. Pon geleas adentro: trabaja sola mientras juegas y convierte 2 geleas en 1 moneda de gelea cada 30 segundos (caben 10 geleas). Las monedas de gelea se cobran desde su panel y se gastan en el yunque.",
+    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo (lo de adentro cae al piso) y también la puedes tirar al tacho. Click derecho sobre ella para abrirla. Pon geleas adentro: trabaja sola mientras juegas y convierte 2 geleas en 1 moneda de gelea cada 30 segundos (caben 10 geleas). Las monedas de gelea se cobran desde su panel y se gastan en el yunque.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []

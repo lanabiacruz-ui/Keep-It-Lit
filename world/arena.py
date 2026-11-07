@@ -1290,6 +1290,190 @@ def bounce_enemies(enemies, collision_map, target=None):
             b.push(normal * depth, collision_map)
 
 
+# ---------------------------------------------------------------------------
+# Piña Brava (zona 2) y mini-piñas
+# ---------------------------------------------------------------------------
+
+# La Piña Brava REEMPLAZA a una parte de las piñas comunes de la zona 2:
+# no suma enemigos (el total de la oleada no cambia).
+BRAVA_FIRST_WAVE = 6        # desde esta oleada aparecen
+BRAVA_SHARE_DIV = 2         # la mitad de las piñas de la oleada son bravas
+BRAVA_HP_EXTRA = 2          # vida de mas que una piña comun
+BRAVA_HITBOX = (14, 12)
+BRAVA_DRAW_SIZE = 18        # una piña comun se dibuja a ENEMY_DRAW_SIZE (14)
+
+# "Cuesta abajo": cada rebote contra pared suma velocidad (hasta +40%)
+BRAVA_SPEED_PER_BOUNCE = 0.08
+BRAVA_SPEED_MAX_BONUS = 0.40
+
+# "Rebote certero": despues de cada rebote apunta mejor (mas hacia vos
+# y con menos desvio)
+BRAVA_AIM_PER_BOUNCE = 0.03
+BRAVA_JITTER_BOUNCES = 6    # a los 6 rebotes ya no tiene desvio
+
+# "Se parte": al morir suelta mini-piñas
+BRAVA_SPLIT_COUNT = 2
+
+MINI_HP = 1
+MINI_HITBOX = (8, 7)
+MINI_DRAW_SIZE = 9
+MINI_SPEED_MULT = 1.15
+MINI_SPAWN_TIME = 0.3
+
+
+class VariantArt(EnemyArt):
+    """Arte de una variante de la piña (mismo formato que EnemyArt, pero
+    con sus propios archivos y su propio tamaño en pantalla).
+
+    Usa  <base>.png  y  <base>_golpe.png  (56x56). Si falta alguno, tiñe
+    la piña comun para que el juego igual funcione.
+    """
+
+    def __init__(self, base, draw_size, tint):
+
+        normal = load_image(COMBAT_DIR / f"{base}.png")
+        hit = load_image(COMBAT_DIR / f"{base}_golpe.png")
+
+        if normal is None:
+
+            normal = load_image(COMBAT_DIR / "enemigo.png")
+
+            if normal is None:
+                normal = self._placeholder()
+
+            normal = normal.copy()
+            normal.fill(tint, special_flags=pygame.BLEND_RGBA_MULT)
+
+        if hit is None:
+
+            hit = normal.copy()
+            hit.fill((170, 170, 170, 0), special_flags=pygame.BLEND_RGB_ADD)
+
+        self.frames = [normal]
+        self.hit = hit
+        self.draw_size = draw_size
+
+        self._zoom = None
+        self._scaled = None
+        self._scaled_hit = None
+
+    def get(self, zoom):
+
+        if self._zoom != zoom:
+
+            px = max(1, int(self.draw_size * zoom))
+
+            self._scaled = [
+                pygame.transform.scale(f, (px, px)) for f in self.frames
+            ]
+
+            self._scaled_hit = pygame.transform.scale(self.hit, (px, px))
+
+            self._zoom = zoom
+
+        return self._scaled, self._scaled_hit
+
+
+class PinaBrava(Enemy):
+    """Piña con tinte rojizo, un poco mas grande y mas dura.
+
+    * Rebote certero: despues de cada rebote apunta mejor.
+    * Cuesta abajo: gana velocidad con cada rebote (hasta +40%) y la
+      pierde al recibir un golpe.
+    * Se parte: al morir suelta mini-piñas (lo hace la Arena).
+    * Tiene BRAVA_HP_EXTRA de vida mas que una piña comun.
+    """
+
+    def __init__(self, x, y, hp, max_speed, spawn_delay=0.0):
+
+        super().__init__(
+            x, y, hp + BRAVA_HP_EXTRA, max_speed, spawn_delay
+        )
+
+        self.rect = pygame.Rect(0, 0, *BRAVA_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.base_ball_speed = self.ball_speed
+        self.bounces = 0
+
+    @property
+    def speed_bonus(self):
+
+        return min(
+            BRAVA_SPEED_MAX_BONUS, self.bounces * BRAVA_SPEED_PER_BOUNCE
+        )
+
+    def take_damage(self, amount):
+
+        dealt = super().take_damage(amount)
+
+        if dealt:
+
+            # el golpe la frena: pierde lo que habia acelerado
+            self.bounces = 0
+            self.ball_speed = self.base_ball_speed
+
+        return dealt
+
+    def aim_after_bounce(self, to_target, hit_x, hit_y, away=None):
+
+        self.bounces += 1
+
+        self.ball_speed = self.base_ball_speed * (1.0 + self.speed_bonus)
+
+        speed = self.vel.length()
+
+        if speed < 1.0 or to_target.length_squared() < 0.01:
+            return
+
+        aim = min(1.0, ENEMY_BOUNCE_AIM + BRAVA_AIM_PER_BOUNCE * self.bounces)
+
+        jitter = ENEMY_BOUNCE_JITTER * max(
+            0.0, 1.0 - self.bounces / BRAVA_JITTER_BOUNCES
+        )
+
+        current = self.vel / speed
+        want = to_target.normalize()
+
+        mix = current * (1.0 - aim) + want * aim
+
+        if mix.length_squared() < 0.0001:
+            return
+
+        mix = mix.normalize()
+
+        if jitter > 0:
+            mix = mix.rotate(random.uniform(-jitter, jitter))
+
+        if hit_x and mix.x * current.x < 0:
+            mix.x = current.x * 0.3
+
+        if hit_y and mix.y * current.y < 0:
+            mix.y = current.y * 0.3
+
+        if away is not None and mix.dot(away) < 0:
+            mix = mix - away * mix.dot(away) + away * 0.3
+
+        if mix.length_squared() < 0.0001:
+            return
+
+        self.vel = mix.normalize() * speed
+
+
+class MiniPina(Enemy):
+    """Mini-piña que suelta la Piña Brava al morir."""
+
+    def __init__(self, x, y, max_speed, spawn_delay=0.0):
+
+        super().__init__(x, y, MINI_HP, max_speed, spawn_delay)
+
+        self.rect = pygame.Rect(0, 0, *MINI_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        # aparece casi al instante (no espera la animacion de entrada)
+        self.spawn_t = MINI_SPAWN_TIME + spawn_delay
+
+
 def load_strip(path):
 
     sheet = load_image(path)
@@ -4579,6 +4763,12 @@ class Arena:
         self.enemies = []
         self.shots = []
         self.art = EnemyArt()
+        self.brava_art = VariantArt(
+            "pina_brava", BRAVA_DRAW_SIZE, (255, 120, 105, 255)
+        )
+        self.mini_art = VariantArt(
+            "mini_pina", MINI_DRAW_SIZE, (255, 150, 120, 255)
+        )
         self.tronco_art = TroncoArt()
         self.mosquito_art = MosquitoArt()
         self.hongun_art = HongunArt()
@@ -5244,8 +5434,16 @@ class Arena:
             self.wave, self.cfg.table
         )
 
+        # zona 2, desde la oleada 6: la mitad de las piñas son bravas
+        # (reemplazan a comunes, el total de enemigos no cambia)
+        bravas = 0
+
+        if self.cfg.key == "left" and self.wave >= BRAVA_FIRST_WAVE:
+            bravas = pinos // BRAVA_SHARE_DIV
+
         kinds = (
-            ["pino"] * pinos + ["tronco"] * troncos
+            ["pino"] * (pinos - bravas) + ["pino_brava"] * bravas
+            + ["tronco"] * troncos
             + ["mosquito"] * mosquitos + ["hongun"] * honguns
             + ["guardian"] * guardians + ["tirador"] * shooters
             + ["destello"] * destellos + ["golem"] * golems
@@ -5283,6 +5481,8 @@ class Arena:
                 hitbox = GOLEM_HITBOX
             elif kind in ("guardian", "tirador"):
                 hitbox = GUARDIAN_HITBOX
+            elif kind == "pino_brava":
+                hitbox = BRAVA_HITBOX
             else:
                 hitbox = ENEMY_HITBOX
 
@@ -5320,6 +5520,10 @@ class Arena:
                 enemy = Guardian(pos[0], pos[1], spawn_delay=delay)
             elif kind == "tirador":
                 enemy = GuardianShooter(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "pino_brava":
+                enemy = PinaBrava(
+                    pos[0], pos[1], hp, speed, spawn_delay=delay
+                )
             else:
                 enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
 
@@ -5698,6 +5902,44 @@ class Arena:
         elif self.state == self.COLLECT:
             self._update_collect(game, dt)
 
+    def _split_brava(self, game, brava):
+        """Mini-piñas que salen de una Piña Brava al morir."""
+
+        out = []
+
+        cmap = game.collision_map
+        base = random.uniform(0, 360)
+
+        for i in range(BRAVA_SPLIT_COUNT):
+
+            angle = base + i * 360.0 / BRAVA_SPLIT_COUNT
+            dirv = pygame.Vector2(1, 0).rotate(angle)
+
+            x, y = brava.pos.x, brava.pos.y
+
+            # intenta separarlas; si hay pared queda en el mismo lugar
+            for dist in (8, 5, 2):
+
+                probe = pygame.Rect(0, 0, *MINI_HITBOX)
+                probe.center = (
+                    round(brava.pos.x + dirv.x * dist),
+                    round(brava.pos.y + dirv.y * dist),
+                )
+
+                if self.cfg.room.contains(probe) and cmap.can_move(probe):
+                    x, y = probe.center
+                    break
+
+            mini = MiniPina(x, y, brava.max_speed * MINI_SPEED_MULT)
+
+            mini.vel = dirv * mini.ball_speed
+            mini.codex_key = "pino"
+            mini.room = self.cfg.room
+
+            out.append(mini)
+
+        return out
+
     def _update_wave(self, game, dt):
 
         pathing.begin_frame()
@@ -5846,9 +6088,14 @@ class Arena:
                 enemy.hp = 0
                 self._destello_explode(game, enemy)
 
+        splits = []
+
         for enemy in self.enemies:
             if enemy.dead:
                 self.last_death = (enemy.pos.x, enemy.pos.y)
+
+                if isinstance(enemy, PinaBrava):
+                    splits.extend(self._split_brava(game, enemy))
 
                 if isinstance(enemy, BOSS_TYPES):
                     self.cinematic.finale(game, enemy)
@@ -5873,6 +6120,7 @@ class Arena:
                     self._death_puff(enemy.pos)
 
         self.enemies = [e for e in self.enemies if not e.dead]
+        self.enemies.extend(splits)
 
         if game.vida <= 0:
             self._player_died(game)
@@ -6176,6 +6424,10 @@ class Arena:
                 enemy.draw(screen, camera, self.shooter_art)
             elif isinstance(enemy, Guardian):
                 enemy.draw(screen, camera, self.guardian_art)
+            elif isinstance(enemy, PinaBrava):
+                enemy.draw(screen, camera, self.brava_art)
+            elif isinstance(enemy, MiniPina):
+                enemy.draw(screen, camera, self.mini_art)
             else:
                 enemy.draw(
                     screen, camera,

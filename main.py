@@ -152,8 +152,16 @@ def desired_music():
         and game.state == "playing"
     ):
 
-        # con la tienda abierta suena la musica tranquila
-        if game.shop is not None:
+        # la musica tranquila suena al estar en la ZONA de la tienda
+        # (no depende de tener abierto el menu de compra)
+        zone = getattr(game, "zone_tracker", None)
+        zone = getattr(zone, "current", None)
+
+        if (
+            zone is not None
+            and zone.id == "tienda"
+            and getattr(game, "current_map", "mapa1") == "mapa1"
+        ):
             return "tienda"
 
         # durante la entrada y la derrota del jefe suena solo la escena

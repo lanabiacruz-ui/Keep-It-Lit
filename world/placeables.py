@@ -1,4 +1,5 @@
 import math
+import random
 from pathlib import Path
 
 import pygame
@@ -11,6 +12,9 @@ from world import maquina as _maquina
 
 
 REACH = 64
+
+# margen para que soltar un objeto "junto" al tacho cuente como tirarlo
+TRASH_DROP_PAD = 10
 
 DRAG_RANGE = 56
 
@@ -105,7 +109,8 @@ HAMMER_ITEM = "martillo"
 HAMMER_TARGETS = ("cofre", "fogata", "tacho", "yunque", "maquina")
 
 # lo que el tacho NO se traga (para no perder algo caro por un click mal puesto)
-TRASH_PROTECTED = ("faro", "tacho", "martillo", "yunque")
+# todo se puede tirar al tacho (la lista queda por si algun dia hace falta)
+TRASH_PROTECTED = ()
 
 
 def _trash_slot(self, game):
@@ -642,6 +647,9 @@ class Placeable:
         """Mensaje si no se puede recoger con el martillo (o None)."""
 
         if self.container is not None and self.container.total() > 0:
+            if self.kind == "bolsa":
+                return "Vacía la bolsa antes de recogerla"
+
             return "Vacía el cofre antes de recogerlo"
 
         return None
@@ -1335,8 +1343,10 @@ class PlaceableManager:
 
         return self.spawn("bolsa", x, y, src=src, delay=delay)
 
-    def deposit(self, game, item_id):
+    def deposit(self, game, item_id, exclude=()):
         """Guarda 1 unidad en la bolsa / cofre mas cercano con lugar.
+
+        `exclude`: tipos de contenedor que NO se usan (ej. ("cofre",)).
 
         Devuelve el contenedor o None si no hay ninguno al lado.
         """
@@ -1344,6 +1354,7 @@ class PlaceableManager:
         cands = [
             (self._dist(game, o), o) for o in self.objects
             if o.container is not None and o.fly is None
+            and o.kind not in exclude
             and self._dist(game, o) <= DEPOSIT_RANGE
         ]
 
@@ -1512,44 +1523,93 @@ class PlaceableManager:
         if obj is None or obj.kind not in HAMMER_TARGETS:
             return False
 
-        block = obj.pickup_block()
+        # lo que tenga adentro (cofre / maquina) cae al piso
+        spilled, coins = self._spill_contents(game, obj)
 
-        if block is not None:
-
-            game.show_message(block)
-
-            return True
-
-        slot = game._free_slot_for(obj.kind)
-
-        if slot is None:
-
-            game.show_message("Inventario lleno")
-
-            return True
-
-        if game.hud.items[slot] is None:
-
-            game.hud.items[slot] = obj.kind
-            game.hud.counts[slot] = 1
-
-        else:
-
-            game.hud.counts[slot] += 1
-
-        self.objects.remove(obj)
+        # No pasa al inventario: queda suelta en el piso y se arrastra con
+        # click izquierdo mantenido. Al soltarla vuelve a quedar fija.
+        obj.draggable = True
+        obj.relocating = True
 
         if self.open_obj is obj:
             self.open_obj = None
 
         audio.play("pickup")
 
-        game.show_message(
-            f"Recogiste {game._item_name(obj.kind)}: "
-            "ya puedes colocarlo en otro lugar"
+        try:
+            game.fx.poof(*obj.rect.center)
+        except Exception:
+            pass
+
+        msg = (
+            f"{game._item_name(obj.kind).capitalize()} suelto: arrástralo "
+            "con click izquierdo mantenido y suéltalo donde lo quieras"
         )
 
+        if spilled:
+            msg = f"Cayeron {spilled} items al piso. " + msg
+
+        if coins:
+            msg += f"  (+{coins} monedas de gelea)"
+
+        game.show_message(msg)
+
         return True
+
+    def _spill_contents(self, game, obj):
+        """Tira al piso todo lo que guarda `obj`.
+
+        Devuelve (items caidos, monedas de gelea cobradas). Las monedas
+        listas de la maquina no son items del piso: pasan directo a tu cuenta.
+        """
+
+        cx, cy = obj.rect.center
+
+        ids = []
+
+        if obj.container is not None:
+
+            for i, slot in enumerate(obj.container.slots):
+
+                if slot:
+                    ids.extend([slot[0]] * int(slot[1]))
+
+                obj.container.slots[i] = None
+
+        coins = 0
+
+        m = getattr(obj, "m", None)
+
+        if m is not None:
+
+            ids.extend([_maquina.GEL_ITEM] * int(m.gel))
+
+            coins = int(m.ready)
+
+            if coins:
+                game.gel_coins = int(getattr(game, "gel_coins", 0)) + coins
+
+            m.gel = 0
+            m.ready = 0
+            m.prog = 0.0
+
+        for item_id in ids:
+
+            it = _items.WorldItem(item_id, cx, cy)
+
+            _items.set_expiry(it)
+
+            it.start_fly(
+                (cx, cy),
+                game._death_landing(cx, cy),
+                delay=random.uniform(0.0, 0.3),
+                height=random.uniform(20, 38),
+                duration=random.uniform(0.45, 0.75),
+            )
+
+            game.world_items.append(it)
+
+        return len(ids), coins
 
     def _trash_slot(self, game):
         """Casillero que se tira: items, pociones o la luz equipada."""
@@ -1627,6 +1687,36 @@ class PlaceableManager:
 
     def _draw_trash_target(self, game, screen):
 
+        drag = self.dragging
+
+        if drag is not None and drag in self.objects:
+
+            tacho = self._trash_near(drag)
+
+            if tacho is not None:
+
+                sprite = tacho._sprite(game.camera.zoom)
+                dest = game.camera.apply(tacho.rect)
+                r = sprite.get_rect(midbottom=(dest.centerx, dest.bottom))
+
+                blocked = drag.pickup_block() is not None
+                color = (240, 80, 70) if blocked else (255, 190, 70)
+
+                pygame.draw.rect(
+                    screen, color, r.inflate(6, 6), 2, border_radius=4
+                )
+
+                font = self._font(20)
+                text = "Suelta para tirar" if not blocked else "Está lleno"
+                img = font.render(text, True, color)
+                shade = font.render(text, True, (20, 12, 4))
+                pos = img.get_rect(midbottom=(r.centerx, r.top - 6))
+
+                screen.blit(shade, pos.move(1, 1))
+                screen.blit(img, pos)
+
+            return
+
         if self._over_hud(game, pygame.mouse.get_pos()):
             return
 
@@ -1680,7 +1770,11 @@ class PlaceableManager:
 
         obj = self._under_mouse(game)
 
-        if obj is None or obj.kind not in HAMMER_TARGETS:
+        if (
+            obj is None
+            or obj.kind not in HAMMER_TARGETS
+            or obj.draggable
+        ):
             return
 
         sprite = obj._sprite(game.camera.zoom)
@@ -1689,17 +1783,18 @@ class PlaceableManager:
 
         r = sprite.get_rect(midbottom=(dest.centerx, dest.bottom - lift))
 
-        block = obj.pickup_block()
-        blocked = block is not None
-
-        color = (240, 80, 70) if blocked else (255, 190, 70)
+        color = (255, 190, 70)
 
         pygame.draw.rect(screen, color, r.inflate(6, 6), 2, border_radius=4)
 
+        full = (
+            (obj.container is not None and obj.container.total() > 0)
+            or (getattr(obj, "m", None) is not None and not obj.m.empty)
+        )
+
         text = (
-            block.replace("antes de recogerlo", "primero")
-            .replace("antes de recogerla", "primero")
-            if blocked else "Click: recoger"
+            "Click: soltar (lo de adentro cae al piso)"
+            if full else "Click: soltar en el piso"
         )
 
         font = self._font(20)
@@ -2002,6 +2097,12 @@ class PlaceableManager:
             or getattr(game, "pause_view", None) is not None
             or getattr(game, "tutorial", None) is not None
         ):
+            return
+
+        if self.dragging is not None:
+
+            self._draw_trash_target(game, screen)
+
             return
 
         if self._hammer_selected(game):
@@ -2544,9 +2645,68 @@ class PlaceableManager:
 
                     return
 
+    def _trash_near(self, obj):
+        """Tacho pegado al objeto (que no sea el mismo), o None."""
+
+        zone = obj.rect.inflate(2 * TRASH_DROP_PAD, 2 * TRASH_DROP_PAD)
+
+        for t in self.objects:
+
+            if (
+                t is not obj and t.kind == "tacho"
+                and t.fly is None and zone.colliderect(t.rect)
+            ):
+                return t
+
+        return None
+
+    def _try_trash_dragged(self, game, obj):
+        """Si soltaste el objeto arrastrado junto a un tacho, lo tira."""
+
+        tacho = self._trash_near(obj)
+
+        if tacho is None:
+            return False
+
+        block = obj.pickup_block()
+
+        if block is not None:
+
+            game.show_message(block.replace("recogerl", "tirarl"))
+
+            return False
+
+        self.objects.remove(obj)
+
+        if self.open_obj is obj:
+            self.open_obj = None
+
+        audio.play("pickup")
+
+        try:
+            game.fx.poof(*tacho.rect.center)
+        except Exception:
+            pass
+
+        game.show_message(f"Tiraste {game._item_name(obj.kind)}")
+
+        return True
+
     def _drop(self, game, obj):
 
+        # soltado junto a un tacho (candil, bolsa, tacho...): se tira
+        if self._try_trash_dragged(game, obj):
+            return
+
         self._unstick(game, obj)
+
+        # lo que se recogio con el martillo se mueve UNA vez: queda fijo
+        if getattr(obj, "relocating", False):
+
+            obj.draggable = False
+            obj.relocating = False
+
+            audio.play("pickup")
 
     def _drag(self, game, obj, dt):
 

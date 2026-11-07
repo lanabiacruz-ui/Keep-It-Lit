@@ -1597,9 +1597,9 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, yunque, máquina, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho, el yunque, la máquina y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, yunque, máquina, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho, el yunque, la máquina y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los sueltes con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
                     "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera, pero mientras está encendido los mosquitos no entran en su luz. El TACHO borra objetos: elige uno y haz click sobre él (Ctrl+click borra toda la casilla).",
-                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío, una fogata, un tacho, un yunque o una máquina vacía para recogerlos y colocarlos en otro lugar.",
+                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre, una fogata, un tacho, un yunque o una máquina (lo que tengan adentro cae al piso): quedan sueltos en el piso (no pasan al inventario). Arrástralos con click izquierdo mantenido y al soltarlos quedan fijos de nuevo.",
                 ],
                 "target": lambda g: (
                     None
@@ -1990,8 +1990,9 @@ class NewGame:
 
         x, y = self.player.rect.center
 
-        # al lado de una bolsa o un cofre: lo que soltas va adentro
-        box = self.placeables.deposit(self, item_id)
+        # al lado de una bolsa: lo que soltas va adentro (el cofre NO lo
+        # agarra: lo soltado queda en el piso)
+        box = self.placeables.deposit(self, item_id, exclude=("cofre",))
 
         if box is not None:
 
@@ -2039,8 +2040,10 @@ class NewGame:
 
             for _ in range(max(1, int(self.hud.counts[slot]))):
 
-                # primero a la bolsa / cofre de al lado; si no hay lugar, al piso
-                if self.placeables.deposit(self, item_id) is None:
+                # primero a la bolsa de al lado (el cofre no); si no, al piso
+                if self.placeables.deposit(
+                    self, item_id, exclude=("cofre",)
+                ) is None:
 
                     lx, ly = self._drop_landing(26)
 

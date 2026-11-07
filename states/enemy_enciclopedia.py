@@ -120,6 +120,18 @@ DEFAULT_DATA = {
         ),
     },
 
+    "pino_brava": {
+        "nombre": "Piña Brava",
+        "imagen": "pina_brava.png",
+        "descripcion": (
+            "Piña con tinte rojizo, un poco más grande y con 2 de vida más. "
+            "Reemplaza a la mitad de las piñas comunes de la Zona 2 desde la "
+            "oleada 6. Rebote certero: apunta mejor después de cada rebote. "
+            "Cuesta abajo: gana velocidad con cada rebote (hasta +40%) y se "
+            "frena al recibir un golpe. Se parte: al morir suelta 2 mini-piñas."
+        ),
+    },
+
     "golem": {
         "nombre": "Golem",
         "imagen": "golem_icono.png",
@@ -213,6 +225,7 @@ class EnemyEncyclopedia:
         "trampa",            # zona 2, oleada 1 (al pisarla)
         "guardian_tirador",  # zona 2, oleada 3
         "destello",          # zona 2, oleada 5
+        "pino_brava",        # zona 2, oleada 6
         "golem",             # zona 2, oleada 8
         "jefe_golem",        # zona 2, oleada 11 (jefe final)
     )
@@ -250,6 +263,7 @@ class EnemyEncyclopedia:
         "guardian": 700,
         "guardian_tirador": 800,
         "destello": 900,
+        "pino_brava": 600,
         "golem": 1000,
         "trampa": 600,
         "slime": 100,

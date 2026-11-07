@@ -33,5 +33,10 @@
         "nombre": "Golem",
         "imagen": "golem_icono.png",
         "descripcion": "Enorme y muy lento. Pasea tranquilo, pero si te ve va directo hacia ti sin parar. Si te toca una sola vez te agarra, te levanta y te aprieta: te saca todo el escudo y, si no tenias escudo, toda la vida de tu luz. Despues te suelta y queda cansado unos segundos. Tiene mucha vida: no te dejes alcanzar."
+    },
+    "pino_brava": {
+        "nombre": "Piña Brava",
+        "imagen": "pina_brava.png",
+        "descripcion": "Piña con tinte rojizo, un poco más grande y con 2 de vida más. Reemplaza a la mitad de las piñas comunes de la Zona 2 desde la oleada 6. Rebote certero: apunta mejor después de cada rebote. Cuesta abajo: gana velocidad con cada rebote (hasta +40%) y se frena al recibir un golpe. Se parte: al morir suelta 2 mini-piñas."
     }
 }

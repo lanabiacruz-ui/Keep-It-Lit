@@ -54,6 +54,9 @@ class Hud:
 
     COIN_TEXT_CENTER = (78, 30)
 
+    # separacion VISIBLE entre las pastillas de monedas / menu (px)
+    HUD_VISIBLE_GAP = 4
+
     COIN_TEXT_MAX_W = 44
 
     def __init__(
@@ -320,8 +323,20 @@ class Hud:
 
         self.menu_button_rect = self.menu_rect
 
+        # los PNG tienen aire transparente a los costados: se acomodan por
+        # lo que se VE (pastillas separadas HUD_VISIBLE_GAP px entre si)
+        gap = self.HUD_VISIBLE_GAP
+
+        menu_pad = self.menu_icon.get_bounding_rect().left
+        coin_pad = self.coin_icon.get_bounding_rect()
+
+        coin_right_pad = self.coin_icon.get_width() - coin_pad.right
+
         self.coin_rect = self.coin_icon.get_rect(
-            topright=(self.menu_rect.left - 6, margin)
+            topright=(
+                self.menu_rect.left + menu_pad - gap + coin_right_pad,
+                margin,
+            )
         )
 
         # contador de monedas de gelea: la misma pastilla (110x60) con la
@@ -337,8 +352,14 @@ class Hud:
 
         self.gcoin_icon = gcoin
 
+        gcoin_pad = self.gcoin_icon.get_bounding_rect()
+
         self.gcoin_rect = self.gcoin_icon.get_rect(
-            topright=(self.coin_rect.left - 6, margin)
+            topright=(
+                self.coin_rect.left + coin_pad.left - gap
+                + (self.gcoin_icon.get_width() - gcoin_pad.right),
+                margin,
+            )
         )
 
         self.coin_font = pygame.font.Font(None, 32)
