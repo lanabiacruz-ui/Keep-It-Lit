@@ -57,6 +57,10 @@ CHECK_DONE = (96, 214, 120)
 CHECK_TEXT = (245, 245, 245)
 CHECK_MUTED = (170, 170, 180)
 
+STEP_PX = 50        # cuantos pixeles del mundo valen "un paso" en la flecha
+NEAR_DIST = 120     # mas cerca que esto: solo se muestra el marcador
+POP_TIME = 0.55     # animacion de tilde recien completado
+
 
 def _dist(a, b):
 
@@ -191,12 +195,28 @@ class Guide:
 
         self.font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 20)
+        self.dist_font = pygame.font.Font(None, 22)
 
         self._arrow_cache = {}
+        self._chevron_cache = {}
+
+        # para animar los tildes que se completan
+        self._done_seen = {}
+        self._pops = {}
+        self._checks_key = None
 
     def update(self, dt):
 
         self.t += dt
+
+        for key in list(self._pops):
+
+            self._pops[key] += dt
+
+            if self._pops[key] > POP_TIME:
+                del self._pops[key]
+
+    # ----------------------------------------------------------- flecha
 
     def _arrow_surface(self, angle_deg):
 
@@ -222,19 +242,49 @@ class Guide:
 
         return self._arrow_cache[key]
 
+    def _chevron_surface(self, angle_deg):
+        """Flechita chica de la estela que 'corre' hacia el objetivo."""
+
+        key = int(round(angle_deg / 10.0)) * 10
+
+        if key not in self._chevron_cache:
+
+            size = 22
+
+            base = pygame.Surface((size, size), pygame.SRCALPHA)
+
+            pts = [(size - 4, size // 2), (5, 4), (11, size // 2), (5, size - 4)]
+
+            pygame.draw.polygon(base, ARROW_COLOR, pts)
+
+            self._chevron_cache[key] = pygame.transform.rotate(base, -key)
+
+        return self._chevron_cache[key]
+
     def draw_arrow(self, screen, camera, player_rect, target):
 
         player = player_rect.center
 
-        wp = next_point(player, target)
+        total = _dist(player, target)
 
-        dx = wp[0] - player[0]
-        dy = wp[1] - player[1]
+        near = total <= NEAR_DIST
 
-        if abs(dx) < 1 and abs(dy) < 1:
-            return
+        if not near:
 
-        angle = math.degrees(math.atan2(dy, dx))
+            wp = next_point(player, target)
+
+            dx = wp[0] - player[0]
+            dy = wp[1] - player[1]
+
+            if abs(dx) >= 1 or abs(dy) >= 1:
+                self._draw_path_arrow(
+                    screen, camera, player, math.degrees(math.atan2(dy, dx)),
+                    total
+                )
+
+        self._draw_marker(screen, camera, target, near)
+
+    def _draw_path_arrow(self, screen, camera, player, angle, total):
 
         pulse = 0.5 + 0.5 * math.sin(self.t * 6)
 
@@ -242,20 +292,55 @@ class Guide:
             pygame.Rect(player[0], player[1], 1, 1)
         ).topleft
 
-        radius = 78 + 8 * pulse
+        rad = math.radians(angle)
+
+        # estela: tres flechitas que avanzan hacia donde hay que ir
+        chevron = self._chevron_surface(angle)
+
+        for i in range(3):
+
+            phase = (self.t * 1.4 + i / 3.0) % 1.0
+
+            r = 38 + phase * 40
+
+            alpha = int(230 * math.sin(phase * math.pi))
+
+            img = chevron.copy()
+            img.set_alpha(alpha)
+
+            pos = (origin[0] + math.cos(rad) * r, origin[1] + math.sin(rad) * r)
+
+            screen.blit(img, img.get_rect(center=(int(pos[0]), int(pos[1]))))
+
+        radius = 92 + 8 * pulse
 
         pos = (
-            origin[0] + math.cos(math.radians(angle)) * radius,
-            origin[1] + math.sin(math.radians(angle)) * radius,
+            origin[0] + math.cos(rad) * radius,
+            origin[1] + math.sin(rad) * radius,
         )
 
         arrow = self._arrow_surface(angle)
 
-        screen.blit(arrow, arrow.get_rect(center=(int(pos[0]), int(pos[1]))))
+        rect = arrow.get_rect(center=(int(pos[0]), int(pos[1])))
 
-        self._draw_marker(screen, camera, target)
+        screen.blit(arrow, rect)
 
-    def _draw_marker(self, screen, camera, target):
+        # cuantos pasos faltan
+        steps = max(1, int(total / STEP_PX))
+
+        label = f"{steps} pasos"
+
+        text = self.dist_font.render(label, True, (255, 236, 200))
+        shadow = self.dist_font.render(label, True, ARROW_OUTLINE)
+
+        spot = text.get_rect(
+            center=(rect.centerx, rect.centery + 28)
+        )
+
+        screen.blit(shadow, spot.move(1, 1))
+        screen.blit(text, spot)
+
+    def _draw_marker(self, screen, camera, target, near):
 
         spot = camera.apply(
             pygame.Rect(int(target[0]), int(target[1]), 1, 1)
@@ -264,7 +349,21 @@ class Guide:
         if not screen.get_rect().inflate(-40, -40).collidepoint(spot):
             return
 
-        bob = int(math.sin(self.t * 5) * 6)
+        # anillo que late en el piso, para ver el punto exacto
+        ring = 0.5 + 0.5 * math.sin(self.t * 4)
+
+        r = int(16 + 10 * ring)
+
+        ring_surf = pygame.Surface((r * 2 + 4, r * 2 + 4), pygame.SRCALPHA)
+
+        pygame.draw.circle(
+            ring_surf, (*ARROW_COLOR, int(150 - 90 * ring)),
+            (r + 2, r + 2), r, 3
+        )
+
+        screen.blit(ring_surf, ring_surf.get_rect(center=spot))
+
+        bob = int(math.sin(self.t * 5) * (9 if near else 6))
 
         x, y = spot[0], spot[1] - 46 + bob
 
@@ -275,16 +374,45 @@ class Guide:
         ])
         pygame.draw.polygon(screen, ARROW_COLOR, tip)
 
+    # -------------------------------------------------------- checklist
+
+    def _track_checks(self, entries):
+        """Detecta que tildes se completaron recien para animarlos."""
+
+        key = tuple(text for text, _ in entries)
+
+        if key != self._checks_key:
+
+            # lista nueva (otro paso): no hay nada que festejar todavia
+            self._checks_key = key
+            self._done_seen = {text: done for text, done in entries}
+            self._pops = {}
+
+            return
+
+        for text, done in entries:
+
+            if done and not self._done_seen.get(text, False):
+                self._pops[text] = 0.0
+
+            self._done_seen[text] = done
+
     def draw_checklist(self, screen, entries):
         """entries: lista de (texto, hecho)."""
 
         if not entries:
             return
 
+        self._track_checks(entries)
+
         pad = 10
         row_h = 26
 
-        title = self.title_font.render("PROBÁ TODO", True, CHECK_BORDER)
+        done_count = sum(1 for _, done in entries if done)
+
+        title = self.title_font.render(
+            f"PROBÁ TODO  {done_count}/{len(entries)}", True, CHECK_BORDER
+        )
 
         labels = [
             self.font.render(text, True, CHECK_TEXT if not done else CHECK_DONE)
@@ -295,22 +423,56 @@ class Guide:
             [title.get_width()] + [l.get_width() + 30 for l in labels]
         ) + pad * 2
 
-        height = pad + title.get_height() + 4 + row_h * len(entries) + pad - 4
+        bar_h = 6
+
+        height = (
+            pad + title.get_height() + 4 + bar_h + 6
+            + row_h * len(entries) + pad - 4
+        )
 
         panel = pygame.Surface((width, height), pygame.SRCALPHA)
 
+        all_done = done_count == len(entries)
+
         pygame.draw.rect(panel, CHECK_BG, panel.get_rect(), border_radius=10)
         pygame.draw.rect(
-            panel, CHECK_BORDER, panel.get_rect(), width=2, border_radius=10
+            panel,
+            CHECK_DONE if all_done else CHECK_BORDER,
+            panel.get_rect(), width=2, border_radius=10
         )
 
         panel.blit(title, (pad, pad))
 
-        y = pad + title.get_height() + 4
+        # barra de progreso
+        bar = pygame.Rect(
+            pad, pad + title.get_height() + 4, width - pad * 2, bar_h
+        )
+
+        pygame.draw.rect(panel, (50, 52, 60), bar, border_radius=3)
+
+        fill = bar.copy()
+        fill.width = int(bar.width * done_count / len(entries))
+
+        if fill.width > 0:
+            pygame.draw.rect(panel, CHECK_DONE, fill, border_radius=3)
+
+        y = bar.bottom + 6
 
         for (text, done), label in zip(entries, labels):
 
+            pop = self._pops.get(text)
+
             box = pygame.Rect(pad, y + 3, 16, 16)
+
+            if pop is not None:
+
+                # el cuadradito "salta" un poco al completarse
+                k = 1.0 + 0.55 * math.sin(min(1.0, pop / POP_TIME) * math.pi)
+
+                grown = int(16 * k)
+
+                box = pygame.Rect(0, 0, grown, grown)
+                box.center = (pad + 8, y + 11)
 
             pygame.draw.rect(
                 panel, CHECK_DONE if done else CHECK_MUTED, box,
@@ -318,10 +480,11 @@ class Guide:
             )
 
             if done:
+                cx, cy = box.center
+
                 pygame.draw.lines(
                     panel, (20, 40, 24), False,
-                    [(box.x + 3, box.y + 8), (box.x + 7, box.y + 12),
-                     (box.x + 13, box.y + 4)], 3
+                    [(cx - 5, cy), (cx - 1, cy + 4), (cx + 5, cy - 4)], 3
                 )
 
             panel.blit(label, (pad + 24, y + 1))

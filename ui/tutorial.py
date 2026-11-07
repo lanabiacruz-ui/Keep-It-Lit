@@ -1,5 +1,6 @@
 import math
 import random
+import re
 from pathlib import Path
 
 import pygame
@@ -11,57 +12,196 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 UI_DIR = ROOT_DIR / "assets" / "maps" / "ui"
 
 
+# Nombre del ayudante. Lo usan el tutorial y el cartelito de ayuda.
+HELPER_NAME = "Cenizo"
+
 CHARACTER_IMAGE = "botayuda.png"
 FRAME_IMAGE = "texto.png"
 
-CHARACTER_CROP = pygame.Rect(490, 214, 194, 319)
+# None = se recorta solo al borde visible de la imagen
+CHARACTER_CROP = None
 FRAME_CROP = None
 
 
+# Marcado de los textos: lo que va entre [[ ]] se resalta como una tecla.
+#   "Apretá [[E]] para agarrar"  ->  la E se dibuja como un botoncito.
 TUTORIAL_PAGES = [
-
-    "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
-    "MOVERTE: W A S D. SALTAR: ESPACIO (sirve para esquivar los ataques de los jefes). ATACAR: click izquierdo. Cada golpe gasta un poco de luz, así que no pegues de más.",
-    "AGARRAR: acercate a un objeto o a una luz del piso y apretá E. Las luces (fósforo, vela, antorcha) se equipan solas, y solo podés llevar una. Con Q soltás lo seleccionado y con CTRL + Q soltás TODO el inventario (la luz equipada no se suelta).",
-    "OBJETOS EN EL PISO: lo que soltás con Q o CTRL + Q, la luz que soltás, lo que escupe la tienda y lo que se cae al morir se esfuma a los 5 MINUTOS (parpadea los últimos 30 segundos y el tiempo solo corre en el mapa donde quedó). Si soltás algo junto a una BOLSA o un COFRE, va adentro y ahí no vence nunca.",
-    "INVENTARIO: tenés 4 casilleros (teclas 1 al 4), 2 marcos de pociones (teclas 5 y 6) y la tecla 7 elige tu luz equipada. También podés recorrer todo con la RUEDITA del mouse.",
-    "USAR OBJETOS: elegí el casillero (con 1-4 o la ruedita) y apretá F o click derecho. Mantené click izquierdo sobre un casillero para ver qué hace.",
-    "RECUPERAR LUZ: la madera suma 25%, la resina recupera 90% de a poco y el aceite la deja en 75% y te da velocidad. Usalos ANTES de quedarte sin luz.",
-    "MONEDAS Y TIENDA: las monedas se juntan solas al acercarte. La DORADA vale 1, la AZUL vale 5 y la ROJA vale 10. El vendedor está en la sala de arriba: apretá F cerca de él para comprar luces y objetos.",
-    "ENCICLOPEDIA: en la pausa (ESC) está la enciclopedia de criaturas. Apretá COBRAR en cada criatura descubierta para llevarte monedas de regalo (una sola vez por criatura).",
-    "SALAS DE COMBATE: tienen oleadas de enemigos. Empezá por la ZONA 1 (Orkun, a la derecha): su jefe suelta una llave dorada que abre la puerta de oro de la ZONA 2. Con escape podés irte caminando, pero si tu luz se apaga peleando perdés igual. Cuidado con los mosquitos, que se pegan y chupan vida.",
-    "AYUDA: ESC abre la pausa. ¡Mucha suerte y que tu luz nunca se apague!",
+    "¡Hola! Soy [[Cenizo]], tu ayudante. Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
+    "Moverte: [[W]] [[A]] [[S]] [[D]]. Saltar: [[ESPACIO]] (sirve para esquivar a los jefes). Atacar: [[CLICK IZQ.]] (cada golpe gasta un poquito de luz).",
+    "Agarrar: acercate a algo del piso y apretá [[E]]. Soltar: [[Q]]. Soltar todo: [[CTRL + Q]] (la luz equipada se queda).",
+    "Lo que tirás al piso se esfuma a los [[5 MINUTOS]]. Si lo soltás junto a una bolsa o un cofre, queda adentro para siempre.",
+    "Inventario: [[1]] al [[4]] son tus casilleros, [[5]] y [[6]] las pociones y [[7]] tu luz. También sirve la [[RUEDITA]] del mouse.",
+    "Usar un objeto: elegilo y apretá [[F]] o [[CLICK DER.]]. Si mantenés click izquierdo sobre un casillero, te cuento qué hace.",
+    "Recuperar luz: la madera suma 25%, la resina 90% de a poco y el aceite te deja en 75% y te da velocidad. ¡Usalos ANTES de quedarte a oscuras!",
+    "Monedas: se juntan solas al acercarte. Dorada = 1, azul = 5, roja = 10. Con ellas comprás cosas en la tienda: [[F]] cerca del vendedor.",
+    "En la pausa ([[ESC]]) está la enciclopedia de criaturas. Tocá COBRAR en cada criatura descubierta y te llevás monedas de regalo.",
+    "Salas de combate: empezá por la Zona 1 (Orkun, a la derecha). Su jefe suelta una llave dorada para la Zona 2. ¡Ojo con los mosquitos!",
+    "Eso es todo. Si te perdés, abrí la pausa con [[ESC]]. ¡Que tu luz nunca se apague!",
 ]
 
 TEXT_COLOR = (25, 60, 150)
 SHADOW_COLOR = (225, 230, 240)
 HINT_COLOR = (60, 95, 170)
 
+KEY_BG = (255, 224, 160)
+KEY_EDGE = (214, 150, 60)
+KEY_TEXT = (140, 56, 0)
+
+NAME_BG = (255, 176, 64)
+NAME_TEXT = (60, 30, 6)
+
 FRAME_BACKING = (255, 255, 255)
+
+_MARK = re.compile(r"(\[\[|\]\])")
+
+
+def parse_markup(text):
+    """Devuelve (texto_plano, flags) donde flags[i] es 0 si el caracter i
+    es texto normal, o el numero de grupo ([[ ]]) al que pertenece. Asi
+    "[[W]] [[A]]" son dos botones y "[[CTRL + Q]]" es uno solo."""
+
+    plain = []
+    flags = []
+
+    group = 0
+    on = 0
+
+    for part in _MARK.split(text):
+
+        if part == "[[":
+            group += 1
+            on = group
+        elif part == "]]":
+            on = 0
+        else:
+            plain.append(part)
+            flags.extend([on] * len(part))
+
+    return "".join(plain), flags
+
+
+def wrap_marked(font, plain, flags, max_width):
+    """Parte el texto en lineas por palabras. Devuelve una lista de
+    (linea, flags_de_la_linea)."""
+
+    words = []
+
+    start = None
+
+    for i, ch in enumerate(plain + " "):
+
+        if ch.isspace():
+
+            if start is not None:
+                words.append((start, i))
+                start = None
+
+        elif start is None:
+
+            start = i
+
+    lines = []
+
+    cur_text = ""
+    cur_flags = []
+
+    for a, b in words:
+
+        word = plain[a:b]
+        word_flags = flags[a:b]
+
+        test = (cur_text + " " + word) if cur_text else word
+
+        if cur_text and font.size(test)[0] > max_width:
+
+            lines.append((cur_text, cur_flags))
+
+            cur_text = word
+            cur_flags = list(word_flags)
+
+        else:
+
+            if cur_text:
+                # el espacio se resalta solo si une dos palabras del mismo grupo
+                joined = (
+                    cur_flags[-1] if cur_flags[-1] == word_flags[0] else 0
+                )
+                cur_flags = cur_flags + [joined] + list(word_flags)
+            else:
+                cur_flags = list(word_flags)
+
+            cur_text = test
+
+    if cur_text:
+        lines.append((cur_text, cur_flags))
+
+    return lines
+
+
+def runs(text, flags):
+    """Agrupa caracteres consecutivos con la misma marca."""
+
+    out = []
+
+    for ch, flag in zip(text, flags):
+
+        if out and out[-1][1] == flag:
+            out[-1][0] += ch
+        else:
+            out.append([ch, flag])
+
+    return out
+
+
+def draw_marked_line(screen, font, text, flags, x, y, text_color=None):
+    """Dibuja una linea; lo marcado con [[ ]] sale como boton de tecla."""
+
+    color = text_color or TEXT_COLOR
+
+    for chunk, flag in runs(text, flags):
+
+        w = font.size(chunk)[0]
+
+        if flag:
+
+            chip = pygame.Rect(x - 3, y - 1, w + 6, font.get_linesize() - 2)
+
+            pygame.draw.rect(screen, KEY_BG, chip, border_radius=6)
+            pygame.draw.rect(screen, KEY_EDGE, chip, width=1, border_radius=6)
+
+            screen.blit(font.render(chunk, True, KEY_TEXT), (x, y))
+
+        else:
+
+            screen.blit(font.render(chunk, True, SHADOW_COLOR), (x + 1, y + 1))
+            screen.blit(font.render(chunk, True, color), (x, y))
+
+        x += w
 
 
 class Tutorial:
 
-
     SLIDE_TIME = 0.5
 
+    INPUT_DELAY = 0.45
 
-    INPUT_DELAY = 0.6
+    START_FONT = 30
+    MIN_FONT = 18
 
-    MIN_FONT = 17
-
-    TYPE_SPEED = 38.0
+    TYPE_SPEED = 46.0
     BLIP_EVERY = 2
-    PAUSE_END = 0.22
-    PAUSE_COMMA = 0.10
+    PAUSE_END = 0.16
+    PAUSE_COMMA = 0.07
     BLIPS = ("talk_a", "talk_b", "talk_c", "talk_d")
+
+    HOP_TIME = 0.4
 
     def __init__(
         self,
         screen_size,
         pages=None,
-        char_height=150,
-        frame_width=400,
+        char_height=170,
+        frame_width=450,
         margin=16,
         can_skip=False
     ):
@@ -73,14 +213,19 @@ class Tutorial:
         self.pages = list(pages or TUTORIAL_PAGES)
         self.margin = margin
 
+        self.parsed = [parse_markup(p) for p in self.pages]
+
         self.index = 0
         self.active = bool(self.pages)
-
 
         self.phase = "in"
         self.phase_time = 0.0
         self.age = 0.0
 
+        # salto del ayudante cuando cambia la pagina
+        self.hop = 0.0
+
+        self.sparks = []
 
         char = self._load_cropped(CHARACTER_IMAGE, CHARACTER_CROP)
         frame = self._load_cropped(FRAME_IMAGE, FRAME_CROP)
@@ -107,11 +252,9 @@ class Tutorial:
             frame, (frame_width, frame_height)
         )
 
-
         self.char_rect = self.character.get_rect(
             bottomright=(self.width - margin, self.height - margin)
         )
-
 
         self.frame_rect = self.frame.get_rect(
             bottomright=(
@@ -120,23 +263,25 @@ class Tutorial:
             )
         )
 
-
         self.group_rect = self.char_rect.union(self.frame_rect)
 
-
-        self.font = pygame.font.Font(None, 28)
-        self.hint_font = pygame.font.Font(None, 20)
+        self.hint_font = pygame.font.Font(None, 21)
         self.counter_font = pygame.font.Font(None, 20)
+        self.name_font = pygame.font.Font(None, 22)
 
-        self.pad_x = 20
+        self.pad_x = 22
         self.pad_y = 14
 
         self._lines_cache = {}
         self._text_cache = {}
         self._fonts = {}
 
-        self._reset_typing()
+        self.glow = self._make_glow(char_height)
 
+        self._reset_typing()
+        self._pop()
+
+    # ---------------------------------------------------------- imagenes
 
     @staticmethod
     def _find_image(name):
@@ -229,28 +374,24 @@ class Tutorial:
         return image.subsurface(area).copy()
 
     @staticmethod
-    def _wrap(font, text, max_width):
+    def _make_glow(char_height):
+        """Halo calido detras del ayudante: es un fantasma que cuida tu luz."""
 
-        lines = []
-        line = ""
+        size = int(char_height * 1.5)
 
-        for word in text.split():
+        glow = pygame.Surface((size, size), pygame.SRCALPHA)
 
-            test = (line + " " + word).strip()
+        center = size // 2
 
-            if line and font.size(test)[0] > max_width:
+        for r in range(center, 0, -3):
 
-                lines.append(line)
-                line = word
+            alpha = int(46 * (1 - r / center) ** 2)
 
-            else:
+            pygame.draw.circle(glow, (255, 190, 90, alpha), (center, center), r)
 
-                line = test
+        return glow
 
-        if line:
-            lines.append(line)
-
-        return lines
+    # ------------------------------------------------------------ texto
 
     def _text(self, font, text, color):
         key = (id(font), text, color)
@@ -276,17 +417,19 @@ class Tutorial:
 
         if index not in self._lines_cache:
 
+            plain, flags = self.parsed[index]
+
             max_w = self.frame_rect.width - self.pad_x * 2
 
-            max_h = self.frame_rect.height - 52
+            max_h = self.frame_rect.height - 56
 
-            size = 28
+            size = self.START_FONT
 
             while True:
 
                 font = self._font_size(size)
 
-                lines = self._wrap(font, self.pages[index], max_w)
+                lines = wrap_marked(font, plain, flags, max_w)
 
                 if (
                     len(lines) * font.get_linesize() <= max_h
@@ -300,6 +443,7 @@ class Tutorial:
 
         return self._lines_cache[index]
 
+    # ----------------------------------------------------------- tipeo
 
     def _reset_typing(self):
 
@@ -313,7 +457,7 @@ class Tutorial:
 
         _, lines = self._lines(self.index)
 
-        return "".join(lines)
+        return "".join(text for text, _ in lines)
 
     def _typing_done(self):
 
@@ -369,38 +513,49 @@ class Tutorial:
 
                 break
 
-    def handle_event(self, event):
+    # --------------------------------------------------------- efectos
 
-        if not self.active or self.phase != "show":
-            return False
+    def _pop(self):
+        """Saltito del ayudante y chispitas al cambiar de pagina."""
 
-        if event.type != pygame.KEYDOWN:
-            return False
+        self.hop = self.HOP_TIME
 
-        if self.age < self.INPUT_DELAY:
-            return False
+        cx = self.char_rect.centerx
+        top = self.char_rect.top + 20
 
+        for _ in range(7):
 
-        if event.key == pygame.K_ESCAPE:
-            return False
+            self.sparks.append({
+                "x": cx + random.uniform(-26, 26),
+                "y": top + random.uniform(-6, 24),
+                "vx": random.uniform(-40, 40),
+                "vy": random.uniform(-90, -40),
+                "life": random.uniform(0.5, 0.9),
+                "age": 0.0,
+                "size": random.randint(3, 5),
+            })
 
-        if self.can_skip and event.key == pygame.K_k:
+    def _update_fx(self, dt):
 
-            self.skip_all = True
-            self.phase = "out"
-            self.phase_time = 0.0
+        if self.hop > 0:
+            self.hop = max(0.0, self.hop - dt)
 
-            return True
+        for s in self.sparks:
 
-        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            s["age"] += dt
+            s["x"] += s["vx"] * dt
+            s["y"] += s["vy"] * dt
 
-            self.phase = "out"
-            self.phase_time = 0.0
+        self.sparks = [s for s in self.sparks if s["age"] < s["life"]]
 
-            return True
+    # --------------------------------------------------------- entrada
 
-        if event.key != pygame.K_SPACE:
-            return False
+    def _close(self):
+
+        self.phase = "out"
+        self.phase_time = 0.0
+
+    def _advance(self):
 
         if not self._typing_done():
 
@@ -408,18 +563,78 @@ class Tutorial:
 
             return True
 
+        if self.index >= len(self.pages) - 1:
+
+            self._close()
+
+            return True
+
         self.index += 1
 
         self._reset_typing()
-
-        if self.index >= len(self.pages):
-
-            self.index = len(self.pages) - 1
-            self.phase = "out"
-            self.phase_time = 0.0
+        self._pop()
 
         return True
 
+    def _back(self):
+
+        if self.index <= 0:
+            return True
+
+        self.index -= 1
+
+        self._reset_typing()
+
+        # al volver atras el texto aparece completo, sin esperar
+        self.shown = len(self._flat())
+
+        self._pop()
+
+        return True
+
+    def handle_event(self, event):
+
+        if not self.active or self.phase != "show":
+            return False
+
+        if self.age < self.INPUT_DELAY:
+            return False
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+
+            if event.button == 1:
+                return self._advance()
+
+            if event.button == 3:
+                return self._back()
+
+            return False
+
+        if event.type != pygame.KEYDOWN:
+            return False
+
+        if event.key == pygame.K_ESCAPE:
+            return False
+
+        if self.can_skip and event.key == pygame.K_k:
+
+            self.skip_all = True
+            self._close()
+
+            return True
+
+        if event.key in (
+            pygame.K_SPACE,
+            pygame.K_RETURN,
+            pygame.K_KP_ENTER,
+            pygame.K_RIGHT,
+        ):
+            return self._advance()
+
+        if event.key in (pygame.K_LEFT, pygame.K_BACKSPACE):
+            return self._back()
+
+        return False
 
     def update(self, dt):
 
@@ -430,6 +645,7 @@ class Tutorial:
         self.phase_time += dt
 
         self._update_typing(dt)
+        self._update_fx(dt)
 
         if self.phase == "in" and self.phase_time >= self.SLIDE_TIME:
 
@@ -440,6 +656,7 @@ class Tutorial:
 
             self.active = False
 
+    # ---------------------------------------------------------- dibujo
 
     def _offset(self):
 
@@ -448,9 +665,13 @@ class Tutorial:
         if self.phase == "in":
 
             t = min(1.0, self.phase_time / self.SLIDE_TIME)
+
+            # entra con un pequeño rebote
             ease = 1 - (1 - t) ** 3
 
-            return int(distance * (1 - ease))
+            overshoot = math.sin(t * math.pi) * 0.06
+
+            return int(distance * (1 - ease - overshoot))
 
         if self.phase == "out":
 
@@ -461,6 +682,74 @@ class Tutorial:
 
         return 0
 
+    def _draw_line(self, screen, font, text, flags, x, y, count):
+        """Una linea con las teclas resaltadas. count = cuantos caracteres
+        mostrar (efecto maquina de escribir)."""
+
+        draw_marked_line(screen, font, text[:count], flags[:count], x, y)
+
+    def _draw_dots(self, screen, frame_pos):
+
+        total = len(self.pages)
+
+        if total <= 1:
+            return
+
+        gap = 12
+
+        x = frame_pos.right - 14 - gap * (total - 1)
+        y = frame_pos.top + 14
+
+        for i in range(total):
+
+            if i == self.index:
+                pygame.draw.circle(screen, (255, 150, 30), (x, y), 5)
+                pygame.draw.circle(screen, (140, 56, 0), (x, y), 5, 1)
+            else:
+                color = (255, 200, 120) if i < self.index else (190, 196, 210)
+                pygame.draw.circle(screen, color, (x, y), 3)
+
+            x += gap
+
+    def _draw_name_tag(self, screen, frame_pos):
+
+        label = self._text(self.name_font, HELPER_NAME.upper(), NAME_TEXT)
+
+        tag = label.get_rect()
+        tag.inflate_ip(18, 6)
+        tag.bottomleft = (frame_pos.left + 16, frame_pos.top + 6)
+
+        pygame.draw.rect(screen, NAME_BG, tag, border_radius=8)
+        pygame.draw.rect(screen, (140, 80, 10), tag, width=2, border_radius=8)
+
+        screen.blit(label, label.get_rect(center=tag.center))
+
+    def _draw_sparks(self, screen, dx):
+
+        for s in self.sparks:
+
+            t = s["age"] / s["life"]
+
+            alpha = int(255 * (1 - t))
+
+            size = s["size"]
+
+            star = pygame.Surface((size * 4, size * 4), pygame.SRCALPHA)
+
+            c = size * 2
+
+            pts = [
+                (c, c - size * 2), (c + 1, c - 1), (c + size * 2, c),
+                (c + 1, c + 1), (c, c + size * 2), (c - 1, c + 1),
+                (c - size * 2, c), (c - 1, c - 1),
+            ]
+
+            pygame.draw.polygon(star, (255, 214, 120, alpha), pts)
+
+            screen.blit(
+                star, (int(s["x"]) + dx - c, int(s["y"]) - c)
+            )
+
     def draw(self, screen):
 
         if not self.active:
@@ -468,25 +757,50 @@ class Tutorial:
 
         dx = self._offset()
 
+        # halo detras del ayudante
+        pulse = 0.8 + 0.2 * math.sin(self.age * 2.2)
+
+        glow = self.glow
+
+        if pulse < 0.999:
+            glow = pygame.transform.smoothscale(
+                self.glow,
+                (int(self.glow.get_width() * pulse),
+                 int(self.glow.get_height() * pulse))
+            )
+
+        screen.blit(
+            glow,
+            glow.get_rect(center=self.char_rect.center).move(dx, 0)
+        )
 
         bob = 0
 
         if self.phase == "show":
 
             if self._typing_done():
-                bob = int(round(math.sin(self.age * 4) * 2))
+                bob = int(round(math.sin(self.age * 3) * 3))
             else:
                 bob = int(round(math.sin(self.age * 22) * 2.5))
+
+        if self.hop > 0:
+
+            t = 1 - self.hop / self.HOP_TIME
+
+            bob -= int(math.sin(t * math.pi) * 14)
 
         screen.blit(
             self.character,
             self.char_rect.move(dx, bob)
         )
 
+        self._draw_sparks(screen, dx)
+
         frame_pos = self.frame_rect.move(dx, 0)
 
         screen.blit(self.frame, frame_pos)
 
+        self._draw_name_tag(screen, frame_pos)
 
         font, lines = self._lines(self.index)
 
@@ -495,79 +809,68 @@ class Tutorial:
         block_h = line_h * len(lines)
 
         top = frame_pos.top + max(
-            self.pad_y,
-            (frame_pos.height - block_h) // 2 - 6
+            self.pad_y + 4,
+            (frame_pos.height - block_h) // 2 - 4
         )
 
         remaining = (
-            sum(len(l) for l in lines)
+            sum(len(text) for text, _ in lines)
             if self.phase == "out" else self.shown
         )
 
-        for i, line in enumerate(lines):
+        for i, (text, flags) in enumerate(lines):
 
             if remaining <= 0:
                 break
 
-            part = line[:remaining]
-
-            remaining -= len(line)
-
-            y = top + i * line_h
-
-            shadow = font.render(part, True, SHADOW_COLOR)
-            label = font.render(part, True, TEXT_COLOR)
-
-            screen.blit(shadow, (frame_pos.left + self.pad_x + 1, y + 1))
-            screen.blit(label, (frame_pos.left + self.pad_x, y))
-
-
-        counter = self._text(
-            self.counter_font,
-            f"{self.index + 1}/{len(self.pages)}",
-            HINT_COLOR
-        )
-
-        screen.blit(
-            counter,
-            counter.get_rect(
-                topright=(
-                    frame_pos.right - 10,
-                    frame_pos.top + 8
-                )
+            self._draw_line(
+                screen, font, text, flags,
+                frame_pos.left + self.pad_x,
+                top + i * line_h,
+                remaining
             )
+
+            remaining -= len(text)
+
+        self._draw_dots(screen, frame_pos)
+
+        if self.phase != "show" or self.age < self.INPUT_DELAY:
+            return
+
+        # ayuda de teclas, abajo del globo
+        done = self._typing_done()
+
+        last = self.index == len(self.pages) - 1
+
+        parts = []
+
+        if self.index > 0:
+            parts.append("← volver")
+
+        parts.append("cerrar" if last and done else "seguir")
+
+        text = "   ".join(parts)
+
+        hint = self._text(self.hint_font, text, HINT_COLOR)
+
+        hint_pos = hint.get_rect(
+            bottomright=(frame_pos.right - 30, frame_pos.bottom - 9)
         )
 
+        screen.blit(hint, hint_pos)
 
-        if (
-            self.phase == "show"
-            and self.age >= self.INPUT_DELAY
-            and self._typing_done()
-        ):
+        # triangulito que parpadea cuando se puede seguir
+        if done:
 
-            if int(self.age * 2) % 2 == 0:
+            tx = frame_pos.right - 18
+            ty = frame_pos.bottom - 17 + int(math.sin(self.age * 6) * 2)
 
-                last = self.index == len(self.pages) - 1
+            pygame.draw.polygon(
+                screen, (255, 150, 30),
+                [(tx - 5, ty - 5), (tx + 5, ty - 5), (tx, ty + 3)]
+            )
 
-                text = (
-                    "Espacio: cerrar"
-                    if last
-                    else "Espacio: seguir   Enter: saltar"
-                )
-
-                hint = self._text(self.hint_font, text, HINT_COLOR)
-
-                screen.blit(
-                    hint,
-                    hint.get_rect(
-                        bottomright=(
-                            frame_pos.right - 12,
-                            frame_pos.bottom - 8
-                        )
-                    )
-                )
-
-        if self.can_skip and self.phase == "show":
+        if self.can_skip:
 
             skip = self._text(
                 self.hint_font, "K: sacar tutorial", HINT_COLOR
@@ -578,7 +881,7 @@ class Tutorial:
                 skip.get_rect(
                     bottomleft=(
                         frame_pos.left + self.pad_x,
-                        frame_pos.bottom - 8
+                        frame_pos.bottom - 9
                     )
                 )
             )
