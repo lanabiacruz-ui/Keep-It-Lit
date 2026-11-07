@@ -528,6 +528,19 @@ class ShopUI:
 
         return data.get("nombre", item_id.capitalize())
 
+    def _lock_tile_text(self, item_id, wave):
+
+        zone = self.lock_zones.get(item_id)
+
+        if zone and len(zone) > 2:
+
+            if zone[2] == "Centro":
+                return "Bloqueado: Centro"
+
+            return f"Bloqueado: oleada {wave} · {zone[2]}"
+
+        return f"Bloqueado: oleada {wave}"
+
     def lock_reason(self, item_id, short=False):
 
         need = self.locks.get(item_id)
@@ -537,14 +550,21 @@ class ShopUI:
 
         zone = self.lock_zones.get(item_id)
 
+        if zone and len(zone) > 2 and zone[2] == "Centro":
+
+            if short:
+                return "Bloqueado: llegá al Centro"
+
+            return "BLOQUEADO: se desbloquea al llegar al Centro del mapa."
+
         current = zone[1] if zone else self.best_wave
 
-        missing = max(1, need - current)
+        missing = max(0, need - current)
 
         if short:
             where = f" en {zone[0]}" if zone else ""
             return (
-                f"Bloqueado: llega a la oleada {need}{where} "
+                f"Bloqueado: empezá la oleada {need}{where} "
                 f"(vas por la {current})"
             )
 
@@ -553,12 +573,18 @@ class ShopUI:
             else "en cualquiera de las salas de combate"
         )
 
+        if missing == 0:
+            tail = f"Ya estás en la oleada {need}: empezala y es tuyo."
+        else:
+            tail = (
+                f"Vas por la oleada {current}: te "
+                f"{'falta' if missing == 1 else 'faltan'} {missing} "
+                f"{'oleada' if missing == 1 else 'oleadas'} por pasar."
+            )
+
         return (
-            f"BLOQUEADO: todavía no llegaste a la oleada {need}. "
-            f"Se desbloquea al alcanzar la oleada {need} {where}. "
-            f"Tu mejor oleada ahí es la {current}: te "
-            f"{'falta' if missing == 1 else 'faltan'} {missing} "
-            f"{'oleada' if missing == 1 else 'oleadas'}."
+            f"BLOQUEADO: se desbloquea al empezar la oleada {need} "
+            f"{where}. {tail}"
         )
 
     def info_lines(self, item_id):
@@ -1600,8 +1626,7 @@ class ShopUI:
         self._text(
             screen, self.tiny_font,
             (
-                f"Bloqueado: oleada {locked_wave}"
-                f"{' · Z2' if item_id in self.lock_zones else ''}"
+                self._lock_tile_text(item_id, locked_wave)
                 if locked_wave is not None
                 else "No va al inventario"
                 if no_inv

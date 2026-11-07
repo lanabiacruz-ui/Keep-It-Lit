@@ -46,7 +46,7 @@ from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
 from world.slime import SlimeManager
 from world.shop import (
     Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES,
-    SHOP_UNLOCK_ZONES
+    SHOP_UNLOCK_ZONES, SHOP_UNLOCK_REQS, CENTER_TAG
 )
 from world.placeables import PlaceableManager
 from world.dungeon_map import DungeonMapView
@@ -196,7 +196,6 @@ DEATH_SINK_DELAY = 0.45       # espera antes de empezar a hundirse
 DEATH_SINK_TIME = 1.7         # tarda en hundirse del todo
 DEATH_HOLD_TIME = 0.9         # queda el pozo vacio y los enemigos mirando
 DEATH_SEQ_TIME = DEATH_SINK_DELAY + DEATH_SINK_TIME + DEATH_HOLD_TIME
-DEATH_LIGHT_RADIUS = 120      # luz tenue para ver la silueta si no hay luz
 
 DELETE_SAVE_ON_LOSS = True
 
@@ -290,9 +289,12 @@ class NewGame:
         self.achievement_toast = AchievementToast((self.width, self.height))
         self.shop_unlock_toast = ShopUnlockToast((self.width, self.height))
 
-        # items de la tienda que ya estaban desbloqueados (para avisar solo
-        # los nuevos); se llena la primera vez que se chequea
-        self._shop_seen = None
+        # items de la tienda ya conseguidos (se guarda en la partida). Es
+        # None en partidas viejas: la primera vez se llena sin avisar
+        saved_unlocks = self.save_data.get("shop_unlocked")
+        self._shop_unlocked = (
+            set(saved_unlocks) if isinstance(saved_unlocks, list) else None
+        )
 
         # prueba (F6): los golpes y bolas de fuego hacen 1000 de dano a los
         # enemigos y jefes
@@ -1642,7 +1644,7 @@ class NewGame:
                     "lanzas una bola de fuego. ¡Pruébala!"
                 ),
                 "tuto": [
-                    f"ANTORCHA: se desbloquea en la tienda al llegar a la oleada {SHOP_UNLOCK_WAVES['antorcha']} (en la Zona 1). Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
+                    f"ANTORCHA: se desbloquea en la tienda al empezar la oleada {SHOP_UNLOCK_WAVES['antorcha']} (en la Zona 1). Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
                 ],
                 "target": lambda g: (
                     None
@@ -3426,35 +3428,58 @@ class NewGame:
 
         return self.best_wave()
 
-    def _unlock_wave(self, item_id):
+    def _req_met(self, tag, wave):
 
-        zone = SHOP_UNLOCK_ZONES.get(item_id)
+        """True si ya cumpliste ese requisito: llegar al Centro o EMPEZAR
+        la oleada N de esa zona (o haberla pasado)."""
 
-        return self.zone_wave(zone) if zone else self.best_wave()
+        if tag == CENTER_TAG:
+            return "central" in self.zones_seen
+
+        for arena in self.arenas:
+
+            if arena.cfg.zone_tag == tag:
+
+                return arena.wave > wave or (
+                    arena.wave == wave
+                    and arena.state in (arena.WAVE, arena.CLEAR)
+                )
+
+        return False
 
     def _shop_unlocked_now(self):
 
-        """Ids de la tienda que ya se pueden comprar por la oleada."""
+        """Ids de la tienda que ya se pueden comprar (lo ya conseguido
+        mas lo que se cumple en este momento)."""
 
-        return {
-            item_id
-            for item_id, need in SHOP_UNLOCK_WAVES.items()
-            if self._unlock_wave(item_id) >= need
-        }
+        done = set(self._shop_unlocked or ())
+
+        for item_id, reqs in SHOP_UNLOCK_REQS.items():
+
+            if item_id not in done and any(
+                self._req_met(tag, wave) for tag, wave in reqs
+            ):
+                done.add(item_id)
+
+        return done
 
     def _check_shop_unlocks(self):
 
-        """Muestra el cartel gris cuando llegas a la oleada que desbloquea
-        un item nuevo de la tienda."""
+        """Muestra el cartel cuando conseguis un objeto nuevo de la tienda
+        (el mapa al llegar al centro, el resto al empezar cada oleada)."""
 
         now = self._shop_unlocked_now()
 
-        if self._shop_seen is None:
-            # primera vez: lo que ya tenias no cuenta como nuevo
-            self._shop_seen = now
+        if self._shop_unlocked is None:
+            # partida vieja: lo que ya tenias no cuenta como nuevo
+            self._shop_unlocked = now
             return
 
-        new = [i for i in SHOP_UNLOCK_WAVES if i in now - self._shop_seen]
+        # en orden de la lista (de menor a mayor oleada)
+        new = [
+            i for i in SHOP_UNLOCK_REQS
+            if i in now and i not in self._shop_unlocked
+        ]
 
         if new:
 
@@ -3462,28 +3487,45 @@ class NewGame:
                 [(i, self._item_name(i)) for i in new]
             )
 
-        self._shop_seen = now
+            self._shop_unlocked = now
+
+            self._save()
 
     def shop_locks(self):
 
+        unlocked = self._shop_unlocked_now()
+
         return {
-            item_id: need
-            for item_id, need in SHOP_UNLOCK_WAVES.items()
-            if self._unlock_wave(item_id) < need
+            item_id: reqs[0][1]
+            for item_id, reqs in SHOP_UNLOCK_REQS.items()
+            if item_id not in unlocked
         }
 
     def shop_lock_zones(self):
 
-        """{item: (nombre de la zona, oleada actual en esa zona)}"""
+        """{item: (nombre de la zona, oleada actual en esa zona, etiqueta)}"""
+
+        unlocked = self._shop_unlocked_now()
 
         out = {}
 
-        for item_id, tag in SHOP_UNLOCK_ZONES.items():
+        for item_id, reqs in SHOP_UNLOCK_REQS.items():
+
+            if item_id in unlocked:
+                continue
+
+            tag = reqs[0][0]
+
+            if tag == CENTER_TAG:
+                out[item_id] = ("el Centro", 0, "Centro")
+                continue
 
             for arena in self.arenas:
                 if arena.cfg.zone_tag == tag:
                     out[item_id] = (
-                        f"{tag} ({arena.cfg.zone_name})", arena.wave
+                        f"{tag} ({arena.cfg.zone_name})",
+                        arena.wave,
+                        tag.replace("ONA ", ""),
                     )
 
         return out
@@ -3823,6 +3865,7 @@ class NewGame:
 
             "stats": dict(self.stats),
             "zones_seen": sorted(self.zones_seen),
+            "shop_unlocked": sorted(self._shop_unlocked or []),
             "tuto_seen": sorted(self.tuto_seen),
             "death_drops": self._collect_drops_for_save(),
         }
@@ -4066,28 +4109,67 @@ class NewGame:
 
     def _draw_death_note(self, alpha):
 
-        font = self._font(20)
+        """Quien te mato y cuantos enemigos faltaban. Va en el costado
+        izquierdo, en el hueco libre de la imagen (no pisa el titulo, el
+        muneco, la frase de abajo ni las esquinas)."""
 
         sw, sh = self.screen.get_size()
 
-        y = sh - 14
+        font = self._font(max(22, round(sh * 0.034)))
 
-        for text in reversed(self._death_lines()):
+        lines = self._death_lines()
 
-            shadow = font.render(text, True, (0, 0, 0))
-            label = font.render(text, True, (205, 205, 205))
+        outline = max(1, round(sh / 540))
 
-            shadow.set_alpha(alpha)
-            label.set_alpha(alpha)
+        rendered = []
 
-            x = sw - label.get_width() - 16
+        for text in lines:
 
-            y -= label.get_height()
+            base = font.render(text, True, (240, 240, 240))
+            edge = font.render(text, True, (0, 0, 0))
 
-            self.screen.blit(shadow, (x + 1, y + 1))
-            self.screen.blit(label, (x, y))
+            surf = pygame.Surface(
+                (base.get_width() + 2 * outline,
+                 base.get_height() + 2 * outline),
+                pygame.SRCALPHA
+            )
 
-            y -= 2
+            for dx in range(-outline, outline + 1):
+                for dy in range(-outline, outline + 1):
+                    if dx or dy:
+                        surf.blit(edge, (outline + dx, outline + dy))
+
+            surf.blit(base, (outline, outline))
+
+            surf.set_alpha(alpha)
+
+            rendered.append(surf)
+
+        gap = max(4, round(sh * 0.01))
+
+        total = sum(r.get_height() for r in rendered) + gap * (len(rendered) - 1)
+
+        # centrado en la franja izquierda (entre el borde y el muneco)
+        cx = round(sw * 0.20)
+        max_w = round(sw * 0.34)
+
+        y = round(sh * 0.50) - total // 2
+
+        for surf in rendered:
+
+            if surf.get_width() > max_w:
+
+                k = max_w / surf.get_width()
+
+                surf = pygame.transform.smoothscale(
+                    surf, (max_w, max(1, round(surf.get_height() * k)))
+                )
+
+                surf.set_alpha(alpha)
+
+            self.screen.blit(surf, surf.get_rect(midtop=(cx, y)))
+
+            y += surf.get_height() + gap
 
     def _finish_arenas(self):
         """Cierra las salas de combate despues de la secuencia (idempotente)."""
@@ -5847,7 +5929,8 @@ class NewGame:
                 radius *= 0.3 + 0.7 * (1 - (1 - k) ** 3)
 
             if self.state in ("dying", "lost"):
-                radius *= max(0.0, 1.0 - 1.5 * self.fade_alpha / 255)
+                # al perder el personaje ya no ilumina nada
+                radius = 0.0
 
             if self.vida < FLICKER_THRESHOLD:
 
@@ -5868,19 +5951,6 @@ class NewGame:
                     self.player.rect.centerx,
                     self.player.rect.centery,
                     radius
-                ))
-
-        if self.state == "dying" and not self.has_match:
-
-            # sin luz igual se tiene que ver la silueta hundiendose
-            k = max(0.0, 1.0 - 1.5 * self.fade_alpha / 255)
-
-            if k > 0:
-
-                sources.append((
-                    self.player.rect.centerx,
-                    self.player.rect.centery,
-                    DEATH_LIGHT_RADIUS * self.camera.zoom * k
                 ))
 
         for ball in self.fireballs:

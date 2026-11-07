@@ -26,61 +26,74 @@ TIENDA_DIR = MOUTH_IMAGE.parent
 BODY_IMAGE = TIENDA_DIR / "vendedor_cuerpo.png"
 BG_IMAGE = TIENDA_DIR / "vendedor_fondo.png"
 
-# Oleada que hay que alcanzar (en cualquiera de las 2 salas de combate)
-# para poder comprar cada objeto en la tienda. Para cambiarlo, editá acá.
-# "Llegar a la oleada N" = haber superado la N-1 (la oleada 12 de una zona
-# es haberla completado entera, jefe incluido).
+# Que hay que hacer para poder comprar cada objeto en la tienda. Para
+# cambiarlo, editá las listas de abajo.
 #
-# Todo lo de la tienda se consigue pasando oleadas, menos fosforo, vela,
-# aceite, madera y polvora. Esta ordenado de lo que menos tarda a lo que
-# mas tarda, y lo que mas beneficia va mas tarde:
+# Cada lista va ORDENADA de menor a mayor oleada: el primer item se
+# desbloquea al EMPEZAR la oleada 1 de esa zona, el segundo al empezar la
+# oleada 2, y asi. (La ultima oleada de cada zona es la del jefe.)
 #
-#   Z1 = Zona 1 (Orkun)          Z2 = Zona 2 (Stonun, se abre despues)
+#   mapa -> al llegar al Centro (la sala central que conecta todo)
 #
-#   mapa, cera, ganzua, bolsa     -> comodidad y ayudas chicas
-#   martillo, tacho               -> herramientas (el martillo va con lo que se coloca)
-#   repelente                     -> sale cuando aparecen los mosquitos (oleada 6)
-#   cofre, iman, p. velocidad     -> utiles pero no deciden una pelea
-#   hongo azul, resina            -> escudo y curacion fuertes
-#   p. invisibilidad              -> te saca de una pelea
-#   antorcha, candil              -> la mejor luz (la cadena de objetivos del
-#                                    juego pide antorcha y luego base, y
-#                                    ambos antes de completar Orkun)
-#   fogata, p. ira                -> lo ultimo antes del jefe de Orkun
-#   esfera, yunque, maquina       -> Zona 2: mejoras permanentes y economia
-#   p. ascua                      -> una vida extra: lo ultimo de todo
-SHOP_UNLOCK_WAVES = {
-    "mapa": 2,
-    "cera": 3,
-    "ganzua": 3,
-    "bolsa": 4,
-    "martillo": 5,
-    "tacho": 5,
-    "repelente": 6,
-    "cofre": 6,
-    "iman": 7,
-    "pocion_velocidad": 7,
-    "hongo_azul": 8,
-    "resina": 8,
-    "pocion_invisibilidad": 9,
-    "antorcha": 10,
-    "faro": 10,
-    "fogata": 11,
-    "pocion_ira": 11,
-    "esfera": 4,           # Zona 2
-    "yunque": 6,           # Zona 2
-    "maquina": 8,          # Zona 2
-    "pocion_ascua": 10,    # Zona 2
-}
+# Si un objeto aparece en las dos zonas (el cofre) se desbloquea con lo
+# primero que cumplas. Lo que no esta en ninguna lista (fosforo, vela,
+# madera, cera, aceite) se puede comprar desde el principio.
+CENTER_TAG = "CENTRO"
 
-# Objetos que piden la oleada en UNA zona en particular (ver zone_tag de
-# cada sala en world/arena.py). El resto cuenta la mejor oleada de cualquiera.
-SHOP_UNLOCK_ZONES = {
-    "esfera": "ZONA 2",
-    "yunque": "ZONA 2",
-    "maquina": "ZONA 2",
-    "pocion_ascua": "ZONA 2",
-}
+SHOP_UNLOCK_CENTER = ["mapa"]
+
+# Zona 1 (Orkun): oleadas 1 a 11
+SHOP_UNLOCK_Z1 = [
+    "resina",       # oleada 1
+    "polvora",      # oleada 2
+    "bolsa",        # oleada 3
+    "ganzua",       # oleada 4
+    "cofre",        # oleada 5
+    "faro",         # oleada 6  (candil)
+    "antorcha",     # oleada 7
+    "hongo_azul",   # oleada 8
+    "repelente",    # oleada 9
+    "martillo",     # oleada 10
+    "fogata",       # oleada 11
+]
+
+# Zona 2 (Stonun): oleadas 1 a 10
+SHOP_UNLOCK_Z2 = [
+    "cofre",                 # oleada 1
+    "iman",                  # oleada 2
+    "tacho",                 # oleada 3
+    "pocion_velocidad",      # oleada 4
+    "maquina",               # oleada 5
+    "yunque",                # oleada 6
+    "esfera",                # oleada 7
+    "pocion_invisibilidad",  # oleada 8
+    "pocion_ira",            # oleada 9
+    "pocion_ascua",          # oleada 10
+]
+
+
+def _build_unlock_reqs():
+
+    """{item: [(zona, oleada), ...]}; con cumplir UNA alcanza."""
+
+    reqs = {}
+
+    for item_id in SHOP_UNLOCK_CENTER:
+        reqs.setdefault(item_id, []).append((CENTER_TAG, 0))
+
+    for tag, items in (("ZONA 1", SHOP_UNLOCK_Z1), ("ZONA 2", SHOP_UNLOCK_Z2)):
+
+        for wave, item_id in enumerate(items, start=1):
+            reqs.setdefault(item_id, []).append((tag, wave))
+
+    return reqs
+
+
+SHOP_UNLOCK_REQS = _build_unlock_reqs()
+
+# Atajos (primer requisito de cada item) para los textos del juego
+SHOP_UNLOCK_WAVES = {i: r[0][1] for i, r in SHOP_UNLOCK_REQS.items()}
+SHOP_UNLOCK_ZONES = {i: r[0][0] for i, r in SHOP_UNLOCK_REQS.items()}
 
 DEFAULT_CATALOG = [
     {
@@ -103,6 +116,40 @@ DEFAULT_CATALOG = [
         ],
     },
 ]
+
+
+def _unlock_sort_key(item_id):
+
+    """Orden en la tienda: primero lo que no se bloquea, despues el mapa,
+    despues la Zona 1 y por ultimo la Zona 2; dentro de cada zona de menor
+    a mayor oleada."""
+
+    reqs = SHOP_UNLOCK_REQS.get(item_id)
+
+    if not reqs:
+        return (0, 0)
+
+    tag, wave = reqs[0]
+
+    order = {CENTER_TAG: 1, "ZONA 1": 2, "ZONA 2": 3}
+
+    return (order.get(tag, 4), wave)
+
+
+def _sort_catalog(catalog):
+
+    """Ordena los items de cada seccion segun cuando se desbloquean (el
+    sort es estable: lo que empata queda en el orden de data/shop.json)."""
+
+    return [
+        {
+            **sec,
+            "items": sorted(
+                sec["items"], key=lambda it: _unlock_sort_key(it["id"])
+            ),
+        }
+        for sec in catalog
+    ]
 
 
 def _with_skins(catalog):
@@ -134,7 +181,7 @@ def load_catalog():
 
         print(f"[tienda] No se pudo leer data/shop.json: {error}")
 
-        return _with_skins(DEFAULT_CATALOG)
+        return _with_skins(_sort_catalog(DEFAULT_CATALOG))
 
     catalog = []
 
@@ -156,7 +203,7 @@ def load_catalog():
                 {"nombre": str(sec.get("nombre", "")), "items": items}
             )
 
-    return _with_skins(catalog or DEFAULT_CATALOG)
+    return _with_skins(_sort_catalog(catalog or DEFAULT_CATALOG))
 
 
 def price_table(catalog):

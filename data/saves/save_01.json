@@ -1,13 +1,13 @@
 {
     "player_name": "f",
     "mode": "normal",
-    "created_at": "2026-11-07T03:08:47",
-    "last_played": "2026-11-07T03:11:37",
-    "password_salt": "642ee56bc6d7e9b69e3d7633ac27c3c0",
-    "password_hash": "ca2ff0039a74302180b0193f0aac74d56299130b4a9c72981961d2fc46ca9b31",
-    "x": 943,
-    "y": 142,
-    "coins": 4,
+    "created_at": "2026-11-07T03:46:51",
+    "last_played": "2026-11-07T03:52:13",
+    "password_salt": "87143f3cd16ee2c1cae9d0f98792cfc4",
+    "password_hash": "134d1741602325f1302e5a28f83bd6db2ec3bb02cab310b3db35191a658e904b",
+    "x": 984,
+    "y": 944,
+    "coins": 6,
     "gel_coins": 0,
     "ganzua_uses": 0,
     "boss_intro_seen": false,
@@ -16,39 +16,27 @@
     "gems_green": 0,
     "has_match": true,
     "light": "fosforo",
-    "vida": 1.0,
+    "vida": 0.7443666666666502,
     "escudo": 0.0,
     "inventory": [
-        [
-            "madera",
-            2
-        ],
-        [
-            "aceite",
-            1
-        ],
+        null,
+        null,
         null,
         null,
         null,
         null
     ],
-    "shop_inventory": [],
-    "collected": [
-        "madera_12#0",
-        "moneda_pasillo_tienda#1",
-        "madera_04#0",
-        "aceite_03#0",
-        "madera_09#0",
-        "madera_10#0",
-        "cera_02#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_cabana#0",
-        "madera_11#0",
-        "madera_08#0",
-        "madera_05#0"
+    "shop_inventory": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
     ],
-    "item_seed": 590304237,
+    "collected": [],
+    "item_seed": 517051628,
     "arena_wave": 1,
     "arena_completed": false,
     "arena_left_wave": 1,
@@ -78,11 +66,12 @@
         "activas": []
     },
     "enemies_seen": [
-        "slime"
+        "slime",
+        "slime3"
     ],
     "enemies_claimed": [],
     "stats": {
-        "items_used": 6,
+        "items_used": 4,
         "chests_opened": 0,
         "purchases": 0,
         "fireballs": 0,
@@ -92,6 +81,9 @@
         "central",
         "inicio",
         "tienda"
+    ],
+    "shop_unlocked": [
+        "mapa"
     ],
     "tuto_seen": [
         0,
@@ -295,7 +287,26 @@
         198,
         199
     ],
-    "death_drops": [],
+    "death_drops": [
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 0.9592333333333313,
+            "x": 957,
+            "y": 246,
+            "map": "mapa1",
+            "ttl": 223.1
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 0.5266333333333001,
+            "x": 946,
+            "y": 894,
+            "map": "mapa1",
+            "ttl": 242.3
+        }
+    ],
     "objective_index": 1000000,
     "objective_version": 3
 }
