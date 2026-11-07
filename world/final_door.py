@@ -1126,6 +1126,12 @@ class MapSwitcher:
         self.phase = None
         self.t = 0.0
 
+        # se pone en True cuando el jugador cruza al mapa 2: el juego
+        # termina ahi (comic final + "Continuara...")
+        self.ending = False
+
+        self._blocked_shown = False
+
     @property
     def active(self):
 
@@ -1143,7 +1149,24 @@ class MapSwitcher:
 
             door_gone = FINAL_DOOR_ID in game.doors.broken_ids
 
-            if door_gone and EXIT_ZONE_MAP1.collidepoint(pos):
+            in_zone = EXIT_ZONE_MAP1.collidepoint(pos)
+
+            if getattr(game, "finished", False):
+
+                # partida terminada: el final se ve una sola vez y ya
+                # no se puede pasar a la zona 2
+                if in_zone and not self._blocked_shown:
+
+                    self._blocked_shown = True
+
+                    if hasattr(game, "show_message"):
+                        game.show_message("El camino está cerrado")
+
+                elif not in_zone:
+
+                    self._blocked_shown = False
+
+            elif door_gone and in_zone:
                 self._start("mapa2")
 
         elif EXIT_ZONE_MAP2.collidepoint(pos):
@@ -1164,6 +1187,18 @@ class MapSwitcher:
             return
 
         self.t += dt
+
+        if (
+            self.phase == "out"
+            and self.t >= FADE_OUT
+            and self.target == "mapa2"
+        ):
+
+            self.ending = True
+            self.phase = None
+            self.t = 0.0
+
+            return
 
         if self.phase == "out" and self.t >= FADE_OUT:
 

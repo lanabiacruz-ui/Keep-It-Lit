@@ -99,6 +99,68 @@ PANELS = {
 }
 
 
+PANELS["image3.png"] = [
+    {
+        "rect": (7, 6, 1079, 285),
+        "wipe": "left",
+        "push": 0.05,
+        "embers": 0.6,
+        "sound": "swing",
+    },
+    {
+        "rect": (7, 291, 1079, 527),
+        "wipe": "right",
+        "push": 0.07,
+        "shake": 2.0,
+        "sound": "alert",
+    },
+    {
+        "rect": (7, 531, 1079, 702),
+        "wipe": "left",
+        "push": 0.08,
+        "embers": 0.5,
+        "sound": "swing",
+    },
+    {
+        "rect": (7, 709, 499, 1017),
+        "wipe": "down",
+        "shake": 4.0,
+        "slam": 0.06,
+        "push": 0.08,
+        "sound": "door_hit",
+    },
+    {
+        "rect": (503, 709, 1079, 1017),
+        "wipe": "iris",
+        "shake": 10.0,
+        "slam": 0.12,
+        "push": 0.10,
+        "flash": 0.7,
+        "sound": "boss_roar",
+    },
+    {
+        "rect": (7, 1029, 563, 1439),
+        "wipe": "up",
+        "shake": 8.0,
+        "slam": 0.12,
+        "push": 0.08,
+        "flash": 0.55,
+        "embers": 0.7,
+        "sound": "alert",
+    },
+    {
+        "rect": (587, 1029, 1079, 1439),
+        "wipe": "iris",
+        "shake": 12.0,
+        "slam": 0.18,
+        "push": 0.14,
+        "flash": 0.8,
+        "beat": True,
+        "sound": "hit_heavy",
+    },
+]
+
+
 PAGE_OUT_TARGET = {
     0: (262, 430),
 }
@@ -214,7 +276,21 @@ class Comic:
 
     MAX_PARTICLES = 110
 
-    def __init__(self, screen):
+    ENDING_IMAGES = ["image3.png"]
+
+    # duracion del cierre del final (zoom lento + fundido a negro)
+    END_TIME = 2.6
+    END_FADE_AT = 0.9
+
+    # negro previo antes de que se encienda la luz en el final
+    ENDING_DARK = 0.9
+
+    def __init__(self, screen, ending=False):
+
+        self.ending = ending
+        self.images = (
+            list(self.ENDING_IMAGES) if ending else list(self.IMAGES)
+        )
 
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -231,7 +307,7 @@ class Comic:
         self.shadows = []
         self.page_panels = []
 
-        for name in self.IMAGES:
+        for name in self.images:
 
             image = pygame.image.load(
                 folder / name
@@ -692,7 +768,7 @@ class Comic:
             round(self.height * 0.70)
         )
 
-        self.title_fade_t = 0.0
+        self.title_fade_t = 99.0 if self.ending else 0.0
 
         self.screen_flash = 1.0
         self.shake = 20.0
@@ -751,6 +827,18 @@ class Comic:
         self.fin_k0 = self.cam_k
 
         audio.play("swing", 0.5)
+
+    def _begin_end_fade(self):
+
+        self.phase = "end_fade"
+
+        self.end_t = 0.0
+        self.done_sent = False
+
+        self.pop = [0.0] * len(self.panels)
+        self.beat = 0.0
+
+        audio.play("light_out", 0.9)
 
     def _fit(self, rect):
 
@@ -849,6 +937,12 @@ class Comic:
         if self.phase == "overview":
 
             if self.page + 1 >= len(self.sources):
+
+                if self.ending:
+
+                    self._begin_end_fade()
+
+                    return None
 
                 story.set_cat_gone()
 
@@ -949,6 +1043,16 @@ class Comic:
         if self.phase == "intro":
             return self.pw / 2, self.ph / 2, self.k0 * 0.9
 
+        if self.phase == "end_fade":
+
+            rect = self.panels[-1]["rect"]
+
+            return (
+                rect.centerx,
+                rect.centery,
+                self._fit(rect) * (1.0 + 0.22 * _ease_out(self.end_t / self.END_TIME))
+            )
+
         return self.pw / 2, self.ph / 2, self.k0
 
     def _approach(self, current, target, rate, dt):
@@ -958,6 +1062,25 @@ class Comic:
     def _tick_title(self):
 
         t = self.title_t
+
+        if self.ending:
+
+            self._cue(
+                "e_hb1",
+                t >= 0.3,
+                lambda: audio.play("heartbeat", 0.5)
+            )
+
+            self._cue(
+                "e_spark",
+                t >= 0.6,
+                lambda: audio.play("crackle", 0.8)
+            )
+
+            if t >= self.ENDING_DARK:
+                self._ignite()
+
+            return
 
         self._cue(
             "hb1",
@@ -1083,6 +1206,30 @@ class Comic:
 
             return None
 
+        if self.phase == "end_fade":
+
+            self.end_t += dt
+
+            self._cue(
+                "end_hb1",
+                self.end_t >= 0.15,
+                lambda: audio.play("heartbeat", 0.8)
+            )
+
+            self._cue(
+                "end_hb2",
+                self.end_t >= 0.75,
+                lambda: audio.play("heartbeat", 0.6)
+            )
+
+            if self.end_t >= self.END_TIME and not self.done_sent:
+
+                self.done_sent = True
+
+                pygame.event.post(
+                    pygame.event.Event(self.DONE_EVENT)
+                )
+
         if self.phase == "intro":
 
             self.intro_time += dt
@@ -1102,7 +1249,7 @@ class Comic:
 
                 return None
 
-        overview = self.phase == "overview"
+        overview = self.phase in ("overview", "end_fade")
 
         for i, panel in enumerate(self.panels):
 
@@ -1618,6 +1765,14 @@ class Comic:
 
         surf.fill((0, 0, 0))
 
+        if self.ending:
+
+            self._draw_particles(surf)
+
+            surf.blit(self.vignette, (0, 0))
+
+            return
+
         cx = w // 2 + jx
 
         bloom_k = _span(t, 1.3, 2.4)
@@ -1854,7 +2009,7 @@ class Comic:
             (0, self.height - height, self.width, height)
         )
 
-        if eased < 1.0 or self.phase in ("title", "finale"):
+        if eased < 1.0 or self.phase in ("title", "finale", "end_fade"):
             return None
 
         center_y = self.height - height // 2
@@ -1899,18 +2054,20 @@ class Comic:
                     1
                 )
 
-        page_text = self.font.render(
-            f"{self.page + 1}/{len(self.sources)}",
-            True,
-            (150, 155, 170)
-        )
+        if len(self.sources) > 1:
 
-        surf.blit(
-            page_text,
-            page_text.get_rect(
-                midleft=(18, center_y)
+            page_text = self.font.render(
+                f"{self.page + 1}/{len(self.sources)}",
+                True,
+                (150, 155, 170)
             )
-        )
+
+            surf.blit(
+                page_text,
+                page_text.get_rect(
+                    midleft=(18, center_y)
+                )
+            )
 
         hint = self.font.render(
             "ENTER: seguir  •  RETROCESO: volver  •  ESC: saltar",
@@ -1977,6 +2134,13 @@ class Comic:
         elif self.phase == "finale":
 
             fade = _span(self.fin_t, self.FIN_FADE_AT, self.FIN_TIME)
+
+        elif self.phase == "end_fade":
+
+            fade = _ease_in(
+                _span(self.end_t, self.END_FADE_AT, self.END_TIME),
+                1.3
+            )
 
         elif self.page > 0:
 

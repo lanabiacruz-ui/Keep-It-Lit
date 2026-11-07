@@ -42,7 +42,9 @@ from world.arena import (
     Arena, RIGHT_ARENA, LEFT_ARENA, BOSS_TYPES, Golem, Hongun
 )
 from world import yunque
-from world.final_door import MapSwitcher, enter_map, draw_placed_gems
+from world.final_door import (
+    MapSwitcher, enter_map, draw_placed_gems, MAP1_RETURN
+)
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
 from world.slime import SlimeManager
@@ -739,6 +741,7 @@ class NewGame:
         # items que se soltaron al morir: quedan guardados en el mapa
         self._death_dropped = False
         self._force_home = False
+        self.finished = bool(self.save_data.get("finished", False))
         self.pending_drops = {}
 
         for entry in self.save_data.get("death_drops", []):
@@ -3888,6 +3891,8 @@ class NewGame:
 
             "mode": self.mode,
 
+            "finished": self.finished,
+
             "inventory": inventory,
 
             "shop_inventory": [
@@ -3970,6 +3975,30 @@ class NewGame:
         self._save()
 
     def save_progress(self):
+
+        self._save()
+
+    def finish_game(self):
+        """El jugador cruzo al mapa 2: la partida queda como terminada.
+
+        Se queda en el mapa 1 (un poco antes de la salida) para que se
+        pueda seguir jugando sin pasar al mapa 2.
+        """
+
+        self.finished = True
+
+        achievements.unlock("region_1")
+
+        self.current_map = "mapa1"
+
+        self.player.rect.center = MAP1_RETURN
+
+        self.player.image_rect.midbottom = (
+            self.player.rect.centerx,
+            self.player.rect.bottom + 3,
+        )
+
+        self.camera.update(self.player)
 
         self._save()
 
@@ -5111,6 +5140,14 @@ class NewGame:
 
             self.map_switch.update(dt, self)
             self._update_fx(dt)
+
+            if self.map_switch.ending:
+
+                self.map_switch.ending = False
+
+                self.finish_game()
+
+                return "ending"
 
             return None
 

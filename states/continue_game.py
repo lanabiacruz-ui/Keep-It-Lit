@@ -475,10 +475,11 @@ class ContinueGame:
 
             mode_rect = self._button_rect(i, self.MODE_LOCAL)
 
-            mode_surface = self.mode_font.render(
-                "HARDCORE" if hardcore else "NORMAL",
-                True,
-                (170, 25, 25) if hardcore else (25, 35, 55)
+            mode_surface = self._mode_label(
+                self.mode_font,
+                hardcore,
+                slot.get("finished", False),
+                mode_rect.width
             )
 
             self.screen.blit(
@@ -532,10 +533,11 @@ class ContinueGame:
 
         mode_rect = self._zoom_button(index, self.MODE_LOCAL)
 
-        mode_surface = self.zoom_mode_font.render(
-            "HARDCORE" if hardcore else "NORMAL",
-            True,
-            (170, 25, 25) if hardcore else (25, 35, 55)
+        mode_surface = self._mode_label(
+            self.zoom_mode_font,
+            hardcore,
+            slot.get("finished", False),
+            mode_rect.width
         )
 
         self.screen.blit(
@@ -568,6 +570,33 @@ class ContinueGame:
             date_surface,
             date_surface.get_rect(center=date_rect.center)
         )
+
+    def _mode_label(self, font, hardcore, finished, max_width):
+
+        text = "HARDCORE" if hardcore else "NORMAL"
+
+        if finished:
+            text += " - TERMINADO"
+
+        surface = font.render(
+            text,
+            True,
+            (170, 25, 25) if hardcore else (25, 35, 55)
+        )
+
+        if surface.get_width() > max_width > 0:
+
+            k = max_width / surface.get_width()
+
+            surface = pygame.transform.smoothscale(
+                surface,
+                (
+                    max(1, round(surface.get_width() * k)),
+                    max(1, round(surface.get_height() * k))
+                )
+            )
+
+        return surface
 
     def _format_date(self, iso_text):
 

@@ -17,6 +17,7 @@ from states.password_menu import PasswordMenu
 from states.continue_game import ContinueGame
 from states.loading import Loading
 from states.comic import Comic
+from states.continuara import Continuara
 from states.new_game import NewGame
 from states.startup import Startup
 from states.settings import Settings, load_settings
@@ -89,6 +90,8 @@ mode_menu = None
 continue_menu = None
 loading = None
 comic = None
+ending_comic = None
+continuara = None
 game = None
 
 player_name = ""
@@ -139,6 +142,11 @@ UI_SOUND_STATES = (
 def desired_music():
 
     if current_state == "startup":
+
+        return None
+
+    # el final (comic + "Continuara...") suena solo con sus efectos
+    if current_state in ("ending", "continuara"):
 
         return None
 
@@ -427,6 +435,18 @@ while running:
 
                 current_state = "gameplay"
 
+        elif current_state == "ending":
+
+            if ending_comic.handle_event(event) == "done":
+
+                continuara = Continuara(screen)
+
+                current_state = "continuara"
+
+        elif current_state == "continuara":
+
+            continuara.handle_event(event)
+
         elif current_state == "gameplay":
 
             if transition is not None:
@@ -483,6 +503,18 @@ while running:
                 transition = ZoomTransition(screen.copy())
 
                 current_state = "comic"
+    elif current_state == "ending":
+
+        ending_comic.update(dt)
+
+    elif current_state == "continuara":
+
+        if continuara.update(dt) == "done":
+
+            current_state = "menu"
+
+            menu.play_intro()
+
     elif current_state == "settings":
 
         settings_menu.update(dt)
@@ -516,6 +548,13 @@ while running:
             current_state = "menu"
 
             menu.play_intro()
+
+        elif result == "ending":
+
+            # cruzo al mapa 2: comic final y "Continuara..."
+            ending_comic = Comic(screen, ending=True)
+
+            current_state = "ending"
 
         elif result == "respawn":
 
@@ -617,6 +656,14 @@ while running:
 
         if transition is not None:
             transition.draw(screen)
+
+    elif current_state == "ending":
+
+        ending_comic.draw()
+
+    elif current_state == "continuara":
+
+        continuara.draw()
 
     elif current_state == "gameplay":
 

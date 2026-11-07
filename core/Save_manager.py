@@ -146,6 +146,7 @@ def list_slots():
             "player_name": str(data.get("player_name", "")),
             "mode": normalize_mode(data.get("mode")),
             "has_password": has_password(data),
+            "finished": bool(data.get("finished", False)),
             "created_at": data.get("created_at", ""),
             "last_played": data.get("last_played", ""),
             "data": data,
