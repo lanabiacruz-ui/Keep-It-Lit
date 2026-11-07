@@ -8,6 +8,7 @@ from core.achievements import achievements
 from core.audio_manager import audio
 from world.fireball import FIRE_SPEED
 from world import pathing
+from world import yunque
 from world.traps import ArenaTraps, TRAP_MAX
 from world.items import (
     WorldItem, coin_id_for, split_coins, get_gem_icon, get_green_gem_icon
@@ -24,6 +25,12 @@ from world.melee import (
 
 # los dos jefes (zona 1: Piña Colosal, zona 2: Golem Colosal)
 BOSS_TYPES = (PinaBoss, GolemBoss)
+
+
+def _is_common(enemy):
+    """Enemigo comun para las mejoras del yunque (no Hongun, Golem ni jefes)."""
+
+    return not isinstance(enemy, (Hongun, Golem) + BOSS_TYPES)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -5740,7 +5747,7 @@ class Arena:
             elif isinstance(enemy, Mosquito):
                 enemy.update(dt, e_target, game.collision_map, e_on, e_light, repel, lamp_zones)
                 if enemy.attached and enemy.damage_t <= 0.0:
-                    game.take_damage(MOSQUITO_DAMAGE)
+                    game.take_damage(MOSQUITO_DAMAGE, common=True)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
             elif isinstance(enemy, GuardianShooter):
                 enemy.update(dt, e_target, game.collision_map, e_on, e_light)
@@ -5755,7 +5762,7 @@ class Arena:
                 enemy.update(dt, e_target, game.collision_map, e_on, e_light)
                 if enemy.swing_hits(body.center):
                     if p.hurt(enemy.pos):
-                        game.take_damage(GUARDIAN_DAMAGE)
+                        game.take_damage(GUARDIAN_DAMAGE, common=True)
                         away = pygame.Vector2(body.center) - enemy.pos
                         if away.length_squared() > 0.01:
                             p.kb_vel = away.normalize() * GUARDIAN_KNOCKBACK
@@ -5801,7 +5808,7 @@ class Arena:
                 continue
             if enemy.rect.colliderect(body):
                 if p.hurt(enemy.pos):
-                    game.take_damage(damage)
+                    game.take_damage(damage, common=_is_common(enemy))
                 enemy.bounce_from(body.center)
 
         for shot in self.shots:
@@ -5812,7 +5819,8 @@ class Arena:
                     amount = getattr(shot, "damage", None)
                     game.take_damage(
                         amount if amount is not None
-                        else damage * SHOT_DAMAGE_MULT
+                        else damage * SHOT_DAMAGE_MULT,
+                        common=True
                     )
                     push = getattr(shot, "knockback", 0.0)
                     away = pygame.Vector2(body.center) - shot.pos
@@ -5847,6 +5855,13 @@ class Arena:
 
                 game.count_stat("kills")
                 achievements.add_counter("kills")
+
+                # mejora del yunque "Brasas": matar enemigos comunes
+                # recupera un poco de luz (solo con la antorcha)
+                if _is_common(enemy) and not getattr(enemy, "boom", False):
+                    heal = yunque.ember_heal(game)
+                    if heal > 0 and game.vida > 0:
+                        game.vida = min(1.0, game.vida + heal)
 
                 if (
                     isinstance(enemy, Destello)
@@ -6081,7 +6096,7 @@ class Arena:
         p.invuln_timer = 0.0
         p.hurt(pos)
 
-        game.take_damage(DESTELLO_DAMAGE)
+        game.take_damage(DESTELLO_DAMAGE, common=True)
 
         away = body - pos
 

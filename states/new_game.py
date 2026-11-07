@@ -36,7 +36,10 @@ from world.fireball import Fireball, FireBurst
 from world.lights import LIGHTS, light_stats
 from world.doors import DoorManager, Door, DOOR_LAYOUT
 from world.chests import ChestManager, Chest, format_time
-from world.arena import Arena, RIGHT_ARENA, LEFT_ARENA
+from world.arena import (
+    Arena, RIGHT_ARENA, LEFT_ARENA, BOSS_TYPES, Golem, Hongun
+)
+from world import yunque
 from world.final_door import MapSwitcher, enter_map, draw_placed_gems
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
@@ -650,6 +653,9 @@ class NewGame:
             self.save_data.get("placeables", [])
         )
 
+        # mejoras de la antorcha (yunque): duran toda la partida
+        self.anvil = yunque.AnvilState(self.save_data.get("yunque"))
+
         self.debug_items = False
         self._font_cache = {}
 
@@ -815,10 +821,14 @@ class NewGame:
         return font
 
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, common=False):
 
         if amount <= 0:
             return
+
+        # yunque "Resistencia": menos daño de enemigos comunes
+        if common:
+            amount *= yunque.damage_mult(self)
 
         # escudo amarillo: el golpe no hace nada
         if self.yshield_timer > 0:
@@ -959,6 +969,9 @@ class NewGame:
         radius = light_stats(
             self.light_type
         )["radio"]
+
+        # yunque "Llama amplia" (solo antorcha)
+        radius = yunque.light_radius(self, radius)
 
         if self.sphere_timer > 0:
             radius *= self.sphere_mult
@@ -1581,9 +1594,9 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, yunque, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho, el yunque y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
                     "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera, pero mientras está encendido los mosquitos no entran en su luz. El TACHO borra objetos: elige uno y haz click sobre él (Ctrl+click borra toda la casilla).",
-                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío, una fogata o un tacho para recogerlos y colocarlos en otro lugar.",
+                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío, una fogata, un tacho o un yunque para recogerlos y colocarlos en otro lugar.",
                 ],
                 "target": lambda g: (
                     None
@@ -2827,7 +2840,7 @@ class NewGame:
 
         if self._magnet_active():
             self.fx.emit_aura(
-                "iman", px, py, MAGNET_RADIUS, (120, 190, 255), dt,
+                "iman", px, py, self._magnet_radius(), (120, 190, 255), dt,
                 rate=10, inward=True
             )
 
@@ -2885,6 +2898,37 @@ class NewGame:
                     radius, (255, 170, 90),
                     0.28 + 0.05 * math.sin(t * 31 + i)
                 )
+
+    def _anvil_push(self, target):
+        """Yunque "Golpe repelente": empuja al enemigo (solo antorcha).
+
+        No cambia el daño. Golem, Hongun y jefes no se mueven.
+        """
+
+        speed = yunque.push_speed(self)
+
+        if speed <= 0:
+            return
+
+        if isinstance(target, (Golem, Hongun) + BOSS_TYPES):
+            return
+
+        vel = getattr(target, "vel", None)
+        pos = getattr(target, "pos", None)
+
+        if vel is None or pos is None:
+            return
+
+        away = pygame.Vector2(pos) - pygame.Vector2(self.player.rect.center)
+
+        if away.length_squared() < 0.01:
+            return
+
+        target.vel = vel + away.normalize() * speed
+
+        # mientras esta aturdido no corrige la velocidad: el empuje se nota
+        if hasattr(target, "stun"):
+            target.stun = max(target.stun, 0.30)
 
     def _hit_target(self, target, damage, free=False, fire_heavy=None):
 
@@ -3014,6 +3058,8 @@ class NewGame:
                 damage = 1000
 
             target.take_damage(damage)
+
+            self._anvil_push(target)
 
 
     def flashbang(self, x, y):
@@ -3701,6 +3747,8 @@ class NewGame:
             "chests": self.chests.save_data(),
 
             "placeables": self.placeables.save_data(),
+
+            "yunque": self.anvil.save(),
 
             "enemies_seen": sorted(self.discovered_enemies),
             "enemies_claimed": sorted(self.claimed_enemies),
@@ -4789,6 +4837,7 @@ class NewGame:
 
                 burn = (
                     self.base_burn
+                    * yunque.burn_mult(self)
                     * self.burn_factor
                     * (self.pspeed_burn if self.pspeed_timer > 0 else 1.0)
                 )
@@ -4951,6 +5000,9 @@ class NewGame:
         self.slimes.update(dt, self)
 
 
+        # yunque "Manos agiles": cofres con menos espera
+        self.chests.wait_reduction = yunque.chest_reduction(self)
+
         self.chests.update(
             dt
         )
@@ -5030,7 +5082,7 @@ class NewGame:
 
                     continue
 
-                if dist <= MAGNET_RADIUS:
+                if dist <= self._magnet_radius():
 
                     self._magnet_pull(
                         item,
@@ -5132,6 +5184,11 @@ class NewGame:
 
         return True
 
+    def _magnet_radius(self):
+
+        # yunque "Manos agiles": imán más amplio
+        return MAGNET_RADIUS + yunque.magnet_bonus(self)
+
     def _magnet_available(self):
 
         return self.magnet_timer > 0 or not MAGNET_NEEDS_ITEM
@@ -5182,7 +5239,7 @@ class NewGame:
         t += dt
         item._mag_t = t
 
-        k = 1.0 - min(1.0, dist / MAGNET_RADIUS)
+        k = 1.0 - min(1.0, dist / self._magnet_radius())
 
         # primero "despierta" (se levanta y retrocede un poquito) y
         # despues acelera cada vez mas fuerte hacia el jugador
@@ -5629,7 +5686,7 @@ class NewGame:
             if self._magnet_active():
                 self.fx.draw_aura(
                     self.screen, "iman", cx, cy,
-                    MAGNET_RADIUS * self.camera.zoom, (110, 180, 255),
+                    self._magnet_radius() * self.camera.zoom, (110, 180, 255),
                     pygame.time.get_ticks() / 1000.0 * 0.6, 0.55
                 )
 

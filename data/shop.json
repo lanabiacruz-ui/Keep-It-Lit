@@ -113,6 +113,10 @@
         {
           "id": "faro",
           "precio": 55
+        },
+        {
+          "id": "yunque",
+          "precio": 150
         }
       ]
     }

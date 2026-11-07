@@ -226,6 +226,10 @@ class ChestManager:
 
         self.wait = float(config["espera_segundos"])
 
+        # segundos menos de espera (mejora "Manos agiles" del yunque);
+        # el juego lo actualiza cada frame
+        self.wait_reduction = 0.0
+
         low, high = config["aperturas_por_cofre"]
         self.min_uses = max(1, int(low))
         self.max_uses = max(self.min_uses, int(high))
@@ -361,7 +365,7 @@ class ChestManager:
         if chest.uses_left <= 0:
 
             chest.uses_left = None
-            chest.start_cooldown(self.wait)
+            chest.start_cooldown(max(0.0, self.wait - self.wait_reduction))
 
             return True
 

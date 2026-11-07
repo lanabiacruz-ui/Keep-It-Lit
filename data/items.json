@@ -187,7 +187,7 @@
   },
   "martillo": {
     "nombre": "Martillo",
-    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata o un tacho que hayas colocado para recogerlo y recuperarlo como item, listo para colocarlo en otro lugar. El cofre debe estar vacío. Solo funciona con cofres, fogatas y tachos.",
+    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata, un tacho o un yunque que hayas colocado para recogerlo y recuperarlo como item, listo para colocarlo en otro lugar. El cofre debe estar vacío. Solo funciona con cofres, fogatas, tachos y yunques.",
     "requiere_fosforo": false,
     "max_pila": 1
   },
@@ -224,7 +224,7 @@
   },
   "tacho": {
     "nombre": "Tacho",
-    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo. Elige un objeto y haz click sobre el tacho para borrar una unidad; Ctrl+click borra toda la casilla. No se traga fogatas, cofres, candiles, tachos ni martillos, ni la luz equipada.",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo. Elige un objeto y haz click sobre el tacho para borrar una unidad; Ctrl+click borra toda la casilla. No se traga fogatas, cofres, candiles, tachos, yunques ni martillos, ni la luz equipada.",
     "requiere_fosforo": false,
     "efectos": []
   },
@@ -283,5 +283,12 @@
         "dano": 1.5
       }
     ]
+  },
+  "yunque": {
+    "nombre": "Yunque",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo (las mejoras no se pierden). Click derecho sobre él para abrirlo; no abre si hay enemigos cerca, así que úsalo entre oleadas. Ahí mejoras tu antorcha con monedas y gelea: tiene 3 engarces activos y los cambias gratis cada vez que lo abres. Las mejoras son solo para la antorcha y duran toda la partida.",
+    "requiere_fosforo": false,
+    "max_pila": 3,
+    "efectos": []
   }
 }

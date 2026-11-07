@@ -6,6 +6,7 @@ import pygame
 from core.audio_manager import audio
 from world import items as _items
 from world.items import HUD_DIR, load_icon
+from world import yunque as _yunque
 
 
 REACH = 64
@@ -84,7 +85,7 @@ FUEL_PER_ITEM = {
     "fogata": FOGATA_PER_MADERA,
 }
 
-PLACE_ITEMS = ("cofre", "faro", "fogata", "tacho")
+PLACE_ITEMS = ("cofre", "faro", "fogata", "tacho", "yunque")
 
 WORLD_SIZE = {
     "bolsa": (16, 16),
@@ -92,16 +93,17 @@ WORLD_SIZE = {
     "faro": (14, 16),
     "fogata": (20, 18),
     "tacho": (16, 18),
+    "yunque": (24, 18),
 }
 
-ICON_IDS = ("bolsa", "cofre", "faro", "fogata", "tacho")
+ICON_IDS = ("bolsa", "cofre", "faro", "fogata", "tacho", "yunque")
 
 HAMMER_ITEM = "martillo"
 
-HAMMER_TARGETS = ("cofre", "fogata", "tacho")
+HAMMER_TARGETS = ("cofre", "fogata", "tacho", "yunque")
 
 # lo que el tacho NO se traga (para no perder algo caro por un click mal puesto)
-TRASH_PROTECTED = ("faro", "tacho", "martillo")
+TRASH_PROTECTED = ("faro", "tacho", "martillo", "yunque")
 
 
 def _trash_slot(self, game):
@@ -424,7 +426,42 @@ def _draw_tacho(W, H):
     return s
 
 
+def _draw_yunque(W, H):
+
+    s = pygame.Surface((W, H), pygame.SRCALPHA)
+
+    lw = max(1, W // 28)
+    dark = (34, 36, 42)
+
+    # base
+    base = pygame.Rect(int(W * .30), int(H * .72), int(W * .40), int(H * .26))
+    pygame.draw.rect(s, (74, 78, 88), base, border_radius=max(1, W // 40))
+    pygame.draw.rect(s, dark, base, lw, border_radius=max(1, W // 40))
+
+    # cintura
+    waist = pygame.Rect(int(W * .38), int(H * .52), int(W * .24), int(H * .24))
+    pygame.draw.rect(s, (92, 96, 108), waist)
+    pygame.draw.rect(s, dark, waist, lw)
+
+    # mesa + pico
+    top = [
+        (W * .10, H * .20), (W * .82, H * .20), (W * .96, H * .30),
+        (W * .80, H * .40), (W * .74, H * .54), (W * .26, H * .54),
+        (W * .22, H * .40), (W * .10, H * .36),
+    ]
+    pygame.draw.polygon(s, (120, 126, 138), top)
+    pygame.draw.polygon(s, dark, top, lw)
+
+    # brillo de la cara de arriba
+    pygame.draw.line(
+        s, (176, 182, 194), (W * .16, H * .24), (W * .78, H * .24), lw
+    )
+
+    return s
+
+
 _DRAWERS = {
+    "yunque": _draw_yunque,
     "tacho": _draw_tacho,
     "bolsa": _draw_bolsa,
     "cofre": _draw_cofre,
@@ -804,6 +841,15 @@ class Trash(Placeable):
     draggable = False
 
 
+class Anvil(Placeable):
+
+    # fijo, como el cofre: se recoge con el martillo.
+    # Las mejoras NO viven aca sino en el juego (game.anvil), asi que
+    # moverlo con el martillo no pierde nada.
+    kind = "yunque"
+    draggable = False
+
+
 class Lighthouse(Placeable):
 
     kind = "faro"
@@ -979,6 +1025,7 @@ KINDS = {
     "faro": Lighthouse,
     "fogata": Campfire,
     "tacho": Trash,
+    "yunque": Anvil,
 }
 
 
@@ -995,6 +1042,8 @@ class PlaceableManager:
         self.dragging = None
 
         self.open_obj = None
+
+        self.anvil_panel = _yunque.AnvilPanel()
 
         self._fonts = {}
         self._icons = {}
@@ -1517,7 +1566,7 @@ class PlaceableManager:
             if self._over_hud(game, pygame.mouse.get_pos()):
 
                 game.show_message(
-                    "Elige el martillo y haz click sobre un cofre, una fogata o un tacho"
+                    "Elige el martillo y haz click sobre un cofre, una fogata, un tacho o un yunque"
                 )
 
                 return True
@@ -1525,7 +1574,7 @@ class PlaceableManager:
             if not self._use_hammer(game):
 
                 game.show_message(
-                    "Acércate a un cofre, una fogata o un tacho y haz click sobre ellos"
+                    "Acércate a un cofre, una fogata, un tacho o un yunque y haz click sobre ellos"
                 )
 
             return True
@@ -1629,6 +1678,20 @@ class PlaceableManager:
 
             if obj is None:
                 return False
+
+            if obj.kind == "yunque":
+
+                if _yunque.enemies_near(game, obj.rect.center):
+
+                    game.show_message(
+                        "No puedes usar el yunque con enemigos cerca"
+                    )
+
+                    return True
+
+                self.open_obj = obj
+
+                return True
 
             if obj.container is not None:
 
@@ -1880,9 +1943,17 @@ class PlaceableManager:
 
     def _panel_click(self, game, event):
 
-        panel, slots = self._panel_layout(game)
-
         obj = self.open_obj
+
+        if obj is not None and obj.kind == "yunque":
+
+            if self.anvil_panel.click(game, event):
+                return True
+
+            # click fuera del panel: deja pasar (hotbar, mapa)
+            return False
+
+        panel, slots = self._panel_layout(game)
 
         one = event.button == 3
 
@@ -2029,6 +2100,12 @@ class PlaceableManager:
         if obj is None:
             return
 
+        if obj.kind == "yunque":
+
+            self.anvil_panel.draw(game, screen)
+
+            return
+
         panel, slots = self._panel_layout(game)
 
         mouse = pygame.mouse.get_pos()
@@ -2162,6 +2239,14 @@ class PlaceableManager:
                 or self._dist(game, self.open_obj) > REACH + 30
             ):
                 self.open_obj = None
+
+            elif (
+                self.open_obj.kind == "yunque"
+                and _yunque.enemies_near(game, self.open_obj.rect.center)
+            ):
+                self.open_obj = None
+
+                game.show_message("Se acercan enemigos: el yunque se cerró")
 
         for obj in self.objects:
 
