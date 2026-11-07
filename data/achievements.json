@@ -13,11 +13,11 @@
         "zona_1": "2026-11-04T21:35:56"
     },
     "counters": {
-        "defeats": 6,
+        "defeats": 10,
         "fireballs": 227,
         "slimes": 12,
         "chests": 7,
         "kills": 171,
-        "doors": 16
+        "doors": 20
     }
 }

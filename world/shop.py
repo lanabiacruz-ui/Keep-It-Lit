@@ -28,20 +28,58 @@ BG_IMAGE = TIENDA_DIR / "vendedor_fondo.png"
 
 # Oleada que hay que alcanzar (en cualquiera de las 2 salas de combate)
 # para poder comprar cada objeto en la tienda. Para cambiarlo, editá acá.
+# "Llegar a la oleada N" = haber superado la N-1 (la oleada 12 de una zona
+# es haberla completado entera, jefe incluido).
+#
+# Todo lo de la tienda se consigue pasando oleadas, menos fosforo, vela,
+# aceite, madera y polvora. Esta ordenado de lo que menos tarda a lo que
+# mas tarda, y lo que mas beneficia va mas tarde:
+#
+#   Z1 = Zona 1 (Orkun)          Z2 = Zona 2 (Stonun, se abre despues)
+#
+#   mapa, cera, ganzua, bolsa     -> comodidad y ayudas chicas
+#   martillo, tacho               -> herramientas (el martillo va con lo que se coloca)
+#   repelente                     -> sale cuando aparecen los mosquitos (oleada 6)
+#   cofre, iman, p. velocidad     -> utiles pero no deciden una pelea
+#   hongo azul, resina            -> escudo y curacion fuertes
+#   p. invisibilidad              -> te saca de una pelea
+#   antorcha, candil              -> la mejor luz (la cadena de objetivos del
+#                                    juego pide antorcha y luego base, y
+#                                    ambos antes de completar Orkun)
+#   fogata, p. ira                -> lo ultimo antes del jefe de Orkun
+#   esfera, yunque, maquina       -> Zona 2: mejoras permanentes y economia
+#   p. ascua                      -> una vida extra: lo ultimo de todo
 SHOP_UNLOCK_WAVES = {
+    "mapa": 2,
+    "cera": 3,
     "ganzua": 3,
-    "esfera": 4,
+    "bolsa": 4,
     "martillo": 5,
-    "antorcha": 6,
+    "tacho": 5,
     "repelente": 6,
+    "cofre": 6,
+    "iman": 7,
+    "pocion_velocidad": 7,
     "hongo_azul": 8,
-    "iman": 9,
+    "resina": 8,
+    "pocion_invisibilidad": 9,
+    "antorcha": 10,
+    "faro": 10,
+    "fogata": 11,
+    "pocion_ira": 11,
+    "esfera": 4,           # Zona 2
+    "yunque": 6,           # Zona 2
+    "maquina": 8,          # Zona 2
+    "pocion_ascua": 10,    # Zona 2
 }
 
 # Objetos que piden la oleada en UNA zona en particular (ver zone_tag de
 # cada sala en world/arena.py). El resto cuenta la mejor oleada de cualquiera.
 SHOP_UNLOCK_ZONES = {
     "esfera": "ZONA 2",
+    "yunque": "ZONA 2",
+    "maquina": "ZONA 2",
+    "pocion_ascua": "ZONA 2",
 }
 
 DEFAULT_CATALOG = [

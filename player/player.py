@@ -108,6 +108,11 @@ class Player:
         # opacidad del cuerpo (255 = normal; baja con la pocion de invisibilidad)
         self.ghost_alpha = 255
 
+        # secuencia de muerte: cuerpo que se vuelve negro y se hunde en el piso
+        self.death_black = 0.0   # 0..1 cuanto se ennegrecio
+        self.death_sink = 0.0    # 0..1 cuanto se hundio
+        self.death_t = 0.0       # segundos desde que empezo (ondas del piso)
+
         self.hurt_timer = 0.0
         self.invuln_timer = 0.0
         self.kb_vel = pygame.Vector2()
@@ -1121,4 +1126,72 @@ class Player:
         if self.ghost_alpha < 255:
             sprite.set_alpha(self.ghost_alpha)
 
+        if self.death_black > 0.0 or self.death_sink > 0.0:
+            self._draw_death(screen, sprite, pos, anchor)
+            return
+
         screen.blit(sprite, pos)
+
+    def _draw_death(self, screen, sprite, pos, anchor):
+        """Dibuja al personaje negro y hundiendose en el piso."""
+
+        sprite = sprite.copy()
+
+        # se vuelve negro (conserva la silueta, solo oscurece el color)
+        k = max(0.0, min(1.0, self.death_black))
+        v = int(255 * (1.0 - k))
+        sprite.fill((v, v, v, 255), special_flags=pygame.BLEND_RGBA_MULT)
+
+        sink = max(0.0, min(1.0, self.death_sink))
+
+        # el pozo oscuro que se abre bajo los pies
+        if sink > 0.0:
+
+            w = max(8, int(sprite.get_width() * (0.45 + 0.75 * sink)))
+            h = max(4, int(w * 0.32))
+
+            pool = pygame.Surface((w, h), pygame.SRCALPHA)
+
+            pygame.draw.ellipse(
+                pool, (0, 0, 0, int(210 * min(1.0, sink * 1.6))),
+                pool.get_rect()
+            )
+
+            screen.blit(pool, pool.get_rect(center=(anchor[0], anchor[1] - 3)))
+
+            # ondas que se abren desde el centro
+            for i in range(2):
+
+                ph = (self.death_t * 0.9 + i * 0.5) % 1.0
+
+                rw = max(8, int(w * (0.5 + 0.9 * ph)))
+                rh = max(4, int(rw * 0.32))
+                ra = int(150 * (1.0 - ph) * min(1.0, sink * 2.0))
+
+                if ra <= 4:
+                    continue
+
+                ring = pygame.Surface((rw + 4, rh + 4), pygame.SRCALPHA)
+
+                pygame.draw.ellipse(
+                    ring, (0, 0, 0, ra), pygame.Rect(2, 2, rw, rh), 2
+                )
+
+                screen.blit(
+                    ring, ring.get_rect(center=(anchor[0], anchor[1] - 3))
+                )
+
+        # baja el cuerpo y lo corta a la altura del piso, asi "entra" en el suelo
+        dy = int(sink * sprite.get_height() * 1.05)
+
+        old_clip = screen.get_clip()
+
+        screen.set_clip(
+            old_clip.clip(
+                pygame.Rect(0, 0, screen.get_width(), anchor[1] - 1)
+            )
+        )
+
+        screen.blit(sprite, (pos[0], pos[1] + dy))
+
+        screen.set_clip(old_clip)

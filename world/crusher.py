@@ -257,7 +257,7 @@ class CrusherBlocks:
 
                 if player.hurt(block.rect.center):
 
-                    game.take_damage(CRUSH_DAMAGE)
+                    game.take_damage(CRUSH_DAMAGE, source="trampa")
 
                 self._push_out(player.rect, block.rect, cmap)
 

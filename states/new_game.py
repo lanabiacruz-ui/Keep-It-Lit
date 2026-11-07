@@ -155,6 +155,7 @@ COIN_PICKUP_DISTANCE = 14
 POLVORA_TICK = 0.5
 
 DEBUG_COINS = 100000
+DROPS_AUTOSAVE_EVERY = 30.0   # segundos entre autoguardados del piso
 DEBUG_GEL_COINS = 10000
 
 COIN_VALUES = {
@@ -189,6 +190,14 @@ INTRO_TIME = 2.2
 
 LOST_SCREEN_TIME = 3.0
 
+# secuencia de muerte (el personaje se vuelve negro y se hunde en el piso)
+DEATH_BLACK_TIME = 0.8        # tarda en ponerse negro
+DEATH_SINK_DELAY = 0.45       # espera antes de empezar a hundirse
+DEATH_SINK_TIME = 1.7         # tarda en hundirse del todo
+DEATH_HOLD_TIME = 0.9         # queda el pozo vacio y los enemigos mirando
+DEATH_SEQ_TIME = DEATH_SINK_DELAY + DEATH_SINK_TIME + DEATH_HOLD_TIME
+DEATH_LIGHT_RADIUS = 120      # luz tenue para ver la silueta si no hay luz
+
 DELETE_SAVE_ON_LOSS = True
 
 NORMAL_KEEP_COINS = True
@@ -217,6 +226,46 @@ SLOT_KEYS = {
 def is_skin_item(item_id):
 
     return item_id.startswith(skin_lib.SHOP_PREFIX)
+
+
+# quien te mato: clase (o clave) -> nombre que se muestra en la esquina
+KILLER_NAMES = {
+    "PinaBoss": "Piña Colosal",
+    "GolemBoss": "Golem Colosal",
+    "PinaBrava": "Piña Brava",
+    "MiniPina": "Piña",
+    "Enemy": "Piña",
+    "Tronco": "Tronco",
+    "Shot": "Tronco",
+    "Mosquito": "Mosquito",
+    "Hongun": "Hongun",
+    "hongun": "Hongun",
+    "Guardian": "Guardián",
+    "GuardianShooter": "Guardián Tirador",
+    "GuardianBolt": "Guardián Tirador",
+    "Destello": "Destello",
+    "Golem": "Golem",
+    "trampa": "una trampa",
+}
+
+
+def killer_name(source):
+    """Nombre de lo que te mato (source puede ser un objeto o una clave)."""
+
+    if source is None:
+        return None
+
+    if isinstance(source, str):
+        return KILLER_NAMES.get(source, source)
+
+    for cls in type(source).__mro__:
+
+        name = KILLER_NAMES.get(cls.__name__)
+
+        if name is not None:
+            return name
+
+    return None
 
 
 class NewGame:
@@ -748,6 +797,12 @@ class NewGame:
         self.fade_alpha = 0
         self.lost_timer = 0
 
+        # muerte: reloj de la secuencia, quien te mato y cuantos faltaban
+        self._death_t = None
+        self._killer = None
+        self._death_cause = None
+        self._death_left = None
+
         self._flicker_time = 0.0
 
         self._gem_icon = None
@@ -825,7 +880,7 @@ class NewGame:
         return font
 
 
-    def take_damage(self, amount, common=False):
+    def take_damage(self, amount, common=False, source=None):
 
         if amount <= 0:
             return
@@ -859,6 +914,10 @@ class NewGame:
 
         if self.escudo < 1e-6:
             self.escudo = 0.0
+
+        # el golpe que apaga la luz es el que te mata
+        if self.vida <= 0:
+            self._killer = killer_name(source)
 
 
     def equip_match(self, kind=None, life=None):
@@ -1042,6 +1101,7 @@ class NewGame:
 
             self.ascua_timer = 0.0
             self.vida = max(0.01, float(self.ascua_life))
+            self._killer = None
 
             self.regen_left = 0.0
 
@@ -1582,7 +1642,7 @@ class NewGame:
                     "lanzas una bola de fuego. ¡Pruébala!"
                 ),
                 "tuto": [
-                    "ANTORCHA: se desbloquea en la tienda al llegar a la oleada 6. Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
+                    f"ANTORCHA: se desbloquea en la tienda al llegar a la oleada {SHOP_UNLOCK_WAVES['antorcha']} (en la Zona 1). Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
                 ],
                 "target": lambda g: (
                     None
@@ -3923,6 +3983,122 @@ class NewGame:
 
         return (cx, cy)
 
+    def _freeze_player(self):
+        """El personaje no se mueve ni reacciona una vez que perdiste."""
+
+        p = self.player
+
+        p.moving = False
+        p.grabbed = False
+        p.grab_lift = 0.0
+        p.hurt_timer = 0.0
+        p.invuln_timer = 0.0
+        p.hurt_anim = 0.0
+        p.kb_vel = pygame.Vector2(0, 0)
+
+        movement = getattr(p, "movement", None)
+
+        if movement is not None:
+            movement._rest_x = 0.0
+            movement._rest_y = 0.0
+
+        self._fire_hold = False
+
+    def _begin_death(self):
+        """Arranca la secuencia: guarda quien te mato y cuantos faltaban."""
+
+        # si ya viene con la pantalla negra (te rendiste) no hay secuencia
+        if self.fade_alpha >= 255:
+            self._death_t = DEATH_SEQ_TIME
+        else:
+            self._death_t = 0.0
+
+        # cuantos enemigos quedaban en la sala donde caiste
+        left = None
+
+        for arena in self.arenas:
+
+            if getattr(arena, "state", None) == arena.WAVE:
+
+                n = len([e for e in arena.enemies if not e.dead])
+
+                left = n if left is None else left + n
+
+        self._death_left = left
+
+    def _animate_death(self):
+
+        t = self._death_t
+
+        p = self.player
+
+        p.death_t = t
+
+        p.death_black = min(1.0, t / DEATH_BLACK_TIME)
+
+        p.death_sink = max(
+            0.0,
+            min(1.0, (t - DEATH_SINK_DELAY) / DEATH_SINK_TIME)
+        )
+
+    def _death_lines(self):
+        """Textos de la esquina: quien te mato y cuantos enemigos faltaban."""
+
+        lines = []
+
+        if self._death_cause == "rendirse":
+            lines.append("Te rendiste")
+        elif self._killer:
+            lines.append(f"Te mató: {self._killer}")
+        else:
+            lines.append("Se te apagó la luz")
+
+        left = self._death_left
+
+        if left is not None:
+
+            if left == 1:
+                lines.append("Te faltaba 1 enemigo")
+            else:
+                lines.append(f"Te faltaban {left} enemigos")
+
+        return lines
+
+    def _draw_death_note(self, alpha):
+
+        font = self._font(20)
+
+        sw, sh = self.screen.get_size()
+
+        y = sh - 14
+
+        for text in reversed(self._death_lines()):
+
+            shadow = font.render(text, True, (0, 0, 0))
+            label = font.render(text, True, (205, 205, 205))
+
+            shadow.set_alpha(alpha)
+            label.set_alpha(alpha)
+
+            x = sw - label.get_width() - 16
+
+            y -= label.get_height()
+
+            self.screen.blit(shadow, (x + 1, y + 1))
+            self.screen.blit(label, (x, y))
+
+            y -= 2
+
+    def _finish_arenas(self):
+        """Cierra las salas de combate despues de la secuencia (idempotente)."""
+
+        for arena in self.arenas:
+
+            finish = getattr(arena, "finish_after_death", None)
+
+            if finish is not None:
+                finish(self)
+
     def _drop_death_items(self):
 
         if self._death_dropped or self.mode == MODE_HARDCORE:
@@ -3974,6 +4150,8 @@ class NewGame:
 
         self._loss_applied = True
 
+        self._finish_arenas()
+
         if self.mode == MODE_HARDCORE:
 
             if DELETE_SAVE_ON_LOSS:
@@ -4015,6 +4193,13 @@ class NewGame:
 
     def handle_event(self, event):
 
+        # una vez que perdiste no se puede hacer nada (mover, atacar, usar
+        # items, pausar...). El cierre de la ventana lo maneja main.py.
+        if self.state in ("dying", "lost"):
+
+            self._fire_hold = False
+
+            return None
 
         if self.tutorial is not None:
 
@@ -4284,6 +4469,7 @@ class NewGame:
         ):
 
             self.no_light_timer = 0.0
+            self._death_cause = "rendirse"
             self.state = "dying"
             self.fade_alpha = 255
             self.flash_t = 0.0
@@ -4698,6 +4884,20 @@ class NewGame:
 
             self.flash_t = 0.0
 
+            self._freeze_player()
+
+            if self._death_t is None:
+                self._begin_death()
+
+            self._death_t += dt
+
+            self._animate_death()
+
+            # mientras dura la secuencia el mundo queda quieto (los enemigos
+            # no se mueven, solo miran) y todavia no se apaga la pantalla
+            if self._death_t < DEATH_SEQ_TIME:
+                return None
+
             self.fade_alpha += (
                 255 / FADE_DURATION
             ) * dt
@@ -4708,9 +4908,13 @@ class NewGame:
                 self.state = "lost"
                 self.lost_timer = LOST_SCREEN_TIME
 
+                self._finish_arenas()
+
             return None
 
         if self.state == "lost":
+
+            self._freeze_player()
 
             self.lost_timer -= dt
 
@@ -4978,7 +5182,7 @@ class NewGame:
             if not s.dead and not s.gone
         ]
 
-        if not lock:
+        if not lock and self.state == "playing":
 
             self.player.update(
                 dt,
@@ -5066,8 +5270,21 @@ class NewGame:
                 drop.update_fly(dt)
 
         # lo que quedo en el piso de ESTE mapa se va esfumando
-        tick_expiry(self.light_drops, dt, self.fx)
-        tick_expiry(self.world_items, dt, self.fx)
+        gone = tick_expiry(self.light_drops, dt, self.fx)
+        gone += tick_expiry(self.world_items, dt, self.fx)
+
+        # autoguardado: si un item se esfumo, o cada tanto para ir
+        # actualizando el tiempo que les queda, se guarda. Sin esto, al
+        # volver a cargar la partida los items que ya habian desaparecido
+        # reaparecian (con el tiempo de la ultima vez que se guardo).
+        self._drops_save_t = getattr(self, "_drops_save_t", 0.0) + dt
+
+        if gone or self._drops_save_t >= DROPS_AUTOSAVE_EVERY:
+
+            self._drops_save_t = 0.0
+
+            if self.save_path and self.state == "playing":
+                self._save()
 
         px, py = self.player.rect.center
 
@@ -5653,6 +5870,19 @@ class NewGame:
                     radius
                 ))
 
+        if self.state == "dying" and not self.has_match:
+
+            # sin luz igual se tiene que ver la silueta hundiendose
+            k = max(0.0, 1.0 - 1.5 * self.fade_alpha / 255)
+
+            if k > 0:
+
+                sources.append((
+                    self.player.rect.centerx,
+                    self.player.rect.centery,
+                    DEATH_LIGHT_RADIUS * self.camera.zoom * k
+                ))
+
         for ball in self.fireballs:
             sources.append(ball.light_source())
 
@@ -5942,8 +6172,12 @@ class NewGame:
             else:
                 lost_img = self.pantalla_perdiste_normal
 
-            lost_img.set_alpha(
-                int(255 * min(1.0, (LOST_SCREEN_TIME - self.lost_timer) / 0.6))
+            lost_a = int(
+                255 * min(1.0, (LOST_SCREEN_TIME - self.lost_timer) / 0.6)
             )
 
+            lost_img.set_alpha(lost_a)
+
             self.screen.blit(lost_img, (0, 0))
+
+            self._draw_death_note(lost_a)

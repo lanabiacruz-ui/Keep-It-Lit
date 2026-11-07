@@ -5401,7 +5401,7 @@ class Arena:
 
             if p.hurt(origin):
 
-                game.take_damage(damage)
+                game.take_damage(damage, source=boss)
 
                 away = pygame.Vector2(body.center) - pygame.Vector2(origin)
 
@@ -5765,10 +5765,17 @@ class Arena:
 
     def _player_died(self, game):
 
-        self._end_run(game)
-
+        # La sala NO se cierra aca: los enemigos tienen que quedarse quietos
+        # mirando mientras el personaje se hunde. El juego llama a
+        # finish_after_death() cuando termina esa secuencia.
         game.state = "dying"
         game.fade_alpha = 0
+
+    def finish_after_death(self, game):
+        """Cierra la sala despues de la secuencia de muerte (idempotente)."""
+
+        if self.state != self.IDLE:
+            self._end_run(game)
 
 
     def _update_fx(self, dt):
@@ -6001,7 +6008,7 @@ class Arena:
             elif isinstance(enemy, Mosquito):
                 enemy.update(dt, e_target, game.collision_map, e_on, e_light, repel, lamp_zones)
                 if enemy.attached and enemy.damage_t <= 0.0:
-                    game.take_damage(MOSQUITO_DAMAGE, common=True)
+                    game.take_damage(MOSQUITO_DAMAGE, common=True, source=enemy)
                     enemy.damage_t = MOSQUITO_DAMAGE_INTERVAL
             elif isinstance(enemy, GuardianShooter):
                 enemy.update(dt, e_target, game.collision_map, e_on, e_light)
@@ -6016,7 +6023,7 @@ class Arena:
                 enemy.update(dt, e_target, game.collision_map, e_on, e_light)
                 if enemy.swing_hits(body.center):
                     if p.hurt(enemy.pos):
-                        game.take_damage(GUARDIAN_DAMAGE, common=True)
+                        game.take_damage(GUARDIAN_DAMAGE, common=True, source=enemy)
                         away = pygame.Vector2(body.center) - enemy.pos
                         if away.length_squared() > 0.01:
                             p.kb_vel = away.normalize() * GUARDIAN_KNOCKBACK
@@ -6062,7 +6069,7 @@ class Arena:
                 continue
             if enemy.rect.colliderect(body):
                 if p.hurt(enemy.pos):
-                    game.take_damage(damage, common=_is_common(enemy))
+                    game.take_damage(damage, common=_is_common(enemy), source=enemy)
                 enemy.bounce_from(body.center)
 
         for shot in self.shots:
@@ -6074,7 +6081,8 @@ class Arena:
                     game.take_damage(
                         amount if amount is not None
                         else damage * SHOT_DAMAGE_MULT,
-                        common=True
+                        common=True,
+                        source=shot
                     )
                     push = getattr(shot, "knockback", 0.0)
                     away = pygame.Vector2(body.center) - shot.pos
@@ -6336,7 +6344,7 @@ class Arena:
         p.invuln_timer = 0.0
         p.hurt(pos)
 
-        game.take_damage(HONGUN_DAMAGE)
+        game.take_damage(HONGUN_DAMAGE, source="hongun")
 
         away = body - pos
 
@@ -6356,7 +6364,7 @@ class Arena:
         p.invuln_timer = 0.0
         p.hurt(pos)
 
-        game.take_damage(DESTELLO_DAMAGE, common=True)
+        game.take_damage(DESTELLO_DAMAGE, common=True, source=enemy)
 
         away = body - pos
 

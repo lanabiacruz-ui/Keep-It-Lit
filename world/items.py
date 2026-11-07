@@ -65,7 +65,12 @@ def tick_expiry(items, dt, fx=None):
     Solo corre para la lista que le pasan: los items de otro mapa no
     avanzan. Cuando se acaba el tiempo arranca el efecto y despues se
     saca de la lista.
+
+    Devuelve cuantos items se sacaron de la lista en esta pasada, para que
+    quien llama pueda guardar la partida y que no vuelvan al cargar.
     """
+
+    removed = 0
 
     for it in list(items):
 
@@ -77,6 +82,7 @@ def tick_expiry(items, dt, fx=None):
 
             if it.vanish_t <= 0:
                 items.remove(it)
+                removed += 1
 
             continue
 
@@ -103,6 +109,8 @@ def tick_expiry(items, dt, fx=None):
 
         if fx is not None:
             fx.poof(*it.rect.center)
+
+    return removed
 
 
 def _blink_hidden(item):

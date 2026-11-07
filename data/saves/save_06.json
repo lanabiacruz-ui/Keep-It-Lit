@@ -2,11 +2,11 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-07T02:44:22",
+    "last_played": "2026-11-07T03:08:41",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 942,
-    "y": 167,
+    "x": 1007,
+    "y": 139,
     "coins": 188887,
     "gems": 5,
     "gems_green": 1,
@@ -25,7 +25,7 @@
         ],
         [
             "aceite",
-            14
+            15
         ],
         [
             "martillo",
@@ -41,22 +41,22 @@
         ]
     ],
     "collected": [
-        "moneda_pasillo_cabana#1",
-        "madera_02#0",
-        "madera_03#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_sala_cofres#0",
         "moneda_sala_central#0",
-        "moneda_pasillo_izq#0",
-        "moneda_pasillo_tienda#1",
         "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_tienda#1",
+        "madera_02#0",
         "madera_04#0",
+        "madera_03#0",
         "moneda_pasillo_der#0",
-        "moneda_sala_central#1",
         "madera_01#0",
-        "moneda_sala_cofres#1",
-        "moneda_pasillo_cofres#0"
+        "moneda_sala_central#1",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_cabana#0",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_cofres#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -252,288 +252,7 @@
     "tuto_seen": [
         0
     ],
-    "death_drops": [
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 1006,
-            "y": 132,
-            "map": "mapa1",
-            "ttl": 6.8
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1006,
-            "y": 132,
-            "map": "mapa1",
-            "ttl": 8.2
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 960,
-            "y": 163,
-            "map": "mapa1",
-            "ttl": 30.0
-        },
-        {
-            "k": "item",
-            "id": "cera",
-            "x": 958,
-            "y": 151,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "cera",
-            "x": 957,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 969,
-            "y": 165,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 982,
-            "y": 155,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 972,
-            "y": 164,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 975,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 986,
-            "y": 158,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 963,
-            "y": 148,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 978,
-            "y": 154,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 977,
-            "y": 164,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 955,
-            "y": 169,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 954,
-            "y": 146,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 988,
-            "y": 154,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 968,
-            "y": 171,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 957,
-            "y": 162,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 987,
-            "y": 162,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 955,
-            "y": 153,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 970,
-            "y": 173,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 952,
-            "y": 166,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 960,
-            "y": 151,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 955,
-            "y": 177,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 968,
-            "y": 165,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 977,
-            "y": 152,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 964,
-            "y": 150,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 990,
-            "y": 160,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 978,
-            "y": 154,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 976,
-            "y": 163,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 946,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 975,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 991,
-            "y": 165,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 951,
-            "y": 150,
-            "map": "mapa1",
-            "ttl": 31.2
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 981,
-            "y": 170,
-            "map": "mapa1",
-            "ttl": 31.2
-        }
-    ],
+    "death_drops": [],
     "ganzua_uses": 0,
     "boss_intro_seen": true,
     "enemies_claimed": [
