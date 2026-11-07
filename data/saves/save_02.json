@@ -2,7 +2,158 @@
     "player_name": "i",
     "mode": "normal",
     "created_at": "2026-11-07T14:08:16",
-    "last_played": "2026-11-07T14:08:16",
+    "last_played": "2026-11-07T14:34:06",
     "password_salt": "c4ab8c8a0b3e01bef971c0a87daadc6a",
-    "password_hash": "cf91f8fe320f926ef51eb2092c9d3117012cfd1a19e727920232159343dc0d05"
+    "password_hash": "cf91f8fe320f926ef51eb2092c9d3117012cfd1a19e727920232159343dc0d05",
+    "x": 899,
+    "y": 140,
+    "coins": 26,
+    "gel_coins": 0,
+    "ganzua_uses": 0,
+    "boss_intro_seen": false,
+    "boss2_intro_seen": false,
+    "gems": 0,
+    "gems_green": 0,
+    "has_match": true,
+    "light": "fosforo",
+    "vida": 1.0,
+    "escudo": 0.0,
+    "inventory": [
+        [
+            "cera",
+            1
+        ],
+        null,
+        [
+            "madera",
+            2
+        ],
+        null,
+        null,
+        null
+    ],
+    "shop_inventory": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    ],
+    "collected": [
+        "moneda_pasillo_tienda#0",
+        "madera_02#0",
+        "moneda_pasillo_tienda#1",
+        "aceite_03#0",
+        "cera_02#0",
+        "madera_03#0",
+        "moneda_pasillo_cabana#1",
+        "moneda5_pasillo_cofres#0",
+        "madera_04#0",
+        "moneda_sala_central#1",
+        "moneda_sala_central#0",
+        "madera_11#0",
+        "cera_03#0",
+        "moneda_pasillo_der#0",
+        "madera_05#0",
+        "moneda_pasillo_izq#0",
+        "madera_12#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_pasillo_cabana#0",
+        "madera_08#0",
+        "madera_10#0",
+        "moneda_sala_cofres#0",
+        "madera_07#0",
+        "madera_09#0"
+    ],
+    "item_seed": 99515013,
+    "arena_wave": 1,
+    "arena_completed": false,
+    "arena_left_wave": 1,
+    "arena_left_completed": false,
+    "broken_doors": [
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "hub_derecha",
+        "hub_izquierda",
+        "sup_central_abajo",
+        "sup_izq_central",
+        "sup_izq_sala"
+    ],
+    "final_door_slots": {
+        "clara": false,
+        "oscura": false
+    },
+    "current_map": "mapa1",
+    "chests": {
+        "cofre_04": {
+            "usos": 9
+        }
+    },
+    "placeables": [],
+    "yunque": {
+        "niveles": {
+            "resistencia": 0,
+            "brasas": 0,
+            "repelente": 0,
+            "llama_amplia": 0,
+            "llama_larga": 0,
+            "manos": 0
+        },
+        "activas": []
+    },
+    "enemies_seen": [
+        "slime",
+        "slime2"
+    ],
+    "enemies_claimed": [],
+    "stats": {
+        "items_used": 15,
+        "chests_opened": 1,
+        "purchases": 1,
+        "fireballs": 0,
+        "kills": 0
+    },
+    "zones_seen": [
+        "central",
+        "cofres",
+        "inicio",
+        "tienda"
+    ],
+    "shop_unlocked": [
+        "mapa"
+    ],
+    "tuto_seen": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        14,
+        15,
+        16
+    ],
+    "death_drops": [
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 482,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 259.3
+        }
+    ],
+    "objective_index": 16,
+    "objective_version": 3,
+    "objectives_minimized": false
 }

@@ -88,7 +88,16 @@ LAST_WAVE = 11
 PINOS_STEP = 1
 TRONCOS_STEP = 1
 TRONCOS_MAX = 8
-ENEMIES_MAX = 32
+# tope de enemigos para las oleadas extra (las que no estan en la tabla)
+ENEMIES_MAX = 40
+
+# tope para las oleadas de la tabla: arriba del maximo actual (56), asi
+# no se recorta nada. Bajalo si queres limitar la sala.
+TABLE_ENEMIES_MAX = 60
+
+# desde esta cantidad de enemigos (o la ultima oleada normal) se avisa
+# "oleada dificil"
+HARD_WAVE_ENEMIES = 30
 MOSQUITOS_STEP = 1
 MOSQUITOS_MAX = 20
 HONGUNS_STEP = 0
@@ -107,15 +116,29 @@ DESTELLO_TEST_COUNT = 3
 GOLEM_TEST_WAVE = 97
 GOLEM_TEST_COUNT = 2
 
-WAVE_REWARDS = {1: 100, 2: 200, 3: 300}
-REWARD_STEP = 100
+# Premios: crecen cada vez mas rapido, igual que la dificultad (antes eran
+# lineales: +100 por oleada).
+WAVE_REWARDS = {
+    1: 100, 2: 200, 3: 300, 4: 420, 5: 560, 6: 720,
+    7: 900, 8: 1100, 9: 1350, 10: 1650,
+    11: 3000,
+}
+REWARD_STEP = 300
 NO_ESCAPE_MULT = 2
 
 ENEMY_HP_BASE = 2
-ENEMY_HP_MAX = 10
+ENEMY_HP_MAX = 12
 ENEMY_SPEED_BASE = 58
 ENEMY_SPEED_STEP = 4
-ENEMY_SPEED_MAX = 90
+ENEMY_SPEED_MAX = 100
+
+# La Zona 2 es mas dificil: parte de mas vida y velocidad, y los topes
+# quedan lejos para que las oleadas 9 y 10 sigan subiendo.
+LEFT_ENEMY_HP_BASE = 3
+LEFT_ENEMY_HP_MAX = 15
+LEFT_ENEMY_SPEED_BASE = 62
+LEFT_ENEMY_SPEED_STEP = 4
+LEFT_ENEMY_SPEED_MAX = 108
 
 ENEMY_DAMAGE = 0.08
 ENEMY_DAMAGE_STEP = 0.01
@@ -391,7 +414,8 @@ def wave_composition(wave, table=None):
         if wave == GOLEM_TEST_WAVE:
             return 0, 0, 0, 0, 0, 0, 0, GOLEM_TEST_COUNT
     if wave in table:
-        return tuple(table[wave]) + (0,) * (8 - len(table[wave]))
+        row = tuple(table[wave]) + (0,) * (8 - len(table[wave]))
+        return cap_composition(row, TABLE_ENEMIES_MAX)
     last = max(table)
     row = tuple(table[last]) + (0,) * (8 - len(table[last]))
     pinos, troncos, mosquitos, honguns, guardians, shooters, destellos, golems = row
@@ -402,11 +426,77 @@ def wave_composition(wave, table=None):
     honguns = min(HONGUNS_MAX, honguns + HONGUNS_STEP * extra)
     destellos = min(DESTELLOS_MAX, destellos + DESTELLOS_STEP * extra)
     golems = min(GOLEMS_MAX, golems + GOLEMS_STEP * extra)
-    total = pinos + troncos + mosquitos + honguns + destellos + golems
-    if total > ENEMIES_MAX:
-        mosquitos = max(0, mosquitos - (total - ENEMIES_MAX))
-    return (pinos, troncos, mosquitos, honguns, guardians, shooters,
-            destellos, golems)
+    return cap_composition((pinos, troncos, mosquitos, honguns, guardians,
+                            shooters, destellos, golems))
+
+
+def cap_composition(row, limit=None):
+    """Recorta la oleada al tope de enemigos. Saca de a uno del tipo comun
+    mas numeroso (piñas, troncos, mosquitos, honguns) para que la mezcla
+    no cambie; los especiales (guardianes, destellos, golems) no se tocan."""
+
+    limit = ENEMIES_MAX if limit is None else limit
+
+    row = list(row)
+
+    while sum(row) > limit:
+
+        idx = max(range(4), key=lambda i: row[i])
+
+        if row[idx] <= 1:
+            break
+
+        row[idx] -= 1
+
+    return tuple(row)
+
+
+KIND_LABELS = (
+    "piñas", "troncos", "mosquitos", "honguns", "guardianes",
+    "guardianes tiradores", "destellos", "golems",
+)
+
+
+def wave_summary(wave, table=None):
+    """Texto con lo que trae la oleada: '5 piñas, 4 troncos...'."""
+
+    row = wave_composition(wave, table)
+
+    return ", ".join(
+        f"{n} {label}" for n, label in zip(row, KIND_LABELS) if n
+    )
+
+
+def new_kinds(wave, table=None):
+    """Tipos de enemigo que aparecen por primera vez en esta oleada."""
+
+    if wave <= 1:
+        return []
+
+    now = wave_composition(wave, table)
+    before = [
+        max(col)
+        for col in zip(*[
+            wave_composition(w, table) for w in range(1, wave)
+        ])
+    ]
+
+    return [
+        KIND_LABELS[i] for i in range(len(now))
+        if now[i] > 0 and before[i] == 0
+    ]
+
+
+def is_hard_wave(wave, table, last_wave):
+    """Oleada dificil: muchos enemigos o la ultima antes del jefe."""
+
+    if wave >= last_wave:
+        return False
+
+    return (
+        enemies_for_wave(wave, table) >= HARD_WAVE_ENEMIES
+        or wave == last_wave - 1
+    )
 
 
 def enemies_for_wave(wave, table=None):
@@ -669,6 +759,32 @@ class EnemyArt:
             self._zoom = zoom
 
         return self._scaled, self._scaled_hit
+
+
+_ENEMY_LABELS = (
+    ("GuardianShooter", "Guardianes tiradores"),
+    ("Guardian", "Guardianes"),
+    ("PinaBrava", "Piñas bravas"),
+    ("MiniPina", ""),
+    ("Tronco", "Troncos"),
+    ("Mosquito", "Mosquitos"),
+    ("Hongun", "Honguns"),
+    ("Destello", "Destellos"),
+    ("Golem", "Golems"),
+    ("Enemy", "Piñas"),
+)
+
+
+def enemy_label(enemy):
+    """Nombre del tipo de enemigo para el HUD ('' = no se cuenta)."""
+
+    names = {c.__name__ for c in type(enemy).__mro__}
+
+    for cls_name, label in _ENEMY_LABELS:
+        if cls_name in names:
+            return label
+
+    return ""
 
 
 class Enemy:
@@ -4776,7 +4892,20 @@ class ArenaConfig:
                  done_text="Mapa completado! La sala se cerro para siempre",
                  gem_id="gema", gem_name="gema",
                  zone_name="", zone_tag="", hard=False, boss=False,
-                 boss_kind="pina", key_id="", traps=0):
+                 boss_kind="pina", key_id="", traps=0,
+                 hp_base=None, hp_max=None, speed_base=None,
+                 speed_step=None, speed_max=None):
+
+        # vida y velocidad de los enemigos comunes de esta zona
+        self.hp_base = ENEMY_HP_BASE if hp_base is None else hp_base
+        self.hp_max = ENEMY_HP_MAX if hp_max is None else hp_max
+        self.speed_base = (
+            ENEMY_SPEED_BASE if speed_base is None else speed_base
+        )
+        self.speed_step = (
+            ENEMY_SPEED_STEP if speed_step is None else speed_step
+        )
+        self.speed_max = ENEMY_SPEED_MAX if speed_max is None else speed_max
 
         # key_id: item que suelta el jefe al morir, junto con la gema
         # ("llave_oro" = llave dorada de la puerta de la Zona 2)
@@ -4819,9 +4948,9 @@ RIGHT_ARENA = ArenaConfig(
 
 
 LEFT_WAVE_REWARDS = {
-    1: 1500, 2: 1700, 3: 1900, 4: 2100, 5: 2300,
-    6: 2500, 7: 2700, 8: 2900, 9: 3100, 10: 3300,
-    11: 3500,
+    1: 1500, 2: 1700, 3: 1950, 4: 2250, 5: 2600,
+    6: 3000, 7: 3450, 8: 3950, 9: 4500, 10: 5100,
+    11: 7000,
 }
 
 # Oleadas 1-10: normales. Oleada 11: jefe (Golem Colosal). La gema verde
@@ -4838,6 +4967,9 @@ LEFT_ARENA = ArenaConfig(
     done_text="Sala completada! Se cerro para siempre",
     gem_id="gema_verde",
     gem_name="gema verde oscuro",
+    hp_base=LEFT_ENEMY_HP_BASE, hp_max=LEFT_ENEMY_HP_MAX,
+    speed_base=LEFT_ENEMY_SPEED_BASE, speed_step=LEFT_ENEMY_SPEED_STEP,
+    speed_max=LEFT_ENEMY_SPEED_MAX,
     zone_name="STONUN", zone_tag="ZONA 2", hard=True,
     boss=True, boss_kind="golem",
     traps=4,
@@ -5313,9 +5445,7 @@ class Arena:
 
         wave = self.cfg.last_wave - 1
 
-        hp = min(ENEMY_HP_MAX, ENEMY_HP_BASE + wave)
-        tronco_hp = min(ENEMY_HP_MAX, hp + TRONCO_HP_EXTRA)
-        speed = min(ENEMY_SPEED_MAX, ENEMY_SPEED_BASE + ENEMY_SPEED_STEP * wave)
+        hp, tronco_hp, speed = self.enemy_stats(wave)
 
         room = self.cfg.room
         cmap = game.collision_map
@@ -5545,6 +5675,17 @@ class Arena:
 
         return min(TRAP_MAX, base + (self.wave - 1) // 2)
 
+    def enemy_stats(self, wave):
+        """(vida, vida del tronco, velocidad) de los enemigos comunes."""
+
+        cfg = self.cfg
+
+        hp = min(cfg.hp_max, cfg.hp_base + wave)
+        tronco_hp = min(cfg.hp_max, hp + TRONCO_HP_EXTRA)
+        speed = min(cfg.speed_max, cfg.speed_base + cfg.speed_step * wave)
+
+        return hp, tronco_hp, speed
+
     def _spawn_wave(self, game):
 
         self._hits_at_wave_start = getattr(game, "hits_taken", 0)
@@ -5583,9 +5724,7 @@ class Arena:
         )
         random.shuffle(kinds)
 
-        hp = min(ENEMY_HP_MAX, ENEMY_HP_BASE + self.wave)
-        tronco_hp = min(ENEMY_HP_MAX, hp + TRONCO_HP_EXTRA)
-        speed = min(ENEMY_SPEED_MAX, ENEMY_SPEED_BASE + ENEMY_SPEED_STEP * self.wave)
+        hp, tronco_hp, speed = self.enemy_stats(self.wave)
 
         cmap = game.collision_map
         player_pos = pygame.Vector2(game.player.rect.center)
@@ -6797,18 +6936,29 @@ class Arena:
             center=rect.center
         )
 
+        y = rect.bottom + 8
+
         if self.state == self.WAVE:
+
+            if is_hard_wave(self.wave, self.cfg.table, self.cfg.last_wave):
+
+                draw_text(
+                    screen, "¡OLEADA DIFÍCIL!", 24, (255, 110, 90),
+                    topleft=(rect.left + 4, y)
+                )
+
+                y += 26
 
             draw_text(
                 screen, f"Enemigos: {len(self.enemies)}", 24,
-                (235, 235, 235), topleft=(rect.left + 4, rect.bottom + 8)
+                (235, 235, 235), topleft=(rect.left + 4, y)
             )
 
-            premio_y = rect.bottom + 34
+            premio_y = y + 26
 
         else:
 
-            premio_y = rect.bottom + 8
+            premio_y = y
 
         premio = self.current_reward if self.state == self.WAVE else self.reward
 
@@ -6833,6 +6983,30 @@ class Arena:
 
 
         if self.state == self.WAVE and not self.cinematic.active:
+
+            # que enemigos quedan, por tipo
+            counts = {}
+
+            for enemy in self.enemies:
+
+                if getattr(enemy, "is_boss", False) or enemy.dead:
+                    continue
+
+                label = enemy_label(enemy)
+
+                if label:
+                    counts[label] = counts.get(label, 0) + 1
+
+            ly = premio_y + 30
+
+            for label, n in sorted(counts.items(), key=lambda kv: -kv[1]):
+
+                draw_text(
+                    screen, f"{label}: {n}", 20, (205, 210, 222),
+                    topleft=(rect.left + 8, ly)
+                )
+
+                ly += 20
 
             for enemy in self.enemies:
                 if getattr(enemy, "is_boss", False):
@@ -6994,6 +7168,109 @@ class Arena:
 
             y += h + gap
 
+    @staticmethod
+    def _wrap(text, size, max_w):
+
+        font = get_font(size)
+
+        lines = []
+        line = ""
+
+        for word in text.split():
+
+            test = f"{line} {word}".strip()
+
+            if line and font.size(test)[0] > max_w:
+                lines.append(line)
+                line = word
+            else:
+                line = test
+
+        if line:
+            lines.append(line)
+
+        return lines
+
+    def _rest_advice(self, game, hard):
+        """Consejo corto para el descanso antes de la oleada."""
+
+        if not game.has_match:
+            return "Conseguí una luz antes de pelear."
+
+        if game.vida < 0.4:
+            return ("Tu luz está baja: recuperala con madera, resina o "
+                    "aceite antes de entrar.")
+
+        if not any(game.hud.items[:game.hud.SLOTS]):
+            return ("No tenés objetos: comprá en la tienda o abrí cofres "
+                    "antes de seguir.")
+
+        if hard:
+            return ("Es difícil: usá cera o aceite al empezar y, si se "
+                    "complica, escapá y volvé.")
+
+        return "Tu luz está bien. Podés entrar cuando quieras."
+
+    def _draw_wave_info(self, screen, game):
+        """Lo que viene en esta oleada, aviso de dificultad y consejo."""
+
+        cfg = self.cfg
+
+        if self._is_boss_wave():
+            lines = [("¡JEFE! Prepará tus objetos y tu luz.", (255, 110, 90))]
+            advice = self._rest_advice(game, True)
+        else:
+            hard = is_hard_wave(self.wave, cfg.table, cfg.last_wave)
+
+            total = enemies_for_wave(self.wave, cfg.table)
+
+            lines = []
+
+            if hard:
+                lines.append(("¡OLEADA DIFÍCIL!", (255, 110, 90)))
+
+            lines.append((f"Enemigos: {total}", (235, 235, 235)))
+
+            for row in self._wrap(
+                wave_summary(self.wave, cfg.table), 20, 380
+            ):
+                lines.append((row, (205, 210, 222)))
+
+            news = new_kinds(self.wave, cfg.table)
+
+            if news:
+                lines.append(
+                    (f"Aparecen por primera vez: {', '.join(news)}",
+                     (255, 205, 90))
+                )
+
+            advice = self._rest_advice(game, hard)
+
+        for row in self._wrap(advice, 20, 380):
+            lines.append((row, (150, 205, 255)))
+
+        height = 14 + 24 * len(lines)
+
+        box = pygame.Rect(0, 0, 420, height)
+        box.midtop = (self.panel_rect.centerx, self.panel_rect.bottom + 10)
+
+        back = pygame.Surface(box.size, pygame.SRCALPHA)
+
+        pygame.draw.rect(back, (0, 0, 0, 175), back.get_rect(), border_radius=12)
+        pygame.draw.rect(
+            back, (226, 201, 150, 200), back.get_rect(), 2, border_radius=12
+        )
+
+        screen.blit(back, box)
+
+        y = box.top + 8
+
+        for text, color in lines:
+
+            draw_text(screen, text, 22, color, midtop=(box.centerx, y))
+
+            y += 24
+
     def draw_menu(self, screen, game):
 
         screen.blit(self.dim, (0, 0))
@@ -7025,6 +7302,8 @@ class Arena:
             22, (255, 225, 120),
             center=(self.panel_rect.centerx, self.panel_rect.top + 54)
         )
+
+        self._draw_wave_info(screen, game)
 
         mouse = pygame.mouse.get_pos()
 

@@ -1,5 +1,6 @@
 import math
 import random
+import re
 from pathlib import Path
 
 import pygame
@@ -246,6 +247,37 @@ SLOT_KEYS = {
     pygame.K_4: 3,
 }
 
+
+
+_KEY_RULES = [
+    (r"\bW A S D\b", "[[W]] [[A]] [[S]] [[D]]"),
+    (r"(?i)\bclick izquierdo\b", "[[CLICK IZQ.]]"),
+    (r"(?i)\bclick derecho\b", "[[CLICK DER.]]"),
+    (r"\bRUEDA\b", "[[RUEDA]]"),
+    (r"\b(ESC|TAB|ESPACIO)\b", r"[[\1]]"),
+    (r"\b(teclas?) (\d) (al?) (\d)\b", r"\1 [[\2]] \3 [[\4]]"),
+    (r"\b(teclas?) (\d) y (\d)\b", r"\1 [[\2]] y [[\3]]"),
+    (r"\b(tecla) (\d)\b", r"\1 [[\2]]"),
+    (r"(?<![\w\[/])([EFQGOK])(?![\w\]])", r"[[\1]]"),
+]
+
+
+def mark_keys(pages):
+    """Resalta las teclas de las paginas del tutorial como botones
+    amarillos (el tutorial dibuja lo que va entre [[ ]])."""
+
+    out = []
+
+    for page in pages:
+
+        if "[[" not in page:
+
+            for pattern, repl in _KEY_RULES:
+                page = re.sub(pattern, repl, page)
+
+        out.append(page)
+
+    return out
 
 
 def is_skin_item(item_id):
@@ -548,7 +580,7 @@ class NewGame:
 
                 self.tutorial = Tutorial(
                     (self.width, self.height),
-                    pages=objective_list[0]["tuto"],
+                    pages=mark_keys(objective_list[0]["tuto"]),
                     can_skip=True
                 )
 
@@ -1186,6 +1218,9 @@ class NewGame:
                     "right": "d",
                 }[action]
 
+            elif action in ("potion1", "potion2"):
+                name = "potkey"
+
             elif action in SLOT_ACTIONS:
                 name = "slotkey"
 
@@ -1250,7 +1285,8 @@ class NewGame:
         if pages and self.tutorial is None and tutorial_hints():
 
             self.tutorial = Tutorial(
-                (self.width, self.height), pages=pages, can_skip=True
+                (self.width, self.height), pages=mark_keys(pages),
+                can_skip=True
             )
 
     def _draw_guidance(self):
@@ -1385,7 +1421,7 @@ class NewGame:
 
             return [
                 ("Teclas 1 a 4 (casillas)", "slotkey" in g.tuto_flags),
-                ("Teclas 5 y 6 (pociones)", "slotkey" in g.tuto_flags),
+                ("Teclas 5 y 6 (pociones)", "potkey" in g.tuto_flags),
                 ("Tecla 7 (tu luz)", "k5" in g.tuto_flags),
                 ("Rueda del mouse", "wheel" in g.tuto_flags),
             ]

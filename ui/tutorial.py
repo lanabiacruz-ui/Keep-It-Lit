@@ -39,20 +39,77 @@ TUTORIAL_PAGES = [
     "Eso es todo. Si te perdés, abrí la pausa con [[ESC]]. ¡Que tu luz nunca se apague!",
 ]
 
-TEXT_COLOR = (25, 60, 150)
-SHADOW_COLOR = (225, 230, 240)
-HINT_COLOR = (60, 95, 170)
+# Colores de Cenizo: azul fantasma, con azul transparente
+TEXT_COLOR = (20, 45, 125)
+SHADOW_COLOR = (225, 236, 252)
+HINT_COLOR = (45, 80, 165)
 
-KEY_BG = (255, 224, 160)
-KEY_EDGE = (214, 150, 60)
-KEY_TEXT = (140, 56, 0)
+KEY_BG = (122, 168, 238)
+KEY_BG_TOP = (170, 205, 250)
+KEY_EDGE = (28, 58, 140)
+KEY_SIDE = (58, 100, 196)
+KEY_TEXT = (12, 30, 95)
 
-NAME_BG = (255, 176, 64)
-NAME_TEXT = (60, 30, 6)
+NAME_BG = (110, 160, 236)
+NAME_EDGE = (28, 58, 140)
+NAME_TEXT = (236, 245, 255)
+
+DOT_ON = (96, 146, 240)
+DOT_ON_EDGE = (20, 48, 130)
+DOT_DONE = (150, 185, 240)
+DOT_NEXT = (130, 150, 200)
+
+ARROW_COLOR = (70, 120, 225)
+SPARK_COLOR = (170, 210, 255)
+GLOW_COLOR = (110, 160, 255)
+
+# panel: borde azul oscuro y relleno azul transparente
+FRAME_BORDER = (36, 72, 158)
+FRAME_FILL = (168, 200, 246)
+FRAME_FILL_ALPHA = 205
 
 FRAME_BACKING = (255, 255, 255)
 
 _MARK = re.compile(r"(\[\[|\]\])")
+
+
+_GHOST_FRAMES = {}
+
+
+def ghost_frame(surf):
+    """Pinta el panel con los colores de Cenizo (azul y azul transparente)."""
+
+    key = surf.get_size()
+
+    if key in _GHOST_FRAMES:
+        return _GHOST_FRAMES[key].copy()
+
+    w, h = key
+
+    out = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    for y in range(h):
+        for x in range(w):
+
+            r, g, b, a = surf.get_at((x, y))
+
+            if a == 0:
+                continue
+
+            t = max(0.0, min(1.0, ((r + g + b) / 3 - 95) / 70))
+
+            color = tuple(
+                int(FRAME_BORDER[i] + (FRAME_FILL[i] - FRAME_BORDER[i]) * t)
+                for i in range(3)
+            )
+
+            alpha = (255 + (FRAME_FILL_ALPHA - 255) * t) * a / 255
+
+            out.set_at((x, y), (*color, int(alpha)))
+
+    _GHOST_FRAMES[key] = out
+
+    return out.copy()
 
 
 def parse_markup(text):
@@ -164,10 +221,23 @@ def draw_marked_line(screen, font, text, flags, x, y, text_color=None):
 
         if flag:
 
-            chip = pygame.Rect(x - 3, y - 1, w + 6, font.get_linesize() - 2)
+            # tecla amarilla con relieve: base oscura abajo y cara clara
+            chip = pygame.Rect(x - 4, y - 2, w + 8, font.get_linesize() - 3)
 
-            pygame.draw.rect(screen, KEY_BG, chip, border_radius=6)
-            pygame.draw.rect(screen, KEY_EDGE, chip, width=1, border_radius=6)
+            base = chip.copy()
+            base.height += 3
+
+            pygame.draw.rect(screen, KEY_SIDE, base, border_radius=6)
+            pygame.draw.rect(screen, KEY_EDGE, base, width=1, border_radius=6)
+
+            face = chip.inflate(-2, -2)
+            face.height -= 1
+
+            pygame.draw.rect(screen, KEY_BG, face, border_radius=5)
+            pygame.draw.line(
+                screen, KEY_BG_TOP,
+                (face.left + 4, face.top + 1), (face.right - 5, face.top + 1)
+            )
 
             screen.blit(font.render(chunk, True, KEY_TEXT), (x, y))
 
@@ -251,6 +321,8 @@ class Tutorial:
         self.frame = pygame.transform.smoothscale(
             frame, (frame_width, frame_height)
         )
+
+        self.frame = ghost_frame(self.frame)
 
         self.char_rect = self.character.get_rect(
             bottomright=(self.width - margin, self.height - margin)
@@ -375,7 +447,7 @@ class Tutorial:
 
     @staticmethod
     def _make_glow(char_height):
-        """Halo calido detras del ayudante: es un fantasma que cuida tu luz."""
+        """Halo azul detras del ayudante: es un fantasma que cuida tu luz."""
 
         size = int(char_height * 1.5)
 
@@ -387,7 +459,7 @@ class Tutorial:
 
             alpha = int(46 * (1 - r / center) ** 2)
 
-            pygame.draw.circle(glow, (255, 190, 90, alpha), (center, center), r)
+            pygame.draw.circle(glow, (*GLOW_COLOR, alpha), (center, center), r)
 
         return glow
 
@@ -697,16 +769,16 @@ class Tutorial:
 
         gap = 12
 
-        x = frame_pos.right - 14 - gap * (total - 1)
-        y = frame_pos.top + 14
+        x = frame_pos.right - 46 - gap * (total - 1)
+        y = frame_pos.top + 26
 
         for i in range(total):
 
             if i == self.index:
-                pygame.draw.circle(screen, (255, 150, 30), (x, y), 5)
-                pygame.draw.circle(screen, (140, 56, 0), (x, y), 5, 1)
+                pygame.draw.circle(screen, DOT_ON, (x, y), 5)
+                pygame.draw.circle(screen, DOT_ON_EDGE, (x, y), 5, 1)
             else:
-                color = (255, 200, 120) if i < self.index else (190, 196, 210)
+                color = DOT_DONE if i < self.index else DOT_NEXT
                 pygame.draw.circle(screen, color, (x, y), 3)
 
             x += gap
@@ -720,7 +792,7 @@ class Tutorial:
         tag.bottomleft = (frame_pos.left + 16, frame_pos.top + 6)
 
         pygame.draw.rect(screen, NAME_BG, tag, border_radius=8)
-        pygame.draw.rect(screen, (140, 80, 10), tag, width=2, border_radius=8)
+        pygame.draw.rect(screen, NAME_EDGE, tag, width=2, border_radius=8)
 
         screen.blit(label, label.get_rect(center=tag.center))
 
@@ -744,7 +816,7 @@ class Tutorial:
                 (c - size * 2, c), (c - 1, c - 1),
             ]
 
-            pygame.draw.polygon(star, (255, 214, 120, alpha), pts)
+            pygame.draw.polygon(star, (*SPARK_COLOR, alpha), pts)
 
             screen.blit(
                 star, (int(s["x"]) + dx - c, int(s["y"]) - c)
@@ -866,7 +938,7 @@ class Tutorial:
             ty = frame_pos.bottom - 17 + int(math.sin(self.age * 6) * 2)
 
             pygame.draw.polygon(
-                screen, (255, 150, 30),
+                screen, ARROW_COLOR,
                 [(tx - 5, ty - 5), (tx + 5, ty - 5), (tx, ty + 3)]
             )
 

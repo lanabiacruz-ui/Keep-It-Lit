@@ -15,19 +15,18 @@ lista: si el largo no coincide, no se aplica nada.
 
 TEXTS = [
 
-    # 0 - cajita con el fosforo
+    # 0 - fosforo
     {
         "text": (
-            "Está oscuro: buscá la cajita que brilla sobre la mesa (la "
-            "flecha te la indica) y apretá E para sacar el fósforo. Si en "
-            "{countdown} segundos no tenés luz, perdés."
+            "Está oscuro: buscá el fósforo en el piso (seguí la flecha) y "
+            "agarralo con E. Si en {countdown} segundos no tenés luz, perdés."
         ),
         "tuto": [
             "¡Ey, despertaste! Soy [[Cenizo]], el fantasma de las cenizas. Voy a ayudarte a sobrevivir en este lugar tan oscuro.",
             "Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y con cada golpe. Si se apaga, perdés.",
-            "Ahora no tenés nada. Seguí la flecha naranja con [[W]] [[A]] [[S]] [[D]] hasta la cajita que brilla sobre la mesa y apretá [[E]] para sacar el fósforo. ¡Tenés {countdown} segundos!",
+            "Ahora no tenés nada. Seguí la flecha naranja con [[W]] [[A]] [[S]] [[D]] hasta el fósforo y agarralo con [[E]]. ¡Tenés {countdown} segundos!",
         ],
-        "hint": "Seguí la flecha naranja hasta la cajita que brilla y apretá [[E]] para sacar el fósforo. ¡Rápido, que el tiempo corre!",
+        "hint": "Seguí la flecha naranja hasta el fósforo y apretá [[E]] al llegar. ¡Rápido, que el tiempo corre!",
         "cheer": "¡Fuego! Ya tenés tu primera lucecita.",
     },
 

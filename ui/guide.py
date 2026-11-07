@@ -51,11 +51,11 @@ DIRECT_DIST = 90    # si el objetivo esta tan cerca, se apunta directo
 ARROW_COLOR = (255, 176, 64)
 ARROW_OUTLINE = (30, 18, 8)
 
-CHECK_BG = (12, 14, 18, 215)
-CHECK_BORDER = (255, 170, 60)
+CHECK_BG = (28, 54, 120, 205)
+CHECK_BORDER = (140, 185, 250)
 CHECK_DONE = (96, 214, 120)
-CHECK_TEXT = (245, 245, 245)
-CHECK_MUTED = (170, 170, 180)
+CHECK_TEXT = (240, 246, 255)
+CHECK_MUTED = (150, 178, 230)
 
 STEP_PX = 50        # cuantos pixeles del mundo valen "un paso" en la flecha
 NEAR_DIST = 120     # mas cerca que esto: solo se muestra el marcador
@@ -448,7 +448,7 @@ class Guide:
             pad, pad + title.get_height() + 4, width - pad * 2, bar_h
         )
 
-        pygame.draw.rect(panel, (50, 52, 60), bar, border_radius=3)
+        pygame.draw.rect(panel, (20, 38, 90), bar, border_radius=3)
 
         fill = bar.copy()
         fill.width = int(bar.width * done_count / len(entries))
