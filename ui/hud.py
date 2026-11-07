@@ -17,6 +17,8 @@ GIVEUP_IMAGE = "btn_rendirse.png"
 GIVEUP_IMAGE_HOVER = "btn_rendirse_hover.png"
 GIVEUP_GAP = 50
 
+GEL_COIN_IMAGE = "hud_monedas_gelea.png"
+
 
 def format_coins(amount):
 
@@ -322,6 +324,23 @@ class Hud:
             topright=(self.menu_rect.left - 6, margin)
         )
 
+        # contador de monedas de gelea: la misma pastilla (110x60) con la
+        # moneda de gelea, pegada a la izquierda del contador de monedas
+        gcoin = self._load_optional(GEL_COIN_IMAGE)
+
+        if gcoin is None:
+            # sin imagen: la pastilla de monedas con un tinte beige
+            gcoin = self.coin_icon.copy()
+            gcoin.fill((235, 205, 170, 255), special_flags=pygame.BLEND_RGBA_MULT)
+        else:
+            gcoin = scaled(gcoin, bar_scale)
+
+        self.gcoin_icon = gcoin
+
+        self.gcoin_rect = self.gcoin_icon.get_rect(
+            topright=(self.coin_rect.left - 6, margin)
+        )
+
         self.coin_font = pygame.font.Font(None, 32)
 
         self.gain_font = None
@@ -574,7 +593,8 @@ class Hud:
         equipped_selected=False,
         coin_gain=0,
         coin_gain_alpha=1.0,
-        attack_mode=None
+        attack_mode=None,
+        gel_coins=0
     ):
 
         self._draw_bar(
@@ -632,6 +652,37 @@ class Hud:
         )
 
         screen.blit(coin_text, coin_text_rect)
+
+        # monedas de gelea (misma pastilla, a la izquierda)
+        screen.blit(self.gcoin_icon, self.gcoin_rect)
+
+        gel_text = self.coin_font.render(
+            format_coins(gel_coins),
+            True,
+            (255, 255, 255)
+        )
+
+        if gel_text.get_width() > max_w:
+
+            factor = max_w / gel_text.get_width()
+
+            gel_text = pygame.transform.smoothscale(
+                gel_text,
+                (
+                    max_w,
+                    max(1, int(gel_text.get_height() * factor))
+                )
+            )
+
+        screen.blit(
+            gel_text,
+            gel_text.get_rect(
+                center=(
+                    self.gcoin_rect.left + self.coin_text_offset[0],
+                    self.gcoin_rect.top + self.coin_text_offset[1]
+                )
+            )
+        )
 
         if coin_gain > 0 and coin_gain_alpha > 0:
 

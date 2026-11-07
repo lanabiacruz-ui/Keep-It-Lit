@@ -286,7 +286,14 @@
   },
   "yunque": {
     "nombre": "Yunque",
-    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo (las mejoras no se pierden). Click derecho sobre él para abrirlo; no abre si hay enemigos cerca, así que úsalo entre oleadas. Ahí mejoras tu antorcha con monedas y gelea: tiene 3 engarces activos y los cambias gratis cada vez que lo abres. Las mejoras son solo para la antorcha y duran toda la partida.",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo (las mejoras no se pierden). Click derecho sobre él para abrirlo; no abre si hay enemigos cerca, así que úsalo entre oleadas. Ahí mejoras tu antorcha con monedas y monedas de gelea (las fabrica la máquina): tiene 3 engarces activos y los cambias gratis cada vez que lo abres. Las mejoras son solo para la antorcha y duran toda la partida.",
+    "requiere_fosforo": false,
+    "max_pila": 3,
+    "efectos": []
+  },
+  "maquina": {
+    "nombre": "Máquina de gelea",
+    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la recojas con el martillo (vacía) y también la puedes tirar al tacho. Click derecho sobre ella para abrirla. Pon geleas adentro: trabaja sola mientras juegas y convierte 2 geleas en 1 moneda de gelea cada 30 segundos (caben 10 geleas). Las monedas de gelea se cobran desde su panel y se gastan en el yunque.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []

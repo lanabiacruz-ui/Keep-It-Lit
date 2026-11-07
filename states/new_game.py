@@ -476,6 +476,9 @@ class NewGame:
 
         self.coins = int(self.save_data.get("coins", 0))
 
+        # moneda de gelea (la fabrica la maquina, la gasta el yunque)
+        self.gel_coins = int(self.save_data.get("gel_coins", 0))
+
         self.gems = int(self.save_data.get("gems", 0))
 
         # la entrada epica del jefe se muestra completa solo la primera vez
@@ -1594,9 +1597,9 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, yunque, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho, el yunque y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, yunque, máquina, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho, el yunque, la máquina y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los recojas con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
                     "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera, pero mientras está encendido los mosquitos no entran en su luz. El TACHO borra objetos: elige uno y haz click sobre él (Ctrl+click borra toda la casilla).",
-                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío, una fogata, un tacho o un yunque para recogerlos y colocarlos en otro lugar.",
+                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre vacío, una fogata, un tacho, un yunque o una máquina vacía para recogerlos y colocarlos en otro lugar.",
                 ],
                 "target": lambda g: (
                     None
@@ -3702,6 +3705,7 @@ class NewGame:
             "y": self.player.rect.centery,
 
             "coins": self.coins,
+            "gel_coins": self.gel_coins,
             "ganzua_uses": self.ganzua_uses,
             "boss_intro_seen": self.boss_intro_seen,
             "boss2_intro_seen": self.boss2_intro_seen,
@@ -3995,6 +3999,7 @@ class NewGame:
 
         if not NORMAL_KEEP_COINS:
             self.coins = 0
+            self.gel_coins = 0
             self.gems = 0
             self.gems_green = 0
 
@@ -5423,8 +5428,8 @@ class NewGame:
 
         rect = img.get_rect(
             topright=(
-                self.hud.coin_rect.left - 8,
-                self.hud.coin_rect.top
+                self.hud.gcoin_rect.left - 8,
+                self.hud.gcoin_rect.top
             )
         )
 
@@ -5799,6 +5804,7 @@ class NewGame:
             escudo=self.escudo,
             countdown=self.no_light_timer,
             coins=self.coins,
+            gel_coins=getattr(self, "gel_coins", 0),
             equipped_selected=self.selected_slot == "equipped",
             coin_gain=self.coin_gain if self.coin_gain_timer > 0 else 0,
             coin_gain_alpha=min(

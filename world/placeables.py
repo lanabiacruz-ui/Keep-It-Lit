@@ -7,6 +7,7 @@ from core.audio_manager import audio
 from world import items as _items
 from world.items import HUD_DIR, load_icon
 from world import yunque as _yunque
+from world import maquina as _maquina
 
 
 REACH = 64
@@ -85,7 +86,7 @@ FUEL_PER_ITEM = {
     "fogata": FOGATA_PER_MADERA,
 }
 
-PLACE_ITEMS = ("cofre", "faro", "fogata", "tacho", "yunque")
+PLACE_ITEMS = ("cofre", "faro", "fogata", "tacho", "yunque", "maquina")
 
 WORLD_SIZE = {
     "bolsa": (16, 16),
@@ -94,13 +95,14 @@ WORLD_SIZE = {
     "fogata": (20, 18),
     "tacho": (16, 18),
     "yunque": (24, 18),
+    "maquina": (26, 18),
 }
 
-ICON_IDS = ("bolsa", "cofre", "faro", "fogata", "tacho", "yunque")
+ICON_IDS = ("bolsa", "cofre", "faro", "fogata", "tacho", "yunque", "maquina")
 
 HAMMER_ITEM = "martillo"
 
-HAMMER_TARGETS = ("cofre", "fogata", "tacho", "yunque")
+HAMMER_TARGETS = ("cofre", "fogata", "tacho", "yunque", "maquina")
 
 # lo que el tacho NO se traga (para no perder algo caro por un click mal puesto)
 TRASH_PROTECTED = ("faro", "tacho", "martillo", "yunque")
@@ -460,7 +462,51 @@ def _draw_yunque(W, H):
     return s
 
 
+def _draw_maquina(W, H):
+    """Dibujo de respaldo (si falta icon_maquina.png): maquinita gris."""
+
+    s = pygame.Surface((W, H), pygame.SRCALPHA)
+
+    lw = max(1, W // 28)
+    dark = (34, 36, 42)
+
+    # chimenea
+    chim = pygame.Rect(int(W * .68), int(H * .04), int(W * .14), int(H * .34))
+    pygame.draw.rect(s, (88, 95, 106), chim)
+    pygame.draw.rect(s, dark, chim, lw)
+
+    # tolva
+    hopper = [
+        (W * .14, H * .10), (W * .54, H * .10),
+        (W * .46, H * .38), (W * .22, H * .38),
+    ]
+    pygame.draw.polygon(s, (122, 130, 140), hopper)
+    pygame.draw.polygon(s, dark, hopper, lw)
+
+    # cuerpo
+    body = pygame.Rect(int(W * .08), int(H * .36), int(W * .84), int(H * .46))
+    pygame.draw.rect(s, (122, 130, 140), body, border_radius=max(1, W // 40))
+    pygame.draw.rect(s, dark, body, lw, border_radius=max(1, W // 40))
+
+    # panel y engranaje
+    panel = pygame.Rect(int(W * .16), int(H * .44), int(W * .30), int(H * .28))
+    pygame.draw.rect(s, (60, 66, 74), panel)
+    pygame.draw.rect(s, dark, panel, lw)
+    pygame.draw.circle(
+        s, (196, 203, 212), (int(W * .68), int(H * .58)), int(H * .14)
+    )
+    pygame.draw.circle(s, dark, (int(W * .68), int(H * .58)), int(H * .14), lw)
+
+    # bandeja
+    tray = pygame.Rect(int(W * .32), int(H * .82), int(W * .36), int(H * .14))
+    pygame.draw.rect(s, (88, 95, 106), tray)
+    pygame.draw.rect(s, dark, tray, lw)
+
+    return s
+
+
 _DRAWERS = {
+    "maquina": _draw_maquina,
     "yunque": _draw_yunque,
     "tacho": _draw_tacho,
     "bolsa": _draw_bolsa,
@@ -588,6 +634,20 @@ class Placeable:
 
         self.grab_dx = 0.0
         self.grab_dy = 0.0
+
+    def tick(self, dt):
+        """Para objetos que trabajan solos (la maquina de gelea)."""
+
+    def pickup_block(self):
+        """Mensaje si no se puede recoger con el martillo (o None)."""
+
+        if self.container is not None and self.container.total() > 0:
+            return "Vacía el cofre antes de recogerlo"
+
+        return None
+
+    def load_extra(self, entry):
+        """Lee datos propios del objeto desde el save."""
 
     def start_fly(self, src, dst, delay=0.0, height=14.0, duration=0.45):
 
@@ -850,6 +910,111 @@ class Anvil(Placeable):
     draggable = False
 
 
+class Machine(Placeable):
+
+    # fija, como el yunque: se recoge con el martillo (vacia).
+    # Trabaja sola mientras jugas; el estado vive aca y se guarda con ella.
+    kind = "maquina"
+    draggable = False
+
+    def __init__(self, x, y, fuel=None):
+
+        super().__init__(x, y, fuel)
+
+        self.m = _maquina.MachineState()
+
+    def tick(self, dt):
+
+        self.m.tick(dt)
+
+    def pickup_block(self):
+
+        if not self.m.empty:
+            return "Vacía la máquina antes de recogerla"
+
+        return None
+
+    def load_extra(self, entry):
+
+        self.m.load(entry.get("maquina"))
+
+    def save(self):
+
+        data = super().save()
+
+        data["maquina"] = self.m.save()
+
+        return data
+
+    def draw_extras(self, screen, r, clock):
+
+        st = self.m
+
+        if st.ready > 0:
+
+            # moneda de gelea flotando: hay algo para cobrar
+            size = max(10, int(r.w * 0.45))
+
+            icon = _items.load_icon("moneda_gelea")
+
+            bob = math.sin(clock * 4 + self._phase) * 2
+
+            if icon is not None:
+
+                key = ("ready", size)
+
+                img = self._scaled.get(key)
+
+                if img is None:
+                    img = pygame.transform.smoothscale(icon, (size, size))
+                    self._scaled[key] = img
+
+                screen.blit(
+                    img,
+                    img.get_rect(midbottom=(r.centerx, r.top - 2 + bob)),
+                )
+
+            else:
+
+                pygame.draw.circle(
+                    screen, (196, 160, 118),
+                    (r.centerx, int(r.top - size // 2 - 2 + bob)),
+                    max(4, size // 2),
+                )
+
+        if self.near and st.working:
+
+            w = max(16, r.w)
+            bar = pygame.Rect(0, 0, w, 5)
+            bar.midbottom = (r.centerx, r.top - 3 - (
+                max(10, int(r.w * 0.45)) + 4 if st.ready > 0 else 0
+            ))
+
+            pygame.draw.rect(screen, (20, 20, 24), bar.inflate(2, 2))
+
+            fill = bar.copy()
+            fill.w = int(bar.w * st.prog / _maquina.SECONDS_PER_COIN)
+
+            pygame.draw.rect(screen, (196, 160, 118), fill)
+
+        if self.near and (st.gel > 0 or st.ready > 0):
+
+            font = _cap_font()
+
+            text = f"{st.gel}/{_maquina.MAX_GEL}"
+
+            if st.ready > 0:
+                text += f"  +{st.ready}"
+
+            img = font.render(text, True, (255, 232, 170))
+            shade = font.render(text, True, (20, 12, 4))
+
+            pos = img.get_rect(midtop=(r.centerx, r.bottom + 2))
+
+            screen.blit(shade, pos.move(1, 1))
+            screen.blit(img, pos)
+
+
 class Lighthouse(Placeable):
 
     kind = "faro"
@@ -1026,6 +1191,7 @@ KINDS = {
     "fogata": Campfire,
     "tacho": Trash,
     "yunque": Anvil,
+    "maquina": Machine,
 }
 
 
@@ -1044,6 +1210,7 @@ class PlaceableManager:
         self.open_obj = None
 
         self.anvil_panel = _yunque.AnvilPanel()
+        self.machine_panel = _maquina.MachinePanel()
 
         self._fonts = {}
         self._icons = {}
@@ -1061,6 +1228,8 @@ class PlaceableManager:
 
             if obj.container is not None:
                 obj.container.load(entry.get("slots", []))
+
+            obj.load_extra(entry)
 
             self.objects.append(obj)
 
@@ -1343,9 +1512,11 @@ class PlaceableManager:
         if obj is None or obj.kind not in HAMMER_TARGETS:
             return False
 
-        if obj.container is not None and obj.container.total() > 0:
+        block = obj.pickup_block()
 
-            game.show_message("Vacía el cofre antes de recogerlo")
+        if block is not None:
+
+            game.show_message(block)
 
             return True
 
@@ -1518,13 +1689,18 @@ class PlaceableManager:
 
         r = sprite.get_rect(midbottom=(dest.centerx, dest.bottom - lift))
 
-        blocked = obj.container is not None and obj.container.total() > 0
+        block = obj.pickup_block()
+        blocked = block is not None
 
         color = (240, 80, 70) if blocked else (255, 190, 70)
 
         pygame.draw.rect(screen, color, r.inflate(6, 6), 2, border_radius=4)
 
-        text = "Vacía el cofre primero" if blocked else "Click: recoger"
+        text = (
+            block.replace("antes de recogerlo", "primero")
+            .replace("antes de recogerla", "primero")
+            if blocked else "Click: recoger"
+        )
 
         font = self._font(20)
 
@@ -1566,7 +1742,7 @@ class PlaceableManager:
             if self._over_hud(game, pygame.mouse.get_pos()):
 
                 game.show_message(
-                    "Elige el martillo y haz click sobre un cofre, una fogata, un tacho o un yunque"
+                    "Elige el martillo y haz click sobre un cofre, una fogata, un tacho, un yunque o una máquina"
                 )
 
                 return True
@@ -1574,7 +1750,7 @@ class PlaceableManager:
             if not self._use_hammer(game):
 
                 game.show_message(
-                    "Acércate a un cofre, una fogata, un tacho o un yunque y haz click sobre ellos"
+                    "Acércate a un cofre, una fogata, un tacho, un yunque o una máquina y haz click sobre ellos"
                 )
 
             return True
@@ -1688,6 +1864,12 @@ class PlaceableManager:
                     )
 
                     return True
+
+                self.open_obj = obj
+
+                return True
+
+            if obj.kind == "maquina":
 
                 self.open_obj = obj
 
@@ -1953,6 +2135,13 @@ class PlaceableManager:
             # click fuera del panel: deja pasar (hotbar, mapa)
             return False
 
+        if obj is not None and obj.kind == "maquina":
+
+            if self.machine_panel.click(game, event, obj):
+                return True
+
+            return False
+
         panel, slots = self._panel_layout(game)
 
         one = event.button == 3
@@ -2106,6 +2295,12 @@ class PlaceableManager:
 
             return
 
+        if obj.kind == "maquina":
+
+            self.machine_panel.draw(game, screen, obj)
+
+            return
+
         panel, slots = self._panel_layout(game)
 
         mouse = pygame.mouse.get_pos()
@@ -2211,6 +2406,7 @@ class PlaceableManager:
                 continue
 
             obj.burn(dt)
+            obj.tick(dt)
 
             obj.near = self._dist(game, obj) <= REACH + 24
 

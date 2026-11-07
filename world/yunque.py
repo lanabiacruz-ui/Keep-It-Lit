@@ -4,7 +4,8 @@ Como funciona:
   * El yunque se compra en la tienda (Construccion), se coloca como el
     cofre, se recoge con el martillo y se abre con click derecho.
     No abre si hay enemigos cerca (se usa entre oleadas).
-  * Hay 6 mejoras de 3 niveles. Se compran con monedas + gelea.
+  * Hay 6 mejoras de 3 niveles. Se compran con monedas + monedas de gelea
+    (la moneda de gelea sale de la Maquina: ver world/maquina.py).
   * Solo 3 mejoras (engarces) funcionan a la vez; se cambian gratis cada
     vez que abris el yunque.
   * Las mejoras son SOLO para la antorcha y duran la partida (se guardan en
@@ -12,7 +13,8 @@ Como funciona:
 
 Imagenes (todas opcionales, si no estan se dibujan con codigo):
   assets/maps/hud/icon_yunque.png            64x64   (item + dibujo en el mapa)
-  assets/maps/ui/yunque_panel.png            740x596 (fondo del panel)
+  assets/maps/ui/yunque_panel.png            cualquier tamaño (fondo del panel,
+                                             se estira en 9 partes: el marco no se deforma)
   assets/maps/hud/yunque_resistencia.png     64x64   \
   assets/maps/hud/yunque_brasas.png          64x64    |
   assets/maps/hud/yunque_repelente.png       64x64    |  iconos de cada mejora
@@ -29,8 +31,6 @@ from world.items import HUD_DIR
 
 UI_DIR = HUD_DIR.parent / "ui"
 
-BADGE_FILE = HUD_DIR.parent / "tienda" / "tienda_badge.png"
-
 TORCH = "antorcha"
 
 ACTIVE_SLOTS = 3
@@ -44,11 +44,14 @@ ENEMY_NEAR = 420
 # ---------------------------------------------------------------------------
 
 COSTS_COINS = (60, 110, 180)
-COSTS_GELEA = (3, 5, 8)
+# Los costos en gelea van en MONEDAS DE GELEA (la Maquina convierte
+# 2 geleas en 1 moneda de gelea).
+COSTS_GELEA = (2, 3, 4)
 
-# Resistencia cuesta distinto: 80 / 140 / 220 monedas y una gelea mas por nivel
+# Resistencia cuesta distinto: 80 / 140 / 220 monedas y una moneda de gelea
+# mas por nivel
 RESIST_COINS = (80, 140, 220)
-RESIST_GELEA = (4, 6, 9)
+RESIST_GELEA = (2, 3, 5)
 
 RESIST_PCT = (0.06, 0.12, 0.18)
 EMBER_HEAL = (0.01, 0.02, 0.03)
@@ -323,15 +326,15 @@ def buy_next(game, uid):
     if game.coins < coins:
         return False, f"Faltan monedas ({coins} necesarias)"
 
-    if count_item(game, "gelea") < gelea:
-        return False, f"Faltan geleas ({gelea} necesarias, en tu hotbar)"
+    if int(getattr(game, "gel_coins", 0)) < gelea:
+        return False, f"Faltan monedas de gelea ({gelea} necesarias)"
 
     game.coins -= coins
 
     if getattr(game, "shop", None) is not None:
         game.shop.coins = int(game.coins)
 
-    take_items(game, "gelea", gelea)
+    game.gel_coins = int(game.gel_coins) - gelea
 
     state.levels[uid] = cur + 1
 
@@ -346,12 +349,19 @@ def buy_next(game, uid):
 # Panel (colores del HUD: grises, sin acentos amarillos)
 # ---------------------------------------------------------------------------
 
-PANEL_W = 740
-PANEL_H = 584
+PANEL_W = 780
+PANEL_H = 612
 
-CARD_W = 344
+# el marco dibujado del fondo ocupa ~19 px por lado: todo lo que va adentro
+# (slots, tarjetas, textos) respeta este margen para no pisarlo
+MARGIN = 36
+CORNER = 60            # esquina (px del png) que no se estira
+
 CARD_H = 130
-CARD_GAP = 8
+CARD_GAP = 8           # separacion vertical entre tarjetas
+CARD_COL_GAP = 14      # separacion horizontal
+CARD_W = (PANEL_W - 2 * MARGIN - CARD_COL_GAP) // 2
+CARDS_TOP = 148        # desde el borde de arriba del panel
 
 # paleta tomada de hud_hotbar / hud_slot
 C_PANEL = (113, 121, 130)
@@ -366,6 +376,7 @@ C_BTN = (60, 66, 74)
 C_BTN_HOT = (84, 91, 100)
 C_BTN_OFF = (128, 138, 146)
 C_BTN_OFF_TEXT = (176, 184, 190)
+C_LACK = (140, 36, 36)      # costo que no te alcanza
 
 
 class AnvilPanel:
@@ -416,14 +427,14 @@ class AnvilPanel:
         panel.clamp_ip(game.screen.get_rect())
 
         rows = {}
-        top = panel.y + 134
+        top = panel.y + CARDS_TOP
 
         for i, uid in enumerate(ORDER):
 
             col, row = i % 2, i // 2
 
             card = pygame.Rect(
-                panel.x + 20 + col * (CARD_W + 12),
+                panel.x + MARGIN + col * (CARD_W + CARD_COL_GAP),
                 top + row * (CARD_H + CARD_GAP),
                 CARD_W, CARD_H,
             )
@@ -501,49 +512,74 @@ class AnvilPanel:
 
         return s
 
-    def _badge(self, width, height):
-        """tienda_badge.png estirado al ancho pedido (extremos sin deformar)."""
+    def _panel_bg(self, size, name="yunque_panel.png"):
+        """yunque_panel.png en 9 partes: las esquinas y el borde no se
+        deforman al agrandar el panel, solo se estira el centro."""
 
-        key = ("badge", width, height)
+        key = ("bg9", name, size)
 
         if key in self._cache:
             return self._cache[key]
 
-        if BADGE_FILE.exists():
+        path = UI_DIR / name
 
-            base = pygame.image.load(str(BADGE_FILE)).convert_alpha()
-            bw, bh = base.get_size()
-            cap = max(1, bw // 3)
-            k = height / bh
-            cap_px = max(1, int(cap * k))
+        if not path.exists():
+            self._cache[key] = None
+            return None
 
-            left = pygame.transform.scale(
-                base.subsurface((0, 0, cap, bh)), (cap_px, height)
+        src = pygame.image.load(str(path)).convert_alpha()
+        sw, sh = src.get_size()
+        w, h = size
+        c = min(CORNER, sw // 2 - 1, sh // 2 - 1)
+
+        out = pygame.Surface(size, pygame.SRCALPHA)
+
+        xs = ((0, c, 0), (c, sw - 2 * c, c), (sw - c, c, w - c))
+        ys = ((0, c, 0), (c, sh - 2 * c, c), (sh - c, c, h - c))
+
+        for sx, swid, dx in xs:
+
+            dw = c if swid == c else w - 2 * c
+
+            for sy, shei, dy in ys:
+
+                dh = c if shei == c else h - 2 * c
+
+                part = src.subsurface((sx, sy, swid, shei))
+
+                if (swid, shei) != (dw, dh):
+                    part = pygame.transform.smoothscale(part, (dw, dh))
+
+                out.blit(part, (dx, dy))
+
+        self._cache[key] = out
+
+        return out
+
+    def _item_icon(self, item_id, size):
+        """Icono de moneda/item; si falta el png dibuja una moneda simple."""
+
+        img = self._image(HUD_DIR / f"icon_{item_id}.png", (size, size))
+
+        if img is not None:
+            return img
+
+        key = ("coin_fallback", item_id, size)
+
+        if key not in self._cache:
+
+            fill = (196, 160, 118) if item_id == "moneda_gelea" else (230, 190, 70)
+
+            s = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(s, fill, (size // 2, size // 2), size // 2 - 1)
+            pygame.draw.circle(
+                s, C_EDGE, (size // 2, size // 2), size // 2 - 1,
+                max(1, size // 12),
             )
-            right = pygame.transform.scale(
-                base.subsurface((bw - cap, 0, cap, bh)), (cap_px, height)
-            )
-            mid = pygame.transform.scale(
-                base.subsurface((cap, 0, bw - 2 * cap, bh)),
-                (max(1, width - 2 * cap_px), height),
-            )
 
-            img = pygame.Surface((width, height), pygame.SRCALPHA)
-            img.blit(left, (0, 0))
-            img.blit(mid, (cap_px, 0))
-            img.blit(right, (width - cap_px, 0))
+            self._cache[key] = s
 
-        else:
-
-            img = pygame.Surface((width, height), pygame.SRCALPHA)
-            pygame.draw.rect(img, C_TILE, img.get_rect(), border_radius=height // 2)
-            pygame.draw.rect(
-                img, C_LIGHT, img.get_rect(), 2, border_radius=height // 2
-            )
-
-        self._cache[key] = img
-
-        return img
+        return self._cache[key]
 
     def _fit(self, text, size, color, max_w):
         """Texto que se achica solo si no entra en `max_w`."""
@@ -596,6 +632,29 @@ class AnvilPanel:
 
         screen.blit(t, t.get_rect(center=rect.center))
 
+    def _cost(self, screen, game, x, cy, coins, gelea):
+        """Precio como en la tienda: icono del item + cantidad."""
+
+        have_coins = game.coins >= coins
+        have_gelea = int(getattr(game, "gel_coins", 0)) >= gelea
+
+        for item_id, amount, ok in (
+            ("moneda", coins, have_coins),
+            ("moneda_gelea", gelea, have_gelea),
+        ):
+
+            icon = self._item_icon(item_id, 24)
+
+            screen.blit(icon, icon.get_rect(midleft=(x, cy)))
+            x += 24 + 3
+
+            num = self._font(24).render(
+                str(amount), True, C_TEXT if ok else C_LACK
+            )
+            screen.blit(num, num.get_rect(midleft=(x, cy)))
+
+            x += num.get_width() + 10
+
     def draw(self, game, screen):
 
         panel, rows = self.layout(game)
@@ -604,7 +663,7 @@ class AnvilPanel:
 
         state = game.anvil
 
-        bg = self._image(UI_DIR / "yunque_panel.png", panel.size)
+        bg = self._panel_bg(panel.size)
 
         if bg is not None:
             screen.blit(bg, panel)
@@ -613,7 +672,7 @@ class AnvilPanel:
             pygame.draw.rect(screen, C_EDGE, panel, 4, border_radius=16)
 
         title = self._font(52).render("Yunque", True, C_LIGHT)
-        screen.blit(title, title.get_rect(midtop=(panel.centerx, panel.y + 14)))
+        screen.blit(title, title.get_rect(midtop=(panel.centerx, panel.y + 26)))
 
         # engarces activos
         sub_text = "Engarces activos"
@@ -622,11 +681,11 @@ class AnvilPanel:
             sub_text += "  ·  solo funcionan con la antorcha equipada"
 
         sub = self._font(23).render(sub_text, True, C_LIGHT)
-        screen.blit(sub, (panel.x + 24, panel.y + 66))
+        screen.blit(sub, (panel.x + MARGIN, panel.y + 80))
 
         for i in range(ACTIVE_SLOTS):
 
-            slot = pygame.Rect(panel.x + 24 + i * 64, panel.y + 92, 56, 36)
+            slot = pygame.Rect(panel.x + MARGIN + i * 64, panel.y + 104, 56, 36)
 
             pygame.draw.rect(screen, C_TILE, slot, border_radius=8)
             pygame.draw.rect(screen, C_LIGHT, slot, 2, border_radius=8)
@@ -636,34 +695,28 @@ class AnvilPanel:
                 icon = self._icon(state.active[i], 30)
                 screen.blit(icon, icon.get_rect(center=slot.center))
 
-        # monedas (badge de la tienda) y geleas (icono del item)
-        right = panel.right - 24
-        cy = panel.y + 110
+        # monedas y geleas: icono del item + numero, sin badge
+        right = panel.right - MARGIN
+        cy = panel.y + 122
 
-        n_gel = self._font(30).render(str(count_item(game, "gelea")), True, C_LIGHT)
-        screen.blit(n_gel, n_gel.get_rect(midright=(right, cy)))
+        for item_id, value in (
+            ("moneda_gelea", int(getattr(game, "gel_coins", 0))),
+            ("moneda", int(game.coins)),
+        ):
 
-        gel = self._image(HUD_DIR / "icon_gelea.png", (40, 40))
+            num = self._font(30).render(str(value), True, C_LIGHT)
+            num_rect = num.get_rect(midright=(right, cy))
+            screen.blit(num, num_rect)
 
-        if gel is not None:
-            screen.blit(gel, gel.get_rect(midright=(n_gel.get_rect(midright=(right, cy)).left - 6, cy)))
-            gel_left = n_gel.get_rect(midright=(right, cy)).left - 6 - 40
-        else:
-            gel_left = n_gel.get_rect(midright=(right, cy)).left
+            left = num_rect.left
 
-        amount = self._font(30).render(str(int(game.coins)), True, (30, 18, 8))
-        bw = amount.get_width() + 34
-        badge = self._badge(bw, 34)
-        coin_right = gel_left - 22
+            icon = self._item_icon(item_id, 38)
 
-        badge_rect = badge.get_rect(midright=(coin_right, cy))
-        screen.blit(badge, badge_rect)
-        screen.blit(amount, amount.get_rect(center=badge_rect.center))
+            icon_rect = icon.get_rect(midright=(num_rect.left - 6, cy))
+            screen.blit(icon, icon_rect)
+            left = icon_rect.left
 
-        coin = self._image(HUD_DIR / "icon_moneda.png", (34, 34))
-
-        if coin is not None:
-            screen.blit(coin, coin.get_rect(midright=(badge_rect.left - 4, cy)))
+            right = left - 22
 
         # tarjetas
         for uid in ORDER:
@@ -719,11 +772,10 @@ class AnvilPanel:
             else:
                 self._button(screen, r["buy"], "Mejorar", True, mouse)
 
-                cost = self._font(18).render(
-                    f"{cost_coins(uid, cur)} mon + {cost_gelea(uid, cur)} gel",
-                    True, C_TEXT,
+                self._cost(
+                    screen, game, card.x + 12, card.bottom - 22,
+                    cost_coins(uid, cur), cost_gelea(uid, cur),
                 )
-                screen.blit(cost, (card.x + 12, card.bottom - 31))
 
             if cur > 0:
                 self._button(
@@ -734,4 +786,4 @@ class AnvilPanel:
         hint = self._font(22).render(
             "ESC para cerrar  ·  3 mejoras activas a la vez", True, C_LIGHT
         )
-        screen.blit(hint, hint.get_rect(center=(panel.centerx, panel.bottom - 22)))
+        screen.blit(hint, hint.get_rect(center=(panel.centerx, panel.bottom - 38)))

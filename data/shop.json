@@ -117,6 +117,10 @@
         {
           "id": "yunque",
           "precio": 150
+        },
+        {
+          "id": "maquina",
+          "precio": 120
         }
       ]
     }
