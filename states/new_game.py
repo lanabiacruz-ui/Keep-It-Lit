@@ -77,7 +77,33 @@ from states.skins_menu import SkinsMenu
 from states.achievements import AchievementsMenu
 
 
-MATCH_POS = (818, 1002)
+MATCH_POS = (897, 998)
+
+
+class StartBox(LightItem):
+
+    INTERACT_DISTANCE = 46
+
+    def __init__(self, x, y):
+
+        super().__init__("fosforo", x, y)
+
+        self.initial = True
+
+    def draw(self, screen, camera):
+
+        return None
+
+    @property
+    def light_radius(self):
+
+        t = pygame.time.get_ticks() / 1000.0
+
+        pulse = 0.5 + 0.5 * math.sin(t * 2.4)
+
+        flick = 0.5 + 0.5 * math.sin(t * 9.0 + 1.3) * math.sin(t * 3.1)
+
+        return 82 + 12 * pulse + 4 * flick
 
 MATCH_DURATION = 30.0
 
@@ -598,8 +624,7 @@ class NewGame:
         if self.has_match:
             self.equip_match(self.light_type)
         else:
-            start_match = LightItem("fosforo", *MATCH_POS)
-            start_match.initial = True
+            start_match = StartBox(*MATCH_POS)
             self.light_drops.append(start_match)
 
 
@@ -1384,13 +1409,13 @@ class NewGame:
 
             {
                 "text": (
-                    "Está oscuro: busca el fósforo en el piso (la flecha te lo "
-                    "indica) y agárralo con E. Si en "
+                    "Está oscuro: busca la cajita que brilla sobre la mesa (la "
+                    "flecha te la indica) y presiona E para sacar el fósforo. Si en "
                     f"{int(NO_LIGHT_COUNTDOWN)} segundos no tienes luz, pierdes."
                 ),
                 "tuto": [
                     "¡Bienvenido a Keep It Lit! Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, pierdes.",
-                    "Está oscuro. Una flecha naranja te guiará. Muévete con W A S D hasta el fósforo del piso y agárralo con E. Tienes 10 segundos sin luz antes de perder.",
+                    "Está oscuro. Una flecha naranja te guiará. Muévete con W A S D hasta la cajita que brilla sobre la mesa y presiona E para sacar el fósforo. Tienes 10 segundos sin luz antes de perder.",
                 ],
                 "target": light_point,
                 "done": lambda g: g.has_match,
