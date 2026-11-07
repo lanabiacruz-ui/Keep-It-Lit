@@ -107,6 +107,15 @@ class MusicManager:
 
         self.target = None
 
+    def cancel_stingers(self, fade_ms=350):
+        """Corta con fundido los sonidos cortos de inicio y libera la musica
+        (se usa al saltar la intro)."""
+
+        for sound in self._stingers.values():
+            sound.fadeout(int(fade_ms))
+
+        self._hold = 0.0
+
     def stinger(self, name, hold=0.0):
 
         if not self.enabled:

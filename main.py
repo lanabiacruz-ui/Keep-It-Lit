@@ -76,7 +76,7 @@ pygame.display.set_caption(
 
 clock = pygame.time.Clock()
 fps_font = pygame.font.Font(None, 28)
-STARTUP_SOUND_HOLD = 2.6
+STARTUP_SOUND_HOLD = 5.4
 
 startup = Startup(screen, duration=STARTUP_SOUND_HOLD)
 menu = MainMenu(screen)
@@ -246,6 +246,15 @@ while running:
                 game.apply_loss()
 
             running = False
+
+        # la intro se puede saltar con cualquier tecla o click
+        if current_state == "startup" and event.type in (
+            pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN
+        ):
+
+            startup.skip()
+
+            music.cancel_stingers()
 
         if current_state in UI_SOUND_STATES:
 

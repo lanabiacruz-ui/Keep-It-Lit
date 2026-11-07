@@ -1,0 +1,75 @@
+{
+    "player_name": "o",
+    "mode": "normal",
+    "created_at": "2026-11-07T13:06:55",
+    "last_played": "2026-11-07T13:07:15",
+    "password_salt": "00b73c6f32e5b2702a80be1ffb236e73",
+    "password_hash": "3c1679abbf0ef2f8c06997291ef407d1cd7788d38c03b8cef0b122225f4f3211",
+    "x": 984,
+    "y": 962,
+    "coins": 0,
+    "gel_coins": 0,
+    "ganzua_uses": 0,
+    "boss_intro_seen": false,
+    "boss2_intro_seen": false,
+    "gems": 0,
+    "gems_green": 0,
+    "has_match": false,
+    "light": "fosforo",
+    "vida": 1.0,
+    "escudo": 0.0,
+    "inventory": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    ],
+    "shop_inventory": [],
+    "collected": [],
+    "item_seed": 587470170,
+    "arena_wave": 1,
+    "arena_completed": false,
+    "arena_left_wave": 1,
+    "arena_left_completed": false,
+    "broken_doors": [],
+    "final_door_slots": {
+        "clara": false,
+        "oscura": false
+    },
+    "current_map": "mapa1",
+    "chests": {},
+    "placeables": [],
+    "yunque": {
+        "niveles": {
+            "resistencia": 0,
+            "brasas": 0,
+            "repelente": 0,
+            "llama_amplia": 0,
+            "llama_larga": 0,
+            "manos": 0
+        },
+        "activas": []
+    },
+    "enemies_seen": [],
+    "enemies_claimed": [],
+    "stats": {
+        "items_used": 0,
+        "chests_opened": 0,
+        "purchases": 0,
+        "fireballs": 0,
+        "kills": 0
+    },
+    "zones_seen": [
+        "inicio"
+    ],
+    "shop_unlocked": [],
+    "tuto_seen": [
+        0
+    ],
+    "death_drops": [],
+    "objective_index": 0,
+    "objective_version": 3,
+    "objectives_minimized": false
+}

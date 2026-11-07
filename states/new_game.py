@@ -4107,69 +4107,233 @@ class NewGame:
 
         return lines
 
+    def _wrap_death_text(self, font, text, max_w):
+
+        """Parte el texto en renglones que entren en max_w."""
+
+        out = []
+
+        line = ""
+
+        for word in text.split():
+
+            test = f"{line} {word}".strip()
+
+            if line and font.size(test)[0] > max_w:
+                out.append(line)
+                line = word
+            else:
+                line = test
+
+        if line:
+            out.append(line)
+
+        return out
+
+    def _death_txt(self, text, size, color, outline):
+
+        """Texto con contorno negro (para que se lea sobre cualquier cosa)."""
+
+        font = self._font(max(8, int(size)))
+
+        base = font.render(text, True, color)
+        edge = font.render(text, True, (0, 0, 0))
+
+        surf = pygame.Surface(
+            (base.get_width() + 2 * outline + 2,
+             base.get_height() + 2 * outline + 2),
+            pygame.SRCALPHA
+        )
+
+        for dx in range(-outline, outline + 1):
+            for dy in range(-outline, outline + 1):
+                if dx or dy:
+                    surf.blit(edge, (outline + 1 + dx, outline + 1 + dy))
+
+        surf.blit(base, (outline + 1, outline + 1))
+
+        return surf
+
+    def _death_frame(self, w, h, unit):
+
+        """Marco 'dibujado a mano' (mismo estilo de la pantalla de derrota).
+        Se arma una sola vez por tamano, asi no tiembla."""
+
+        cache = getattr(self, "_death_frame_cache", None)
+
+        if cache is None:
+            cache = self._death_frame_cache = {}
+
+        key = (w, h)
+
+        if key in cache:
+            return cache[key]
+
+        rng = random.Random(11)
+
+        surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+        # fondo negro (igual que la pantalla de derrota)
+        surf.fill((0, 0, 0, 255))
+
+        pad = max(3, round(5 * unit))
+        wob = max(1.0, 1.8 * unit)
+        step = max(10, round(16 * unit))
+
+        def side(x0, y0, x1, y1):
+
+            n = max(2, int(math.hypot(x1 - x0, y1 - y0) // step))
+
+            pts = []
+
+            for i in range(n + 1):
+                t = i / n
+                pts.append((
+                    x0 + (x1 - x0) * t + rng.uniform(-wob, wob),
+                    y0 + (y1 - y0) * t + rng.uniform(-wob, wob),
+                ))
+
+            return pts
+
+        for width, color in (
+            (max(1, round(2 * unit)), (120, 120, 130)),
+            (max(2, round(3 * unit)), (240, 240, 240)),
+        ):
+
+            pts = (
+                side(pad, pad, w - pad, pad)
+                + side(w - pad, pad, w - pad, h - pad)[1:]
+                + side(w - pad, h - pad, pad, h - pad)[1:]
+                + side(pad, h - pad, pad, pad)[1:]
+            )
+
+            pygame.draw.lines(surf, color, True, pts, width)
+
+        cache[key] = surf
+
+        return surf
+
     def _draw_death_note(self, alpha):
 
-        """Quien te mato y cuantos enemigos faltaban. Va en el costado
-        izquierdo, en el hueco libre de la imagen (no pisa el titulo, el
-        muneco, la frase de abajo ni las esquinas)."""
+        """Cartelito de la derrota (abajo a la izquierda): quien te mato y
+        cuantos enemigos faltaban, con marco dibujado a mano."""
 
         sw, sh = self.screen.get_size()
 
-        font = self._font(max(22, round(sh * 0.034)))
+        unit = sh / 768.0
 
-        lines = self._death_lines()
+        box = pygame.Rect(
+            round(sw * 0.027), round(sh * 0.655),
+            round(sw * 0.138), round(sh * 0.292),
+        )
 
-        outline = max(1, round(sh / 540))
+        cause = self._death_cause
+        killer = self._killer
+        left = self._death_left
 
-        rendered = []
+        if cause == "rendirse":
+            label, main = "", "Te rendiste"
+        elif killer:
+            label, main = "TE MATÓ", str(killer)
+        else:
+            label, main = "", "Se te apagó la luz"
 
-        for text in lines:
+        inner_w = box.width - round(26 * unit)
+        inner_h = box.height - round(22 * unit)
 
-            base = font.render(text, True, (240, 240, 240))
-            edge = font.render(text, True, (0, 0, 0))
+        k = 1.0
 
-            surf = pygame.Surface(
-                (base.get_width() + 2 * outline,
-                 base.get_height() + 2 * outline),
-                pygame.SRCALPHA
+        while True:
+
+            o = max(1, round(2 * unit * k))
+
+            gap = max(3, round(7 * unit * k))
+
+            items = []
+
+            if label:
+                items.append(self._death_txt(
+                    label, 22 * unit * k, (255, 120, 100), o
+                ))
+
+            main_font = self._font(max(8, int(32 * unit * k)))
+
+            for row in self._wrap_death_text(main_font, main, inner_w - 2 * o):
+                items.append(self._death_txt(
+                    row, 32 * unit * k, (245, 245, 245), o
+                ))
+
+            sep = max(6, round(10 * unit * k))
+
+            if left is not None:
+
+                items.append(None)  # separador
+
+                items.append(self._death_txt(
+                    str(left), 58 * unit * k, (255, 205, 90), o
+                ))
+
+                items.append(self._death_txt(
+                    "enemigo restante" if left == 1 else "enemigos restantes",
+                    20 * unit * k, (200, 200, 205), o
+                ))
+
+            total = sum(
+                (it.get_height() if it is not None else sep)
+                for it in items
+            ) + gap * (len(items) - 1)
+
+            widest = max(
+                (it.get_width() for it in items if it is not None),
+                default=0
             )
 
-            for dx in range(-outline, outline + 1):
-                for dy in range(-outline, outline + 1):
-                    if dx or dy:
-                        surf.blit(edge, (outline + dx, outline + dy))
+            if (total <= inner_h and widest <= inner_w) or k <= 0.4:
+                break
 
-            surf.blit(base, (outline, outline))
+            k -= 0.05
 
-            surf.set_alpha(alpha)
+        panel = self._death_frame(box.width, box.height, unit).copy()
 
-            rendered.append(surf)
+        y = (box.height - total) // 2
 
-        gap = max(4, round(sh * 0.01))
+        for it in items:
 
-        total = sum(r.get_height() for r in rendered) + gap * (len(rendered) - 1)
+            if it is None:
 
-        # centrado en la franja izquierda (entre el borde y el muneco)
-        cx = round(sw * 0.20)
-        max_w = round(sw * 0.34)
+                # separador en zigzag (como las rayas del dibujo)
+                x0 = round(box.width * 0.22)
+                x1 = round(box.width * 0.78)
 
-        y = round(sh * 0.50) - total // 2
+                pts = []
 
-        for surf in rendered:
+                n = 8
 
-            if surf.get_width() > max_w:
+                for i in range(n + 1):
+                    pts.append((
+                        x0 + (x1 - x0) * i / n,
+                        y + sep // 2 + (-2 if i % 2 else 2) * unit,
+                    ))
 
-                k = max_w / surf.get_width()
-
-                surf = pygame.transform.smoothscale(
-                    surf, (max_w, max(1, round(surf.get_height() * k)))
+                pygame.draw.lines(
+                    panel, (240, 240, 240), False, pts,
+                    max(1, round(2 * unit))
                 )
 
-                surf.set_alpha(alpha)
+                y += sep + gap
 
-            self.screen.blit(surf, surf.get_rect(midtop=(cx, y)))
+                continue
 
-            y += surf.get_height() + gap
+            panel.blit(it, it.get_rect(midtop=(box.width // 2, y)))
+
+            y += it.get_height() + gap
+
+        # entra deslizandose desde la izquierda mientras aparece
+        slide = round((1.0 - alpha / 255.0) * 24 * unit)
+
+        panel.set_alpha(alpha)
+
+        self.screen.blit(panel, (box.x - slide, box.y))
 
     def _finish_arenas(self):
         """Cierra las salas de combate despues de la secuencia (idempotente)."""

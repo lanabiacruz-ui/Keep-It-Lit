@@ -1210,7 +1210,7 @@ def _overlap_depth(a, b):
 
 def bounce_enemies(enemies, collision_map, target=None):
 
-    live = [e for e in enemies if not e.spawning and not e.dead and not getattr(e, "attached", False)]
+    live = [e for e in enemies if not e.spawning and not e.dead and not getattr(e, "attached", False) and not getattr(e, "launching", False)]
 
     for i, a in enumerate(live):
 
@@ -1318,7 +1318,16 @@ MINI_HP = 1
 MINI_HITBOX = (8, 7)
 MINI_DRAW_SIZE = 9
 MINI_SPEED_MULT = 1.15
-MINI_SPAWN_TIME = 0.3
+MINI_SPAWN_TIME = 0.3       # (ya no se usa: ahora salen disparadas)
+
+# Al partirse, las minis SALEN DISPARADAS hacia los costados (no hacia vos),
+# frenando de a poco. Mientras vuelan y un rato despues no hacen dano y
+# parpadean, asi se entiende que la piña se partio y no te comen de golpe.
+MINI_LAUNCH_TIME = 0.40     # cuanto dura el disparo
+MINI_LAUNCH_SPEED = 150.0   # velocidad inicial (frena hasta 0)
+MINI_GRACE = 0.90           # sin dano (parpadeando) desde que nacen
+MINI_POP_SCALE = 0.70       # nacen un 70% mas grandes y se achican
+MINI_SPLIT_FX_TIME = 0.35   # duracion del "pop" donde se parte
 
 
 class VariantArt(EnemyArt):
@@ -1461,17 +1470,132 @@ class PinaBrava(Enemy):
 
 
 class MiniPina(Enemy):
-    """Mini-piña que suelta la Piña Brava al morir."""
+    """Mini-piña que suelta la Piña Brava al morir.
 
-    def __init__(self, x, y, max_speed, spawn_delay=0.0):
+    Nace disparada hacia un costado (launch_dir), frena y recien ahi sale a
+    perseguir. Mientras vuela y durante MINI_GRACE no hace dano.
+    """
+
+    def __init__(self, x, y, max_speed, spawn_delay=0.0, launch_dir=None):
 
         super().__init__(x, y, MINI_HP, max_speed, spawn_delay)
 
         self.rect = pygame.Rect(0, 0, *MINI_HITBOX)
         self.rect.center = (round(x), round(y))
 
-        # aparece casi al instante (no espera la animacion de entrada)
-        self.spawn_t = MINI_SPAWN_TIME + spawn_delay
+        # sin animacion de entrada: se ve al instante, ya volando
+        self.spawn_t = 0.0
+
+        if launch_dir is None:
+            launch_dir = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        self.launch_dir = pygame.Vector2(launch_dir)
+        self.launch_t = MINI_LAUNCH_TIME
+
+        # no hace dano hasta que pase la gracia
+        self.touch_cd = MINI_GRACE
+
+        self.spin = random.uniform(0, 360)
+
+    @property
+    def launching(self):
+
+        return self.launch_t > 0
+
+    def update(self, dt, target, collision_map, others=None):
+
+        if self.launch_t <= 0:
+            return super().update(dt, target, collision_map, others)
+
+        self.last_target = pygame.Vector2(target)
+        self.anim_t += dt
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.touch_cd > 0:
+            self.touch_cd = max(0.0, self.touch_cd - dt)
+
+        self.launch_t = max(0.0, self.launch_t - dt)
+
+        k = self.launch_t / MINI_LAUNCH_TIME
+
+        self.vel = self.launch_dir * MINI_LAUNCH_SPEED * k
+
+        hit_x, hit_y = self._move(dt, collision_map)
+
+        if hit_x:
+            self.launch_dir.x = -self.launch_dir.x
+
+        if hit_y:
+            self.launch_dir.y = -self.launch_dir.y
+
+        if not self._free(self.rect, collision_map):
+            self._rescue(collision_map)
+
+        # gira rapido mientras vuela
+        self.spin = (self.spin + 900.0 * dt) % 360.0
+
+        if self.launch_t <= 0:
+            self.vel = self.launch_dir * self.ball_speed
+
+    def draw(self, screen, camera, art):
+
+        frames, hit = art.get(camera.zoom)
+
+        img = hit if self.flash > 0 else frames[0]
+
+        k = self.launch_t / MINI_LAUNCH_TIME if self.launching else 0.0
+
+        if k > 0:
+
+            # nace mas grande y se achica a su tamano normal
+            scale = 1.0 + MINI_POP_SCALE * k
+
+            img = pygame.transform.scale(
+                img,
+                (
+                    max(1, int(img.get_width() * scale)),
+                    max(1, int(img.get_height() * scale)),
+                )
+            )
+
+        img = pygame.transform.rotate(img, self.spin)
+
+        if self.touch_cd > 0 and self.flash <= 0:
+
+            # parpadea: todavia no hace dano
+            blink = int(self.anim_t * 16) % 2 == 0
+
+            img = img.copy()
+            img.set_alpha(110 if blink else 230)
+
+        dest = camera.apply(self.rect)
+
+        if self.launching:
+            # saltito en arco mientras sale disparada
+            lift = int(
+                math.sin(math.pi * (1.0 - k)) * 10 * camera.zoom
+            )
+        else:
+            lift = int(
+                abs(math.sin(self.hop_t * math.pi))
+                * ENEMY_HOP_HEIGHT * camera.zoom
+            )
+
+        shadow = get_shadow(
+            (int(dest.width * 1.3), int(dest.height * 0.6)), 90
+        )
+
+        screen.blit(
+            shadow,
+            shadow.get_rect(center=(dest.centerx, dest.bottom))
+        )
+
+        screen.blit(
+            img,
+            img.get_rect(center=(dest.centerx, dest.centery - lift))
+        )
 
 
 def load_strip(path):
@@ -4801,6 +4925,7 @@ class Arena:
         self._sealed_msg_t = -10.0
 
         self.particles = []
+        self.split_fx = []
         self.ring_t = None
         self.ring_pos = (0, 0)
         self.boom_light_t = None
@@ -5790,6 +5915,13 @@ class Arena:
 
         self.particles = [p for p in self.particles if p["life"] > 0]
 
+        for fx in self.split_fx:
+            fx["t"] += dt
+
+        self.split_fx = [
+            f for f in self.split_fx if f["t"] < MINI_SPLIT_FX_TIME
+        ]
+
         if self.ring_t is not None:
 
             self.ring_t += dt
@@ -5918,36 +6050,35 @@ class Arena:
             self._update_collect(game, dt)
 
     def _split_brava(self, game, brava):
-        """Mini-piñas que salen de una Piña Brava al morir."""
+        """Mini-piñas que salen de una Piña Brava al morir.
+
+        Salen disparadas hacia los costados (perpendicular a la linea que
+        la une con el jugador) para que no caigan encima tuyo, y se marca
+        con un "pop" visible donde se partio."""
 
         out = []
 
-        cmap = game.collision_map
-        base = random.uniform(0, 360)
+        self._split_fx(brava.pos)
+
+        to_player = pygame.Vector2(game.player.rect.center) - brava.pos
+
+        if to_player.length_squared() < 0.01:
+            to_player = pygame.Vector2(1, 0).rotate(random.uniform(0, 360))
+
+        # una sale para cada costado (+-90 grados respecto de donde estas)
+        base = to_player.normalize().rotate(90 + random.uniform(-20, 20))
 
         for i in range(BRAVA_SPLIT_COUNT):
 
-            angle = base + i * 360.0 / BRAVA_SPLIT_COUNT
-            dirv = pygame.Vector2(1, 0).rotate(angle)
+            dirv = base.rotate(i * 360.0 / BRAVA_SPLIT_COUNT)
 
-            x, y = brava.pos.x, brava.pos.y
+            mini = MiniPina(
+                brava.pos.x, brava.pos.y,
+                brava.max_speed * MINI_SPEED_MULT,
+                launch_dir=dirv,
+            )
 
-            # intenta separarlas; si hay pared queda en el mismo lugar
-            for dist in (8, 5, 2):
-
-                probe = pygame.Rect(0, 0, *MINI_HITBOX)
-                probe.center = (
-                    round(brava.pos.x + dirv.x * dist),
-                    round(brava.pos.y + dirv.y * dist),
-                )
-
-                if self.cfg.room.contains(probe) and cmap.can_move(probe):
-                    x, y = probe.center
-                    break
-
-            mini = MiniPina(x, y, brava.max_speed * MINI_SPEED_MULT)
-
-            mini.vel = dirv * mini.ball_speed
+            mini.vel = dirv * MINI_LAUNCH_SPEED
             mini.codex_key = "pino"
             mini.room = self.cfg.room
 
@@ -5958,6 +6089,30 @@ class Arena:
             out.append(mini)
 
         return out
+
+    def _split_fx(self, pos):
+        """Efecto de 'se partio': destello, aro y trocitos de piña."""
+
+        self.split_fx.append({"x": pos.x, "y": pos.y, "t": 0.0})
+
+        colors = ((255, 140, 110), (255, 205, 90), (255, 235, 200))
+
+        for _ in range(16):
+
+            angle = random.uniform(0, math.tau)
+            speed = random.uniform(40, 110)
+
+            life = random.uniform(0.3, 0.5)
+
+            self.particles.append({
+                "x": pos.x,
+                "y": pos.y,
+                "vx": math.cos(angle) * speed,
+                "vy": math.sin(angle) * speed,
+                "life": life,
+                "max": life,
+                "color": random.choice(colors),
+            })
 
     def _update_wave(self, game, dt):
 
@@ -6543,6 +6698,35 @@ class Arena:
             )
 
             screen.blit(ring, ring.get_rect(center=(cx, cy)))
+
+        for fx in self.split_fx:
+
+            k = min(1.0, fx["t"] / MINI_SPLIT_FX_TIME)
+
+            radius = int((3 + 20 * k) * camera.zoom)
+
+            cx = int(fx["x"] * camera.zoom - camera.x)
+            cy = int(fx["y"] * camera.zoom - camera.y)
+
+            size = radius * 2 + 8
+
+            pop = pygame.Surface((size, size), pygame.SRCALPHA)
+
+            mid = (size // 2, size // 2)
+
+            # destello blanco al principio
+            pygame.draw.circle(
+                pop, (255, 245, 225, int(200 * (1 - k) ** 2)), mid,
+                max(2, int(radius * 0.7))
+            )
+
+            # aro rojizo que se abre
+            pygame.draw.circle(
+                pop, (255, 130, 100, int(240 * (1 - k))), mid, radius,
+                max(2, int(5 * camera.zoom * (1 - k)))
+            )
+
+            screen.blit(pop, pop.get_rect(center=(cx, cy)))
 
         for part in self.particles:
 
