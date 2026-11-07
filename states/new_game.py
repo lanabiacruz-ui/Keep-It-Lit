@@ -8,6 +8,7 @@ import pygame
 from core.accessibility import flash_safe, flash_level, tutorial_hints
 from core.audio_manager import audio
 from core.controls import controls, SLOT_ACTIONS
+from core.trucos import trucos_activados
 from core.achievements import achievements
 from core.Save_manager import (
     save_progress, delete_save, normalize_mode, MODE_HARDCORE
@@ -4895,6 +4896,13 @@ class NewGame:
 
         if event.type == pygame.KEYDOWN:
 
+            # F5-F9 son trucos: solo andan si data/trucos.json dice true
+            # (F3 y F4 no son trucos, andan siempre)
+            trucos = (
+                pygame.K_F5 <= event.key <= pygame.K_F9
+                and trucos_activados()
+            )
+
             if event.key == pygame.K_F3:
 
                 self.debug_items = not self.debug_items
@@ -4903,11 +4911,11 @@ class NewGame:
 
                 self.debug_combat = not self.debug_combat
 
-            elif event.key == pygame.K_F5:
+            elif event.key == pygame.K_F5 and trucos:
 
                 self._spawn_dummy()
 
-            elif event.key == pygame.K_F6:
+            elif event.key == pygame.K_F6 and trucos:
 
                 # PRUEBA: dano x1000 (mata al jefe de un golpe)
                 self.debug_dano = not self.debug_dano
@@ -4916,14 +4924,14 @@ class NewGame:
                     "PRUEBA: dano x1000 " + ("ACTIVADO" if self.debug_dano else "desactivado")
                 )
 
-            elif event.key == pygame.K_F7:
+            elif event.key == pygame.K_F7 and trucos:
 
                 # PRUEBA: muestra el cartel de "nuevo item en la tienda"
                 self.shop_unlock_toast.push(
                     [(i, self._item_name(i)) for i in ("ganzua",)]
                 )
 
-            elif event.key == pygame.K_F8:
+            elif event.key == pygame.K_F8 and trucos:
 
                 # PRUEBA: +100k monedas y +10k monedas de gelea
                 self.coins += DEBUG_COINS
@@ -4934,7 +4942,7 @@ class NewGame:
 
                 self._save()
 
-            elif event.key == pygame.K_F9:
+            elif event.key == pygame.K_F9 and trucos:
 
                 # al reves de F8 (debug): resta monedas, sin bajar de 0
                 self.coins = max(0, self.coins - DEBUG_COINS)

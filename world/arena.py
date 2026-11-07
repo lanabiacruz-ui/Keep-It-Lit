@@ -6984,30 +6984,6 @@ class Arena:
 
         if self.state == self.WAVE and not self.cinematic.active:
 
-            # que enemigos quedan, por tipo
-            counts = {}
-
-            for enemy in self.enemies:
-
-                if getattr(enemy, "is_boss", False) or enemy.dead:
-                    continue
-
-                label = enemy_label(enemy)
-
-                if label:
-                    counts[label] = counts.get(label, 0) + 1
-
-            ly = premio_y + 30
-
-            for label, n in sorted(counts.items(), key=lambda kv: -kv[1]):
-
-                draw_text(
-                    screen, f"{label}: {n}", 20, (205, 210, 222),
-                    topleft=(rect.left + 8, ly)
-                )
-
-                ly += 20
-
             for enemy in self.enemies:
                 if getattr(enemy, "is_boss", False):
                     draw_boss_bar(screen, enemy)
@@ -7211,13 +7187,63 @@ class Arena:
 
         return "Tu luz está bien. Podés entrar cuando quieras."
 
+    def _themed_box(self, size):
+        """Cartel con el mismo look del panel (9-slice del panel del juego)."""
+
+        cache = self.__dict__.setdefault("_box_cache", {})
+
+        if size in cache:
+            return cache[size]
+
+        w, h = size
+
+        if self.panel_img is None:
+
+            surf = pygame.Surface(size, pygame.SRCALPHA)
+
+            pygame.draw.rect(surf, (60, 72, 92), surf.get_rect(), border_radius=16)
+            pygame.draw.rect(
+                surf, (33, 38, 46), surf.get_rect(), 5, border_radius=16
+            )
+
+            cache[size] = surf
+
+            return surf
+
+        src = self.panel_img
+        sw, sh = src.get_size()
+        c = 28
+
+        surf = pygame.Surface(size, pygame.SRCALPHA)
+
+        xs = [(0, c, 0, c), (c, w - c, c, sw - c), (w - c, w, sw - c, sw)]
+        ys = [(0, c, 0, c), (c, h - c, c, sh - c), (h - c, h, sh - c, sh)]
+
+        for dx0, dx1, sx0, sx1 in xs:
+            for dy0, dy1, sy0, sy1 in ys:
+
+                part = src.subsurface(
+                    pygame.Rect(sx0, sy0, sx1 - sx0, sy1 - sy0)
+                )
+
+                if part.get_size() != (dx1 - dx0, dy1 - dy0):
+                    part = pygame.transform.smoothscale(
+                        part, (dx1 - dx0, dy1 - dy0)
+                    )
+
+                surf.blit(part, (dx0, dy0))
+
+        cache[size] = surf
+
+        return surf
+
     def _draw_wave_info(self, screen, game):
         """Lo que viene en esta oleada, aviso de dificultad y consejo."""
 
         cfg = self.cfg
 
         if self._is_boss_wave():
-            lines = [("¡JEFE! Prepará tus objetos y tu luz.", (255, 110, 90))]
+            lines = [("¡JEFE! Prepará tus objetos y tu luz.", (255, 125, 100))]
             advice = self._rest_advice(game, True)
         else:
             hard = is_hard_wave(self.wave, cfg.table, cfg.last_wave)
@@ -7227,43 +7253,31 @@ class Arena:
             lines = []
 
             if hard:
-                lines.append(("¡OLEADA DIFÍCIL!", (255, 110, 90)))
+                lines.append(("¡OLEADA DIFÍCIL!", (255, 125, 100)))
 
-            lines.append((f"Enemigos: {total}", (235, 235, 235)))
-
-            for row in self._wrap(
-                wave_summary(self.wave, cfg.table), 20, 380
-            ):
-                lines.append((row, (205, 210, 222)))
+            lines.append((f"Enemigos: {total}", (255, 240, 200)))
 
             news = new_kinds(self.wave, cfg.table)
 
             if news:
-                lines.append(
-                    (f"Aparecen por primera vez: {', '.join(news)}",
-                     (255, 205, 90))
-                )
+                for row in self._wrap(
+                    f"Aparecen por primera vez: {', '.join(news)}", 20, 380
+                ):
+                    lines.append((row, (255, 225, 120)))
 
             advice = self._rest_advice(game, hard)
 
         for row in self._wrap(advice, 20, 380):
-            lines.append((row, (150, 205, 255)))
+            lines.append((row, (255, 240, 200)))
 
-        height = 14 + 24 * len(lines)
+        height = 32 + 24 * len(lines)
 
         box = pygame.Rect(0, 0, 420, height)
         box.midtop = (self.panel_rect.centerx, self.panel_rect.bottom + 10)
 
-        back = pygame.Surface(box.size, pygame.SRCALPHA)
+        screen.blit(self._themed_box(box.size), box)
 
-        pygame.draw.rect(back, (0, 0, 0, 175), back.get_rect(), border_radius=12)
-        pygame.draw.rect(
-            back, (226, 201, 150, 200), back.get_rect(), 2, border_radius=12
-        )
-
-        screen.blit(back, box)
-
-        y = box.top + 8
+        y = box.top + 16
 
         for text, color in lines:
 
