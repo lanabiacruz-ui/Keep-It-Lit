@@ -1609,6 +1609,14 @@ class PlaceableManager:
 
             game.world_items.append(it)
 
+        if coins:
+
+            # monedas de gelea cobradas: se guardan en el momento
+            saver = getattr(game, "save_progress", None)
+
+            if callable(saver):
+                saver()
+
         return len(ids), coins
 
     def _trash_slot(self, game):

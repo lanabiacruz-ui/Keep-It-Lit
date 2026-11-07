@@ -5199,16 +5199,19 @@ class Arena:
 
         if isinstance(boss, GolemBoss):
 
-            # zona 2: solo guardianes, guardianes tiradores, golem y flashbang
+            # zona 2: guardianes, guardianes tiradores, golem, flashbang
+            # y piñas bravas
             if boss.phase == 2:
                 kinds = (
                     ["guardian"] * 6 + ["tirador"] * 6
                     + ["golem"] * 3 + ["destello"] * 4
+                    + ["pino_brava"] * 4
                 )
             else:
                 kinds = (
                     ["guardian"] * 5 + ["tirador"] * 4
                     + ["golem"] * 2 + ["destello"] * 3
+                    + ["pino_brava"] * 3
                 )
 
         else:
@@ -5224,6 +5227,7 @@ class Arena:
             "tirador": GUARDIAN_HITBOX,
             "guardian": GUARDIAN_HITBOX,
             "destello": DESTELLO_HITBOX,
+            "pino_brava": BRAVA_HITBOX,
         }
 
         for i, kind in enumerate(kinds):
@@ -5276,6 +5280,10 @@ class Arena:
                 enemy = Destello(pos[0], pos[1], spawn_delay=delay)
             elif kind == "tirador":
                 enemy = GuardianShooter(pos[0], pos[1], spawn_delay=delay)
+            elif kind == "pino_brava":
+                enemy = PinaBrava(
+                    pos[0], pos[1], hp, speed, spawn_delay=delay
+                )
             else:
                 enemy = Enemy(pos[0], pos[1], hp, speed, spawn_delay=delay)
 
@@ -5935,6 +5943,10 @@ class Arena:
             mini.vel = dirv * mini.ball_speed
             mini.codex_key = "pino"
             mini.room = self.cfg.room
+
+            # si la brava la invoco el jefe, sus minis tambien se van solas
+            if getattr(brava, "boss_life", None) is not None:
+                mini.boss_life = brava.boss_life
 
             out.append(mini)
 

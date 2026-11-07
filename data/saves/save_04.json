@@ -2,31 +2,44 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-02T07:42:12",
+    "last_played": "2026-11-07T02:48:47",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 949,
+    "x": 884,
     "y": 154,
-    "coins": 96505,
+    "coins": 96101,
     "gems": 0,
     "gems_green": 0,
     "has_match": true,
-    "light": "fosforo",
+    "light": "antorcha",
     "vida": 1.0,
     "escudo": 0.0,
     "inventory": [
-        null,
-        null,
+        [
+            "aceite",
+            15
+        ],
+        [
+            "aceite",
+            1
+        ],
+        [
+            "aceite",
+            5
+        ],
+        [
+            "hongo_azul",
+            2
+        ],
         null,
         null
     ],
     "collected": [
         "moneda_pasillo_cabana#1",
-        "madera_05#0",
-        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#0",
         "moneda_pasillo_tienda#0",
-        "madera_10#0"
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
@@ -67,15 +80,25 @@
     },
     "placeables": [],
     "enemies_seen": [
+        "destello",
+        "golem",
+        "guardian",
+        "guardian_tirador",
+        "hongun",
+        "mosquito",
+        "pino",
+        "pino_brava",
         "slime",
-        "slime2"
+        "slime2",
+        "trampa",
+        "tronco"
     ],
     "stats": {
-        "items_used": 11,
+        "items_used": 52,
         "chests_opened": 4,
-        "purchases": 2,
+        "purchases": 5,
         "fireballs": 0,
-        "kills": 40
+        "kills": 54
     },
     "zones_seen": [
         "central",
@@ -86,11 +109,25 @@
         "tienda"
     ],
     "shop_inventory": [
+        [
+            "aceite",
+            15
+        ],
+        [
+            "aceite",
+            15
+        ],
+        [
+            "aceite",
+            15
+        ],
         null,
         null,
         null,
-        null,
-        null
+        [
+            "antorcha",
+            1
+        ]
     ],
     "tuto_seen": [
         0
@@ -101,18 +138,388 @@
             "id": "aceite",
             "x": 944,
             "y": 318,
-            "map": "mapa1"
+            "map": "mapa1",
+            "ttl": 145.0
         },
         {
             "k": "item",
             "id": "mapa",
             "x": 942,
             "y": 320,
-            "map": "mapa1"
+            "map": "mapa1",
+            "ttl": 145.0
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 625,
+            "y": 566,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 622,
+            "y": 608,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 599,
+            "y": 586,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 625,
+            "y": 587,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 625,
+            "y": 599,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 613,
+            "y": 546,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 613,
+            "y": 575,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 616,
+            "y": 589,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 625,
+            "y": 586,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 613,
+            "y": 606,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 606,
+            "y": 566,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 640,
+            "y": 571,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 618,
+            "y": 614,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 639,
+            "y": 568,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 600,
+            "y": 590,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 630,
+            "y": 582,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 647,
+            "y": 564,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 623,
+            "y": 619,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 626,
+            "y": 636,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 632,
+            "y": 555,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 609,
+            "y": 603,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 611,
+            "y": 582,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 646,
+            "y": 574,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 646,
+            "y": 569,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 599,
+            "y": 591,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 635,
+            "y": 639,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 607,
+            "y": 641,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 625,
+            "y": 605,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 623,
+            "y": 545,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 667,
+            "y": 532,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 616,
+            "y": 564,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 646,
+            "y": 624,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 631,
+            "y": 662,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 630,
+            "y": 660,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 578,
+            "y": 589,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 631,
+            "y": 560,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 651,
+            "y": 632,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 625,
+            "y": 573,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 655,
+            "y": 663,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 598,
+            "y": 649,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 654,
+            "y": 648,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 654,
+            "y": 650,
+            "map": "mapa1",
+            "ttl": 177.7
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 0.9400333333333292,
+            "x": 941,
+            "y": 205,
+            "map": "mapa1",
+            "ttl": 152.7
+        },
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 0.9766666666666656,
+            "x": 954,
+            "y": 915,
+            "map": "mapa1",
+            "ttl": 178.4
         }
     ],
     "ganzua_uses": 0,
     "boss_intro_seen": false,
     "boss2_intro_seen": false,
-    "enemies_claimed": []
+    "enemies_claimed": [
+        "pino_brava"
+    ],
+    "gel_coins": 0,
+    "yunque": {
+        "niveles": {
+            "resistencia": 0,
+            "brasas": 0,
+            "repelente": 0,
+            "llama_amplia": 0,
+            "llama_larga": 0,
+            "manos": 0
+        },
+        "activas": []
+    }
 }

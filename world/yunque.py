@@ -342,6 +342,12 @@ def buy_next(game, uid):
     if uid not in state.active and len(state.active) < ACTIVE_SLOTS:
         state.active.append(uid)
 
+    # la compra gasta monedas y monedas de gelea: se guarda en el momento
+    saver = getattr(game, "save_progress", None)
+
+    if callable(saver):
+        saver()
+
     return True, f"{UPGRADES[uid]['name']} nivel {cur + 1}"
 
 

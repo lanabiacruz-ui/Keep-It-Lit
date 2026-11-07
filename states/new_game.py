@@ -155,6 +155,7 @@ COIN_PICKUP_DISTANCE = 14
 POLVORA_TICK = 0.5
 
 DEBUG_COINS = 100000
+DEBUG_GEL_COINS = 10000
 
 COIN_VALUES = {
     "moneda": 1,
@@ -4431,7 +4432,14 @@ class NewGame:
 
             elif event.key == pygame.K_F8:
 
+                # PRUEBA: +100k monedas y +10k monedas de gelea
                 self.coins += DEBUG_COINS
+                self.gel_coins = int(self.gel_coins) + DEBUG_GEL_COINS
+
+                if self.shop is not None:
+                    self.shop.coins = int(self.coins)
+
+                self._save()
 
             elif event.key == pygame.K_F9:
 

@@ -193,6 +193,13 @@ def collect(game, state):
 
     state.ready = 0
 
+    # las monedas de gelea se guardan en el momento: si cerras el juego
+    # despues de cobrar no se pierden
+    saver = getattr(game, "save_progress", None)
+
+    if callable(saver):
+        saver()
+
     return True, f"+{n} moneda{'s' if n != 1 else ''} de gelea"
 
 
