@@ -148,6 +148,12 @@ ESCAPE_REVIVE_LIFE = 0.15
 
 ESCAPE_GRACE = 2.5
 
+# El piso que realmente se puede caminar (mapa_colision.png) sobresale
+# unos 4-12 px del rectangulo de la sala. Sin este margen, al pegarte a
+# una pared el centro del personaje quedaba "afuera" y avisaba que
+# saliste de la sala aunque siguieras adentro.
+LEAVE_MARGIN = 12
+
 
 ENEMY_DRAW_SIZE = 14
 ENEMY_HITBOX = (12, 10)
@@ -6125,7 +6131,11 @@ class Arena:
         if self.banner_t > 0:
             self.banner_t = max(0.0, self.banner_t - dt)
 
-        outside = not self.cfg.room.collidepoint(p.rect.center)
+        leave_zone = self.cfg.room.inflate(
+            LEAVE_MARGIN * 2, LEAVE_MARGIN * 2
+        )
+
+        outside = not leave_zone.collidepoint(p.rect.center)
 
         if outside:
             self._out_t += dt
@@ -6436,9 +6446,12 @@ class Arena:
         self.enemies = [e for e in self.enemies if not e.dead]
         self.enemies.extend(splits)
 
-        if game.vida <= 0:
-            self._player_died(game)
-            return
+        # Se apago la luz en plena oleada: pasa lo mismo que afuera de la
+        # sala. Si hay pocion de ascua se reenciende sola; si no, la luz
+        # se apaga y el juego da NO_LIGHT_COUNTDOWN (10 s) para conseguir
+        # otra antes de perder. Ya no se muere de una.
+        if game.has_match and game.vida <= 0:
+            game._burn_out()
 
         if not self.enemies:
             self.shots = []

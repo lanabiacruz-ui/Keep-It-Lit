@@ -12,14 +12,15 @@
         "intocable": "2026-11-04T21:35:51",
         "zona_1": "2026-11-04T21:35:56",
         "zona_2": "2026-11-07T19:38:43",
-        "region_1": "2026-11-07T19:38:56"
+        "region_1": "2026-11-07T19:38:56",
+        "exterminador": "2026-11-07T22:10:08"
     },
     "counters": {
-        "defeats": 35,
-        "fireballs": 227,
-        "slimes": 13,
+        "defeats": 36,
+        "fireballs": 269,
+        "slimes": 22,
         "chests": 8,
-        "kills": 184,
-        "doors": 32
+        "kills": 260,
+        "doors": 41
     }
 }
