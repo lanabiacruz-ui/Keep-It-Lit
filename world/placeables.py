@@ -9,6 +9,7 @@ from world import items as _items
 from world.items import HUD_DIR, load_icon
 from world import yunque as _yunque
 from world import maquina as _maquina
+from world import ruleta as _ruleta
 
 
 REACH = 64
@@ -90,7 +91,9 @@ FUEL_PER_ITEM = {
     "fogata": FOGATA_PER_MADERA,
 }
 
-PLACE_ITEMS = ("cofre", "faro", "fogata", "tacho", "yunque", "maquina")
+PLACE_ITEMS = (
+    "cofre", "faro", "fogata", "tacho", "yunque", "maquina", "ruleta"
+)
 
 WORLD_SIZE = {
     "bolsa": (16, 16),
@@ -100,13 +103,17 @@ WORLD_SIZE = {
     "tacho": (16, 18),
     "yunque": (24, 18),
     "maquina": (26, 18),
+    "ruleta": (24, 20),
 }
 
-ICON_IDS = ("bolsa", "cofre", "faro", "fogata", "tacho", "yunque", "maquina")
+ICON_IDS = (
+    "bolsa", "cofre", "faro", "fogata", "tacho", "yunque", "maquina",
+    "ruleta",
+)
 
 HAMMER_ITEM = "martillo"
 
-HAMMER_TARGETS = ("cofre", "fogata", "tacho", "yunque", "maquina")
+HAMMER_TARGETS = ("cofre", "fogata", "tacho", "yunque", "maquina", "ruleta")
 
 # lo que el tacho NO se traga (para no perder algo caro por un click mal puesto)
 # todo se puede tirar al tacho (la lista queda por si algun dia hace falta)
@@ -510,7 +517,46 @@ def _draw_maquina(W, H):
     return s
 
 
+def _draw_ruleta(W, H):
+
+    s = pygame.Surface((W, H), pygame.SRCALPHA)
+
+    lw = max(1, W // 28)
+    dark = (34, 36, 42)
+
+    table = pygame.Rect(int(W * .04), int(H * .30), int(W * .92), int(H * .62))
+    pygame.draw.rect(s, (40, 104, 66), table, border_radius=max(1, W // 14))
+    pygame.draw.rect(s, dark, table, lw, border_radius=max(1, W // 14))
+
+    cx, cy = int(W * .50), int(H * .46)
+    radius = int(min(W, H) * .34)
+
+    pygame.draw.circle(s, dark, (cx, cy), radius + lw)
+
+    colors = [(200, 54, 54), (32, 34, 40), (200, 54, 54), (32, 34, 40),
+              (50, 160, 84)]
+
+    for i in range(20):
+
+        a0 = math.radians(i * 18 - 99)
+        a1 = math.radians(i * 18 - 81)
+
+        pts = [(cx, cy)]
+
+        for j in range(4):
+            a = a0 + (a1 - a0) * j / 3
+            pts.append((cx + math.cos(a) * radius, cy + math.sin(a) * radius))
+
+        pygame.draw.polygon(s, colors[i % 5], pts)
+
+    pygame.draw.circle(s, (196, 203, 212), (cx, cy), max(2, radius // 3))
+    pygame.draw.circle(s, dark, (cx, cy), max(2, radius // 3), lw)
+
+    return s
+
+
 _DRAWERS = {
+    "ruleta": _draw_ruleta,
     "maquina": _draw_maquina,
     "yunque": _draw_yunque,
     "tacho": _draw_tacho,
@@ -1023,6 +1069,57 @@ class Machine(Placeable):
             screen.blit(img, pos)
 
 
+class Roulette(Placeable):
+
+    kind = "ruleta"
+    draggable = False
+
+    def __init__(self, x, y, fuel=None):
+
+        super().__init__(x, y, fuel)
+
+        self.r = _ruleta.RouletteState()
+
+    def tick(self, dt):
+
+        self.r.tick(dt)
+
+    def pickup_block(self):
+
+        if self.r.busy:
+            return "Espera a que termine de girar la ruleta"
+
+        return None
+
+    def load_extra(self, entry):
+
+        self.r.load(entry.get("ruleta"))
+
+    def save(self):
+
+        data = super().save()
+
+        data["ruleta"] = self.r.save()
+
+        return data
+
+    def draw_extras(self, screen, r, clock):
+
+        if self.r.spinning:
+
+            font = _cap_font()
+
+            text = "¡Girando!"
+
+            img = font.render(text, True, (255, 232, 170))
+            shade = font.render(text, True, (20, 12, 4))
+
+            pos = img.get_rect(midbottom=(r.centerx, r.top - 3))
+
+            screen.blit(shade, pos.move(1, 1))
+            screen.blit(img, pos)
+
+
 class Lighthouse(Placeable):
 
     kind = "faro"
@@ -1200,6 +1297,7 @@ KINDS = {
     "tacho": Trash,
     "yunque": Anvil,
     "maquina": Machine,
+    "ruleta": Roulette,
 }
 
 
@@ -1219,6 +1317,7 @@ class PlaceableManager:
 
         self.anvil_panel = _yunque.AnvilPanel()
         self.machine_panel = _maquina.MachinePanel()
+        self.roulette_panel = _ruleta.RoulettePanel()
 
         self._fonts = {}
         self._icons = {}
@@ -1978,6 +2077,20 @@ class PlaceableManager:
 
                 return True
 
+            if obj.kind == "ruleta":
+
+                if _yunque.enemies_near(game, obj.rect.center):
+
+                    game.show_message(
+                        "No puedes usar la ruleta con enemigos cerca"
+                    )
+
+                    return True
+
+                self.open_obj = obj
+
+                return True
+
             if obj.container is not None:
 
                 self.open_obj = obj
@@ -2251,6 +2364,13 @@ class PlaceableManager:
 
             return False
 
+        if obj is not None and obj.kind == "ruleta":
+
+            if self.roulette_panel.click(game, event, obj):
+                return True
+
+            return False
+
         panel, slots = self._panel_layout(game)
 
         one = event.button == 3
@@ -2410,6 +2530,12 @@ class PlaceableManager:
 
             return
 
+        if obj.kind == "ruleta":
+
+            self.roulette_panel.draw(game, screen, obj)
+
+            return
+
         panel, slots = self._panel_layout(game)
 
         mouse = pygame.mouse.get_pos()
@@ -2517,6 +2643,9 @@ class PlaceableManager:
             obj.burn(dt)
             obj.tick(dt)
 
+            if obj.kind == "ruleta":
+                obj.r.settle(game)
+
             obj.near = self._dist(game, obj) <= REACH + 24
 
         if game.has_match and game.vida < 1.0:
@@ -2552,6 +2681,14 @@ class PlaceableManager:
                 self.open_obj = None
 
                 game.show_message("Se acercan enemigos: el yunque se cerró")
+
+            elif (
+                self.open_obj.kind == "ruleta"
+                and _yunque.enemies_near(game, self.open_obj.rect.center)
+            ):
+                self.open_obj = None
+
+                game.show_message("Se acercan enemigos: la ruleta se cerró")
 
         for obj in self.objects:
 

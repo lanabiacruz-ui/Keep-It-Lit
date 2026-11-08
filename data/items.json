@@ -187,7 +187,7 @@
   },
   "martillo": {
     "nombre": "Martillo",
-    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata, un tacho o un yunque que hayas colocado para soltarlo en el piso (no pasa al inventario): arrástralo con click izquierdo mantenido y al soltarlo queda fijo otra vez. Si el cofre o la máquina tienen cosas adentro, caen al piso. Solo funciona con cofres, fogatas, tachos y yunques.",
+    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata, un tacho, un yunque, una máquina o una ruleta que hayas colocado para soltarlo en el piso (no pasa al inventario): arrástralo con click izquierdo mantenido y al soltarlo queda fijo otra vez. Si el cofre o la máquina tienen cosas adentro, caen al piso. Solo funciona con cofres, fogatas, tachos, yunques, máquinas y ruletas.",
     "requiere_fosforo": false,
     "max_pila": 1
   },
@@ -294,6 +294,13 @@
   "maquina": {
     "nombre": "Máquina de gelea",
     "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo (lo de adentro cae al piso) y también la puedes tirar al tacho. Click derecho sobre ella para abrirla. Pon geleas adentro: trabaja sola mientras juegas y convierte 2 geleas en 1 moneda de gelea cada 30 segundos (caben 10 geleas). Las monedas de gelea se cobran desde su panel y se gastan en el yunque.",
+    "requiere_fosforo": false,
+    "max_pila": 3,
+    "efectos": []
+  },
+  "ruleta": {
+    "nombre": "Ruleta",
+    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo y también la puedes tirar al tacho. Click derecho sobre ella para abrirla; no abre si hay enemigos cerca, así que úsala entre oleadas. Apuesta monedas a rojo, negro o verde: rojo y negro duplican tu apuesta (40% de probabilidad cada uno) y verde la triplica (20%). Si pierdes, pierdes lo apostado. La apuesta va de 10 a 5000 monedas.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []

@@ -121,6 +121,10 @@
         {
           "id": "maquina",
           "precio": 120
+        },
+        {
+          "id": "ruleta",
+          "precio": 200
         }
       ]
     }
