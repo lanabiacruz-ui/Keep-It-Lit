@@ -57,7 +57,8 @@ SHOP_UNLOCK_Z1 = [
     "fogata",       # oleada 11
 ]
 
-# Zona 2 (Stonun): oleadas 1 a 11
+# Zona 2 (Stonun): oleadas 1 a 10 (la 11, la del jefe, ya no desbloquea
+# nada: la ruleta ahora sale de los cofres)
 SHOP_UNLOCK_Z2 = [
     "cofre",                 # oleada 1
     "iman",                  # oleada 2
@@ -69,7 +70,6 @@ SHOP_UNLOCK_Z2 = [
     "pocion_invisibilidad",  # oleada 8
     "pocion_ira",            # oleada 9
     "pocion_ascua",          # oleada 10
-    "ruleta",                # oleada 11 (jefe)
 ]
 
 

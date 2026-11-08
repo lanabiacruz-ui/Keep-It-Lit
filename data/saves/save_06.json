@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-07T23:26:34",
+    "last_played": "2026-11-07T23:57:04",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 944,
-    "y": 161,
-    "coins": 188887,
+    "x": 857,
+    "y": 131,
+    "coins": 188843,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
@@ -15,13 +15,10 @@
     "vida": 1.0,
     "escudo": 1.0,
     "inventory": [
+        null,
         [
-            "hongo_azul",
-            10
-        ],
-        [
-            "esfera",
-            1
+            "polvora",
+            15
         ],
         [
             "aceite",
@@ -41,22 +38,22 @@
         ]
     ],
     "collected": [
-        "moneda_pasillo_tienda#0",
-        "moneda_sala_cofres#1",
         "madera_04#0",
-        "moneda_sala_cofres#0",
-        "madera_03#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_cabana#0",
         "moneda_sala_central#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_pasillo_der#0",
-        "moneda5_pasillo_cofres#0",
-        "madera_01#0",
         "madera_02#0",
         "moneda_pasillo_izq#0",
-        "moneda_sala_central#1"
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_cabana#0",
+        "madera_03#0",
+        "madera_01#0",
+        "moneda_sala_cofres#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_der#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -82,14 +79,8 @@
         "cofre_01": {
             "usos": 8
         },
-        "cofre_02": {
-            "usos": 1
-        },
         "cofre_03": {
             "usos": 3
-        },
-        "cofre_04": {
-            "usos": 9
         }
     },
     "placeables": [
@@ -183,9 +174,53 @@
                     "mapa",
                     1
                 ],
-                null,
+                [
+                    "hongo_azul",
+                    10
+                ],
                 null
             ]
+        },
+        {
+            "t": "maquina",
+            "x": 1008,
+            "y": 97,
+            "maquina": {
+                "gel": 0,
+                "prog": 0.0,
+                "ready": 0
+            }
+        },
+        {
+            "t": "maquina",
+            "x": 1008,
+            "y": 117,
+            "maquina": {
+                "gel": 0,
+                "prog": 0.0,
+                "ready": 0
+            }
+        },
+        {
+            "t": "maquina",
+            "x": 1008,
+            "y": 135,
+            "maquina": {
+                "gel": 0,
+                "prog": 0.0,
+                "ready": 0
+            }
+        },
+        {
+            "t": "ruleta",
+            "x": 867,
+            "y": 111,
+            "ruleta": {
+                "bet": 5000,
+                "bet_gelea": 100,
+                "cur": "gelea",
+                "pick": "R"
+            }
         }
     ],
     "enemies_seen": [
@@ -205,9 +240,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1451,
-        "chests_opened": 57,
-        "purchases": 90,
+        "items_used": 1463,
+        "chests_opened": 67,
+        "purchases": 94,
         "fireballs": 3045,
         "kills": 369
     },
@@ -253,7 +288,7 @@
         0
     ],
     "death_drops": [],
-    "ganzua_uses": 0,
+    "ganzua_uses": 1,
     "boss_intro_seen": true,
     "enemies_claimed": [
         "destello",
@@ -297,7 +332,7 @@
             "llama_amplia"
         ]
     },
-    "gel_coins": 9991,
+    "gel_coins": 9990,
     "shop_unlocked": [
         "antorcha",
         "bolsa",

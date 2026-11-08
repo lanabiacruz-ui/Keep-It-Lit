@@ -300,7 +300,7 @@
   },
   "ruleta": {
     "nombre": "Ruleta",
-    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo y también la puedes tirar al tacho. Click derecho sobre ella para abrirla; no abre si hay enemigos cerca, así que úsala entre oleadas. Apuesta monedas a rojo, negro o verde: rojo y negro duplican tu apuesta (40% de probabilidad cada uno) y verde la triplica (20%). Si pierdes, pierdes lo apostado. La apuesta va de 10 a 5000 monedas.",
+    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo y también la puedes tirar al tacho. Click derecho sobre ella para abrirla; no abre si hay enemigos cerca, así que úsala entre oleadas. Apuesta monedas o monedas de gelea a rojo, negro o verde: rojo y negro duplican tu apuesta (45% de probabilidad cada uno) y verde la triplica (10%). Si pierdes, pierdes lo apostado. La apuesta va de 10 a 5000 monedas, o de 1 a 100 monedas de gelea.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []

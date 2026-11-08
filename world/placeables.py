@@ -525,7 +525,7 @@ def _draw_ruleta(W, H):
     dark = (34, 36, 42)
 
     table = pygame.Rect(int(W * .04), int(H * .30), int(W * .92), int(H * .62))
-    pygame.draw.rect(s, (40, 104, 66), table, border_radius=max(1, W // 14))
+    pygame.draw.rect(s, (74, 80, 90), table, border_radius=max(1, W // 14))
     pygame.draw.rect(s, dark, table, lw, border_radius=max(1, W // 14))
 
     cx, cy = int(W * .50), int(H * .46)
@@ -533,13 +533,14 @@ def _draw_ruleta(W, H):
 
     pygame.draw.circle(s, dark, (cx, cy), radius + lw)
 
-    colors = [(200, 54, 54), (32, 34, 40), (200, 54, 54), (32, 34, 40),
-              (50, 160, 84)]
+    # mismos colores y orden que la rueda de world/ruleta.py
+    n = len(_ruleta.WHEEL)
+    step = 360.0 / n
 
-    for i in range(20):
+    for i, letter in enumerate(_ruleta.WHEEL):
 
-        a0 = math.radians(i * 18 - 99)
-        a1 = math.radians(i * 18 - 81)
+        a0 = math.radians(i * step - 90 - step / 2)
+        a1 = math.radians(i * step - 90 + step / 2)
 
         pts = [(cx, cy)]
 
@@ -547,7 +548,7 @@ def _draw_ruleta(W, H):
             a = a0 + (a1 - a0) * j / 3
             pts.append((cx + math.cos(a) * radius, cy + math.sin(a) * radius))
 
-        pygame.draw.polygon(s, colors[i % 5], pts)
+        pygame.draw.polygon(s, _ruleta.FILL[letter], pts)
 
     pygame.draw.circle(s, (196, 203, 212), (cx, cy), max(2, radius // 3))
     pygame.draw.circle(s, dark, (cx, cy), max(2, radius // 3), lw)

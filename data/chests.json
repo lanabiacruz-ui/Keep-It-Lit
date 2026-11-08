@@ -23,7 +23,8 @@
     "pocion_ascua": 1,
     "pocion_invisibilidad": 1,
     "pocion_velocidad": 1,
-    "pocion_ira": 1
+    "pocion_ira": 1,
+    "ruleta": 1
   },
   "cofres": [
     {

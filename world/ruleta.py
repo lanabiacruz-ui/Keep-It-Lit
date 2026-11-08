@@ -9,34 +9,39 @@ from world.yunque import (
     C_PANEL, C_EDGE, C_LIGHT,
 )
 
-WHEEL = "RNRNV" * 4
+# 20 casilleros: 9 rojos (45%), 9 negros (45%) y 2 verdes (10%), los verdes
+# enfrentados. Para cambiar las probabilidades cambia esta rueda.
+WHEEL = "V" + "RNRNRNRNR" + "V" + "NRNRNRNRN"
 SLOTS = len(WHEEL)
 STEP = 360.0 / SLOTS
 
+# Premio de cada color (rojo y negro x2, verde x3).
 MULT = {"R": 2, "N": 2, "V": 3}
 NAMES = {"R": "Rojo", "N": "Negro", "V": "Verde"}
-FILL = {"R": (200, 54, 54), "N": (32, 34, 40), "V": (50, 160, 84)}
 
-_SEQ = (11, 4, 15, 8, 13, 2, 9, 16, 5, 12, 1, 10, 7, 14, 3, 6)
+# colores apagados, en la linea gris oscuro del resto del juego
+FILL = {"R": (150, 54, 46), "N": (30, 32, 38), "V": (62, 126, 90)}
 
-
-def _numbers():
-
-    seq = iter(_SEQ)
-
-    return tuple(0 if c == "V" else next(seq) for c in WHEEL)
-
-
-NUMBERS = _numbers()
+# Monedas con las que se puede apostar. "attr" es el atributo del juego
+# donde esta ese saldo.
+CURRENCIES = {
+    "coins": {
+        "attr": "coins", "icon": "moneda", "unit": "monedas",
+        "min": 10, "max": 5000, "chips": (10, 50, 100, 500),
+    },
+    "gelea": {
+        "attr": "gel_coins", "icon": "moneda_gelea",
+        "unit": "monedas de gelea",
+        "min": 1, "max": 100, "chips": (1, 5, 10, 25),
+    },
+}
+CUR_ORDER = ("coins", "gelea")
 
 GOLD = (214, 170, 72)
 GOLD_DARK = (122, 84, 24)
 BALL_TURNS = 5
 BALL_DROP_FROM = 0.68
 
-MIN_BET = 10
-MAX_BET = 5000
-CHIPS = (10, 50, 100, 500)
 SPIN_TIME = 4.2
 EXTRA_TURNS = 4
 
@@ -50,11 +55,17 @@ def chance(letter):
     return WHEEL.count(letter) / SLOTS
 
 
+def pct(letter):
+
+    return int(round(chance(letter) * 100))
+
+
 class RouletteState:
 
     def __init__(self):
 
-        self.bet = MIN_BET
+        self.cur = "coins"
+        self.bets = {k: CURRENCIES[k]["min"] for k in CUR_ORDER}
         self.pick = None
 
         self.spinning = False
@@ -70,6 +81,25 @@ class RouletteState:
         self.stake = 0
         self.owed = 0
         self.last_win = 0
+
+    @property
+    def bet(self):
+
+        return self.bets[self.cur]
+
+    @bet.setter
+    def bet(self, value):
+
+        self.bets[self.cur] = int(value)
+
+    @property
+    def cfg(self):
+
+        return CURRENCIES[self.cur]
+
+    def have(self, game):
+
+        return int(getattr(game, self.cfg["attr"], 0))
 
     @property
     def busy(self):
@@ -100,13 +130,13 @@ class RouletteState:
         if self.pick not in MULT:
             return False, "Elige un color"
 
-        if self.bet < MIN_BET:
-            return False, f"La apuesta mínima es {MIN_BET}"
+        if self.bet < self.cfg["min"]:
+            return False, f"La apuesta mínima es {self.cfg['min']}"
 
-        if int(game.coins) < self.bet:
-            return False, "No tienes tantas monedas"
+        if self.have(game) < self.bet:
+            return False, f"No tienes tantas {self.cfg['unit']}"
 
-        game.coins -= self.bet
+        setattr(game, self.cfg["attr"], self.have(game) - self.bet)
 
         self.stake = self.bet
         self.slot = random.randrange(SLOTS)
@@ -138,17 +168,21 @@ class RouletteState:
         self.last_win = won
 
         name = NAMES.get(self.result, "").lower()
-        num = NUMBERS[self.slot]
+        unit = self.cfg["unit"]
 
         if won > 0:
 
-            game.add_coins(won)
+            if self.cur == "coins":
+                game.add_coins(won)
+            else:
+                game.gel_coins = int(getattr(game, "gel_coins", 0)) + won
+                audio.play("coin_big")
 
             if self.result == "V":
                 audio.play("gem")
 
             game.show_message(
-                f"¡Salió el {num} {name}! Ganaste {won} monedas "
+                f"¡Salió el {name}! Ganaste {won} {unit} "
                 f"(apostaste {self.stake})"
             )
 
@@ -157,7 +191,7 @@ class RouletteState:
             audio.play("click")
 
             game.show_message(
-                f"Salió el {num} {name}. Perdiste {self.stake} monedas"
+                f"Salió el {name}. Perdiste {self.stake} {unit}"
             )
 
         saver = getattr(game, "save_progress", None)
@@ -167,7 +201,12 @@ class RouletteState:
 
     def save(self):
 
-        data = {"bet": int(self.bet), "pick": self.pick}
+        data = {
+            "bet": int(self.bets["coins"]),
+            "bet_gelea": int(self.bets["gelea"]),
+            "cur": self.cur,
+            "pick": self.pick,
+        }
 
         if self.busy:
             data.update({
@@ -185,10 +224,19 @@ class RouletteState:
         if not isinstance(data, dict):
             return
 
-        try:
-            self.bet = max(MIN_BET, min(MAX_BET, int(data.get("bet", MIN_BET))))
-        except (TypeError, ValueError):
-            self.bet = MIN_BET
+        cur = data.get("cur")
+        self.cur = cur if cur in CURRENCIES else "coins"
+
+        for key, field in (("coins", "bet"), ("gelea", "bet_gelea")):
+
+            cfg = CURRENCIES[key]
+
+            try:
+                value = int(data.get(field, cfg["min"]))
+            except (TypeError, ValueError):
+                value = cfg["min"]
+
+            self.bets[key] = max(cfg["min"], min(cfg["max"], value))
 
         pick = data.get("pick")
         self.pick = pick if pick in MULT else None
@@ -216,9 +264,8 @@ class RoulettePanel(AnvilPanel):
         super().__init__()
 
         self._last_idx = None
-        self._nums = {}
 
-    def layout(self, game):
+    def layout(self, game, st=None):
 
         sw, sh = game.screen.get_size()
 
@@ -231,21 +278,29 @@ class RoulettePanel(AnvilPanel):
         rx = panel.x + 290
         rw = panel.right - MARGIN - rx
 
+        tw = (rw - 8) // 2
+        tabs = {
+            key: pygame.Rect(rx + i * (tw + 8), panel.y + 106, tw, 32)
+            for i, key in enumerate(CUR_ORDER)
+        }
+
         bw = (rw - 16) // 3
         colors = {
-            letter: pygame.Rect(rx + i * (bw + 8), panel.y + 150, bw, 50)
+            letter: pygame.Rect(rx + i * (bw + 8), panel.y + 146, bw, 48)
             for i, letter in enumerate("RNV")
         }
 
         cw = (rw - 3 * 8) // 4
         chips = [
-            (chip, pygame.Rect(rx + i * (cw + 8), panel.y + 262, cw, 34))
-            for i, chip in enumerate(CHIPS)
+            (chip, pygame.Rect(rx + i * (cw + 8), panel.y + 244, cw, 32))
+            for i, chip in enumerate(
+                (st.cfg if st is not None else CURRENCIES["coins"])["chips"]
+            )
         ]
 
         sw3 = (rw - 16) // 3
         quick = {
-            key: pygame.Rect(rx + i * (sw3 + 8), panel.y + 304, sw3, 34)
+            key: pygame.Rect(rx + i * (sw3 + 8), panel.y + 282, sw3, 32)
             for i, key in enumerate(("min", "double", "max"))
         }
 
@@ -254,20 +309,27 @@ class RoulettePanel(AnvilPanel):
             "wheel": wheel_c,
             "radius": 88,
             "right": pygame.Rect(rx, panel.y + 112, rw, 0),
+            "tabs": tabs,
             "colors": colors,
             "chips": chips,
             "quick": quick,
-            "spin": pygame.Rect(rx, panel.y + 350, rw, 46),
+            "spin": pygame.Rect(rx, panel.y + 324, rw, 46),
             "footer": panel.bottom - 30,
         }
 
-    def _limit(self, game):
+    _chips = CURRENCIES["coins"]["chips"]
 
-        return max(MIN_BET, min(MAX_BET, int(game.coins)))
+    def _limit(self, game, st):
+
+        cfg = st.cfg
+
+        return max(cfg["min"], min(cfg["max"], st.have(game)))
 
     def click(self, game, event, obj):
 
-        lay = self.layout(game)
+        st = obj.r
+
+        lay = self.layout(game, st)
 
         if not lay["panel"].collidepoint(event.pos):
             return False
@@ -275,10 +337,16 @@ class RoulettePanel(AnvilPanel):
         if event.button != 1:
             return True
 
-        st = obj.r
-
         if st.busy:
             return True
+
+        for key, rect in lay["tabs"].items():
+
+            if rect.collidepoint(event.pos):
+                if st.cur != key:
+                    st.cur = key
+                    audio.play("click")
+                return True
 
         for letter, rect in lay["colors"].items():
 
@@ -290,7 +358,7 @@ class RoulettePanel(AnvilPanel):
         for chip, rect in lay["chips"]:
 
             if rect.collidepoint(event.pos):
-                st.bet = min(self._limit(game), st.bet + chip)
+                st.bet = min(self._limit(game, st), st.bet + chip)
                 audio.play("click")
                 return True
 
@@ -299,11 +367,11 @@ class RoulettePanel(AnvilPanel):
             if rect.collidepoint(event.pos):
 
                 if key == "min":
-                    st.bet = MIN_BET
+                    st.bet = st.cfg["min"]
                 elif key == "double":
-                    st.bet = min(self._limit(game), st.bet * 2)
+                    st.bet = min(self._limit(game, st), st.bet * 2)
                 else:
-                    st.bet = self._limit(game)
+                    st.bet = self._limit(game, st)
 
                 audio.play("click")
                 return True
@@ -319,22 +387,12 @@ class RoulettePanel(AnvilPanel):
 
         return True
 
-    def _num_surface(self, number):
-
-        img = self._nums.get(number)
-
-        if img is None:
-            img = self._font(21).render(str(number), True, (246, 246, 246))
-            self._nums[number] = img
-
-        return img
-
     def _draw_wheel(self, screen, cx, cy, radius, angle):
 
         track = radius + 15
 
         pygame.draw.circle(screen, (22, 24, 28), (cx, cy), track + 5)
-        pygame.draw.circle(screen, (46, 49, 56), (cx, cy), track)
+        pygame.draw.circle(screen, (78, 84, 94), (cx, cy), track)
         pygame.draw.circle(screen, GOLD, (cx, cy), track + 5, 3)
 
         for deg in (45, 135, 225, 315):
@@ -375,18 +433,19 @@ class RoulettePanel(AnvilPanel):
             pygame.draw.polygon(screen, FILL[letter], pts)
             pygame.draw.polygon(screen, GOLD, pts, 1)
 
-            m = math.radians(mid)
-            num = pygame.transform.rotate(
-                self._num_surface(NUMBERS[i]), -(mid + 90.0)
-            )
+            if letter == "V":
 
-            screen.blit(
-                num,
-                num.get_rect(center=(
-                    cx + math.cos(m) * radius * 0.80,
-                    cy + math.sin(m) * radius * 0.80,
-                ))
-            )
+                # el verde lleva un rombo dorado para reconocerlo rapido
+                m = math.radians(mid)
+                gx = cx + math.cos(m) * radius * 0.80
+                gy = cy + math.sin(m) * radius * 0.80
+
+                gem = [
+                    (gx, gy - 5), (gx + 4, gy), (gx, gy + 5), (gx - 4, gy)
+                ]
+
+                pygame.draw.polygon(screen, GOLD, gem)
+                pygame.draw.polygon(screen, GOLD_DARK, gem, 1)
 
         pygame.draw.circle(screen, (38, 40, 46), (cx, cy), int(inner))
         pygame.draw.circle(screen, GOLD, (cx, cy), int(inner), 2)
@@ -469,10 +528,11 @@ class RoulettePanel(AnvilPanel):
 
     def draw(self, game, screen, obj):
 
-        lay = self.layout(game)
-        panel = lay["panel"]
         st = obj.r
-        coins = int(game.coins)
+        lay = self.layout(game, st)
+        panel = lay["panel"]
+        cfg = st.cfg
+        have = st.have(game)
 
         mouse = pygame.mouse.get_pos()
 
@@ -491,13 +551,6 @@ class RoulettePanel(AnvilPanel):
         screen.blit(shade, t_rect.move(0, 3))
         screen.blit(title, t_rect)
 
-        sub = self._font(23).render(
-            f"Rojo y Negro x2 ({int(chance('R') * 100)}%)  ·  "
-            f"Verde x3 ({int(chance('V') * 100)}%)",
-            True, C_LIGHT,
-        )
-        screen.blit(sub, sub.get_rect(midtop=(panel.centerx, panel.y + 80)))
-
         cx, cy = lay["wheel"]
         radius = lay["radius"]
 
@@ -511,39 +564,68 @@ class RoulettePanel(AnvilPanel):
 
         self._last_idx = idx
 
+        status = None
+
         if st.spinning:
-            status, ink = "Girando…", C_LIGHT
+            status = "Girando…"
         elif st.result in FILL:
-            status = f"Salió el {NUMBERS[st.slot]} {NAMES[st.result].lower()}"
-            ink = C_LIGHT
-        else:
-            status, ink = "Haz tu apuesta", C_LIGHT
+            status = f"Salió el {NAMES[st.result].lower()}"
 
-        label = self._font(28).render(status, True, ink)
-        l_rect = label.get_rect(center=(cx + 10, cy + radius + 34))
+        if status is not None:
 
-        if st.result in FILL and not st.spinning:
-            dot = pygame.Rect(0, 0, 18, 18)
-            dot.midright = (l_rect.left - 8, l_rect.centery)
-            pygame.draw.rect(screen, FILL[st.result], dot, border_radius=4)
-            pygame.draw.rect(screen, C_LIGHT, dot, 2, border_radius=4)
+            label = self._font(28).render(status, True, C_LIGHT)
+            l_rect = label.get_rect(center=(cx + 10, cy + radius + 34))
 
-        screen.blit(label, l_rect)
+            if st.result in FILL and not st.spinning:
+                dot = pygame.Rect(0, 0, 18, 18)
+                dot.midright = (l_rect.left - 8, l_rect.centery)
+                pygame.draw.rect(screen, FILL[st.result], dot, border_radius=4)
+                pygame.draw.rect(screen, C_LIGHT, dot, 2, border_radius=4)
+
+            screen.blit(label, l_rect)
 
         rx = lay["right"].x
         rw = lay["right"].w
 
-        coin = self._item_icon("moneda", 28)
-        have = self._font(30).render(f"{coins}", True, C_LIGHT)
-
-        coin_rect = coin.get_rect(midleft=(rx, panel.y + 124))
-        screen.blit(coin, coin_rect)
-        screen.blit(have, have.get_rect(midleft=(coin_rect.right + 8, coin_rect.centery)))
-
-        small = self._font(22).render("tus monedas", True, (214, 218, 222))
-        screen.blit(small, small.get_rect(midright=(rx + rw, coin_rect.centery)))
-
         disabled = st.busy
+
+        # pestañas de moneda: icono + cuanto tienes de cada una
+        for key, rect in lay["tabs"].items():
+
+            on = st.cur == key
+            hot = rect.collidepoint(mouse) and not disabled
+
+            if on:
+                fill = (150, 108, 36)
+            elif hot:
+                fill = (84, 91, 100)
+            else:
+                fill = (60, 66, 74)
+
+            if disabled and not on:
+                fill = (96, 104, 112)
+
+            pygame.draw.rect(screen, fill, rect, border_radius=6)
+            pygame.draw.rect(
+                screen, GOLD if on else C_EDGE, rect, 3 if on else 2,
+                border_radius=6,
+            )
+
+            icon = self._item_icon(CURRENCIES[key]["icon"], 24)
+            amount = int(getattr(game, CURRENCIES[key]["attr"], 0))
+            txt = self._fit(f"{amount}", 26, C_LIGHT, rect.w - 24 - 20)
+
+            gap = 6
+            total = icon.get_width() + gap + txt.get_width()
+            x0 = rect.centerx - total // 2
+
+            screen.blit(icon, icon.get_rect(midleft=(x0, rect.centery)))
+            screen.blit(
+                txt,
+                txt.get_rect(
+                    midleft=(x0 + icon.get_width() + gap, rect.centery)
+                ),
+            )
 
         for letter, rect in lay["colors"].items():
 
@@ -557,7 +639,7 @@ class RoulettePanel(AnvilPanel):
             pygame.draw.rect(screen, fill, rect, border_radius=8)
 
             if selected:
-                pygame.draw.rect(screen, C_LIGHT, rect, 4, border_radius=8)
+                pygame.draw.rect(screen, GOLD, rect, 4, border_radius=8)
             elif rect.collidepoint(mouse) and not disabled:
                 pygame.draw.rect(screen, (214, 218, 222), rect, 2, border_radius=8)
             else:
@@ -566,26 +648,26 @@ class RoulettePanel(AnvilPanel):
             name = self._font(26).render(
                 f"{NAMES[letter]} x{MULT[letter]}", True, (255, 255, 255)
             )
-            pct = self._font(20).render(
-                f"{int(chance(letter) * 100)}%", True, (235, 238, 240)
+            pc = self._font(20).render(
+                f"{pct(letter)}%", True, (235, 238, 240)
             )
 
-            screen.blit(name, name.get_rect(center=(rect.centerx, rect.y + 18)))
-            screen.blit(pct, pct.get_rect(center=(rect.centerx, rect.y + 37)))
+            screen.blit(name, name.get_rect(center=(rect.centerx, rect.y + 17)))
+            screen.blit(pc, pc.get_rect(center=(rect.centerx, rect.y + 36)))
 
         bet_label = self._font(26).render("Apuesta", True, C_LIGHT)
-        screen.blit(bet_label, bet_label.get_rect(midleft=(rx, panel.y + 226)))
+        screen.blit(bet_label, bet_label.get_rect(midleft=(rx, panel.y + 218)))
 
-        bet_coin = self._item_icon("moneda", 30)
+        bet_coin = self._item_icon(cfg["icon"], 30)
         bet_txt = self._font(44).render(f"{st.bet}", True, C_LIGHT)
 
-        b_rect = bet_txt.get_rect(midright=(rx + rw, panel.y + 226))
+        b_rect = bet_txt.get_rect(midright=(rx + rw, panel.y + 218))
         screen.blit(bet_txt, b_rect)
         screen.blit(
             bet_coin, bet_coin.get_rect(midright=(b_rect.left - 8, b_rect.centery))
         )
 
-        lack = coins < st.bet
+        lack = have < st.bet
 
         for chip, rect in lay["chips"]:
             self._button(screen, rect, f"+{chip}", not disabled, mouse)
@@ -600,9 +682,9 @@ class RoulettePanel(AnvilPanel):
         spin_rect = lay["spin"]
 
         if can_spin and spin_rect.collidepoint(mouse):
-            fill = (74, 150, 92)
+            fill = (176, 130, 46)
         elif can_spin:
-            fill = (52, 120, 70)
+            fill = (150, 108, 36)
         else:
             fill = (128, 138, 146)
 
@@ -614,7 +696,10 @@ class RoulettePanel(AnvilPanel):
         elif st.pick not in MULT:
             spin_text = "Elige un color"
         elif lack:
-            spin_text = "Te faltan monedas"
+            spin_text = (
+                "Te faltan monedas" if st.cur == "coins"
+                else "Te faltan geleas"
+            )
         else:
             gain = st.bet * MULT[st.pick]
             spin_text = f"GIRAR  (ganas {gain})"
@@ -633,12 +718,12 @@ class RoulettePanel(AnvilPanel):
         hint_color = (255, 150, 140) if lack and not st.busy else (214, 218, 222)
 
         if lack and not st.busy:
-            hint = f"Necesitas {st.bet - coins} monedas más para esta apuesta"
+            hint = f"Necesitas {st.bet - have} {cfg['unit']} más para esta apuesta"
         else:
             hint = (
-                f"ESC para cerrar  ·  apuesta de {MIN_BET} a {MAX_BET} "
-                "monedas"
+                f"ESC para cerrar  ·  apuesta de {cfg['min']} a {cfg['max']} "
+                f"{cfg['unit']}"
             )
 
-        hint_surf = self._font(22).render(hint, True, hint_color)
+        hint_surf = self._fit(hint, 22, hint_color, panel.w - 2 * MARGIN)
         screen.blit(hint_surf, hint_surf.get_rect(center=(panel.centerx, fy)))
