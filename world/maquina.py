@@ -17,6 +17,20 @@ Imagenes (todas opcionales, si no estan se dibuja con codigo):
   assets/maps/hud/hud_monedas_gelea.png     110x60  (contador del HUD)
   assets/maps/ui/maquina_panel.png          cualquier tamano (fondo del panel,
                                             se estira en 9 partes)
+
+Imagenes del PANEL (todas opcionales; en assets/maps/ui/). Las "9 partes" se
+estiran sin deformar las esquinas:
+  maquina_titulo.png          ~300x64   la palabra "Maquina" (reemplaza al texto)
+  maquina_tarjeta.png         508x188   tarjeta que agrupa casilleros y barra
+                                        (9 partes, esquina 16)
+  maquina_casillero.png       38x38     cada casillero de gelea
+  maquina_barra.png           476x28    fondo de la barra (9 partes, esquina 8)
+  maquina_barra_llena.png     476x28    relleno de la barra (9 partes, esquina 8)
+  panel_btn.png               140x40    boton normal  (9 partes, esquina 8)
+  panel_btn_hover.png         140x40    boton con el mouse encima
+  panel_btn_off.png           140x40    boton desactivado
+  panel_separador.png         ~476x6    linea de arriba del pie del panel
+Los botones y el separador son los mismos del Yunque y la Ruleta.
 """
 
 import pygame
@@ -327,23 +341,26 @@ class MachinePanel(AnvilPanel):
             pygame.draw.rect(screen, C_EDGE, panel, 4, border_radius=16)
 
         # ---- encabezado ----
-        title = self._font(54).render("Máquina", True, C_LIGHT)
-        shade = self._font(54).render("Máquina", True, C_EDGE)
+        if not self._title(screen, panel, "maquina_titulo.png"):
 
-        t_rect = title.get_rect(midtop=(panel.centerx, panel.y + 22))
-        screen.blit(shade, t_rect.move(0, 3))
-        screen.blit(title, t_rect)
+            title = self._font(54).render("Máquina", True, C_LIGHT)
+            shade = self._font(54).render("Máquina", True, C_EDGE)
 
-        sub = self._font(23).render(
-            f"{GEL_PER_COIN} geleas = 1 moneda de gelea  ·  "
-            f"{int(SECONDS_PER_COIN)} s cada una",
-            True, C_LIGHT,
-        )
-        screen.blit(sub, sub.get_rect(midtop=(panel.centerx, panel.y + 80)))
+            t_rect = title.get_rect(midtop=(panel.centerx, panel.y + 22))
+            screen.blit(shade, t_rect.move(0, 3))
+            screen.blit(title, t_rect)
 
         # ---- tarjeta central ----
-        pygame.draw.rect(screen, (84, 92, 102), card, border_radius=12)
-        pygame.draw.rect(screen, C_EDGE, card, 2, border_radius=12)
+        card_img = self._nine(card.size, "maquina_tarjeta.png", 16)
+
+        if card_img is not None:
+
+            screen.blit(card_img, card)
+
+        else:
+
+            pygame.draw.rect(screen, (84, 92, 102), card, border_radius=12)
+            pygame.draw.rect(screen, C_EDGE, card, 2, border_radius=12)
 
         # geleas adentro (izquierda) y geleas en tu hotbar (derecha)
         label = self._font(25).render(
@@ -367,8 +384,16 @@ class MachinePanel(AnvilPanel):
 
         for i, slot in enumerate(lay["slots"]):
 
-            pygame.draw.rect(screen, C_TILE, slot, border_radius=8)
-            pygame.draw.rect(screen, C_LIGHT, slot, 2, border_radius=8)
+            slot_img = self._skin("maquina_casillero.png", slot.size)
+
+            if slot_img is not None:
+
+                screen.blit(slot_img, slot)
+
+            else:
+
+                pygame.draw.rect(screen, C_TILE, slot, border_radius=8)
+                pygame.draw.rect(screen, C_LIGHT, slot, 2, border_radius=8)
 
             if i < state.gel:
 
@@ -378,7 +403,12 @@ class MachinePanel(AnvilPanel):
         # barra de progreso
         bar = lay["bar"]
 
-        pygame.draw.rect(screen, C_TILE, bar, border_radius=8)
+        bar_img = self._nine(bar.size, "maquina_barra.png", 8)
+
+        if bar_img is not None:
+            screen.blit(bar_img, bar)
+        else:
+            pygame.draw.rect(screen, C_TILE, bar, border_radius=8)
 
         if state.working:
             frac = state.prog / SECONDS_PER_COIN
@@ -388,11 +418,19 @@ class MachinePanel(AnvilPanel):
         if frac > 0:
 
             fill = bar.copy()
-            fill.w = max(10, int(bar.w * frac))
+            fill.w = max(16, int(bar.w * frac))
 
-            pygame.draw.rect(screen, (176, 186, 192), fill, border_radius=8)
+            fill_img = self._nine(fill.size, "maquina_barra_llena.png", 8)
 
-        pygame.draw.rect(screen, C_EDGE, bar, 2, border_radius=8)
+            if fill_img is not None:
+                screen.blit(fill_img, fill)
+            else:
+                pygame.draw.rect(
+                    screen, (176, 186, 192), fill, border_radius=8
+                )
+
+        if bar_img is None:
+            pygame.draw.rect(screen, C_EDGE, bar, 2, border_radius=8)
 
         if state.ready >= MAX_READY:
             status = "Llena de monedas: cóbralas"
@@ -440,9 +478,8 @@ class MachinePanel(AnvilPanel):
         # ---- pie: separador + ayuda (con su propio espacio) ----
         fy = lay["footer"]
 
-        pygame.draw.line(
-            screen, C_EDGE,
-            (panel.x + MARGIN, fy - 16), (panel.right - MARGIN, fy - 16), 2,
+        self._separator(
+            screen, panel.x + MARGIN, panel.right - MARGIN, fy - 16
         )
 
         hint = self._font(22).render(

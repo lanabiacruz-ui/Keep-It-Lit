@@ -21,6 +21,21 @@ Imagenes (todas opcionales, si no estan se dibujan con codigo):
   assets/maps/hud/yunque_llama_amplia.png    64x64    |
   assets/maps/hud/yunque_llama_larga.png     64x64    |
   assets/maps/hud/yunque_manos.png           64x64   /
+
+Imagenes del PANEL (todas opcionales; en assets/maps/ui/). Las que dicen
+"9 partes" se estiran sin deformar las esquinas, asi que podes dibujarlas
+de cualquier tamaño parecido al indicado:
+  yunque_titulo.png            ~300x64  la palabra "Yunque" (reemplaza al texto)
+  yunque_engarce.png           56x36    casillero de engarce activo (9 partes, esquina 8)
+  yunque_tarjeta.png           347x130  tarjeta de cada mejora (9 partes, esquina 16)
+  yunque_tarjeta_activa.png    347x130  la misma cuando esta activa
+  yunque_pip.png               16x16    puntito de nivel vacio
+  yunque_pip_lleno.png         16x16    puntito de nivel conseguido
+  panel_btn.png                96x32    boton normal   (9 partes, esquina 8)
+  panel_btn_hover.png          96x32    boton con el mouse encima
+  panel_btn_off.png            96x32    boton desactivado
+  panel_separador.png          ~480x6   linea de arriba del pie del panel
+Los botones y el separador son compartidos con la Maquina y la Ruleta.
 """
 
 from pathlib import Path
@@ -518,11 +533,96 @@ class AnvilPanel:
 
         return s
 
-    def _panel_bg(self, size, name="yunque_panel.png"):
+    def _skin(self, name, size):
+        """Tu imagen de assets/maps/ui/<name> escalada a `size`, o None."""
+
+        return self._image(UI_DIR / name, tuple(size))
+
+    def _raw(self, name):
+        """Tu imagen de assets/maps/ui/<name> sin escalar, o None."""
+
+        key = ("raw", name)
+
+        if key not in self._cache:
+
+            path = UI_DIR / name
+            img = None
+
+            if path.exists():
+                img = pygame.image.load(str(path)).convert_alpha()
+
+            self._cache[key] = img
+
+        return self._cache[key]
+
+    def _nine(self, size, name, corner):
+        """Imagen en 9 partes (esquinas fijas) o None si no existe."""
+
+        return self._panel_bg(size, name, corner)
+
+    def _title(self, screen, panel, name):
+        """Titulo hecho por vos. Devuelve False si no esta la imagen."""
+
+        img = self._raw(name)
+
+        if img is None:
+            return False
+
+        screen.blit(img, img.get_rect(midtop=(panel.centerx, panel.y + 14)))
+
+        return True
+
+    def _separator(self, screen, x1, x2, y):
+        """Linea de separacion: panel_separador.png o una linea simple."""
+
+        img = self._raw("panel_separador.png")
+
+        if img is not None:
+
+            w = x2 - x1
+
+            if img.get_width() != w:
+                img = pygame.transform.smoothscale(img, (w, img.get_height()))
+
+            screen.blit(img, (x1, y - img.get_height() // 2))
+
+        else:
+
+            pygame.draw.line(screen, C_EDGE, (x1, y), (x2, y), 2)
+
+    def _btn_img(self, rect, enabled, hot, prefix="panel_btn"):
+        """Imagen del boton segun su estado, o None si no hay ninguna."""
+
+        state = "_off" if not enabled else ("_hover" if hot else "")
+
+        for pre in dict.fromkeys((prefix, "panel_btn")):
+
+            img = self._nine(rect.size, f"{pre}{state}.png", 8)
+
+            if img is not None:
+                return img
+
+            if state:
+
+                base = self._nine(rect.size, f"{pre}.png", 8)
+
+                if base is not None:
+
+                    if not enabled:
+                        base = base.copy()
+                        base.set_alpha(120)
+
+                    return base
+
+        return None
+
+    def _panel_bg(self, size, name="yunque_panel.png", corner=None):
         """yunque_panel.png en 9 partes: las esquinas y el borde no se
         deforman al agrandar el panel, solo se estira el centro."""
 
-        key = ("bg9", name, size)
+        corner = CORNER if corner is None else corner
+
+        key = ("bg9", name, size, corner)
 
         if key in self._cache:
             return self._cache[key]
@@ -536,7 +636,7 @@ class AnvilPanel:
         src = pygame.image.load(str(path)).convert_alpha()
         sw, sh = src.get_size()
         w, h = size
-        c = min(CORNER, sw // 2 - 1, sh // 2 - 1)
+        c = min(corner, sw // 2 - 1, sh // 2 - 1)
 
         out = pygame.Surface(size, pygame.SRCALPHA)
 
@@ -622,17 +722,27 @@ class AnvilPanel:
 
         return [font.render(t, True, color) for t in lines[:max_lines]]
 
-    def _button(self, screen, rect, text, enabled, mouse):
+    def _button(self, screen, rect, text, enabled, mouse, prefix="panel_btn"):
+
+        hot = enabled and rect.collidepoint(mouse)
 
         if not enabled:
             fill, ink = C_BTN_OFF, C_BTN_OFF_TEXT
-        elif rect.collidepoint(mouse):
+        elif hot:
             fill, ink = C_BTN_HOT, C_LIGHT
         else:
             fill, ink = C_BTN, C_LIGHT
 
-        pygame.draw.rect(screen, fill, rect, border_radius=6)
-        pygame.draw.rect(screen, C_EDGE, rect, 2, border_radius=6)
+        img = self._btn_img(rect, enabled, hot, prefix)
+
+        if img is not None:
+
+            screen.blit(img, rect)
+
+        else:
+
+            pygame.draw.rect(screen, fill, rect, border_radius=6)
+            pygame.draw.rect(screen, C_EDGE, rect, 2, border_radius=6)
 
         t = self._font(22).render(text, True, ink)
 
@@ -677,8 +787,12 @@ class AnvilPanel:
             pygame.draw.rect(screen, C_PANEL, panel, border_radius=16)
             pygame.draw.rect(screen, C_EDGE, panel, 4, border_radius=16)
 
-        title = self._font(52).render("Yunque", True, C_LIGHT)
-        screen.blit(title, title.get_rect(midtop=(panel.centerx, panel.y + 26)))
+        if not self._title(screen, panel, "yunque_titulo.png"):
+
+            title = self._font(52).render("Yunque", True, C_LIGHT)
+            screen.blit(
+                title, title.get_rect(midtop=(panel.centerx, panel.y + 26))
+            )
 
         # engarces activos
         sub_text = "Engarces activos"
@@ -693,8 +807,16 @@ class AnvilPanel:
 
             slot = pygame.Rect(panel.x + MARGIN + i * 64, panel.y + 104, 56, 36)
 
-            pygame.draw.rect(screen, C_TILE, slot, border_radius=8)
-            pygame.draw.rect(screen, C_LIGHT, slot, 2, border_radius=8)
+            slot_img = self._nine(slot.size, "yunque_engarce.png", 8)
+
+            if slot_img is not None:
+
+                screen.blit(slot_img, slot)
+
+            else:
+
+                pygame.draw.rect(screen, C_TILE, slot, border_radius=8)
+                pygame.draw.rect(screen, C_LIGHT, slot, 2, border_radius=8)
 
             if i < len(state.active):
 
@@ -733,13 +855,28 @@ class AnvilPanel:
             cur = state.levels[uid]
             on = uid in state.active
 
-            pygame.draw.rect(
-                screen, C_CARD_ON if on else C_CARD, card, border_radius=10
+            card_img = self._nine(
+                card.size,
+                "yunque_tarjeta_activa.png" if on else "yunque_tarjeta.png",
+                16,
             )
-            pygame.draw.rect(
-                screen, C_LIGHT if on else C_EDGE, card,
-                3 if on else 2, border_radius=10,
-            )
+
+            if card_img is None and on:
+                card_img = self._nine(card.size, "yunque_tarjeta.png", 16)
+
+            if card_img is not None:
+
+                screen.blit(card_img, card)
+
+            else:
+
+                pygame.draw.rect(
+                    screen, C_CARD_ON if on else C_CARD, card, border_radius=10
+                )
+                pygame.draw.rect(
+                    screen, C_LIGHT if on else C_EDGE, card,
+                    3 if on else 2, border_radius=10,
+                )
 
             icon = self._icon(uid, 56)
             screen.blit(icon, (card.x + 10, card.y + 10))
@@ -752,11 +889,22 @@ class AnvilPanel:
 
                 pip = pygame.Rect(card.right - 74 + n * 22, card.y + 14, 16, 16)
 
-                pygame.draw.rect(
-                    screen, C_TILE if n < cur else C_CARD_ON,
-                    pip, border_radius=4,
+                pip_img = self._skin(
+                    "yunque_pip_lleno.png" if n < cur else "yunque_pip.png",
+                    pip.size,
                 )
-                pygame.draw.rect(screen, C_EDGE, pip, 2, border_radius=4)
+
+                if pip_img is not None:
+
+                    screen.blit(pip_img, pip)
+
+                else:
+
+                    pygame.draw.rect(
+                        screen, C_TILE if n < cur else C_CARD_ON,
+                        pip, border_radius=4,
+                    )
+                    pygame.draw.rect(screen, C_EDGE, pip, 2, border_radius=4)
 
             text_w = card.w - 88
 

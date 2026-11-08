@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-07T23:57:04",
+    "last_played": "2026-11-08T13:08:18",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 857,
-    "y": 131,
-    "coins": 188843,
+    "x": 897,
+    "y": 123,
+    "coins": 192246,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
@@ -18,11 +18,11 @@
         null,
         [
             "polvora",
-            15
+            14
         ],
         [
             "aceite",
-            8
+            6
         ],
         [
             "martillo",
@@ -38,22 +38,23 @@
         ]
     ],
     "collected": [
-        "madera_04#0",
-        "moneda_sala_central#0",
-        "madera_02#0",
-        "moneda_pasillo_izq#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_cofres#1",
-        "moneda_pasillo_cabana#0",
-        "madera_03#0",
-        "madera_01#0",
-        "moneda_sala_cofres#0",
         "moneda_pasillo_tienda#1",
-        "moneda_pasillo_tienda#0",
         "moneda_pasillo_cabana#1",
+        "moneda_pasillo_der#0",
+        "madera_02#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda5_sala_cofres#0",
+        "moneda_sala_cofres#1",
+        "moneda_sala_central#0",
         "moneda_pasillo_cofres#0",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#0",
         "moneda_sala_central#1",
-        "moneda_pasillo_der#0"
+        "madera_04#0",
+        "moneda_pasillo_cabana#0",
+        "moneda_sala_cofres#0",
+        "madera_01#0",
+        "madera_03#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -218,7 +219,7 @@
             "ruleta": {
                 "bet": 5000,
                 "bet_gelea": 100,
-                "cur": "gelea",
+                "cur": "coins",
                 "pick": "R"
             }
         }
@@ -240,10 +241,10 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1463,
+        "items_used": 1471,
         "chests_opened": 67,
         "purchases": 94,
-        "fireballs": 3045,
+        "fireballs": 3054,
         "kills": 369
     },
     "zones_seen": [
@@ -320,19 +321,20 @@
     },
     "yunque": {
         "niveles": {
-            "resistencia": 2,
-            "brasas": 0,
-            "repelente": 0,
+            "resistencia": 3,
+            "brasas": 3,
+            "repelente": 3,
             "llama_amplia": 3,
-            "llama_larga": 0,
-            "manos": 0
+            "llama_larga": 3,
+            "manos": 3
         },
         "activas": [
             "resistencia",
-            "llama_amplia"
+            "llama_larga",
+            "repelente"
         ]
     },
-    "gel_coins": 9990,
+    "gel_coins": 9597,
     "shop_unlocked": [
         "antorcha",
         "bolsa",

@@ -1,3 +1,37 @@
+"""Ruleta: apuesta monedas o monedas de gelea a rojo, negro o verde.
+
+Imagenes (todas opcionales; en assets/maps/ui/). Si falta alguna, ese
+elemento se dibuja con codigo. Las "9 partes" se estiran sin deformar las
+esquinas, asi que pueden tener un tamaño parecido al indicado:
+  ruleta_panel.png          640x440   fondo del panel (9 partes, esquina 60)
+  ruleta_titulo.png         ~300x64   la palabra "Ruleta" (reemplaza al texto)
+  ruleta_aro.png            216x216   aro FIJO de la rueda (el centro puede
+                                      quedar transparente: la rueda va encima)
+  ruleta_rueda.png          176x176   rueda que GIRA, con el centro incluido.
+                                      Dibujala con el verde arriba y los 20
+                                      casilleros asi, en sentido del reloj:
+                                      V R N R N R N R N R V N R N R N R N R N
+                                      (V verde, R rojo, N negro: tiene que
+                                      coincidir con WHEEL de este archivo)
+  ruleta_puntero.png        18x18     flechita fija de arriba (apunta abajo)
+  ruleta_bola.png           16x16     la bolita
+  ruleta_pestana.png        153x32    pestaña de moneda (9 partes, esquina 8)
+  ruleta_pestana_sel.png    153x32    la misma cuando esta elegida
+  ruleta_rojo.png           99x48     boton Rojo  (9 partes, esquina 8)
+  ruleta_negro.png          99x48     boton Negro
+  ruleta_verde.png          99x48     boton Verde
+  ruleta_color_sel.png      99x48     marco de seleccion (fondo transparente,
+                                      se dibuja ENCIMA del color elegido)
+  ruleta_girar.png          314x46    boton GIRAR (9 partes, esquina 8)
+  ruleta_girar_hover.png    314x46    con el mouse encima
+  ruleta_girar_off.png      314x46    desactivado
+  panel_btn.png             72x32     botones +10, +50, Minimo, x2, etc.
+  panel_btn_hover.png       72x32     (compartidos con el Yunque y la Maquina)
+  panel_btn_off.png         72x32
+  panel_separador.png       ~568x6    linea de arriba del pie del panel
+Los textos y numeros (apuesta, "Rojo x2", 45%) los dibuja el codigo encima.
+"""
+
 import math
 import random
 
@@ -390,23 +424,68 @@ class RoulettePanel(AnvilPanel):
     def _draw_wheel(self, screen, cx, cy, radius, angle):
 
         track = radius + 15
+        outer = track + 5
 
-        pygame.draw.circle(screen, (22, 24, 28), (cx, cy), track + 5)
-        pygame.draw.circle(screen, (78, 84, 94), (cx, cy), track)
-        pygame.draw.circle(screen, GOLD, (cx, cy), track + 5, 3)
+        # ---- aro fijo (tu imagen o dibujo) ----
+        ring = self._skin("ruleta_aro.png", (outer * 2, outer * 2))
 
-        for deg in (45, 135, 225, 315):
+        if ring is not None:
 
-            a = math.radians(deg)
-            dx = cx + math.cos(a) * (radius + 9)
-            dy = cy + math.sin(a) * (radius + 9)
+            screen.blit(ring, ring.get_rect(center=(cx, cy)))
 
-            diamond = [
-                (dx, dy - 5), (dx + 4, dy), (dx, dy + 5), (dx - 4, dy)
+        else:
+
+            pygame.draw.circle(screen, (22, 24, 28), (cx, cy), track + 5)
+            pygame.draw.circle(screen, (78, 84, 94), (cx, cy), track)
+            pygame.draw.circle(screen, GOLD, (cx, cy), track + 5, 3)
+
+            for deg in (45, 135, 225, 315):
+
+                a = math.radians(deg)
+                dx = cx + math.cos(a) * (radius + 9)
+                dy = cy + math.sin(a) * (radius + 9)
+
+                diamond = [
+                    (dx, dy - 5), (dx + 4, dy), (dx, dy + 5), (dx - 4, dy)
+                ]
+
+                pygame.draw.polygon(screen, GOLD, diamond)
+                pygame.draw.polygon(screen, GOLD_DARK, diamond, 1)
+
+        # ---- rueda que gira (tu imagen o dibujo) ----
+        disc = self._skin("ruleta_rueda.png", (radius * 2, radius * 2))
+
+        if disc is not None:
+
+            # la imagen se dibuja con el casillero 0 (verde) arriba
+            spun = pygame.transform.rotozoom(disc, -(angle + 90.0), 1.0)
+            screen.blit(spun, spun.get_rect(center=(cx, cy)))
+
+        else:
+
+            self._draw_disc_code(screen, cx, cy, radius, angle)
+
+        # ---- puntero ----
+        tip_img = self._raw("ruleta_puntero.png")
+
+        if tip_img is not None:
+
+            screen.blit(
+                tip_img, tip_img.get_rect(midbottom=(cx, cy - track - 2))
+            )
+
+        else:
+
+            tip = [
+                (cx - 9, cy - track - 20),
+                (cx + 9, cy - track - 20),
+                (cx, cy - track - 3),
             ]
 
-            pygame.draw.polygon(screen, GOLD, diamond)
-            pygame.draw.polygon(screen, GOLD_DARK, diamond, 1)
+            pygame.draw.polygon(screen, GOLD, tip)
+            pygame.draw.polygon(screen, GOLD_DARK, tip, 2)
+
+    def _draw_disc_code(self, screen, cx, cy, radius, angle):
 
         inner = radius * 0.60
 
@@ -470,15 +549,6 @@ class RoulettePanel(AnvilPanel):
             screen, GOLD_DARK, (cx, cy), max(5, int(radius * 0.11)), 2
         )
 
-        tip = [
-            (cx - 9, cy - track - 20),
-            (cx + 9, cy - track - 20),
-            (cx, cy - track - 3),
-        ]
-
-        pygame.draw.polygon(screen, GOLD, tip)
-        pygame.draw.polygon(screen, GOLD_DARK, tip, 2)
-
     def _ball_state(self, radius, st):
 
         if st.spinning:
@@ -521,6 +591,13 @@ class RoulettePanel(AnvilPanel):
         bx = int(cx + math.cos(a) * dist)
         by = int(cy + math.sin(a) * dist)
 
+        ball = self._skin("ruleta_bola.png", (16, 16))
+
+        if ball is not None:
+
+            screen.blit(ball, ball.get_rect(center=(bx, by)))
+            return
+
         pygame.draw.circle(screen, (16, 16, 18), (bx + 2, by + 3), 7)
         pygame.draw.circle(screen, (232, 188, 62), (bx, by), 7)
         pygame.draw.circle(screen, GOLD_DARK, (bx, by), 7, 1)
@@ -544,12 +621,14 @@ class RoulettePanel(AnvilPanel):
             pygame.draw.rect(screen, C_PANEL, panel, border_radius=16)
             pygame.draw.rect(screen, C_EDGE, panel, 4, border_radius=16)
 
-        title = self._font(54).render("Ruleta", True, C_LIGHT)
-        shade = self._font(54).render("Ruleta", True, C_EDGE)
+        if not self._title(screen, panel, "ruleta_titulo.png"):
 
-        t_rect = title.get_rect(midtop=(panel.centerx, panel.y + 22))
-        screen.blit(shade, t_rect.move(0, 3))
-        screen.blit(title, t_rect)
+            title = self._font(54).render("Ruleta", True, C_LIGHT)
+            shade = self._font(54).render("Ruleta", True, C_EDGE)
+
+            t_rect = title.get_rect(midtop=(panel.centerx, panel.y + 22))
+            screen.blit(shade, t_rect.move(0, 3))
+            screen.blit(title, t_rect)
 
         cx, cy = lay["wheel"]
         radius = lay["radius"]
@@ -605,11 +684,26 @@ class RoulettePanel(AnvilPanel):
             if disabled and not on:
                 fill = (96, 104, 112)
 
-            pygame.draw.rect(screen, fill, rect, border_radius=6)
-            pygame.draw.rect(
-                screen, GOLD if on else C_EDGE, rect, 3 if on else 2,
-                border_radius=6,
+            tab_img = self._nine(
+                rect.size,
+                "ruleta_pestana_sel.png" if on else "ruleta_pestana.png", 8,
             )
+
+            if tab_img is not None:
+
+                if disabled and not on:
+                    tab_img = tab_img.copy()
+                    tab_img.set_alpha(150)
+
+                screen.blit(tab_img, rect)
+
+            else:
+
+                pygame.draw.rect(screen, fill, rect, border_radius=6)
+                pygame.draw.rect(
+                    screen, GOLD if on else C_EDGE, rect, 3 if on else 2,
+                    border_radius=6,
+                )
 
             icon = self._item_icon(CURRENCIES[key]["icon"], 24)
             amount = int(getattr(game, CURRENCIES[key]["attr"], 0))
@@ -636,14 +730,45 @@ class RoulettePanel(AnvilPanel):
             if disabled and not selected:
                 fill = tuple(int(c * 0.55 + 60 * 0.45) for c in fill)
 
-            pygame.draw.rect(screen, fill, rect, border_radius=8)
+            color_img = self._nine(
+                rect.size, f"ruleta_{NAMES[letter].lower()}.png", 8
+            )
 
-            if selected:
-                pygame.draw.rect(screen, GOLD, rect, 4, border_radius=8)
-            elif rect.collidepoint(mouse) and not disabled:
-                pygame.draw.rect(screen, (214, 218, 222), rect, 2, border_radius=8)
+            if color_img is not None:
+
+                if disabled and not selected:
+                    color_img = color_img.copy()
+                    color_img.set_alpha(150)
+
+                screen.blit(color_img, rect)
+
+                sel_img = self._nine(rect.size, "ruleta_color_sel.png", 8)
+
+                if selected:
+                    if sel_img is not None:
+                        screen.blit(sel_img, rect)
+                    else:
+                        pygame.draw.rect(screen, GOLD, rect, 4, border_radius=8)
+                elif (
+                    rect.collidepoint(mouse) and not disabled
+                    and sel_img is not None
+                ):
+                    hover = sel_img.copy()
+                    hover.set_alpha(110)
+                    screen.blit(hover, rect)
+
             else:
-                pygame.draw.rect(screen, C_EDGE, rect, 2, border_radius=8)
+
+                pygame.draw.rect(screen, fill, rect, border_radius=8)
+
+                if selected:
+                    pygame.draw.rect(screen, GOLD, rect, 4, border_radius=8)
+                elif rect.collidepoint(mouse) and not disabled:
+                    pygame.draw.rect(
+                        screen, (214, 218, 222), rect, 2, border_radius=8
+                    )
+                else:
+                    pygame.draw.rect(screen, C_EDGE, rect, 2, border_radius=8)
 
             name = self._font(26).render(
                 f"{NAMES[letter]} x{MULT[letter]}", True, (255, 255, 255)
@@ -681,15 +806,24 @@ class RoulettePanel(AnvilPanel):
 
         spin_rect = lay["spin"]
 
-        if can_spin and spin_rect.collidepoint(mouse):
-            fill = (176, 130, 46)
-        elif can_spin:
-            fill = (150, 108, 36)
-        else:
-            fill = (128, 138, 146)
+        spin_hot = can_spin and spin_rect.collidepoint(mouse)
+        spin_img = self._btn_img(spin_rect, can_spin, spin_hot, "ruleta_girar")
 
-        pygame.draw.rect(screen, fill, spin_rect, border_radius=8)
-        pygame.draw.rect(screen, C_EDGE, spin_rect, 3, border_radius=8)
+        if spin_img is not None:
+
+            screen.blit(spin_img, spin_rect)
+
+        else:
+
+            if spin_hot:
+                fill = (176, 130, 46)
+            elif can_spin:
+                fill = (150, 108, 36)
+            else:
+                fill = (128, 138, 146)
+
+            pygame.draw.rect(screen, fill, spin_rect, border_radius=8)
+            pygame.draw.rect(screen, C_EDGE, spin_rect, 3, border_radius=8)
 
         if st.busy:
             spin_text = "Girando…"
@@ -710,9 +844,8 @@ class RoulettePanel(AnvilPanel):
 
         fy = lay["footer"]
 
-        pygame.draw.line(
-            screen, C_EDGE,
-            (panel.x + MARGIN, fy - 16), (panel.right - MARGIN, fy - 16), 2,
+        self._separator(
+            screen, panel.x + MARGIN, panel.right - MARGIN, fy - 16
         )
 
         hint_color = (255, 150, 140) if lack and not st.busy else (214, 218, 222)
