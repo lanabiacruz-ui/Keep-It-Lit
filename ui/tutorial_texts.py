@@ -153,7 +153,7 @@ TEXTS = [
         ),
         "tuto": [
             "Tienda: está al norte de la sala central. Acercate al vendedor hasta que aparezca la tecla [[F]] y apretala. Se cierra con [[E]] o [[ESC]].",
-            "Ahí gastás tus monedas en luces, objetos y construcciones. Algunos productos se desbloquean al llegar a cierta oleada en las salas de combate.",
+            "Ahí gastás tus monedas en luces, objetos y construcciones. Algunos productos se desbloquean al terminar cierta oleada en las salas de combate.",
         ],
         "hint": "La tienda queda al norte de la sala central. Cuando estés cerca del vendedor, apretá [[F]].",
         "cheer": "¡Bienvenido a la tienda!",
@@ -294,9 +294,9 @@ TEXTS = [
             "lanzás una bola de fuego. ¡Probala!"
         ),
         "tuto": [
-            "Antorcha: se desbloquea en la tienda al empezar la oleada {antorcha_wave} (en la Zona 1). Con [[G]] cambiás de golpe y lanzás una bola de fuego. ¡Probala!",
+            "Antorcha: se desbloquea en la tienda al terminar la oleada {antorcha_wave} (en la Zona 1). Con [[G]] cambiás de golpe y lanzás una bola de fuego. ¡Probala!",
         ],
-        "hint": "La antorcha se desbloquea en la tienda al llegar a la oleada {antorcha_wave}. Con ella equipada, usá [[G]] para cambiar de golpe.",
+        "hint": "La antorcha se desbloquea en la tienda al terminar la oleada {antorcha_wave}. Con ella equipada, usá [[G]] para cambiar de golpe.",
         "cheer": "¡FUEGO! Sos un pirotécnico.",
     },
 

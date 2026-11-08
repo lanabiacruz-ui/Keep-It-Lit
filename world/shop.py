@@ -30,7 +30,7 @@ BG_IMAGE = TIENDA_DIR / "vendedor_fondo.png"
 # cambiarlo, editá las listas de abajo.
 #
 # Cada lista va ORDENADA de menor a mayor oleada: el primer item se
-# desbloquea al EMPEZAR la oleada 1 de esa zona, el segundo al empezar la
+# desbloquea al TERMINAR la oleada 1 de esa zona, el segundo al terminar la
 # oleada 2, y asi. (La ultima oleada de cada zona es la del jefe.)
 #
 #   mapa -> al llegar al Centro (la sala central que conecta todo)

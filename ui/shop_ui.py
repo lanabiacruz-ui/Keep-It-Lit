@@ -559,12 +559,12 @@ class ShopUI:
 
         current = zone[1] if zone else self.best_wave
 
-        missing = max(0, need - current)
+        missing = max(0, need + 1 - current)
 
         if short:
             where = f" en {zone[0]}" if zone else ""
             return (
-                f"Bloqueado: empezá la oleada {need}{where} "
+                f"Bloqueado: terminá la oleada {need}{where} "
                 f"(vas por la {current})"
             )
 
@@ -573,8 +573,8 @@ class ShopUI:
             else "en cualquiera de las salas de combate"
         )
 
-        if missing == 0:
-            tail = f"Ya estás en la oleada {need}: empezala y es tuyo."
+        if current == need:
+            tail = f"Ya estás en la oleada {need}: terminala y es tuyo."
         else:
             tail = (
                 f"Vas por la oleada {current}: te "
@@ -583,7 +583,7 @@ class ShopUI:
             )
 
         return (
-            f"BLOQUEADO: se desbloquea al empezar la oleada {need} "
+            f"BLOQUEADO: se desbloquea al terminar la oleada {need} "
             f"{where}. {tail}"
         )
 

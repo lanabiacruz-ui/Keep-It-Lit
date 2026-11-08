@@ -1709,7 +1709,7 @@ class NewGame:
                     "lanzas una bola de fuego. ¡Pruébala!"
                 ),
                 "tuto": [
-                    f"ANTORCHA: se desbloquea en la tienda al empezar la oleada {SHOP_UNLOCK_WAVES['antorcha']} (en la Zona 1). Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
+                    f"ANTORCHA: se desbloquea en la tienda al terminar la oleada {SHOP_UNLOCK_WAVES['antorcha']} (en la Zona 1). Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
                 ],
                 "target": lambda g: (
                     None
@@ -3495,8 +3495,8 @@ class NewGame:
 
     def _req_met(self, tag, wave):
 
-        """True si ya cumpliste ese requisito: llegar al Centro o EMPEZAR
-        la oleada N de esa zona (o haberla pasado)."""
+        """True si ya cumpliste ese requisito: llegar al Centro o TERMINAR
+        la oleada N de esa zona."""
 
         if tag == CENTER_TAG:
             return "central" in self.zones_seen
@@ -3505,10 +3505,7 @@ class NewGame:
 
             if arena.cfg.zone_tag == tag:
 
-                return arena.wave > wave or (
-                    arena.wave == wave
-                    and arena.state in (arena.WAVE, arena.CLEAR)
-                )
+                return arena.wave > wave
 
         return False
 
@@ -3531,7 +3528,7 @@ class NewGame:
     def _check_shop_unlocks(self):
 
         """Muestra el cartel cuando conseguis un objeto nuevo de la tienda
-        (el mapa al llegar al centro, el resto al empezar cada oleada)."""
+        (el mapa al llegar al centro, el resto al terminar cada oleada)."""
 
         now = self._shop_unlocked_now()
 
