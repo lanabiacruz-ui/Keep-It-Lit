@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-08T13:08:18",
+    "last_played": "2026-11-08T13:55:00",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 897,
-    "y": 123,
-    "coins": 192246,
+    "x": 952,
+    "y": 146,
+    "coins": 192298,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
@@ -15,14 +15,17 @@
     "vida": 1.0,
     "escudo": 1.0,
     "inventory": [
-        null,
+        [
+            "gelea",
+            15
+        ],
         [
             "polvora",
-            14
+            15
         ],
         [
             "aceite",
-            6
+            15
         ],
         [
             "martillo",
@@ -38,23 +41,26 @@
         ]
     ],
     "collected": [
-        "moneda_pasillo_tienda#1",
-        "moneda_pasillo_cabana#1",
-        "moneda_pasillo_der#0",
-        "madera_02#0",
-        "moneda5_pasillo_cofres#0",
         "moneda5_sala_cofres#0",
         "moneda_sala_cofres#1",
-        "moneda_sala_central#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_pasillo_izq#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_sala_central#1",
-        "madera_04#0",
         "moneda_pasillo_cabana#0",
+        "moneda5_pasillo_cofres#0",
         "moneda_sala_cofres#0",
+        "aceite_01#0",
         "madera_01#0",
-        "madera_03#0"
+        "moneda_pasillo_cofres#0",
+        "moneda_pasillo_tienda#1",
+        "madera_02#0",
+        "madera_05#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_izq#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_der#0",
+        "moneda_sala_central#0",
+        "cera_01#0",
+        "moneda_pasillo_cabana#1",
+        "madera_03#0",
+        "madera_04#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -87,30 +93,30 @@
     "placeables": [
         {
             "t": "faro",
-            "x": 1033,
-            "y": 169,
+            "x": 1034,
+            "y": 170,
             "fuel": 0.0
         },
         {
             "t": "cofre",
-            "x": 1013,
+            "x": 905,
             "y": 169,
             "slots": [
-                [
-                    "aceite",
-                    15
-                ],
-                [
-                    "madera",
-                    3
-                ],
                 [
                     "hongo_azul",
                     15
                 ],
                 [
                     "polvora",
+                    13
+                ],
+                [
+                    "aceite",
                     15
+                ],
+                [
+                    "madera",
+                    4
                 ],
                 [
                     "aceite",
@@ -118,22 +124,19 @@
                 ],
                 [
                     "aceite",
-                    15
+                    6
                 ],
                 [
                     "hongo_azul",
                     6
                 ],
-                [
-                    "cera",
-                    3
-                ]
+                null
             ]
         },
         {
             "t": "faro",
-            "x": 1035,
-            "y": 152,
+            "x": 1034,
+            "y": 155,
             "fuel": 0.0
         },
         {
@@ -222,6 +225,26 @@
                 "cur": "coins",
                 "pick": "R"
             }
+        },
+        {
+            "t": "bolsa",
+            "x": 878,
+            "y": 175,
+            "slots": [
+                [
+                    "cera",
+                    4
+                ],
+                [
+                    "aceite",
+                    1
+                ],
+                [
+                    "polvora",
+                    1
+                ],
+                null
+            ]
         }
     ],
     "enemies_seen": [
@@ -241,10 +264,10 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1471,
+        "items_used": 1472,
         "chests_opened": 67,
-        "purchases": 94,
-        "fireballs": 3054,
+        "purchases": 96,
+        "fireballs": 3083,
         "kills": 369
     },
     "zones_seen": [
@@ -288,7 +311,16 @@
     "tuto_seen": [
         0
     ],
-    "death_drops": [],
+    "death_drops": [
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 344,
+            "y": 210,
+            "map": "mapa1",
+            "ttl": 284.7
+        }
+    ],
     "ganzua_uses": 1,
     "boss_intro_seen": true,
     "enemies_claimed": [

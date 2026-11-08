@@ -2633,6 +2633,13 @@ class PlaceableManager:
 
         self.clock += dt
 
+        game.collision_map.static_blockers = [
+            obj.rect.copy() for obj in self.objects
+            if obj.kind != "bolsa"
+            and obj.fly is None
+            and obj is not self.dragging
+        ]
+
         for obj in self.objects:
 
             if obj.fly is not None:

@@ -16,6 +16,7 @@ class CollisionMap:
         # Rects de cosas moviles (slimes) que el jugador no puede atravesar.
         # Los actualiza el juego en cada frame.
         self.dynamic_blockers = []
+        self.static_blockers = []
 
         # --------------------------------------------------
         # COLISIONES DEL MAPA 1
@@ -299,6 +300,11 @@ class CollisionMap:
         """
 
         for blocker in self.dynamic_blockers:
+
+            if test.colliderect(blocker) and not current.colliderect(blocker):
+                return True
+
+        for blocker in self.static_blockers:
 
             if test.colliderect(blocker) and not current.colliderect(blocker):
                 return True

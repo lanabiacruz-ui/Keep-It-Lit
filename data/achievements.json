@@ -13,12 +13,13 @@
         "zona_1": "2026-11-04T21:35:56",
         "zona_2": "2026-11-07T19:38:43",
         "region_1": "2026-11-07T19:38:56",
-        "exterminador": "2026-11-07T22:10:08"
+        "exterminador": "2026-11-07T22:10:08",
+        "gelatinero": "2026-11-08T13:54:10"
     },
     "counters": {
         "defeats": 36,
-        "fireballs": 278,
-        "slimes": 24,
+        "fireballs": 307,
+        "slimes": 30,
         "chests": 18,
         "kills": 260,
         "doors": 41

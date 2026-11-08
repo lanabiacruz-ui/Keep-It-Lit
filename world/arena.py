@@ -191,6 +191,8 @@ TRONCO_SHOTS = 3
 TRONCO_SPREAD = 24.0
 TRONCO_LEAD = 0.45
 TRONCO_ANIM_FRAME = 0.12
+TRONCO_IDLE_FRAME = 0.2
+TRONCO_WALK_FRAME = 0.09
 
 TRONCO_SPEED = 70.0
 TRONCO_KEEP_DIST = 60.0
@@ -2076,13 +2078,24 @@ class TroncoArt:
 
     def __init__(self):
 
-        idle = load_strip(COMBAT_DIR / "tronco.png")
-        charge = load_strip(COMBAT_DIR / "tronco_carga.png")
-        shoot = load_strip(COMBAT_DIR / "tronco_disparo.png")
+        idle = (
+            load_strip(COMBAT_DIR / "tronco_idle.png")
+            or load_strip(COMBAT_DIR / "tronco.png")
+        )
+        walk = load_strip(COMBAT_DIR / "tronco_anim.png")
+        charge = (
+            load_strip(COMBAT_DIR / "tronco_carga_anim.png")
+            or load_strip(COMBAT_DIR / "tronco_carga.png")
+        )
+        shoot = (
+            load_strip(COMBAT_DIR / "tronco_disparo_anim.png")
+            or load_strip(COMBAT_DIR / "tronco_disparo.png")
+        )
         hit = load_image(COMBAT_DIR / "tronco_golpe.png")
         shot = load_image(COMBAT_DIR / "bola_enemiga.png")
 
         self.idle = idle or [self._placeholder("idle")]
+        self.walk = walk or self.idle
         self.charge = charge or [
             self._placeholder("charge", k) for k in (0.4, 1.0)
         ]
@@ -2148,6 +2161,7 @@ class TroncoArt:
 
             self._scaled = {
                 "idle": scale(self.idle),
+                "walk": scale(self.walk),
                 "charge": scale(self.charge),
                 "shoot": scale(self.shoot),
                 "hit": pygame.transform.scale(self.hit, (tpx, tpx)),
@@ -2263,6 +2277,8 @@ class Tronco(Enemy):
         self.phase = self.IDLE
         self.phase_t = random.uniform(*TRONCO_FIRST_DELAY)
 
+        self.walking = False
+
         self.light_radius = 0.0
 
         self.target_vel = pygame.Vector2()
@@ -2349,6 +2365,7 @@ class Tronco(Enemy):
 
         self.last_target = target.copy()
         self.anim_t += dt
+        self.walking = False
 
         if self.flash > 0:
             self.flash = max(0.0, self.flash - dt)
@@ -2424,7 +2441,7 @@ class Tronco(Enemy):
 
         if dist > ideal + TRONCO_BAND:
 
-            self._walk(
+            self.walking = self._walk(
                 dt, self.nav_dir(target, collision_map, dt), collision_map
             )
 
@@ -2432,7 +2449,7 @@ class Tronco(Enemy):
 
         elif dist < ideal - TRONCO_BAND:
 
-            self._walk(dt, -toward, collision_map)
+            self.walking = self._walk(dt, -toward, collision_map)
 
         if (
             self.phase_t <= 0
@@ -2458,9 +2475,10 @@ class Tronco(Enemy):
             if self.phase == self.WINDUP:
 
                 frames = sprites["charge"]
-                index = int(self.anim_t / TRONCO_ANIM_FRAME) % len(frames)
 
                 k = 1.0 - max(0.0, self.phase_t) / TRONCO_WINDUP
+
+                index = min(len(frames) - 1, int(k * len(frames)))
                 shake = int(math.sin(self.anim_t * 55) * 1.5 * k * camera.zoom)
 
             elif self.phase == self.SHOOT:
@@ -2469,10 +2487,15 @@ class Tronco(Enemy):
                 progress = 1.0 - max(0.0, self.phase_t) / TRONCO_SHOOT_TIME
                 index = min(len(frames) - 1, int(progress * len(frames)))
 
+            elif self.walking:
+
+                frames = sprites["walk"]
+                index = int(self.anim_t / TRONCO_WALK_FRAME) % len(frames)
+
             else:
 
                 frames = sprites["idle"]
-                index = int(self.anim_t / (TRONCO_ANIM_FRAME * 4)) % len(frames)
+                index = int(self.anim_t / TRONCO_IDLE_FRAME) % len(frames)
 
             img = frames[index]
 
