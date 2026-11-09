@@ -2,11 +2,11 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-09T01:37:30",
+    "last_played": "2026-11-09T02:42:07",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 954,
-    "y": 166,
+    "x": 899,
+    "y": 134,
     "coins": 216300,
     "gems": 5,
     "gems_green": 1,
@@ -38,25 +38,25 @@
         ]
     ],
     "collected": [
-        "moneda_sala_cofres#1",
-        "moneda5_sala_cofres#0",
-        "moneda_pasillo_cofres#0",
-        "cera_01#0",
-        "moneda_pasillo_izq#0",
-        "aceite_01#0",
         "moneda_sala_central#0",
-        "moneda_pasillo_cabana#1",
-        "madera_02#0",
-        "madera_04#0",
+        "aceite_01#0",
+        "moneda_pasillo_izq#0",
         "madera_05#0",
         "moneda_pasillo_cabana#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_sala_central#1",
-        "moneda_pasillo_tienda#1",
-        "madera_03#0",
-        "moneda5_pasillo_cofres#0",
-        "madera_01#0",
+        "madera_04#0",
         "moneda_pasillo_der#0",
+        "moneda5_sala_cofres#0",
+        "moneda_sala_central#1",
+        "madera_01#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_sala_cofres#1",
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_cofres#0",
+        "madera_03#0",
+        "moneda_pasillo_tienda#0",
+        "madera_02#0",
+        "moneda_pasillo_cabana#1",
+        "cera_01#0",
         "moneda_sala_cofres#0"
     ],
     "item_seed": 757481128,
@@ -253,7 +253,7 @@
             "t": "fogata",
             "x": 940,
             "y": 425,
-            "fuel": 1288.26
+            "fuel": 498.65
         }
     ],
     "enemies_seen": [
@@ -390,5 +390,6 @@
         "tacho",
         "yunque"
     ],
-    "finished": false
+    "finished": false,
+    "shop_intro_seen": true
 }

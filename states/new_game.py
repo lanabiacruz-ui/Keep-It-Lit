@@ -69,6 +69,7 @@ from ui.shop_plan import (
     sanitize_draft,
 )
 from ui.tutorial import Tutorial
+from ui.shop_dialog import ShopkeeperDialog
 from ui.guide import Guide
 from ui.Zone_banner import ZoneBanner
 from ui.achievement_toast import AchievementToast
@@ -601,6 +602,11 @@ class NewGame:
 
         self.boss2_intro_seen = bool(
             self.save_data.get("boss2_intro_seen", False)
+        )
+
+        # la charla con el vendedor rojo se ve completa solo la primera vez
+        self.shop_intro_seen = bool(
+            self.save_data.get("shop_intro_seen", False)
         )
 
         self.gems_green = int(self.save_data.get("gems_green", 0))
@@ -3783,6 +3789,26 @@ class NewGame:
 
         return out
 
+    def _talk_to_shopkeeper(self):
+        """La primera vez, Escupin te cuenta un poquito antes de abrir la
+        tienda. Despues la tienda se abre directo."""
+
+        if self.shop_intro_seen or self.tutorial is not None:
+
+            self._open_shop()
+
+            return
+
+        self.shop_intro_seen = True
+
+        self.tutorial = ShopkeeperDialog((self.width, self.height))
+
+    def _after_dialog(self, closed):
+        """Cuando termina la charla del vendedor, se abre la tienda."""
+
+        if isinstance(closed, ShopkeeperDialog):
+            self._open_shop()
+
     def _open_shop(self):
 
         if self.shop is not None:
@@ -4068,6 +4094,7 @@ class NewGame:
             "ganzua_uses": self.ganzua_uses,
             "boss_intro_seen": self.boss_intro_seen,
             "boss2_intro_seen": self.boss2_intro_seen,
+            "shop_intro_seen": self.shop_intro_seen,
             "gems": self.gems,
             "gems_green": self.gems_green,
 
@@ -4740,7 +4767,11 @@ class NewGame:
 
             if result == "close" or not self.tutorial.active:
 
+                closed = self.tutorial
+
                 self.tutorial = None
+
+                self._after_dialog(closed)
 
             return None
 
@@ -5305,7 +5336,7 @@ class NewGame:
                     self.player
                 ):
 
-                    self._open_shop()
+                    self._talk_to_shopkeeper()
 
                     return None
 
@@ -5390,7 +5421,11 @@ class NewGame:
 
             if not self.tutorial.active:
 
+                closed = self.tutorial
+
                 self.tutorial = None
+
+                self._after_dialog(closed)
 
                 if getattr(self, "_intro_pending", False):
                     self._intro_pending = False

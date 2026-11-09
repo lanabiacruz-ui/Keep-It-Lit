@@ -25,16 +25,19 @@ CHEERS = [
     "¡Excelente! Cenizo está orgulloso.",
     "¡Ese es mi aventurero!",
     "¡Chispa! Seguí así.",
+    "¡Buuu... perdón, quise decir BRAVO!",
+    "¡Hasta mi esqueleto aplaude! (No tengo esqueleto.)",
+    "¡Eso me dio tanta emoción que casi me muero! Otra vez.",
 ]
 
 FAREWELL = (
     "¡Terminaste el entrenamiento! Ya sabés lo básico. "
-    "Yo me quedo por acá, ¡que tu luz nunca se apague!"
+    "Yo me quedo por acá, flotando sin hacer nada, que es mi especialidad. ¡Que tu luz nunca se apague!"
 )
 
 LOW_LIGHT = [
-    "¡Ey, tu luz está bajita! Usá madera, resina o aceite con [[F]].",
-    "¡Se está apagando! Comé algo de luz antes de que sea tarde.",
+    "¡Ey, tu luz está bajita! Usá madera, resina o aceite con [[F]]. ¡No te sumes al club de los fantasmas todavía!",
+    "¡Se está apagando! Comé algo de luz antes de que sea tarde. ¡Todavía no tengo con quién jugar a las cartas!",
 ]
 
 # segundos sin avanzar antes del 1er, 2do, 3er... consejo del mismo paso

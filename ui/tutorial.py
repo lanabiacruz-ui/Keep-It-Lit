@@ -70,21 +70,48 @@ FRAME_FILL_ALPHA = 205
 
 FRAME_BACKING = (255, 255, 255)
 
+# Colores de Cenizo en un solo lugar. Otros personajes (ver
+# ui/shop_dialog.py) heredan de Tutorial y cambian THEME.
+DEFAULT_THEME = {
+    "name": HELPER_NAME,
+    "text": TEXT_COLOR,
+    "shadow": SHADOW_COLOR,
+    "hint": HINT_COLOR,
+    "name_bg": NAME_BG,
+    "name_edge": NAME_EDGE,
+    "name_text": NAME_TEXT,
+    "dot_on": DOT_ON,
+    "dot_on_edge": DOT_ON_EDGE,
+    "dot_done": DOT_DONE,
+    "dot_next": DOT_NEXT,
+    "arrow": ARROW_COLOR,
+    "spark": SPARK_COLOR,
+    "glow": GLOW_COLOR,
+    "frame_border": FRAME_BORDER,
+    "frame_fill": FRAME_FILL,
+    "frame_fill_alpha": FRAME_FILL_ALPHA,
+}
+
 _MARK = re.compile(r"(\[\[|\]\])")
 
 
 _GHOST_FRAMES = {}
 
 
-def ghost_frame(surf):
-    """Pinta el panel con los colores de Cenizo (azul y azul transparente)."""
+def ghost_frame(surf, border=None, fill=None, fill_alpha=None):
+    """Pinta el panel con los colores de Cenizo (azul y azul transparente).
+    Con border / fill / fill_alpha se pinta con otros colores."""
 
-    key = surf.get_size()
+    border = border or FRAME_BORDER
+    fill = fill or FRAME_FILL
+    fill_alpha = FRAME_FILL_ALPHA if fill_alpha is None else fill_alpha
+
+    key = (surf.get_size(), border, fill, fill_alpha)
 
     if key in _GHOST_FRAMES:
         return _GHOST_FRAMES[key].copy()
 
-    w, h = key
+    w, h = surf.get_size()
 
     out = pygame.Surface((w, h), pygame.SRCALPHA)
 
@@ -99,11 +126,11 @@ def ghost_frame(surf):
             t = max(0.0, min(1.0, ((r + g + b) / 3 - 95) / 70))
 
             color = tuple(
-                int(FRAME_BORDER[i] + (FRAME_FILL[i] - FRAME_BORDER[i]) * t)
+                int(border[i] + (fill[i] - border[i]) * t)
                 for i in range(3)
             )
 
-            alpha = (255 + (FRAME_FILL_ALPHA - 255) * t) * a / 255
+            alpha = (255 + (fill_alpha - 255) * t) * a / 255
 
             out.set_at((x, y), (*color, int(alpha)))
 
@@ -210,10 +237,13 @@ def runs(text, flags):
     return out
 
 
-def draw_marked_line(screen, font, text, flags, x, y, text_color=None):
+def draw_marked_line(
+    screen, font, text, flags, x, y, text_color=None, shadow_color=None
+):
     """Dibuja una linea; lo marcado con [[ ]] sale como boton de tecla."""
 
     color = text_color or TEXT_COLOR
+    shadow = shadow_color or SHADOW_COLOR
 
     for chunk, flag in runs(text, flags):
 
@@ -243,7 +273,7 @@ def draw_marked_line(screen, font, text, flags, x, y, text_color=None):
 
         else:
 
-            screen.blit(font.render(chunk, True, SHADOW_COLOR), (x + 1, y + 1))
+            screen.blit(font.render(chunk, True, shadow), (x + 1, y + 1))
             screen.blit(font.render(chunk, True, color), (x, y))
 
         x += w
@@ -265,6 +295,8 @@ class Tutorial:
     BLIPS = ("talk_a", "talk_b", "talk_c", "talk_d")
 
     HOP_TIME = 0.4
+
+    THEME = DEFAULT_THEME
 
     def __init__(
         self,
@@ -297,22 +329,15 @@ class Tutorial:
 
         self.sparks = []
 
-        char = self._load_cropped(CHARACTER_IMAGE, CHARACTER_CROP)
+        char = self._source_character()
         frame = self._load_cropped(FRAME_IMAGE, FRAME_CROP)
-
-        if char is None:
-            char = self._fallback_character(319)
 
         if frame is None:
             frame = self._fallback_frame(428, 152)
 
         frame = self._solidify(frame, FRAME_BACKING)
 
-        char_w = int(char.get_width() * char_height / char.get_height())
-
-        self.character = pygame.transform.smoothscale(
-            char, (char_w, char_height)
-        )
+        self.character = self._scale_character(char, char_height)
 
         frame_height = int(
             frame.get_height() * frame_width / frame.get_width()
@@ -322,7 +347,12 @@ class Tutorial:
             frame, (frame_width, frame_height)
         )
 
-        self.frame = ghost_frame(self.frame)
+        t = self.THEME
+
+        self.frame = ghost_frame(
+            self.frame,
+            t["frame_border"], t["frame_fill"], t["frame_fill_alpha"]
+        )
 
         self.char_rect = self.character.get_rect(
             bottomright=(self.width - margin, self.height - margin)
@@ -348,12 +378,28 @@ class Tutorial:
         self._text_cache = {}
         self._fonts = {}
 
-        self.glow = self._make_glow(char_height)
+        self.glow = self._make_glow(char_height, t["glow"])
 
         self._reset_typing()
         self._pop()
 
     # ---------------------------------------------------------- imagenes
+
+    def _source_character(self):
+        """Imagen original del personaje (sin escalar)."""
+
+        char = self._load_cropped(CHARACTER_IMAGE, CHARACTER_CROP)
+
+        if char is None:
+            char = self._fallback_character(319)
+
+        return char
+
+    def _scale_character(self, char, char_height):
+
+        char_w = int(char.get_width() * char_height / char.get_height())
+
+        return pygame.transform.smoothscale(char, (char_w, char_height))
 
     @staticmethod
     def _find_image(name):
@@ -446,7 +492,7 @@ class Tutorial:
         return image.subsurface(area).copy()
 
     @staticmethod
-    def _make_glow(char_height):
+    def _make_glow(char_height, color=GLOW_COLOR):
         """Halo azul detras del ayudante: es un fantasma que cuida tu luz."""
 
         size = int(char_height * 1.5)
@@ -459,7 +505,7 @@ class Tutorial:
 
             alpha = int(46 * (1 - r / center) ** 2)
 
-            pygame.draw.circle(glow, (*GLOW_COLOR, alpha), (center, center), r)
+            pygame.draw.circle(glow, (*color, alpha), (center, center), r)
 
         return glow
 
@@ -730,6 +776,9 @@ class Tutorial:
 
     # ---------------------------------------------------------- dibujo
 
+    def _draw_front(self, screen, dx):
+        """Lo que se dibuja delante del personaje (por defecto nada)."""
+
     def _offset(self):
 
         distance = self.width - self.group_rect.left + 10
@@ -758,7 +807,10 @@ class Tutorial:
         """Una linea con las teclas resaltadas. count = cuantos caracteres
         mostrar (efecto maquina de escribir)."""
 
-        draw_marked_line(screen, font, text[:count], flags[:count], x, y)
+        draw_marked_line(
+            screen, font, text[:count], flags[:count], x, y,
+            self.THEME["text"], self.THEME["shadow"]
+        )
 
     def _draw_dots(self, screen, frame_pos):
 
@@ -766,6 +818,8 @@ class Tutorial:
 
         if total <= 1:
             return
+
+        t = self.THEME
 
         gap = 12
 
@@ -775,24 +829,28 @@ class Tutorial:
         for i in range(total):
 
             if i == self.index:
-                pygame.draw.circle(screen, DOT_ON, (x, y), 5)
-                pygame.draw.circle(screen, DOT_ON_EDGE, (x, y), 5, 1)
+                pygame.draw.circle(screen, t["dot_on"], (x, y), 5)
+                pygame.draw.circle(screen, t["dot_on_edge"], (x, y), 5, 1)
             else:
-                color = DOT_DONE if i < self.index else DOT_NEXT
+                color = t["dot_done"] if i < self.index else t["dot_next"]
                 pygame.draw.circle(screen, color, (x, y), 3)
 
             x += gap
 
     def _draw_name_tag(self, screen, frame_pos):
 
-        label = self._text(self.name_font, HELPER_NAME.upper(), NAME_TEXT)
+        t = self.THEME
+
+        label = self._text(self.name_font, t["name"].upper(), t["name_text"])
 
         tag = label.get_rect()
         tag.inflate_ip(18, 6)
         tag.bottomleft = (frame_pos.left + 16, frame_pos.top + 6)
 
-        pygame.draw.rect(screen, NAME_BG, tag, border_radius=8)
-        pygame.draw.rect(screen, NAME_EDGE, tag, width=2, border_radius=8)
+        pygame.draw.rect(screen, t["name_bg"], tag, border_radius=8)
+        pygame.draw.rect(
+            screen, t["name_edge"], tag, width=2, border_radius=8
+        )
 
         screen.blit(label, label.get_rect(center=tag.center))
 
@@ -816,7 +874,7 @@ class Tutorial:
                 (c - size * 2, c), (c - 1, c - 1),
             ]
 
-            pygame.draw.polygon(star, (*SPARK_COLOR, alpha), pts)
+            pygame.draw.polygon(star, (*self.THEME["spark"], alpha), pts)
 
             screen.blit(
                 star, (int(s["x"]) + dx - c, int(s["y"]) - c)
@@ -865,6 +923,8 @@ class Tutorial:
             self.character,
             self.char_rect.move(dx, bob)
         )
+
+        self._draw_front(screen, dx)
 
         self._draw_sparks(screen, dx)
 
@@ -923,7 +983,7 @@ class Tutorial:
 
         text = "   ".join(parts)
 
-        hint = self._text(self.hint_font, text, HINT_COLOR)
+        hint = self._text(self.hint_font, text, self.THEME["hint"])
 
         hint_pos = hint.get_rect(
             bottomright=(frame_pos.right - 30, frame_pos.bottom - 9)
@@ -938,14 +998,14 @@ class Tutorial:
             ty = frame_pos.bottom - 17 + int(math.sin(self.age * 6) * 2)
 
             pygame.draw.polygon(
-                screen, ARROW_COLOR,
+                screen, self.THEME["arrow"],
                 [(tx - 5, ty - 5), (tx + 5, ty - 5), (tx, ty + 3)]
             )
 
         if self.can_skip:
 
             skip = self._text(
-                self.hint_font, "K: sacar tutorial", HINT_COLOR
+                self.hint_font, "K: sacar tutorial", self.THEME["hint"]
             )
 
             screen.blit(

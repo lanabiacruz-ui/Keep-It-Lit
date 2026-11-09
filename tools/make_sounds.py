@@ -628,6 +628,31 @@ def talk_d():
     return _talk(1590, 0.05, 0.10)
 
 
+def _tonto(base, wobble=0.12, fall=0.18):
+    # blip grave, mas largo y bamboleante que el del fantasma: "bwa-bwo" de tontito
+    dur = 0.11
+    n = int(SR * dur)
+    f = Sig(
+        base * (1 - fall * i / n)
+        * (1 + wobble * math.sin(2 * math.pi * 14 * i / SR))
+        for i in range(n)
+    )
+    tone = sine(f, dur) + 0.45 * sine(f * 2, dur) + 0.12 * sine(f * 3, dur)
+    return tone * env(n, 0.004, 14)
+
+
+def tonto_a():
+    return _tonto(430)
+
+
+def tonto_b():
+    return _tonto(510, 0.10, 0.22)
+
+
+def tonto_c():
+    return _tonto(380, 0.14, 0.12)
+
+
 SOUNDS = {
     "coin": coin, "coin_big": coin_big, "pickup": pickup, "gem": gem,
     "swing": swing, "hit": hit, "hit_heavy": hit_heavy, "hurt": hurt,
@@ -651,6 +676,7 @@ SOUNDS = {
     "portal": portal, "place": place, "bite": bite,
     "slime_hit": slime_hit, "crackle": crackle, "heartbeat": heartbeat,
     "talk_a": talk_a, "talk_b": talk_b, "talk_c": talk_c, "talk_d": talk_d,
+    "tonto_a": tonto_a, "tonto_b": tonto_b, "tonto_c": tonto_c,
 }
 
 
