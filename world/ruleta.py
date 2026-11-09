@@ -49,8 +49,8 @@ WHEEL = "V" + "RNRNRNRNR" + "V" + "NRNRNRNRN"
 SLOTS = len(WHEEL)
 STEP = 360.0 / SLOTS
 
-# Premio de cada color (rojo y negro x2, verde x3).
-MULT = {"R": 2, "N": 2, "V": 3}
+# Premio de cada color (rojo y negro x2, verde x6).
+MULT = {"R": 2, "N": 2, "V": 6}
 NAMES = {"R": "Rojo", "N": "Negro", "V": "Verde"}
 
 # colores apagados, en la linea gris oscuro del resto del juego

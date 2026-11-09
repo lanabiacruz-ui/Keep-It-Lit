@@ -28,7 +28,7 @@ FRAME_CROP = None
 TUTORIAL_PAGES = [
     "¡Hola! Soy [[Cenizo]], tu ayudante. Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
     "Moverte: [[W]] [[A]] [[S]] [[D]]. Saltar: [[ESPACIO]] (sirve para esquivar a los jefes). Atacar: [[CLICK IZQ.]] (cada golpe gasta un poquito de luz).",
-    "Agarrar: acercate a algo del piso y apretá [[E]]. Soltar: [[Q]]. Soltar todo: [[CTRL + Q]] (la luz equipada se queda).",
+    "Agarrar: acercate a algo del piso y apretá [[E]]. Soltar: [[Q]]. Soltar toda la casilla: [[SHIFT + Q]]. Soltar todo: [[CTRL + Q]] (la luz equipada se queda).",
     "Lo que tirás al piso se esfuma a los [[5 MINUTOS]]. Si lo soltás junto a una bolsa o un cofre, queda adentro para siempre.",
     "Inventario: [[1]] al [[4]] son tus casilleros, [[5]] y [[6]] las pociones y [[7]] tu luz. También sirve la [[RUEDITA]] del mouse.",
     "Usar un objeto: elegilo y apretá [[F]] o [[CLICK DER.]]. Si mantenés click izquierdo sobre un casillero, te cuento qué hace.",

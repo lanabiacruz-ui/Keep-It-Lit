@@ -1,7 +1,7 @@
 {
   "madera": {
     "nombre": "Madera",
-    "descripcion": "Alimenta la llama: suma 25% de vida al fósforo.",
+    "descripcion": "Recupera 25% de la vida de la luz. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -12,7 +12,7 @@
   },
   "aceite": {
     "nombre": "Aceite",
-    "descripcion": "Deja la vida del fósforo en 75%, sin importar cuánta tenga. Además, te da más velocidad durante 6 segundos.",
+    "descripcion": "Deja la vida de la luz en 75%, tenga más o menos. Además da +30% de velocidad durante 6 s. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -28,7 +28,7 @@
   },
   "cera": {
     "nombre": "Cera",
-    "descripcion": "Hace que el fósforo se consuma más despacio durante 15 segundos: dura casi 3 veces más.",
+    "descripcion": "Durante 15 s la luz se gasta más lento: dura casi 3 veces más. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -40,7 +40,7 @@
   },
   "ganzua": {
     "nombre": "Ganzúa",
-    "descripcion": "Abre un cofre cercano sin hacer el minijuego. Tiene 3 usos y luego se rompe. No elimina la espera de 3 minutos del cofre.",
+    "descripcion": "Abre un cofre cercano sin minijuego. Tiene 3 usos y luego se rompe. El cofre sigue teniendo su espera de 3 minutos.",
     "usos": 3,
     "requiere_fosforo": false,
     "efectos": [
@@ -51,7 +51,7 @@
   },
   "polvora": {
     "nombre": "Pólvora",
-    "descripcion": "Durante 20 segundos, tu luz quema y daña a los enemigos que ilumina.",
+    "descripcion": "Durante 20 s, tu luz quema a los enemigos que ilumina (1 de daño por segundo). Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -63,7 +63,7 @@
   },
   "resina": {
     "nombre": "Resina",
-    "descripcion": "Recupera 90% de la vida del fósforo poco a poco, en 8 segundos: la barra sube sola hasta completarse.",
+    "descripcion": "Recupera 90% de la vida de la luz poco a poco, en 8 s. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -75,7 +75,7 @@
   },
   "fosforo": {
     "nombre": "Fósforo",
-    "descripcion": "Luz básica. Al recogerlo se equipa solo en la casilla aparte (no ocupa espacio del inventario) y dura 30 segundos.",
+    "descripcion": "Luz básica. Dura 30 s. Se equipa sola en la casilla aparte y no ocupa espacio del inventario.",
     "tipo": "luz",
     "efectos": [
       {
@@ -87,7 +87,7 @@
   },
   "vela": {
     "nombre": "Vela",
-    "descripcion": "Ilumina el doble que el fósforo y dura 60 segundos. Ataca lento, pero cada 20 segundos entra en furia y ataca rapidísimo. Rompe las puertas grises, algo que el fósforo no puede. Se equipa sola en la casilla aparte.",
+    "descripcion": "Ilumina el doble que el fósforo y dura 60 s. Rompe las puertas grises. Ataca lento, pero cada 20 s entra en furia y ataca muy rápido. Se equipa sola en la casilla aparte.",
     "tipo": "luz",
     "efectos": [
       {
@@ -99,7 +99,7 @@
   },
   "antorcha": {
     "nombre": "Antorcha",
-    "descripcion": "El doble que la vela en todo: ilumina el doble, dura 120 segundos, ataca el doble de rápido y el doble de fuerte. Cada 10 segundos entra en furia durante 30 segundos y ataca rapidísimo. Rompe las puertas grises. Se equipa sola en la casilla aparte.",
+    "descripcion": "La mejor luz: ilumina el doble que la vela, dura 120 s y ataca el doble de rápido y de fuerte. Rompe las puertas grises. Cada 10 s entra en furia durante 30 s y ataca muy rápido. Se equipa sola en la casilla aparte.",
     "tipo": "luz",
     "efectos": [
       {
@@ -111,7 +111,7 @@
   },
   "hongo_azul": {
     "nombre": "Hongo azul",
-    "descripcion": "Te da 25% de escudo. El escudo no se gasta con el tiempo.",
+    "descripcion": "Da 25% de escudo. El escudo no se gasta con el tiempo.",
     "requiere_fosforo": false,
     "efectos": [
       {
@@ -122,7 +122,7 @@
   },
   "repelente": {
     "nombre": "Repelente de mosquitos",
-    "descripcion": "Durante 1:45 min, el área de tu luz espanta a los mosquitos (no los mata): no se te acercan ni se pegan. Los que ya tengas pegados se sueltan.",
+    "descripcion": "Durante 1:45 min, los mosquitos no se acercan a tu luz y los que estén pegados se sueltan. No los mata. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -133,7 +133,7 @@
   },
   "iman": {
     "nombre": "Imán",
-    "descripcion": "Durante 7 minutos, tu personaje atrae automáticamente los objetos cercanos: monedas, gemas e items sueltos, sin tener que recogerlos. Se enciende y se apaga con la tecla O (apagado no gasta tiempo y te permite soltar items).",
+    "descripcion": "Durante 7 min, atrae solo los objetos cercanos: monedas, gemas e items sueltos. Tecla O: enciende y apaga. Apagado no gasta tiempo y permite soltar items.",
     "requiere_fosforo": false,
     "efectos": [
       {
@@ -144,7 +144,7 @@
   },
   "esfera": {
     "nombre": "Esfera de vidrio",
-    "descripcion": "Durante 2 minutos, tu luz tiene 25% más de radio, así que ilumina una zona mayor.",
+    "descripcion": "Durante 2 min, tu luz tiene 25% más de radio e ilumina una zona mayor. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -156,44 +156,44 @@
   },
   "mapa": {
     "nombre": "Mapa",
-    "descripcion": "Mantén click derecho con el mapa elegido para ver la forma de la dungeon con los nombres de las zonas (no muestra tu ubicación). No se gasta.",
+    "descripcion": "Mantén click derecho con el mapa elegido para ver la forma de la dungeon y el nombre de las zonas. No muestra tu posición. No se gasta.",
     "requiere_fosforo": false,
     "max_pila": 1,
     "efectos": []
   },
   "bolsa": {
     "nombre": "Bolsa",
-    "descripcion": "No va al inventario. Mantén click izquierdo sobre ella para arrastrarla; click derecho para ver qué tiene adentro. 4 casillas, 15 de cada cosa por casilla (60 en total). Si estás al lado, lo que sueltas con Q o Ctrl+Q y lo que agarras con el inventario lleno va adentro. Lo de adentro nunca vence.",
+    "descripcion": "No va al inventario. Arrástrala con click izquierdo mantenido. Click derecho: ver lo de adentro. Tiene 4 casillas de 15 unidades. Si estás al lado, lo que sueltas con Q, Shift + Q o Ctrl + Q va adentro. Lo guardado no vence.",
     "requiere_fosforo": false,
     "efectos": []
   },
   "cofre": {
     "nombre": "Cofre",
-    "descripcion": "Elígelo en la hotbar y haz click en el mapa donde quieras colocarlo: queda fijo hasta que lo recojas con el martillo, así que piensa bien dónde. Click derecho sobre él para abrirlo. 8 casillas, 15 por casilla (120 en total). Si estás al lado, lo que sueltas con Q o Ctrl+Q y lo que agarras con el inventario lleno va adentro. Lo de adentro nunca vence.",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo. Solo se recoge con el martillo. Click derecho: abrirlo. Tiene 8 casillas de 15 unidades. Si estás al lado, lo que sueltas con Q, Shift + Q o Ctrl + Q va adentro. Lo guardado no vence.",
     "requiere_fosforo": false,
     "efectos": []
   },
   "faro": {
     "nombre": "Candil",
-    "descripcion": "El candil es una lámpara antigua. No va al inventario: el vendedor lo escupe al piso. Mantén click izquierdo sobre él para arrastrarlo. Ilumina un poco y le devuelve vida a tu luz (2% por segundo) mientras estés cerca. Mientras está encendido, los mosquitos no entran en su luz y no se te pegan si estás adentro. Arranca con 90 s, aguanta hasta 240 s y cada cera suma 30 s: elige la cera y presiona F o click derecho cerca de él.",
+    "descripcion": "No va al inventario: el vendedor lo deja en el piso. Arrástralo con click izquierdo mantenido. Ilumina un poco y, si estás cerca, recupera 2% de vida de tu luz por segundo. Los mosquitos no entran en su luz. Dura 90 s (máximo 240 s): elige cera y presiona F o click derecho cerca para sumar 30 s.",
     "requiere_fosforo": false,
     "efectos": []
   },
   "fogata": {
     "nombre": "Fogata",
-    "descripcion": "Elígela y haz click donde quieras colocarla: queda fija hasta que la recojas con el martillo. Ilumina mucho, dura mucho y se alimenta con un poco de madera (elige la madera y presiona F o click derecho cerca de ella).",
+    "descripcion": "Elígela y haz click en el mapa para colocarla. Solo se recoge con el martillo. Ilumina mucho y, si estás cerca, recupera vida de tu luz. Empieza con 10 min (máximo 30 min). Se alimenta con madera: elígela y presiona F o click derecho cerca. Cada madera suma 2 min.",
     "requiere_fosforo": false,
     "efectos": []
   },
   "martillo": {
     "nombre": "Martillo",
-    "descripcion": "Herramienta: no se gasta. Elígelo en la hotbar y haz click izquierdo sobre un cofre, una fogata, un tacho, un yunque, una máquina o una ruleta que hayas colocado para soltarlo en el piso (no pasa al inventario): arrástralo con click izquierdo mantenido y al soltarlo queda fijo otra vez. Si el cofre o la máquina tienen cosas adentro, caen al piso. Solo funciona con cofres, fogatas, tachos, yunques, máquinas y ruletas.",
+    "descripcion": "Herramienta: no se gasta. Con el martillo elegido, haz click sobre un cofre, fogata, tacho, yunque, máquina o ruleta colocados para soltarlos en el piso. Arrástralos con click izquierdo mantenido y al soltarlos quedan fijos. Lo que tengan adentro cae al piso.",
     "requiere_fosforo": false,
     "max_pila": 1
   },
   "gelea": {
     "nombre": "Gelea",
-    "descripcion": "Al comerla, cura 15%, 45% o 88% de la vida de tu luz, al azar. Las curaciones grandes son raras. La sueltan los slimes.",
+    "descripcion": "Cura 15%, 45% u 88% de la vida de la luz, al azar. El 88% es raro. La sueltan los slimes. Necesita una luz encendida.",
     "requiere_fosforo": true,
     "efectos": [
       {
@@ -213,7 +213,7 @@
   },
   "hongo_amarillo": {
     "nombre": "Hongo amarillo",
-    "descripcion": "Muy raro: solo sale de los cofres. Te rodea un escudo amarillo durante 8 segundos: nada te hace daño mientras dure.",
+    "descripcion": "Muy raro: solo sale de los cofres. Te rodea un escudo amarillo durante 8 s: no recibes daño mientras dure.",
     "requiere_fosforo": false,
     "efectos": [
       {
@@ -224,13 +224,13 @@
   },
   "tacho": {
     "nombre": "Tacho",
-    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo. Elige un objeto y haz click sobre el tacho para borrar una unidad; Ctrl+click borra toda la casilla. Se traga todo, hasta la luz equipada. Candiles, bolsas y cualquier objeto que hayas soltado con el martillo también: arrástralo y suéltalo junto al tacho (la bolsa y el cofre deben estar vacíos; con el martillo se vacían solos).",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo. Solo se recoge con el martillo. Elige un objeto y haz click sobre el tacho para borrar 1 unidad. Ctrl + click borra toda la casilla. Borra todo, incluso la luz equipada.",
     "requiere_fosforo": false,
     "efectos": []
   },
   "pocion_ascua": {
     "nombre": "Poción de ascua",
-    "descripcion": "Queda armada 3 minutos. Si tu luz se apaga en ese tiempo, se reenciende sola con 60% de vida y la poción se gasta.",
+    "descripcion": "Queda activa 3 min. Si tu luz se apaga en ese tiempo, se reenciende sola con 60% de vida y la poción se gasta.",
     "tipo": "pocion",
     "requiere_fosforo": false,
     "max_pila": 1,
@@ -244,7 +244,7 @@
   },
   "pocion_invisibilidad": {
     "nombre": "Poción de invisibilidad",
-    "descripcion": "20 segundos invisible: los enemigos no te ven ni a vos ni a tu luz. Se rompe si atacás con golpe o bola de fuego.",
+    "descripcion": "Durante 20 s eres invisible: los enemigos no te ven a ti ni a tu luz. Se rompe si atacas con golpe o bola de fuego.",
     "tipo": "pocion",
     "requiere_fosforo": false,
     "max_pila": 1,
@@ -257,7 +257,7 @@
   },
   "pocion_velocidad": {
     "nombre": "Poción de velocidad",
-    "descripcion": "Velocidad x1.6 durante 10 segundos, pero tu luz se gasta un 25% más rápido.",
+    "descripcion": "Velocidad x1.6 durante 10 s, pero tu luz se gasta 25% más rápido.",
     "tipo": "pocion",
     "requiere_fosforo": false,
     "max_pila": 1,
@@ -272,7 +272,7 @@
   },
   "pocion_ira": {
     "nombre": "Poción de ira",
-    "descripcion": "15 segundos con +50% de daño y golpes sin costo de luz, también con bolas de fuego.",
+    "descripcion": "Durante 15 s haces +50% de daño y atacas sin gastar luz, con golpes y con bolas de fuego.",
     "tipo": "pocion",
     "requiere_fosforo": false,
     "max_pila": 1,
@@ -286,21 +286,21 @@
   },
   "yunque": {
     "nombre": "Yunque",
-    "descripcion": "Elígelo y haz click en el mapa para colocarlo: queda fijo hasta que lo recojas con el martillo (las mejoras no se pierden). Click derecho sobre él para abrirlo; no abre si hay enemigos cerca, así que úsalo entre oleadas. Ahí mejoras tu antorcha con monedas y monedas de gelea (las fabrica la máquina): tiene 3 engarces activos y los cambias gratis cada vez que lo abres. Las mejoras son solo para la antorcha y duran toda la partida.",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo. Solo se recoge con el martillo (las mejoras no se pierden). Click derecho: abrirlo. No abre si hay enemigos cerca. Mejora solo la antorcha con monedas y monedas de gelea. Tiene 3 engarces activos que cambias gratis cada vez que lo abres.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []
   },
   "maquina": {
     "nombre": "Máquina de gelea",
-    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo (lo de adentro cae al piso) y también la puedes tirar al tacho. Click derecho sobre ella para abrirla. Pon geleas adentro: trabaja sola mientras juegas y convierte 2 geleas en 1 moneda de gelea cada 30 segundos (caben 10 geleas). Las monedas de gelea se cobran desde su panel y se gastan en el yunque.",
+    "descripcion": "Elígela y haz click en el mapa para colocarla. Solo se suelta con el martillo (lo de adentro cae al piso). Click derecho: abrirla. Convierte 2 geleas en 1 moneda de gelea cada 30 s (caben 10 geleas). Cobra las monedas en su panel y gástalas en el yunque.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []
   },
   "ruleta": {
     "nombre": "Ruleta",
-    "descripcion": "Elígela y haz click en el mapa para colocarla: queda fija hasta que la sueltes con el martillo y también la puedes tirar al tacho. Click derecho sobre ella para abrirla; no abre si hay enemigos cerca, así que úsala entre oleadas. Apuesta monedas o monedas de gelea a rojo, negro o verde: rojo y negro duplican tu apuesta (45% de probabilidad cada uno) y verde la triplica (10%). Si pierdes, pierdes lo apostado. La apuesta va de 10 a 5000 monedas, o de 1 a 100 monedas de gelea.",
+    "descripcion": "Elígela y haz click en el mapa para colocarla. Solo se suelta con el martillo. Click derecho: abrirla. No abre si hay enemigos cerca. Apuesta monedas o monedas de gelea: rojo y negro duplican (45% cada uno) y verde multiplica por 6 (10%). Si pierdes, pierdes lo apostado. Apuesta: de 10 a 5000 monedas, o de 1 a 100 de gelea.",
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []

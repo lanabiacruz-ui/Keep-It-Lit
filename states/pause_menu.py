@@ -17,7 +17,8 @@ class PauseMenu:
         "enemies": (569, 457, 1063, 535),
         "skins": (569, 568, 802, 646),
         "achievements": (828, 568, 1063, 646),
-        "back": (569, 681, 1063, 759),
+        "resume": (569, 681, 802, 771),
+        "menu": (828, 681, 1063, 771),
     }
 
     # Botones cuyo texto NO esta en la imagen (se dibuja por codigo).
@@ -110,7 +111,19 @@ class PauseMenu:
         for key, text in self.LABELS.items():
             rect = self.button_rects[key]
 
-            surf = self.label_font.render(text, True, self.LABEL_COLOR)
+            # achica la letra hasta que entre dentro de la pastilla
+            size = max(20, round(52 * self.sy))
+            max_w = rect.width * 0.86
+
+            while True:
+                font = pygame.font.Font(None, size)
+                font.set_italic(True)
+                surf = font.render(text, True, self.LABEL_COLOR)
+
+                if surf.get_width() <= max_w or size <= 14:
+                    break
+
+                size -= 2
 
             self.screen.blit(surf, surf.get_rect(center=rect.center))
 

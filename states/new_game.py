@@ -854,6 +854,10 @@ class NewGame:
         self.no_light_timer = None
 
         self.selected_slot = "equipped"
+
+        # arrastre de items entre casilleros (click izquierdo mantenido)
+        self._slot_drag = None
+
         self.emote_wheel = EmoteWheel(self.screen)
         self.state = "playing"
 
@@ -2149,6 +2153,50 @@ class NewGame:
                 "Apagá el imán (O) para soltar items"
             )
 
+    def drop_stack(self, slot):
+        """Suelta TODAS las unidades del casillero elegido (y solo ese).
+
+        Es como apretar Q una vez por cada unidad: si hay una bolsa al
+        lado se guardan ahi, si no caen al piso.
+        """
+
+        item_id = self.hud.items[slot]
+
+        if item_id is None:
+            return
+
+        amount = max(1, int(self.hud.counts[slot]))
+
+        for _ in range(amount):
+
+            # primero a la bolsa de al lado (el cofre no); si no, al piso
+            if self.placeables.deposit(
+                self, item_id, exclude=("cofre",)
+            ) is None:
+
+                lx, ly = self._drop_landing(26)
+
+                self.world_items.append(
+                    set_expiry(WorldItem(item_id, lx, ly))
+                )
+
+        self.hud.items[slot] = None
+        self.hud.counts[slot] = 0
+
+        self.tuto_flags.add("dropped")
+
+        if amount > 1:
+
+            self.show_message(
+                f"Soltaste {amount} {self._item_name(item_id)}"
+            )
+
+        if self._magnet_active():
+
+            self.show_message(
+                "Apagá el imán (O) para soltar items"
+            )
+
     def drop_all_items(self):
         """Suelta TODO el inventario (los 4 casilleros, con todas sus unidades).
 
@@ -2197,6 +2245,149 @@ class NewGame:
         else:
 
             self.show_message("No tenés nada para soltar")
+
+    def move_slot(self, src, dst):
+        """Mueve lo que hay en el casillero src al casillero dst.
+
+        - casillero vacio: se mueve todo el stack
+        - mismo item: se juntan (hasta el maximo del stack)
+        - items distintos: se intercambian
+
+        Las pociones solo van en los marcos de pociones y los demas items
+        solo en los casilleros normales.
+        """
+
+        hud = self.hud
+
+        if (
+            not isinstance(src, int)
+            or not isinstance(dst, int)
+            or src == dst
+        ):
+            return False
+
+        a = hud.items[src]
+        b = hud.items[dst]
+
+        if a is None:
+            return False
+
+        if self._is_potion(a) != hud.is_potion_slot(dst):
+
+            self.show_message(
+                "Las pociones solo van en los marcos de pociones"
+                if self._is_potion(a)
+                else "Ese marco es solo para pociones"
+            )
+
+            return False
+
+        if b is None:
+
+            hud.items[dst] = a
+            hud.counts[dst] = hud.counts[src]
+
+            hud.items[src] = None
+            hud.counts[src] = 0
+
+        elif b == a and not self._is_potion(a):
+
+            room = self._max_stack(a) - hud.counts[dst]
+
+            if room <= 0:
+
+                self.show_message("Ese casillero ya está lleno")
+
+                return False
+
+            moved = min(room, hud.counts[src])
+
+            hud.counts[dst] += moved
+            hud.counts[src] -= moved
+
+            if hud.counts[src] <= 0:
+                hud.items[src] = None
+                hud.counts[src] = 0
+
+        else:
+
+            if self._is_potion(b) != hud.is_potion_slot(src):
+
+                self.show_message(
+                    "Las pociones solo van en los marcos de pociones"
+                    if self._is_potion(b)
+                    else "Ese marco es solo para pociones"
+                )
+
+                return False
+
+            hud.items[src], hud.items[dst] = b, a
+            hud.counts[src], hud.counts[dst] = (
+                hud.counts[dst], hud.counts[src]
+            )
+
+        self.selected_slot = dst
+
+        audio.play("pickup")
+
+        return True
+
+    def _dragged_item(self):
+        """(item, cantidad) si se esta arrastrando un item (ya se movio el
+        mouse), o None. Si se solto el click, cancela el arrastre."""
+
+        drag = self._slot_drag
+
+        if drag is None:
+            return None
+
+        if not pygame.mouse.get_pressed()[0]:
+            self._slot_drag = None
+            return None
+
+        item_id = self.hud.items[drag["from"]]
+
+        if item_id is None:
+            self._slot_drag = None
+            return None
+
+        mx, my = pygame.mouse.get_pos()
+
+        if math.hypot(mx - drag["start"][0], my - drag["start"][1]) < 6:
+            return None
+
+        return item_id, int(self.hud.counts[drag["from"]])
+
+    def _draw_dragged_item(self, drag_item):
+
+        if drag_item is None:
+            return
+
+        item_id, count = drag_item
+
+        icon = self.hud._slot_icon(item_id)
+
+        if icon is None:
+            return
+
+        mx, my = pygame.mouse.get_pos()
+
+        ghost = icon.copy()
+        ghost.set_alpha(210)
+
+        self.screen.blit(ghost, ghost.get_rect(center=(mx, my)))
+
+        if count > 1:
+
+            font = pygame.font.Font(None, 22)
+            txt = font.render(str(count), True, (255, 255, 255))
+            shadow = font.render(str(count), True, (20, 20, 24))
+
+            pos = (mx + icon.get_width() // 2 - txt.get_width(),
+                   my + icon.get_height() // 2 - txt.get_height())
+
+            self.screen.blit(shadow, (pos[0] + 1, pos[1] + 1))
+            self.screen.blit(txt, pos)
 
     def _take_one(self, slot):
 
@@ -4618,7 +4809,7 @@ class NewGame:
 
                 self.pause_view = "achievements"
 
-            elif result == "back":
+            elif result == "menu":
 
                 self._save()
 
@@ -4823,6 +5014,26 @@ class NewGame:
 
 
         if (
+            event.type == pygame.MOUSEBUTTONUP
+            and event.button == 1
+            and self._slot_drag is not None
+        ):
+
+            drag = self._slot_drag
+            self._slot_drag = None
+
+            target = self.hud.slot_at(event.pos)
+
+            if (
+                self.state == "playing"
+                and target is not None
+                and target != drag["from"]
+            ):
+                self.move_slot(drag["from"], target)
+
+            return None
+
+        if (
             event.type == pygame.MOUSEWHEEL
             and self.state == "playing"
             and event.y != 0
@@ -4892,6 +5103,9 @@ class NewGame:
             if slot is not None:
 
                 self.selected_slot = slot
+
+                if self.hud.items[slot] is not None:
+                    self._slot_drag = {"from": slot, "start": event.pos}
 
                 return None
 
@@ -5042,6 +5256,14 @@ class NewGame:
 
                     # CTRL + Q: suelta todo el inventario (la luz equipada no)
                     self.drop_all_items()
+
+                elif (
+                    pygame.key.get_mods() & pygame.KMOD_SHIFT
+                    and self.selected_slot != "equipped"
+                ):
+
+                    # SHIFT + Q: suelta todo el stack del casillero elegido
+                    self.drop_stack(self.selected_slot)
 
                 elif self.selected_slot == "equipped":
 
@@ -6421,14 +6643,18 @@ class NewGame:
 
             self.zone_banner.draw(self.screen)
 
+        drag_item = self._dragged_item()
+
         self.hud.draw_overlay(
             self.screen,
             self.item_defs,
             pygame.mouse.get_pos(),
-            pygame.mouse.get_pressed()[0],
+            pygame.mouse.get_pressed()[0] and drag_item is None,
             self.message if self.message_timer > 0 else "",
             self.message_color
         )
+
+        self._draw_dragged_item(drag_item)
 
         for arena in self.arenas:
             arena.draw_hud(self.screen)

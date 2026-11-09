@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-08T13:55:00",
+    "last_played": "2026-11-08T23:22:15",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 952,
-    "y": 146,
-    "coins": 192298,
+    "x": 937,
+    "y": 148,
+    "coins": 217168,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
@@ -16,17 +16,14 @@
     "escudo": 1.0,
     "inventory": [
         [
-            "gelea",
-            15
+            "aceite",
+            12
         ],
         [
             "polvora",
             15
         ],
-        [
-            "aceite",
-            15
-        ],
+        null,
         [
             "martillo",
             1
@@ -41,26 +38,26 @@
         ]
     ],
     "collected": [
-        "moneda5_sala_cofres#0",
-        "moneda_sala_cofres#1",
-        "moneda_pasillo_cabana#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_cofres#0",
-        "aceite_01#0",
+        "madera_04#0",
         "madera_01#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_pasillo_tienda#1",
-        "madera_02#0",
-        "madera_05#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_izq#0",
-        "moneda_sala_central#1",
-        "moneda_pasillo_der#0",
-        "moneda_sala_central#0",
-        "cera_01#0",
-        "moneda_pasillo_cabana#1",
         "madera_03#0",
-        "madera_04#0"
+        "moneda_pasillo_cofres#0",
+        "cera_01#0",
+        "madera_05#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_cabana#0",
+        "moneda5_sala_cofres#0",
+        "moneda_pasillo_izq#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_der#0",
+        "moneda5_pasillo_cofres#0",
+        "aceite_01#0",
+        "moneda_pasillo_tienda#0",
+        "madera_02#0",
+        "moneda_sala_cofres#0",
+        "moneda_sala_central#1",
+        "moneda_sala_cofres#1",
+        "moneda_pasillo_tienda#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -130,7 +127,10 @@
                     "hongo_azul",
                     6
                 ],
-                null
+                [
+                    "gelea",
+                    6
+                ]
             ]
         },
         {
@@ -223,7 +223,7 @@
                 "bet": 5000,
                 "bet_gelea": 100,
                 "cur": "coins",
-                "pick": "R"
+                "pick": "V"
             }
         },
         {
@@ -245,6 +245,12 @@
                 ],
                 null
             ]
+        },
+        {
+            "t": "fogata",
+            "x": 940,
+            "y": 425,
+            "fuel": 1749.51
         }
     ],
     "enemies_seen": [
@@ -264,9 +270,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1472,
+        "items_used": 1485,
         "chests_opened": 67,
-        "purchases": 96,
+        "purchases": 98,
         "fireballs": 3083,
         "kills": 369
     },
@@ -315,10 +321,114 @@
         {
             "k": "item",
             "id": "gelea",
-            "x": 344,
-            "y": 210,
+            "x": 978,
+            "y": 169,
             "map": "mapa1",
-            "ttl": 284.7
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 990,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 999,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1001,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 994,
+            "y": 146,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 1006,
+            "y": 145,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 973,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 985,
+            "y": 160,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 972,
+            "y": 173,
+            "map": "mapa1",
+            "ttl": 195.8
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 996,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 278.4
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 992,
+            "y": 154,
+            "map": "mapa1",
+            "ttl": 278.5
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 897,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 278.6
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 993,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 279.2
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 889,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 279.4
         }
     ],
     "ganzua_uses": 1,
