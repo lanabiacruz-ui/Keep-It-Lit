@@ -4,6 +4,7 @@ from pathlib import Path
 
 from core import skins as skin_lib
 from core.audio_manager import audio
+from ui import room_light
 
 
 class SkinsMenu:
@@ -53,6 +54,9 @@ class SkinsMenu:
 
         # convert_alpha: la tablet tiene fondo transparente, asi se ve el
         # juego detras en vez de negro
+        # solo la cabaña se oscurece (la tablet del juego no)
+        self.cabin = room_light.is_cabin(background)
+
         image = pygame.image.load(ui_dir / background).convert_alpha()
 
         self.background = pygame.transform.smoothscale(
@@ -756,7 +760,7 @@ class SkinsMenu:
 
         self._ease()
 
-        self.screen.blit(self.background, (0, 0))
+        room_light.blit_background(self.screen, self.background, self.cabin)
 
         previous_clip = self.screen.get_clip()
 

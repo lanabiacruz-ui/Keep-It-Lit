@@ -5,6 +5,7 @@ from core.Save_manager import (
     list_slots, delete_save, check_password, MODE_HARDCORE
 )
 from states.password_menu import PasswordMenu
+from ui import room_light
 
 
 class ContinueGame:
@@ -440,7 +441,7 @@ class ContinueGame:
 
             return
 
-        self.screen.blit(self.background, (0, 0))
+        room_light.blit_background(self.screen, self.background)
 
         mouse_pos = pygame.mouse.get_pos()
 

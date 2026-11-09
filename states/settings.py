@@ -7,6 +7,7 @@ from core import accessibility
 from core.audio_manager import audio
 from core.controls import controls, GROUPS
 from core.music_manager import music
+from ui import room_light
 
 ROOT = Path(__file__).resolve().parent.parent
 UI_DIR = ROOT / "assets" / "maps" / "ui"
@@ -247,12 +248,17 @@ class Settings:
 
         self.background = self._load_background(background)
 
+        # solo la cabaña se oscurece (la tablet del juego no)
+        self.cabin = room_light.is_cabin(background)
+
         if controls_background in (None, background):
             self.controls_background = self.background
+            self.controls_cabin = self.cabin
         else:
             self.controls_background = self._load_background(
                 controls_background
             )
+            self.controls_cabin = room_light.is_cabin(controls_background)
 
         self.close_rect = self._box(self.CLOSE_BOX)
 
@@ -857,17 +863,23 @@ class Settings:
 
         if self.view == "main":
 
-            self.screen.blit(self.background, (0, 0))
+            room_light.blit_background(
+                self.screen, self.background, self.cabin
+            )
             self._draw_main(mouse)
 
         elif self.view == "guide":
 
-            self.screen.blit(self.controls_background, (0, 0))
+            room_light.blit_background(
+                self.screen, self.controls_background, self.controls_cabin
+            )
             self._draw_guide(mouse)
 
         else:
 
-            self.screen.blit(self.controls_background, (0, 0))
+            room_light.blit_background(
+                self.screen, self.controls_background, self.controls_cabin
+            )
             self._draw_controls(mouse)
 
     def _draw_button(self, rect, image, image_hover, mouse, fallback_text):

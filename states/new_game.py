@@ -69,6 +69,7 @@ from ui.shop_plan import (
     sanitize_draft,
 )
 from ui.tutorial import Tutorial
+from ui.tutorial_texts import apply_texts
 from ui.shop_dialog import ShopkeeperDialog
 from ui.guide import Guide
 from ui.Zone_banner import ZoneBanner
@@ -1455,7 +1456,7 @@ class NewGame:
                 ("TAB: ocultar el objetivo", "tab" in g.tuto_flags),
             ]
 
-        return [
+        objectives = [
 
             {
                 "text": (
@@ -1779,6 +1780,14 @@ class NewGame:
                 ) >= len(EnemyEncyclopedia.ORDER),
             },
         ]
+
+        # Pisa los textos con los de ui/tutorial_texts.py (dialogos de Cenizo)
+        return apply_texts(
+            objectives,
+            countdown=int(NO_LIGHT_COUNTDOWN),
+            antorcha_wave=SHOP_UNLOCK_WAVES["antorcha"],
+            creatures=len(EnemyEncyclopedia.ORDER),
+        )
 
     def _check_achievements(self):
 

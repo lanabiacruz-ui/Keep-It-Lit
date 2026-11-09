@@ -2,6 +2,7 @@ import pygame
 from pathlib import Path
 
 from core.Save_manager import PASSWORD_MIN, PASSWORD_MAX
+from ui import room_light
 
 
 UI_DIR = (
@@ -173,7 +174,7 @@ class PasswordMenu:
 
     def draw(self):
 
-        self.screen.blit(self.background, (0, 0))
+        room_light.blit_background(self.screen, self.background)
 
         if not self.has_own_image:
 

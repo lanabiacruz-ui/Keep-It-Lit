@@ -6,6 +6,7 @@ import pygame
 
 from core.audio_manager import audio
 from core import story
+from ui import room_light
 
 
 BG_W = 745
@@ -384,7 +385,7 @@ class MainMenu:
 
         return patch
 
-    def _draw_cat_or_patch(self, now, name, cat=None):
+    def _draw_cat_or_patch(self, now, name, cat=None, dark=False):
 
         if not story.cat_gone():
 
@@ -404,6 +405,11 @@ class MainMenu:
             surface = surface.copy()
 
             surface.fill(self._tint, special_flags=pygame.BLEND_RGBA_MULT)
+
+        # sobre otra pantalla, el fondo ya esta a oscuras: el parche del
+        # escritorio tiene que quedar igual de oscuro
+        if dark and room_light.is_dark():
+            surface = room_light.darken_sprite(surface, pos)
 
         self.screen.blit(surface, pos)
 
@@ -436,7 +442,23 @@ class MainMenu:
         cat = self.live_cats.get(source)
 
         if cat is not None:
-            self._draw_cat_or_patch(now, source, cat)
+            self._draw_cat_or_patch(now, source, cat, dark=True)
+
+        # las hojas se ven por las ventanas: reciben la luz de la luna
+        if room_light.is_dark() and self.window_rects:
+
+            r, g, b = room_light.sample(
+                self.window_rects[0].center, self.screen.get_size()
+            )
+
+            base = self._tint or (255, 255, 255, 255)
+
+            self._tint = (
+                base[0] * r // 255,
+                base[1] * g // 255,
+                base[2] * b // 255,
+                255,
+            )
 
         self._draw_leaves()
 
@@ -583,6 +605,8 @@ class MainMenu:
 
         self._draw_cat_or_patch(now, "menu")
         self._draw_leaves()
+
+        self._draw_room_darkness(now)
 
         self._draw_monitor(now)
 
@@ -852,6 +876,41 @@ class MainMenu:
                 line_color,
                 (m.x, m.y + band_y + open_h - 2, m.width, 3)
             )
+
+    def _room_light_level(self, now):
+        """0 = PC apagada (todo a oscuras), 1 = PC encendida."""
+
+        if self.intro_t0 is None:
+            return 1.0
+
+        ts = now - self.intro_t0 - MON_DELAY
+
+        if ts <= 0:
+            return 0.0
+
+        return _ease_out(ts / (MON_LINE + MON_OPEN))
+
+    def _draw_room_darkness(self, now):
+        """Si el gato ya se fue, la cabaña queda a oscuras y solo la PC
+        ilumina al jugador (ver ui/room_light.py)."""
+
+        if not room_light.is_dark():
+            return
+
+        level = self._room_light_level(now)
+
+        if level >= 1.0 and room_light.FLICKER > 0:
+
+            # la luz de la pantalla titila apenitas, como un monitor real
+            wobble = (
+                math.sin(now * 7.3) * 0.5
+                + math.sin(now * 17.9 + 1.3) * 0.3
+                + math.sin(now * 2.1) * 0.2
+            )
+
+            level = 1.0 - room_light.FLICKER * (0.5 + 0.5 * wobble)
+
+        room_light.apply_light(self.screen, level)
 
     def play_intro(self):
 

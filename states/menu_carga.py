@@ -2,6 +2,7 @@ import pygame
 from pathlib import Path
 
 from core.Save_manager import name_exists
+from ui import room_light
 
 
 class MenuCarga:
@@ -132,10 +133,7 @@ class MenuCarga:
 
     def draw(self):
 
-        self.screen.blit(
-            self.background,
-            (0, 0)
-        )
+        room_light.blit_background(self.screen, self.background)
 
         text_surface = self.font.render(
             self.name,

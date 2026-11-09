@@ -1,5 +1,6 @@
 import pygame
 from pathlib import Path
+from ui import room_light
 
 
 class Loading:
@@ -56,10 +57,7 @@ class Loading:
 
     def draw(self):
 
-        self.screen.blit(
-            self.background,
-            (0, 0)
-        )
+        room_light.blit_background(self.screen, self.background)
 
         progress = min(1, self.timer / self.duration)
 

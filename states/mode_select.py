@@ -2,6 +2,7 @@ import pygame
 from pathlib import Path
 
 from core.Save_manager import MODE_NORMAL, MODE_HARDCORE
+from ui import room_light
 
 
 UI_DIR = (
@@ -216,7 +217,7 @@ class ModeSelect:
 
     def draw(self):
 
-        self.screen.blit(self.background, (0, 0))
+        room_light.blit_background(self.screen, self.background)
 
         title = self.title_font.render(
             "Elegí el modo de juego", True, (255, 255, 255)

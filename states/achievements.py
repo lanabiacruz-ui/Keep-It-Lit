@@ -2,6 +2,7 @@ import pygame
 from pathlib import Path
 
 from core.achievements import achievements, ACHIEVEMENTS
+from ui import room_light
 
 
 GOLD = (255, 205, 90)
@@ -87,6 +88,9 @@ class AchievementsMenu:
 
         # convert_alpha: la tablet tiene fondo transparente, asi se ve el
         # juego detras en vez de negro
+        # solo la cabaña se oscurece (la tablet del juego no)
+        self.cabin = room_light.is_cabin(background_path.name)
+
         image = pygame.image.load(background_path).convert_alpha()
 
         self.background = pygame.transform.smoothscale(
@@ -990,7 +994,7 @@ class AchievementsMenu:
 
         self._ease()
 
-        self.screen.blit(self.background, (0, 0))
+        room_light.blit_background(self.screen, self.background, self.cabin)
 
         previous_clip = self.screen.get_clip()
 
