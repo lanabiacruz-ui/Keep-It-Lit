@@ -135,17 +135,17 @@ def _use_trash(self, game, obj, whole):
     slot = self._trash_slot(game)
 
     if slot is None:
-        game.show_message("La luz equipada no se tira al tacho")
+        game.show_message("La luz equipada no se tira al basurero")
         return True
 
     item_id = game.hud.items[slot]
 
     if item_id is None:
-        game.show_message("Elige un objeto y haz click sobre el tacho")
+        game.show_message("Elige un objeto y haz click sobre el basurero")
         return True
 
     if item_id in TRASH_PROTECTED:
-        game.show_message(f"{game._item_name(item_id)} no se puede tirar al tacho")
+        game.show_message(f"{game._item_name(item_id)} no se puede tirar al basurero")
         return True
 
     n = max(1, int(game.hud.counts[slot])) if whole else 1
@@ -1746,7 +1746,7 @@ class PlaceableManager:
 
         if slot is None:
 
-            game.show_message("Elige un objeto y haz click sobre el tacho")
+            game.show_message("Elige un objeto y haz click sobre el basurero")
 
             return True
 
@@ -1754,14 +1754,14 @@ class PlaceableManager:
 
         if item_id is None:
 
-            game.show_message("Elige un objeto y haz click sobre el tacho")
+            game.show_message("Elige un objeto y haz click sobre el basurero")
 
             return True
 
         if item_id in TRASH_PROTECTED:
 
             game.show_message(
-                f"{game._item_name(item_id)} no se puede tirar al tacho"
+                f"{game._item_name(item_id)} no se puede tirar al basurero"
             )
 
             return True
@@ -1945,7 +1945,7 @@ class PlaceableManager:
             if self._over_hud(game, pygame.mouse.get_pos()):
 
                 game.show_message(
-                    "Elige el martillo y haz click sobre un cofre, una fogata, un tacho, un yunque o una máquina"
+                    "Elige el martillo y haz click sobre un cofre, una fogata, un basurero, un yunque o una máquina"
                 )
 
                 return True
@@ -1953,7 +1953,7 @@ class PlaceableManager:
             if not self._use_hammer(game):
 
                 game.show_message(
-                    "Acércate a un cofre, una fogata, un tacho, un yunque o una máquina y haz click sobre ellos"
+                    "Acércate a un cofre, una fogata, un basurero, un yunque o una máquina y haz click sobre ellos"
                 )
 
             return True

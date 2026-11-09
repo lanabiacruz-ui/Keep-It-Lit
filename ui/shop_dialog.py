@@ -72,6 +72,9 @@ class ShopkeeperDialog(Tutorial):
     # un poco mas lento y con una voz cada 3 letras
     TYPE_SPEED = 32.0
     BLIP_EVERY = 3
+    PAUSE_END = 0.16
+    PAUSE_COMMA = 0.07
+    PAUSE_DOTS = 0.16
     BLIPS = ("tonto_a", "tonto_b", "tonto_c")
 
     def __init__(self, screen_size, pages=None, **kwargs):

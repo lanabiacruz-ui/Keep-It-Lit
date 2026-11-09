@@ -1,55 +1,100 @@
 {
     "player_name": "o",
     "mode": "normal",
-    "created_at": "2026-11-09T03:27:44",
-    "last_played": "2026-11-09T03:30:04",
-    "password_salt": "37a36a1ce66ba858f15d59e1f6904ca0",
-    "password_hash": "8b7847de3d507fe47f54cf94c08c5b903d2e3dc506eeb3e6164551611352b640",
-    "x": 939,
-    "y": 837,
-    "coins": 0,
+    "created_at": "2026-11-09T03:51:50",
+    "last_played": "2026-11-09T04:18:36",
+    "password_salt": "2ab75b47a6a3d9bad0435d09824c4dcd",
+    "password_hash": "3074ff52cf290a678ac9a816f2f2b10382d7be8effdf7e635d0036cb5e211074",
+    "x": 945,
+    "y": 153,
+    "coins": 20,
     "gel_coins": 0,
     "ganzua_uses": 0,
     "boss_intro_seen": false,
     "boss2_intro_seen": false,
-    "shop_intro_seen": false,
+    "shop_intro_seen": true,
     "gems": 0,
     "gems_green": 0,
     "has_match": true,
-    "light": "fosforo",
-    "vida": 0.5999666666666535,
+    "light": "vela",
+    "vida": 1.0,
     "escudo": 0.0,
     "finished": false,
     "inventory": [
+        null,
+        null,
         [
-            "madera",
-            2
+            "cera",
+            1
         ],
+        [
+            "gelea",
+            7
+        ],
+        null,
+        null
+    ],
+    "shop_inventory": [
+        null,
+        null,
         null,
         null,
         null,
         null,
         null
     ],
-    "shop_inventory": [],
     "collected": [
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_der#0",
+        "madera_12#0",
+        "madera_08#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_cabana#0",
+        "madera_05#0",
+        "cera_02#0",
+        "moneda_pasillo_cabana#1",
+        "madera_09#0",
+        "moneda5_sala_cofres#0",
+        "cera_01#0",
+        "madera_04#0",
+        "moneda_pasillo_tienda#0",
+        "madera_10#0",
+        "moneda_sala_cofres#1",
+        "moneda_sala_cofres#0",
+        "madera_01#0",
+        "aceite_01#0",
         "madera_11#0",
-        "madera_12#0"
+        "madera_03#0",
+        "madera_02#0",
+        "aceite_03#0"
     ],
-    "item_seed": 981093147,
+    "item_seed": 495457888,
     "arena_wave": 1,
     "arena_completed": false,
     "arena_left_wave": 1,
     "arena_left_completed": false,
     "broken_doors": [
-        "cabana"
+        "cabana",
+        "hub_abajo",
+        "hub_arriba",
+        "hub_derecha",
+        "sala_der",
+        "sup_central_abajo",
+        "sup_izq_central",
+        "sup_izq_sala"
     ],
     "final_door_slots": {
         "clara": false,
         "oscura": false
     },
     "current_map": "mapa1",
-    "chests": {},
+    "chests": {
+        "cofre_02": {
+            "usos": 9
+        }
+    },
     "placeables": [],
     "yunque": {
         "niveles": {
@@ -62,26 +107,61 @@
         },
         "activas": []
     },
-    "enemies_seen": [],
+    "enemies_seen": [
+        "pino",
+        "slime",
+        "slime2",
+        "slime3"
+    ],
     "enemies_claimed": [],
     "stats": {
-        "items_used": 0,
-        "chests_opened": 0,
-        "purchases": 0,
+        "items_used": 18,
+        "chests_opened": 1,
+        "purchases": 2,
         "fireballs": 0,
         "kills": 0
     },
     "zones_seen": [
-        "inicio"
+        "central",
+        "cofres",
+        "combate",
+        "inicio",
+        "tienda"
     ],
-    "shop_unlocked": [],
+    "shop_unlocked": [
+        "mapa"
+    ],
     "tuto_seen": [
         0,
         2,
-        4
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
     ],
-    "death_drops": [],
-    "objective_index": 4,
+    "death_drops": [
+        {
+            "k": "light",
+            "id": "fosforo",
+            "life": 1.0,
+            "x": 891,
+            "y": 130,
+            "map": "mapa1",
+            "ttl": 264.5
+        }
+    ],
+    "objective_index": 19,
     "objective_version": 3,
     "objectives_minimized": false
 }

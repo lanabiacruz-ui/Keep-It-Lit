@@ -1736,9 +1736,9 @@ class NewGame:
                     "ponerla."
                 ),
                 "tuto": [
-                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, tacho, yunque, máquina, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el tacho, el yunque, la máquina y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los sueltes con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
-                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera, pero mientras está encendido los mosquitos no entran en su luz. El TACHO borra objetos: elige uno y haz click sobre él (Ctrl+click borra toda la casilla).",
-                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre, una fogata, un tacho, un yunque o una máquina (lo que tengan adentro cae al piso): quedan sueltos en el piso (no pasan al inventario). Arrástralos con click izquierdo mantenido y al soltarlos quedan fijos de nuevo.",
+                    "CONSTRUIR: la sección Construcción de la tienda vende bolsa, cofre, basurero, yunque, máquina, fogata y candil (el martillo está en Objetos). La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el basurero, el yunque, la máquina y la fogata los eliges en tu casilla y haces click en el mapa: quedan fijos hasta que los sueltes con el martillo. La bolsa y el cofre guardan lo que sueltes o agarres con el inventario lleno, y lo de adentro nunca vence.",
+                    "La FOGATA ilumina mucho y te devuelve luz mientras estés cerca: dale madera con F o click derecho. El CANDIL es más pequeño y consume cera, pero mientras está encendido los mosquitos no entran en su luz. El BASURERO borra objetos: elige uno y haz click sobre él (Ctrl+click borra toda la casilla).",
+                    "MARTILLO: con el martillo elegido, haz click izquierdo sobre un cofre, una fogata, un basurero, un yunque o una máquina (lo que tengan adentro cae al piso): quedan sueltos en el piso (no pasan al inventario). Arrástralos con click izquierdo mantenido y al soltarlos quedan fijos de nuevo.",
                 ],
                 "target": lambda g: (
                     None
@@ -2165,7 +2165,7 @@ class NewGame:
         if self._magnet_active():
 
             self.show_message(
-                "Apagá el imán (O) para soltar items"
+                "Apaga el imán (O) para soltar items"
             )
 
     def drop_stack(self, slot):
@@ -2209,7 +2209,7 @@ class NewGame:
         if self._magnet_active():
 
             self.show_message(
-                "Apagá el imán (O) para soltar items"
+                "Apaga el imán (O) para soltar items"
             )
 
     def drop_all_items(self):
@@ -2254,12 +2254,12 @@ class NewGame:
             if self._magnet_active():
 
                 self.show_message(
-                    "Apagá el imán (O) para soltar items"
+                    "Apaga el imán (O) para soltar items"
                 )
 
         else:
 
-            self.show_message("No tenés nada para soltar")
+            self.show_message("No tienes nada para soltar")
 
     def move_slot(self, src, dst):
         """Mueve lo que hay en el casillero src al casillero dst.
@@ -2423,7 +2423,7 @@ class NewGame:
         if item_id == "mapa":
 
             self.show_message(
-                "Mantené click derecho para ver el mapa"
+                "Mantén click derecho para ver el mapa"
             )
             return
 
@@ -2442,7 +2442,7 @@ class NewGame:
         if item.get("tipo") == "luz":
 
             self.show_message(
-                "Las luces se equipan solas al agarrarlas (soltá antes la que tenés)"
+                "Las luces se equipan solas al agarrarlas (suelta antes la que tienes)"
             )
             return
 
@@ -2538,7 +2538,7 @@ class NewGame:
         elif item_id == "iman":
 
             self.show_message(
-                f"Usaste Imán: apretá {controls.label('magnet')} para activarlo o desactivarlo"
+                f"Usaste Imán: presiona {controls.label('magnet')} para activarlo o desactivarlo"
             )
 
         elif item_id == "gelea":
@@ -2609,7 +2609,7 @@ class NewGame:
 
             if self.ascua_timer > 0:
 
-                self.show_message("Ya tenés el ascua armada")
+                self.show_message("Ya tienes el ascua armada")
                 return False
 
             self.ascua_total = float(e.get("duracion", 180.0))
@@ -2636,7 +2636,7 @@ class NewGame:
 
             if self.pspeed_timer > 0:
 
-                self.show_message("Ya tenés la velocidad activa")
+                self.show_message("Ya tienes la velocidad activa")
                 return False
 
             self.pspeed_mult = float(e.get("multiplicador", 1.6))
@@ -2695,7 +2695,7 @@ class NewGame:
 
             if self.yshield_timer > 0:
 
-                self.show_message("Ya tenés el escudo amarillo activo")
+                self.show_message("Ya tienes el escudo amarillo activo")
                 return False
 
             self.yshield_total = float(e.get("duracion", 8.0))
@@ -3882,7 +3882,7 @@ class NewGame:
 
         if not cart:
 
-            self._shop_notice("Ya tenés esa skin")
+            self._shop_notice("Ya tienes esa skin")
 
             return
 
@@ -5274,7 +5274,7 @@ class NewGame:
                 ):
 
                     self.show_message(
-                        "Ya tenés una luz: soltala primero "
+                        "Ya tienes una luz: suéltala primero "
                         f"({controls.label('equipped')} y después "
                         f"{controls.label('drop')}) para agarrar esta"
                     )
@@ -5321,7 +5321,7 @@ class NewGame:
                 if not self._magnet_available():
 
                     self.show_message(
-                        "No tenés el imán: usalo desde el inventario"
+                        "No tienes el imán: úsalo desde el inventario"
                     )
 
                 else:
@@ -5622,7 +5622,7 @@ class NewGame:
                 and self.stats.get("chests_opened", 0) < 1
             ):
                 self.show_message(
-                    "Acercate a un cofre y apretá F para abrirlo"
+                    "Acércate a un cofre y presiona F para abrirlo"
                 )
 
         self.zone_banner.update(

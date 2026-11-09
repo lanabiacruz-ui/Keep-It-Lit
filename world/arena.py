@@ -7123,7 +7123,7 @@ class Arena:
             if cfg.boss_kind == "golem":
 
                 lines.append((
-                    "¡JEFE! Te enfrentás al GOLEM COLOSAL", 30,
+                    "¡JEFE! Te enfrentas al GOLEM COLOSAL", 30,
                     (255, 214, 120)
                 ))
                 lines.append((
@@ -7135,7 +7135,7 @@ class Arena:
             else:
 
                 lines.append((
-                    f"¡JEFE! Te enfrentás a la {BOSS_NAME}", 30,
+                    f"¡JEFE! Te enfrentas a la {BOSS_NAME}", 30,
                     (255, 214, 120)
                 ))
                 lines.append((
@@ -7145,7 +7145,7 @@ class Arena:
                 ))
 
         lines.append((
-            "Al empezar la oleada se oscurece: fijate bien dónde estás.",
+            "Al empezar la oleada se oscurece: fíjate bien dónde estás.",
             22, (220, 220, 235)
         ))
 
@@ -7207,21 +7207,21 @@ class Arena:
         """Consejo corto para el descanso antes de la oleada."""
 
         if not game.has_match:
-            return "Conseguí una luz antes de pelear."
+            return "Consigue una luz antes de pelear."
 
         if game.vida < 0.4:
-            return ("Tu luz está baja: recuperala con madera, resina o "
+            return ("Tu luz está baja: recupérala con madera, resina o "
                     "aceite antes de entrar.")
 
         if not any(game.hud.items[:game.hud.SLOTS]):
-            return ("No tenés objetos: comprá en la tienda o abrí cofres "
+            return ("No tienes objetos: compra en la tienda o abre cofres "
                     "antes de seguir.")
 
         if hard:
-            return ("Es difícil: usá cera o aceite al empezar y, si se "
-                    "complica, escapá y volvé.")
+            return ("Es difícil: usa cera o aceite al empezar y, si se "
+                    "complica, escapa y vuelve.")
 
-        return "Tu luz está bien. Podés entrar cuando quieras."
+        return "Tu luz está bien. Puedes entrar cuando quieras."
 
     def _themed_box(self, size):
         """Cartel con el mismo look del panel (9-slice del panel del juego)."""
@@ -7279,7 +7279,7 @@ class Arena:
         cfg = self.cfg
 
         if self._is_boss_wave():
-            lines = [("¡JEFE! Prepará tus objetos y tu luz.", (255, 125, 100))]
+            lines = [("¡JEFE! Prepara tus objetos y tu luz.", (255, 125, 100))]
             advice = self._rest_advice(game, True)
         else:
             hard = is_hard_wave(self.wave, cfg.table, cfg.last_wave)

@@ -107,11 +107,11 @@ class MenuCarga:
 
                 if not final_name:
 
-                    self.message = "Escribí un nombre para continuar"
+                    self.message = "Escribe un nombre para continuar"
 
                 elif name_exists(final_name):
 
-                    self.message = "Ese nombre ya fue utilizado. Elegí otro."
+                    self.message = "Ese nombre ya fue utilizado. Elige otro."
 
                 else:
 

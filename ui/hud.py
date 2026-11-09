@@ -482,12 +482,18 @@ class Hud:
 
                 d = item_defs[item_id]
 
+                potion = self.is_potion_slot(i)
+
                 title = self.tip_title_font.render(
-                    d.get("nombre", item_id), True, (40, 46, 56)
+                    d.get("nombre", item_id), True,
+                    (255, 244, 255) if potion else (40, 46, 56)
                 )
 
                 lines = [
-                    self.tip_font.render(t, True, (55, 62, 74))
+                    self.tip_font.render(
+                        t, True,
+                        (240, 228, 250) if potion else (55, 62, 74)
+                    )
                     for t in self._wrap(
                         self.tip_font, d.get("descripcion", ""), 230
                     )
@@ -510,11 +516,16 @@ class Hud:
                 )
                 rect.clamp_ip(screen.get_rect())
 
+                # violeta (como el marco de pociones) si el objeto esta en
+                # un slot de pociones; gris en los demas
+                if self.is_potion_slot(i):
+                    fill, edge = (126, 93, 151), (68, 47, 84)
+                else:
+                    fill, edge = (150, 160, 168), (70, 78, 90)
+
+                pygame.draw.rect(screen, fill, rect, border_radius=10)
                 pygame.draw.rect(
-                    screen, (150, 160, 168), rect, border_radius=10
-                )
-                pygame.draw.rect(
-                    screen, (70, 78, 90), rect, width=3, border_radius=10
+                    screen, edge, rect, width=3, border_radius=10
                 )
 
                 y = rect.top + pad

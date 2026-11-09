@@ -411,7 +411,7 @@ class Guide:
         done_count = sum(1 for _, done in entries if done)
 
         title = self.title_font.render(
-            f"PROBÁ TODO  {done_count}/{len(entries)}", True, CHECK_BORDER
+            f"PRUEBA TODO  {done_count}/{len(entries)}", True, CHECK_BORDER
         )
 
         labels = [

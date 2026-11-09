@@ -18,26 +18,26 @@ from ui.tutorial import (
 
 CHEERS = [
     "¡Eso es!",
-    "¡Bien ahí! Tu luz brilla más.",
-    "¡Lo lograste! Sos un crack.",
-    "¡Pan comido para vos!",
+    "¡Bien hecho! Tu luz brilla más.",
+    "¡Lo lograste! Eres un crack.",
+    "¡Pan comido para ti!",
     "¡Qué manera de prender la mecha!",
     "¡Excelente! Cenizo está orgulloso.",
     "¡Ese es mi aventurero!",
-    "¡Chispa! Seguí así.",
+    "¡Chispa! Sigue así.",
     "¡Buuu... perdón, quise decir BRAVO!",
     "¡Hasta mi esqueleto aplaude! (No tengo esqueleto.)",
     "¡Eso me dio tanta emoción que casi me muero! Otra vez.",
 ]
 
 FAREWELL = (
-    "¡Terminaste el entrenamiento! Ya sabés lo básico. "
-    "Yo me quedo por acá, flotando sin hacer nada, que es mi especialidad. ¡Que tu luz nunca se apague!"
+    "¡Terminaste el entrenamiento! Ya sabes lo básico. "
+    "Yo me quedo por aquí, flotando sin hacer nada, que es mi especialidad. ¡Que tu luz nunca se apague!"
 )
 
 LOW_LIGHT = [
-    "¡Ey, tu luz está bajita! Usá madera, resina o aceite con [[F]]. ¡No te sumes al club de los fantasmas todavía!",
-    "¡Se está apagando! Comé algo de luz antes de que sea tarde. ¡Todavía no tengo con quién jugar a las cartas!",
+    "¡Ey, tu luz está bajita! Usa madera, resina o aceite con [[F]]. ¡No te sumes al club de los fantasmas todavía!",
+    "¡Se está apagando! Come algo de luz antes de que sea tarde. ¡Todavía no tengo con quién jugar a las cartas!",
 ]
 
 # segundos sin avanzar antes del 1er, 2do, 3er... consejo del mismo paso

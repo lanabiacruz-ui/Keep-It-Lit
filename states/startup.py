@@ -71,7 +71,7 @@ class Startup:
 
     BAR_RATIO = 0.085
     EMBER_MAX = 80
-    TAGLINE = "MANTENÉ LA LUZ ENCENDIDA"
+    TAGLINE = "MANTÉN LA LUZ ENCENDIDA"
 
     FADE_OUT = 0.55     # (en segundos de diseno)
     FLASH_AT = 1.45

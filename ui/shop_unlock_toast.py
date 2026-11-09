@@ -9,7 +9,7 @@ SHOW_TIME = 5.0
 FADE_TIME = 0.45
 
 TITLE_TEXT = "¡Conseguiste un objeto!"
-SUBTITLE_TEXT = "Ya lo podés comprar en la tienda"
+SUBTITLE_TEXT = "Ya lo puedes comprar en la tienda"
 
 # Colores sacados del arte del HUD (hud_hotbar.png / hud_slot.png)
 PANEL_GRAY = (143, 155, 161)

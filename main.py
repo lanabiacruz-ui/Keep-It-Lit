@@ -370,7 +370,7 @@ while running:
                 if save_path is None:
 
                     name_menu.message = (
-                        "No hay espacio. Borrá una partida primero."
+                        "No hay espacio. Borra una partida primero."
                     )
 
                     pygame.key.start_text_input()

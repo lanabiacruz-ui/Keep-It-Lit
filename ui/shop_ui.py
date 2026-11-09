@@ -553,7 +553,7 @@ class ShopUI:
         if zone and len(zone) > 2 and zone[2] == "Centro":
 
             if short:
-                return "Bloqueado: llegá al Centro"
+                return "Bloqueado: llega al Centro"
 
             return "BLOQUEADO: se desbloquea al llegar al Centro del mapa."
 
@@ -564,7 +564,7 @@ class ShopUI:
         if short:
             where = f" en {zone[0]}" if zone else ""
             return (
-                f"Bloqueado: terminá la oleada {need}{where} "
+                f"Bloqueado: termina la oleada {need}{where} "
                 f"(vas por la {current})"
             )
 
@@ -574,7 +574,7 @@ class ShopUI:
         )
 
         if current == need:
-            tail = f"Ya estás en la oleada {need}: terminala y es tuyo."
+            tail = f"Ya estás en la oleada {need}: termínala y es tuyo."
         else:
             tail = (
                 f"Vas por la oleada {current}: te "
@@ -780,9 +780,9 @@ class ShopUI:
         if slot_index is None:
 
             self._flash(
-                "No quedan lugares de pociones: sacá una con click derecho"
+                "No quedan lugares de pociones: saca una con click derecho"
                 if kind == KIND_POTION
-                else "La hotbar está llena: sacá algo con click derecho"
+                else "La hotbar está llena: saca algo con click derecho"
             )
 
             return
@@ -792,7 +792,7 @@ class ShopUI:
             current = self.inventory[self.light_idx]
 
             if current is not None and current[0] == item_id:
-                self._flash("Ya tenés esa luz")
+                self._flash("Ya tienes esa luz")
             else:
                 self.inventory[self.light_idx] = [item_id, 1]
                 self._pop_slot(self.light_idx)
@@ -805,7 +805,7 @@ class ShopUI:
 
         if slot is not None and slot[0] != item_id:
 
-            self._flash("Ese casillero ya tiene otra cosa: vacialo primero")
+            self._flash("Ese casillero ya tiene otra cosa: vacíalo primero")
 
             return
 
@@ -1145,7 +1145,7 @@ class ShopUI:
 
             if self._skin_owned(item_id):
 
-                self._flash("Ya tenés esta skin")
+                self._flash("Ya tienes esta skin")
 
             else:
 
@@ -1630,7 +1630,7 @@ class ShopUI:
                 if locked_wave is not None
                 else "No va al inventario"
                 if no_inv
-                else "Ya la tenés"
+                else "Ya la tienes"
                 if is_skin(item_id) and self._skin_owned(item_id)
                 else f"{self.prices[item_id]} monedas"
             ),
@@ -1829,7 +1829,7 @@ class ShopUI:
 
             lines = self._wrap(
                 self.small_font,
-                "Tocá un producto para agregarlo.",
+                "Toca un producto para agregarlo.",
                 self.rows_rect.width - 20
             )
 
@@ -2229,7 +2229,7 @@ class ShopUI:
         if n == self.light_idx:
 
             lines.append(
-                ("Ya tenés luz: esta sale al piso", C_BADGE)
+                ("Ya tienes luz: esta sale al piso", C_BADGE)
                 if self.has_light
                 else ("Se equipa en tu mano", C_MUTED)
             )
@@ -2238,7 +2238,7 @@ class ShopUI:
 
             placed, floor = per_slot.get(n, (qty, 0))
 
-            lines.append((f"Comprás {qty}", C_MUTED))
+            lines.append((f"Compras {qty}", C_MUTED))
 
             lines.append(
                 (

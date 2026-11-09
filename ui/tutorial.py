@@ -26,17 +26,17 @@ FRAME_CROP = None
 # Marcado de los textos: lo que va entre [[ ]] se resalta como una tecla.
 #   "Apretá [[E]] para agarrar"  ->  la E se dibuja como un botoncito.
 TUTORIAL_PAGES = [
-    "¡Hola! Soy [[Cenizo]], tu ayudante. Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, perdés.",
+    "¡Hola! Soy [[Cenizo]], tu ayudante. Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y, si se apaga, pierdes.",
     "Moverte: [[W]] [[A]] [[S]] [[D]]. Saltar: [[ESPACIO]] (sirve para esquivar a los jefes). Atacar: [[CLICK IZQ.]] (cada golpe gasta un poquito de luz).",
-    "Agarrar: acercate a algo del piso y apretá [[E]]. Soltar: [[Q]]. Soltar toda la casilla: [[SHIFT + Q]]. Soltar todo: [[CTRL + Q]] (la luz equipada se queda).",
-    "Lo que tirás al piso se esfuma a los [[5 MINUTOS]]. Si lo soltás junto a una bolsa o un cofre, queda adentro para siempre.",
-    "Inventario: [[1]] al [[4]] son tus casilleros, [[5]] y [[6]] las pociones y [[7]] tu luz. También sirve la [[RUEDITA]] del mouse.",
-    "Usar un objeto: elegilo y apretá [[F]] o [[CLICK DER.]]. Si mantenés click izquierdo sobre un casillero, te cuento qué hace.",
-    "Recuperar luz: la madera suma 25%, la resina 90% de a poco y el aceite te deja en 75% y te da velocidad. ¡Usalos ANTES de quedarte a oscuras!",
-    "Monedas: se juntan solas al acercarte. Dorada = 1, azul = 5, roja = 10. Con ellas comprás cosas en la tienda: [[F]] cerca del vendedor.",
-    "En la pausa ([[ESC]]) está la enciclopedia de criaturas. Tocá COBRAR en cada criatura descubierta y te llevás monedas de regalo.",
-    "Salas de combate: empezá por la Zona 1 (Orkun, a la derecha). Su jefe suelta una llave dorada para la Zona 2. ¡Ojo con los mosquitos!",
-    "Eso es todo. Si te perdés, abrí la pausa con [[ESC]]. ¡Que tu luz nunca se apague!",
+    "Agarrar: acércate a algo del piso y presiona [[E]]. Soltar: [[Q]]. Soltar toda la casilla: [[SHIFT + Q]]. Soltar todo: [[CTRL + Q]] (la luz equipada se queda).",
+    "Lo que tiras al piso se esfuma a los [[5 MINUTOS]]. Si lo sueltas junto a una bolsa o un cofre, queda adentro para siempre.",
+    "Inventario: [[1]] al [[4]] son tus casilleros, [[5]] y [[6]] las pociones y [[7]] tu luz. También sirve la [[RUEDA]] del mouse.",
+    "Usar un objeto: elígelo y presiona [[F]] o [[CLICK DER.]]. Si mantienes click izquierdo sobre un casillero, te cuento qué hace.",
+    "Recuperar luz: la madera suma 25%, la resina 90% de a poco y el aceite te deja en 75% y te da velocidad. ¡Úsalos ANTES de quedarte a oscuras!",
+    "Monedas: se juntan solas al acercarte. Dorada = 1, azul = 5, roja = 10. Con ellas compras cosas en la tienda: [[F]] cerca del vendedor.",
+    "En la pausa ([[ESC]]) está la enciclopedia de criaturas. Toca COBRAR en cada criatura descubierta y te llevas monedas de regalo.",
+    "Salas de combate: empieza por la Zona 1 (Orkun, a la derecha). Su jefe suelta una llave dorada para la Zona 2. ¡Ojo con los mosquitos!",
+    "Eso es todo. Si te pierdes, abre la pausa con [[ESC]]. ¡Que tu luz nunca se apague!",
 ]
 
 # Colores de Cenizo: azul fantasma, con azul transparente
@@ -288,10 +288,11 @@ class Tutorial:
     START_FONT = 30
     MIN_FONT = 18
 
-    TYPE_SPEED = 46.0
-    BLIP_EVERY = 2
-    PAUSE_END = 0.16
-    PAUSE_COMMA = 0.07
+    TYPE_SPEED = 32.0
+    BLIP_EVERY = 3
+    PAUSE_END = 0.45
+    PAUSE_COMMA = 0.22
+    PAUSE_DOTS = 0.14
     BLIPS = ("talk_a", "talk_b", "talk_c", "talk_d")
 
     HOP_TIME = 0.4
@@ -619,7 +620,14 @@ class Tutorial:
 
             if ch in ".!?:":
 
-                self.pause = self.PAUSE_END
+                nxt = flat[self.shown] if self.shown < len(flat) else ""
+
+                # puntos suspensivos: pausa corta entre punto y punto
+                if ch == "." and nxt == ".":
+                    self.pause = self.PAUSE_DOTS
+                else:
+                    self.pause = self.PAUSE_END
+
                 self.reveal = float(self.shown)
 
                 break
@@ -823,8 +831,9 @@ class Tutorial:
 
         gap = 12
 
-        x = frame_pos.right - 46 - gap * (total - 1)
-        y = frame_pos.top + 26
+        # dentro del globo, esquina de arriba a la derecha (sobre el texto)
+        x = frame_pos.right - 28 - gap * (total - 1)
+        y = frame_pos.top + 14
 
         for i in range(total):
 

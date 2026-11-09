@@ -46,7 +46,7 @@ import pygame
 
 BOSS_NAME = "GOLEM COLOSAL"
 BOSS_TAG = "JEFE DE LA ZONA 2"
-BOSS_SUB = "Salta sus ondas, esquiva las rocas y pegale cuando se aturda"
+BOSS_SUB = "Salta sus ondas, esquiva las rocas y pégale cuando se aturda"
 VICTORY_TITLE = "GOLEM COLOSAL DERROTADO"
 VICTORY_SUB = "LA GEMA VERDE ES TUYA"
 SUMMON_MESSAGE = "El golem invoca refuerzos!"

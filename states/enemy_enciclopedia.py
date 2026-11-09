@@ -101,7 +101,7 @@ DEFAULT_DATA = {
         "descripcion": (
             "Pasea tranquilo y da un poco de luz con el cuerpo. Si te ve se frena "
             "y parpadea en blanco: ese es el aviso. Despues sale corriendo casi el "
-            "doble de rapido que vos, te choca y explota: te saca vida, te empuja y "
+            "doble de rapido que tú, te choca y explota: te saca vida, te empuja y "
             "deja la pantalla en blanco unos 5 segundos. Aguanta 2 golpes y si lo "
             "derrotas antes de que te alcance, no explota."
         ),
@@ -1633,7 +1633,7 @@ class EnemyEncyclopedia:
                 str(enemy.get("descripcion", ""))
                 if found
                 else f"Todavía no te encontraste con esta {KIND_WORD}. "
-                     "Explorá las salas y las oleadas para descubrirla."
+                     "Explora las salas y las oleadas para descubrirla."
             ),
             card.width - pad * 2,
             available_h,
@@ -1775,7 +1775,7 @@ class EnemyEncyclopedia:
             font = self._font(max(12, round(22 * self.sy)))
 
             surf = font.render(
-                f"Descubrila y ganá +{amount}", True, self.MUTED_COLOR
+                f"Descúbrela y gana +{amount}", True, self.MUTED_COLOR
             )
 
             coin = self.coin_16

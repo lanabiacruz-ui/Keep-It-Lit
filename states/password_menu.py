@@ -145,7 +145,7 @@ class PasswordMenu:
 
                 if len(self.text) < PASSWORD_MIN:
 
-                    self.message = "Escribí una contraseña"
+                    self.message = "Escribe una contraseña"
 
                 else:
 

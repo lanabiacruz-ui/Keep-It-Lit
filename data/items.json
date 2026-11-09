@@ -187,7 +187,7 @@
   },
   "martillo": {
     "nombre": "Martillo",
-    "descripcion": "Herramienta: no se gasta. Con el martillo elegido, haz click sobre un cofre, fogata, tacho, yunque, máquina o ruleta colocados para soltarlos en el piso. Arrástralos con click izquierdo mantenido y al soltarlos quedan fijos. Lo que tengan adentro cae al piso.",
+    "descripcion": "Herramienta: no se gasta. Con el martillo elegido, haz click sobre un cofre, fogata, basurero, yunque, máquina o ruleta colocados para soltarlos en el piso. Arrástralos con click izquierdo mantenido y al soltarlos quedan fijos. Lo que tengan adentro cae al piso.",
     "requiere_fosforo": false,
     "max_pila": 1
   },
@@ -223,8 +223,8 @@
     ]
   },
   "tacho": {
-    "nombre": "Tacho",
-    "descripcion": "Elígelo y haz click en el mapa para colocarlo. Solo se recoge con el martillo. Elige un objeto y haz click sobre el tacho para borrar 1 unidad. Ctrl + click borra toda la casilla. Borra todo, incluso la luz equipada.",
+    "nombre": "Basurero",
+    "descripcion": "Elígelo y haz click en el mapa para colocarlo. Solo se recoge con el martillo. Elige un objeto y haz click sobre el basurero para borrar 1 unidad. Ctrl + click borra toda la casilla. Borra todo, incluso la luz equipada.",
     "requiere_fosforo": false,
     "efectos": []
   },

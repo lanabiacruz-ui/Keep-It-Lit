@@ -35,7 +35,7 @@ VICTORY_TITLE = 3.4
 
 BOSS_TAG = "JEFE DE LA ZONA 1"
 BOSS_LABEL = "PIÑA COLOSAL"
-BOSS_SUB = "Esquivá sus fragmentos y pegale cuando esté entera"
+BOSS_SUB = "Esquiva sus fragmentos y pégale cuando esté entera"
 
 BAR_FRACTION = 0.115
 

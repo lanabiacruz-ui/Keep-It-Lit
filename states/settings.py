@@ -1238,8 +1238,8 @@ class Settings:
                 ),
                 (
                     ["CTRL", plus, "CLIC IZQ"],
-                    "Tirar al tacho",
-                    "Sobre un tacho, tira todo el montón elegido en vez "
+                    "Tirar al basurero",
+                    "Sobre un basurero, tira todo el montón elegido en vez "
                     "de uno solo."
                 ),
                 (
@@ -1728,7 +1728,7 @@ class Settings:
         )
 
         if self.listening is not None:
-            title = "Apretá una tecla"
+            title = "Presiona una tecla"
             color = self.ACCENT
 
         elif self.message:

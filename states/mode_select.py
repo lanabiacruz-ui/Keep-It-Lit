@@ -29,11 +29,11 @@ class ModeSelect:
     CLOSE_BOX = (1179, 219, 1204, 246)
 
     DESC_NORMAL = (
-        "Si perdés, te queda solo el fósforo y perdés todos los items. "
+        "Si pierdes, te queda solo el fósforo y pierdes todos los items. "
         "Las oleadas siguen igual."
     )
     DESC_HARDCORE = (
-        "Si perdés, perdés todo: se borra la partida."
+        "Si pierdes, pierdes todo: se borra la partida."
     )
 
     def __init__(self, screen):
@@ -220,7 +220,7 @@ class ModeSelect:
         room_light.blit_background(self.screen, self.background)
 
         title = self.title_font.render(
-            "Elegí el modo de juego", True, (255, 255, 255)
+            "Elige el modo de juego", True, (255, 255, 255)
         )
 
         self.screen.blit(
