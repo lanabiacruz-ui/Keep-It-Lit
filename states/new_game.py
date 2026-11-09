@@ -1275,6 +1275,38 @@ class NewGame:
 
         self._save()
 
+    def _tick_objectives(self, dt):
+        """Avanza los objetivos y abre el tutorial del paso nuevo.
+
+        Tambien se llama con el menu de zona abierto (con escape / sin
+        escape): si no, el objetivo "entrar a una zona de combate" no
+        arranca a tiempo y su explicacion nunca se muestra.
+        """
+
+        if self.objectives is None:
+            return
+
+        self.objectives.update(
+            dt,
+            self
+        )
+
+        if self.objectives.skip_requested:
+
+            self._skip_tutorial()
+
+        else:
+
+            self._tuto_step_check()
+
+            self.guide.update(dt)
+
+        if self.objectives is not None and self.objectives.finished:
+
+            self._objective_saved = 10 ** 6
+
+            self.objectives = None
+
     def _tuto_step_check(self):
 
         obj = self.objectives
@@ -1284,25 +1316,35 @@ class NewGame:
 
         idx = obj.index
 
-        if idx == self._tuto_last:
-            return
+        if idx != self._tuto_last:
 
-        self._tuto_last = idx
-        self.tuto_flags = set()
+            self._tuto_last = idx
+            self.tuto_flags = set()
 
         if idx >= len(obj.objectives) or idx in self.tuto_seen:
             return
 
-        self.tuto_seen.add(idx)
-
         pages = obj.objectives[idx].get("tuto")
 
-        if pages and self.tutorial is None and tutorial_hints():
+        # sin paginas o con las ayudas apagadas: nada que mostrar
+        if not pages or not tutorial_hints():
 
-            self.tutorial = Tutorial(
-                (self.width, self.height), pages=mark_keys(pages),
-                can_skip=True
-            )
+            self.tuto_seen.add(idx)
+
+            return
+
+        # hay otro dialogo abierto (ej. el vendedor): se espera y se
+        # reintenta en el proximo cuadro. Antes el paso se marcaba como
+        # visto igual y la explicacion se perdia para siempre.
+        if self.tutorial is not None:
+            return
+
+        self.tuto_seen.add(idx)
+
+        self.tutorial = Tutorial(
+            (self.width, self.height), pages=mark_keys(pages),
+            can_skip=True
+        )
 
     def _draw_guidance(self):
 
@@ -5558,6 +5600,9 @@ class NewGame:
 
         if menu_arena is not None:
 
+            # el menu frena el juego, pero no el tutorial
+            self._tick_objectives(dt)
+
             menu_arena.update_menu(
                 dt
             )
@@ -5629,28 +5674,7 @@ class NewGame:
             dt
         )
 
-        if self.objectives is not None:
-
-            self.objectives.update(
-                dt,
-                self
-            )
-
-            if self.objectives.skip_requested:
-
-                self._skip_tutorial()
-
-            else:
-
-                self._tuto_step_check()
-
-                self.guide.update(dt)
-
-            if self.objectives is not None and self.objectives.finished:
-
-                self._objective_saved = 10 ** 6
-
-                self.objectives = None
+        self._tick_objectives(dt)
 
 
         in_shop = self.shopkeeper.zone_inset(

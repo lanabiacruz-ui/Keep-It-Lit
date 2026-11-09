@@ -152,7 +152,7 @@ TEXTS = [
             "cerca del vendedor para hablarle."
         ),
         "tuto": [
-            "Tienda: está al norte de la sala central. Acércate al vendedor hasta que aparezca la tecla [[F]] y presiónala. Se cierra con [[E]] o [[ESC]]. Ojo, el vendedor es medio... especial.",
+            "Tienda: está al norte de la sala central. Acércate al vendedor hasta que aparezca la tecla [[F]] y presiónala. Se cierra con [[E]] o [[ESC]]. Ojo, el vendedor tiene costumbres muy raras.",
             "Ahí gastas tus monedas en luces, objetos y construcciones. Algunos productos se desbloquean al terminar cierta oleada en las salas de combate. Es como un centro comercial, pero con más oscuridad y menos aire acondicionado.",
         ],
         "hint": "La tienda queda al norte de la sala central. Cuando estés cerca del vendedor, presiona [[F]]. No muerde. Escupe, pero no muerde.",
@@ -210,7 +210,7 @@ TEXTS = [
             "Inventario de la tienda: con [[TAB]] cambias entre Tienda e Inventario. Ahí armas tus casilleros y tu luz como quieras y compras todo junto con 'Comprar inventario'. ¡Pruébalo! Yo te dejaría el mío, pero está vacío.",
         ],
         "hint": "Abre la tienda con [[F]] y presiona [[TAB]] para cambiar de pestaña. Tranquilo, no hay examen.",
-        "cheer": "¡Ya eres todo un comerciante! Falta el bigote.",
+        "cheer": "¡Ya eres todo un comerciante!",
     },
 
     # 15 - cofres
