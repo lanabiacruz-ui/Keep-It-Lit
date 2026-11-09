@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-08T23:22:15",
+    "last_played": "2026-11-09T00:23:18",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 937,
-    "y": 148,
-    "coins": 217168,
+    "x": 941,
+    "y": 180,
+    "coins": 216300,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
@@ -17,47 +17,47 @@
     "inventory": [
         [
             "aceite",
-            12
+            14
         ],
         [
             "polvora",
             15
         ],
+        [
+            "hongo_azul",
+            15
+        ],
+        [
+            "mapa",
+            1
+        ],
         null,
         [
-            "martillo",
-            1
-        ],
-        [
             "pocion_velocidad",
-            1
-        ],
-        [
-            "pocion_invisibilidad",
             1
         ]
     ],
     "collected": [
-        "madera_04#0",
-        "madera_01#0",
-        "madera_03#0",
-        "moneda_pasillo_cofres#0",
         "cera_01#0",
-        "madera_05#0",
-        "moneda_pasillo_cabana#1",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_cofres#1",
+        "madera_03#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_tienda#1",
         "moneda_pasillo_cabana#0",
+        "moneda_sala_central#1",
         "moneda5_sala_cofres#0",
+        "aceite_01#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_pasillo_der#0",
+        "madera_02#0",
+        "madera_04#0",
+        "madera_05#0",
         "moneda_pasillo_izq#0",
         "moneda_sala_central#0",
-        "moneda_pasillo_der#0",
-        "moneda5_pasillo_cofres#0",
-        "aceite_01#0",
-        "moneda_pasillo_tienda#0",
-        "madera_02#0",
+        "moneda_pasillo_cabana#1",
         "moneda_sala_cofres#0",
-        "moneda_sala_central#1",
-        "moneda_sala_cofres#1",
-        "moneda_pasillo_tienda#1"
+        "madera_01#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -81,7 +81,10 @@
     "current_map": "mapa1",
     "chests": {
         "cofre_01": {
-            "usos": 8
+            "espera": 10.4
+        },
+        "cofre_02": {
+            "espera": 7.0
         },
         "cofre_03": {
             "usos": 3
@@ -237,20 +240,23 @@
                 ],
                 [
                     "aceite",
-                    1
+                    12
+                ],
+                [
+                    "polvora",
+                    15
                 ],
                 [
                     "polvora",
                     1
-                ],
-                null
+                ]
             ]
         },
         {
             "t": "fogata",
             "x": 940,
             "y": 425,
-            "fuel": 1749.51
+            "fuel": 1522.97
         }
     ],
     "enemies_seen": [
@@ -270,9 +276,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1485,
-        "chests_opened": 67,
-        "purchases": 98,
+        "items_used": 1516,
+        "chests_opened": 95,
+        "purchases": 100,
         "fireballs": 3083,
         "kills": 369
     },
@@ -298,8 +304,8 @@
             19
         ],
         [
-            "esfera",
-            1
+            "ganzua",
+            15
         ],
         [
             "pocion_invisibilidad",
@@ -320,83 +326,11 @@
     "death_drops": [
         {
             "k": "item",
-            "id": "gelea",
-            "x": 978,
-            "y": 169,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 990,
-            "y": 162,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 999,
-            "y": 167,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 1001,
-            "y": 164,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 994,
-            "y": 146,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 1006,
-            "y": 145,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 973,
-            "y": 172,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 985,
-            "y": 160,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
-            "id": "gelea",
-            "x": 972,
-            "y": 173,
-            "map": "mapa1",
-            "ttl": 195.8
-        },
-        {
-            "k": "item",
             "id": "madera",
             "x": 996,
             "y": 174,
             "map": "mapa1",
-            "ttl": 278.4
+            "ttl": 51.9
         },
         {
             "k": "item",
@@ -404,7 +338,7 @@
             "x": 992,
             "y": 154,
             "map": "mapa1",
-            "ttl": 278.5
+            "ttl": 52.0
         },
         {
             "k": "item",
@@ -412,7 +346,7 @@
             "x": 897,
             "y": 167,
             "map": "mapa1",
-            "ttl": 278.6
+            "ttl": 52.1
         },
         {
             "k": "item",
@@ -420,7 +354,7 @@
             "x": 993,
             "y": 174,
             "map": "mapa1",
-            "ttl": 279.2
+            "ttl": 52.7
         },
         {
             "k": "item",
@@ -428,10 +362,963 @@
             "x": 889,
             "y": 158,
             "map": "mapa1",
-            "ttl": 279.4
+            "ttl": 52.9
+        },
+        {
+            "k": "item",
+            "id": "martillo",
+            "x": 865,
+            "y": 146,
+            "map": "mapa1",
+            "ttl": 91.9
+        },
+        {
+            "k": "item",
+            "id": "pocion_velocidad",
+            "x": 886,
+            "y": 116,
+            "map": "mapa1",
+            "ttl": 91.9
+        },
+        {
+            "k": "item",
+            "id": "pocion_invisibilidad",
+            "x": 882,
+            "y": 110,
+            "map": "mapa1",
+            "ttl": 91.9
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 882,
+            "y": 161,
+            "map": "mapa1",
+            "ttl": 98.3
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 997,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 98.4
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 925,
+            "y": 165,
+            "map": "mapa1",
+            "ttl": 98.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 992,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 98.7
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 902,
+            "y": 170,
+            "map": "mapa1",
+            "ttl": 98.8
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 989,
+            "y": 168,
+            "map": "mapa1",
+            "ttl": 99.0
+        },
+        {
+            "k": "item",
+            "id": "hongo_amarillo",
+            "x": 516,
+            "y": 165,
+            "map": "mapa1",
+            "ttl": 102.6
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 455,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 102.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 527,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 102.8
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 481,
+            "y": 216,
+            "map": "mapa1",
+            "ttl": 102.8
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 450,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 103.2
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 489,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 103.6
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 521,
+            "y": 177,
+            "map": "mapa1",
+            "ttl": 103.7
+        },
+        {
+            "k": "item",
+            "id": "pocion_ira",
+            "x": 507,
+            "y": 214,
+            "map": "mapa1",
+            "ttl": 103.6
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 510,
+            "y": 160,
+            "map": "mapa1",
+            "ttl": 103.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 473,
+            "y": 193,
+            "map": "mapa1",
+            "ttl": 103.8
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 501,
+            "y": 203,
+            "map": "mapa1",
+            "ttl": 103.9
+        },
+        {
+            "k": "item",
+            "id": "pocion_ascua",
+            "x": 513,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 104.0
+        },
+        {
+            "k": "item",
+            "id": "pocion_invisibilidad",
+            "x": 484,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 103.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 468,
+            "y": 214,
+            "map": "mapa1",
+            "ttl": 103.8
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 494,
+            "y": 143,
+            "map": "mapa1",
+            "ttl": 104.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 457,
+            "y": 192,
+            "map": "mapa1",
+            "ttl": 103.9
+        },
+        {
+            "k": "item",
+            "id": "resina",
+            "x": 518,
+            "y": 194,
+            "map": "mapa1",
+            "ttl": 104.0
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 483,
+            "y": 143,
+            "map": "mapa1",
+            "ttl": 103.9
+        },
+        {
+            "k": "item",
+            "id": "ruleta",
+            "x": 497,
+            "y": 154,
+            "map": "mapa1",
+            "ttl": 104.1
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 482,
+            "y": 215,
+            "map": "mapa1",
+            "ttl": 104.3
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 457,
+            "y": 62,
+            "map": "mapa1",
+            "ttl": 109.0
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 470,
+            "y": 42,
+            "map": "mapa1",
+            "ttl": 109.1
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 507,
+            "y": 104,
+            "map": "mapa1",
+            "ttl": 109.2
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 460,
+            "y": 60,
+            "map": "mapa1",
+            "ttl": 109.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 508,
+            "y": 48,
+            "map": "mapa1",
+            "ttl": 109.3
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 470,
+            "y": 94,
+            "map": "mapa1",
+            "ttl": 109.4
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 510,
+            "y": 61,
+            "map": "mapa1",
+            "ttl": 109.3
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 520,
+            "y": 92,
+            "map": "mapa1",
+            "ttl": 109.4
+        },
+        {
+            "k": "item",
+            "id": "pocion_ira",
+            "x": 501,
+            "y": 42,
+            "map": "mapa1",
+            "ttl": 109.6
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 485,
+            "y": 93,
+            "map": "mapa1",
+            "ttl": 109.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 500,
+            "y": 88,
+            "map": "mapa1",
+            "ttl": 109.5
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 520,
+            "y": 85,
+            "map": "mapa1",
+            "ttl": 109.7
+        },
+        {
+            "k": "item",
+            "id": "pocion_invisibilidad",
+            "x": 458,
+            "y": 119,
+            "map": "mapa1",
+            "ttl": 121.0
+        },
+        {
+            "k": "item",
+            "id": "pocion_velocidad",
+            "x": 514,
+            "y": 111,
+            "map": "mapa1",
+            "ttl": 123.2
+        },
+        {
+            "k": "item",
+            "id": "ruleta",
+            "x": 494,
+            "y": 103,
+            "map": "mapa1",
+            "ttl": 126.9
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 530,
+            "y": 63,
+            "map": "mapa1",
+            "ttl": 127.0
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 467,
+            "y": 44,
+            "map": "mapa1",
+            "ttl": 127.1
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 509,
+            "y": 71,
+            "map": "mapa1",
+            "ttl": 127.2
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 476,
+            "y": 63,
+            "map": "mapa1",
+            "ttl": 127.2
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 490,
+            "y": 89,
+            "map": "mapa1",
+            "ttl": 127.1
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 508,
+            "y": 60,
+            "map": "mapa1",
+            "ttl": 127.2
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 487,
+            "y": 88,
+            "map": "mapa1",
+            "ttl": 127.3
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 476,
+            "y": 75,
+            "map": "mapa1",
+            "ttl": 127.2
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 501,
+            "y": 84,
+            "map": "mapa1",
+            "ttl": 127.3
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 515,
+            "y": 92,
+            "map": "mapa1",
+            "ttl": 127.3
+        },
+        {
+            "k": "item",
+            "id": "pocion_invisibilidad",
+            "x": 522,
+            "y": 89,
+            "map": "mapa1",
+            "ttl": 127.4
+        },
+        {
+            "k": "item",
+            "id": "resina",
+            "x": 470,
+            "y": 56,
+            "map": "mapa1",
+            "ttl": 127.3
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 470,
+            "y": 87,
+            "map": "mapa1",
+            "ttl": 127.4
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 518,
+            "y": 70,
+            "map": "mapa1",
+            "ttl": 127.4
+        },
+        {
+            "k": "item",
+            "id": "resina",
+            "x": 497,
+            "y": 51,
+            "map": "mapa1",
+            "ttl": 127.5
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 479,
+            "y": 102,
+            "map": "mapa1",
+            "ttl": 127.6
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 516,
+            "y": 72,
+            "map": "mapa1",
+            "ttl": 127.3
+        },
+        {
+            "k": "item",
+            "id": "resina",
+            "x": 472,
+            "y": 69,
+            "map": "mapa1",
+            "ttl": 127.4
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 503,
+            "y": 101,
+            "map": "mapa1",
+            "ttl": 127.5
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 515,
+            "y": 80,
+            "map": "mapa1",
+            "ttl": 127.6
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 514,
+            "y": 74,
+            "map": "mapa1",
+            "ttl": 127.4
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 516,
+            "y": 56,
+            "map": "mapa1",
+            "ttl": 127.5
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 464,
+            "y": 53,
+            "map": "mapa1",
+            "ttl": 127.6
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 512,
+            "y": 100,
+            "map": "mapa1",
+            "ttl": 127.7
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 525,
+            "y": 62,
+            "map": "mapa1",
+            "ttl": 127.7
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 502,
+            "y": 50,
+            "map": "mapa1",
+            "ttl": 127.8
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 341,
+            "y": 103,
+            "map": "mapa1",
+            "ttl": 130.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 376,
+            "y": 88,
+            "map": "mapa1",
+            "ttl": 130.2
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 326,
+            "y": 76,
+            "map": "mapa1",
+            "ttl": 130.3
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 391,
+            "y": 65,
+            "map": "mapa1",
+            "ttl": 130.3
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 330,
+            "y": 53,
+            "map": "mapa1",
+            "ttl": 130.4
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 338,
+            "y": 67,
+            "map": "mapa1",
+            "ttl": 130.5
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 346,
+            "y": 54,
+            "map": "mapa1",
+            "ttl": 130.3
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 353,
+            "y": 51,
+            "map": "mapa1",
+            "ttl": 130.4
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 334,
+            "y": 69,
+            "map": "mapa1",
+            "ttl": 130.4
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 379,
+            "y": 71,
+            "map": "mapa1",
+            "ttl": 130.5
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 387,
+            "y": 51,
+            "map": "mapa1",
+            "ttl": 130.6
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 357,
+            "y": 48,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 334,
+            "y": 85,
+            "map": "mapa1",
+            "ttl": 130.4
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 338,
+            "y": 53,
+            "map": "mapa1",
+            "ttl": 130.5
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 339,
+            "y": 58,
+            "map": "mapa1",
+            "ttl": 130.6
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 343,
+            "y": 52,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 376,
+            "y": 105,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "pocion_radar",
+            "x": 353,
+            "y": 87,
+            "map": "mapa1",
+            "ttl": 130.6
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 343,
+            "y": 56,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 381,
+            "y": 78,
+            "map": "mapa1",
+            "ttl": 130.8
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 353,
+            "y": 96,
+            "map": "mapa1",
+            "ttl": 130.8
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 376,
+            "y": 48,
+            "map": "mapa1",
+            "ttl": 130.9
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 368,
+            "y": 90,
+            "map": "mapa1",
+            "ttl": 130.6
+        },
+        {
+            "k": "item",
+            "id": "pocion_velocidad",
+            "x": 378,
+            "y": 93,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 384,
+            "y": 72,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 337,
+            "y": 61,
+            "map": "mapa1",
+            "ttl": 130.8
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 354,
+            "y": 55,
+            "map": "mapa1",
+            "ttl": 130.9
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 383,
+            "y": 71,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 336,
+            "y": 52,
+            "map": "mapa1",
+            "ttl": 130.8
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 346,
+            "y": 100,
+            "map": "mapa1",
+            "ttl": 131.0
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 348,
+            "y": 96,
+            "map": "mapa1",
+            "ttl": 131.1
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 377,
+            "y": 77,
+            "map": "mapa1",
+            "ttl": 130.8
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 353,
+            "y": 52,
+            "map": "mapa1",
+            "ttl": 130.9
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 348,
+            "y": 95,
+            "map": "mapa1",
+            "ttl": 130.9
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 377,
+            "y": 81,
+            "map": "mapa1",
+            "ttl": 131.0
+        },
+        {
+            "k": "item",
+            "id": "madera",
+            "x": 353,
+            "y": 55,
+            "map": "mapa1",
+            "ttl": 131.1
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 357,
+            "y": 87,
+            "map": "mapa1",
+            "ttl": 131.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 383,
+            "y": 71,
+            "map": "mapa1",
+            "ttl": 130.9
+        },
+        {
+            "k": "item",
+            "id": "cera",
+            "x": 373,
+            "y": 84,
+            "map": "mapa1",
+            "ttl": 131.0
+        },
+        {
+            "k": "item",
+            "id": "moneda",
+            "x": 363,
+            "y": 50,
+            "map": "mapa1",
+            "ttl": 131.2
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 934,
+            "y": 277,
+            "map": "mapa1",
+            "ttl": 165.9
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 935,
+            "y": 255,
+            "map": "mapa1",
+            "ttl": 166.1
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 942,
+            "y": 235,
+            "map": "mapa1",
+            "ttl": 166.3
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 945,
+            "y": 197,
+            "map": "mapa1",
+            "ttl": 166.5
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 924,
+            "y": 166,
+            "map": "mapa1",
+            "ttl": 167.0
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 925,
+            "y": 155,
+            "map": "mapa1",
+            "ttl": 167.2
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 946,
+            "y": 148,
+            "map": "mapa1",
+            "ttl": 174.3
+        },
+        {
+            "k": "item",
+            "id": "gelea",
+            "x": 947,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 174.5
+        },
+        {
+            "k": "light",
+            "id": "antorcha",
+            "life": 1.0,
+            "x": 987,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 99.1
         }
     ],
-    "ganzua_uses": 1,
+    "ganzua_uses": 2,
     "boss_intro_seen": true,
     "enemies_claimed": [
         "destello",

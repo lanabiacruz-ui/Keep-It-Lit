@@ -5962,6 +5962,57 @@ class NewGame:
 
         return self.hud.items[self.selected_slot]
 
+    def _map_info(self):
+        """Lo que el mapa muestra ademas de la forma: tu posicion, el estado
+        de los cofres y la oleada de cada zona."""
+
+        info = {
+            "player": self.player.rect.center,
+            "chests": [],
+            "subs": {},
+        }
+
+        if getattr(self, "current_map", "mapa1") != "mapa1":
+            return info
+
+        chests = self.chests.chests
+
+        info["chests"] = [
+            (c.rect.centerx, c.rect.centery, c.ready) for c in chests
+        ]
+
+        if chests:
+
+            ready = sum(1 for c in chests if c.ready)
+
+            if ready:
+                text = f"{ready}/{len(chests)} listos"
+            else:
+                waits = [c.cooldown for c in chests if c.cooldown > 0]
+                text = (
+                    f"próximo en {format_time(min(waits))}"
+                    if waits else "en uso"
+                )
+
+            info["subs"]["cofres"] = text
+
+        for zone_id, arena in (
+            ("combate", self.arena), ("combate_izq", self.arena_left)
+        ):
+
+            cfg = arena.cfg
+
+            if arena.completed:
+                text = "Completada"
+            elif cfg.show_total:
+                text = f"Oleada {min(arena.wave, cfg.last_wave)}/{cfg.last_wave}"
+            else:
+                text = f"Oleada {arena.wave}"
+
+            info["subs"][zone_id] = text
+
+        return info
+
     def _map_held(self):
 
         if not self._map_hold:
@@ -6590,6 +6641,7 @@ class NewGame:
             self._map_held(),
             self._font(28),
             map_name=getattr(self, "current_map", "mapa1"),
+            info=self._map_info(),
         )
 
         self.hud.selected = (

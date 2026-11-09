@@ -156,7 +156,7 @@
   },
   "mapa": {
     "nombre": "Mapa",
-    "descripcion": "Mantén click derecho con el mapa elegido para ver la forma de la dungeon y el nombre de las zonas. No muestra tu posición. No se gasta.",
+    "descripcion": "Mantén click derecho con el mapa elegido para ver la dungeon: te marca dónde estás, qué cofres están listos (y cuánto falta para el próximo) y en qué oleada vas en cada zona. No se gasta.",
     "requiere_fosforo": false,
     "max_pila": 1,
     "efectos": []

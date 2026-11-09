@@ -49,6 +49,13 @@ POTIONS = {
         "hue": 0.07,
         "mark": "brows",
     },
+    "radar": {
+        "liquid": (60, 200, 170),
+        "light": (150, 240, 215),
+        "dark": (24, 120, 105),
+        "hue": 0.46,
+        "mark": "radar",
+    },
 }
 
 
@@ -92,6 +99,17 @@ def _mark(d, kind, cx, cy, light):
             (cx + _s(10), cy - _s(3)), (cx + _s(2), cy - _s(3)),
         ]
         d.polygon(pts, fill=white)
+
+    elif kind == "radar":
+
+        w = _s(3)
+        for r in (14, 8):
+            d.ellipse((cx - _s(r), cy - _s(r), cx + _s(r), cy + _s(r)),
+                      outline=(235, 255, 248, 255), width=w)
+        d.line([(cx, cy), (cx + _s(10), cy - _s(10))],
+               fill=(235, 255, 248, 255), width=w)
+        d.ellipse((cx - _s(9), cy + _s(2), cx - _s(4), cy + _s(7)),
+                  fill=(255, 90, 80, 255))
 
     elif kind == "brows":
 

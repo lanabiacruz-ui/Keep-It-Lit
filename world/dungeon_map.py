@@ -62,6 +62,10 @@ ZONE_LABELS = {
 
 LABEL_OUTLINE = (0, 0, 0)
 
+PLAYER_COLOR = (255, 215, 110)
+CHEST_READY = (120, 225, 120)
+CHEST_WAIT = (140, 132, 122)
+
 
 def _erode(mask, size, t):
 
@@ -349,7 +353,7 @@ class DungeonMapView:
 
         return self._label_cache[key]
 
-    def _draw_zone_labels(self, screen, to_screen, alpha, screen_h):
+    def _draw_zone_labels(self, screen, to_screen, alpha, screen_h, subs=None):
 
         base = max(15, int(screen_h / 34))
 
@@ -361,6 +365,9 @@ class DungeonMapView:
                 continue
 
             title, sub, color = info
+
+            if subs and zone.id in subs:
+                sub = subs[zone.id]
 
             cx, cy = to_screen(*zone.rect.center)
 
@@ -389,7 +396,129 @@ class DungeonMapView:
                 small.get_rect(midtop=(cx, top + main.get_height() - 2))
             )
 
-    def draw(self, screen, walkable, held, label_font=None, map_name="mapa1"):
+    def _draw_extras(self, screen, to_screen, alpha, screen_h, map_name,
+                     info, bottom):
+        """Nombres de zona (con su estado), cofres, tu posicion y leyenda."""
+
+        info = info or {}
+
+        if map_name == "mapa1":
+            self._draw_zone_labels(
+                screen, to_screen, alpha, screen_h, info.get("subs")
+            )
+
+        player = info.get("player")
+        chests = info.get("chests") or []
+
+        if player is None and not chests:
+            return
+
+        base = max(6, int(screen_h / 110))
+        now = pygame.time.get_ticks() / 1000.0
+
+        layer = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+
+        for x, y, ready in chests:
+
+            sx, sy = to_screen(x, y)
+
+            box = pygame.Rect(0, 0, base * 2, base * 2)
+            box.center = (int(sx), int(sy))
+
+            color = CHEST_READY if ready else CHEST_WAIT
+
+            pygame.draw.rect(layer, color + (255,), box, border_radius=2)
+            pygame.draw.rect(
+                layer, SHADOW_COLOR + (255,), box, 2, border_radius=2
+            )
+
+        if player is not None:
+
+            sx, sy = to_screen(*player)
+
+            pulse = 0.5 + 0.5 * math.sin(now * 5)
+
+            pygame.draw.circle(
+                layer, PLAYER_COLOR + (int(150 * (1 - pulse)),),
+                (int(sx), int(sy)), int(base + 3 + 6 * pulse), 2
+            )
+            pygame.draw.circle(
+                layer, SHADOW_COLOR + (255,), (int(sx), int(sy)), base + 2
+            )
+            pygame.draw.circle(
+                layer, PLAYER_COLOR + (255,), (int(sx), int(sy)), base
+            )
+
+        layer.set_alpha(alpha)
+        screen.blit(layer, (0, 0))
+
+        if player is not None:
+
+            sx, sy = to_screen(*player)
+
+            tag = self._label("Vos", max(15, int(screen_h / 40)), PLAYER_COLOR)
+            tag.set_alpha(alpha)
+
+            screen.blit(
+                tag, tag.get_rect(midbottom=(int(sx), int(sy - base - 8)))
+            )
+
+        # leyenda abajo del papel
+        items = []
+
+        if player is not None:
+            items.append(("player", "Vos"))
+
+        if chests:
+            items.append(("ready", "Cofre listo"))
+            items.append(("wait", "Cofre en espera"))
+
+        size = max(14, int(screen_h / 46))
+
+        labels = [
+            (kind, self._label(text, size, LABEL_COLOR))
+            for kind, text in items
+        ]
+
+        gap = 22
+        icon_w = base * 2 + 8
+
+        total = sum(icon_w + lab.get_width() for _, lab in labels)
+        total += gap * (len(labels) - 1)
+
+        x = (screen.get_width() - total) // 2
+        y = min(screen_h - 26, int(bottom) + 10)
+
+        for kind, lab in labels:
+
+            lab.set_alpha(alpha)
+
+            cx, cy = x + base, y + lab.get_height() // 2
+
+            dot = pygame.Surface((base * 2 + 6, base * 2 + 6), pygame.SRCALPHA)
+            c = (dot.get_width() // 2, dot.get_height() // 2)
+
+            if kind == "player":
+                pygame.draw.circle(dot, SHADOW_COLOR + (255,), c, base + 2)
+                pygame.draw.circle(dot, PLAYER_COLOR + (255,), c, base)
+            else:
+                color = CHEST_READY if kind == "ready" else CHEST_WAIT
+                box = pygame.Rect(0, 0, base * 2, base * 2)
+                box.center = c
+                pygame.draw.rect(dot, color + (255,), box, border_radius=2)
+                pygame.draw.rect(
+                    dot, SHADOW_COLOR + (255,), box, 2, border_radius=2
+                )
+
+            dot.set_alpha(alpha)
+
+            screen.blit(dot, dot.get_rect(center=(cx, cy)))
+            screen.blit(lab, (x + icon_w, y))
+
+            x += icon_w + lab.get_width() + gap
+
+    def draw(self, screen, walkable, held, label_font=None, map_name="mapa1",
+             info=None):
 
         now = pygame.time.get_ticks()
 
@@ -450,7 +579,7 @@ class DungeonMapView:
 
             fit = _fit(walkable, (sw, sh), box)
 
-            if map_name == "mapa1" and fit is not None:
+            if fit is not None:
 
                 bounds = fit[1]
 
@@ -460,7 +589,10 @@ class DungeonMapView:
                         rect.top + (y - bounds.top) / bounds.height * rect.height,
                     )
 
-                self._draw_zone_labels(screen, to_screen, a, sh)
+                self._draw_extras(
+                    screen, to_screen, a, sh, map_name, info,
+                    rect.bottom if bg is None else bg_rect.bottom
+                )
 
         else:
 
@@ -482,7 +614,7 @@ class DungeonMapView:
 
             fit = _fit(walkable, (sw, sh), box)
 
-            if map_name == "mapa1" and fit is not None:
+            if fit is not None:
 
                 _, bounds, scale, _, pad = fit
 
@@ -493,7 +625,11 @@ class DungeonMapView:
                         pos[1] + pad + (y - bounds.top) * scale,
                     )
 
-                self._draw_zone_labels(screen, to_screen, a, sh)
+                self._draw_extras(
+                    screen, to_screen, a, sh, map_name, info,
+                    pos[1] + self._line.get_height()
+                    if bg is None else bg_rect.bottom
+                )
 
         if bg_top is not None:
             top = bg_top
