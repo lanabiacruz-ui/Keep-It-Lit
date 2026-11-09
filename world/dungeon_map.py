@@ -1,3 +1,11 @@
+"""Mapa que se ve mientras se mantiene el click derecho.
+
+Imagenes (assets/maps/region_01/), hechas con tools/make_mapa_contorno.py:
+  mapa_contorno.png    1567x1049   forma del mapa 1 (recortada al borde)
+  mapa2_contorno.png   1984x1592   forma del mapa 2
+Fondo (assets/maps/hud/): fondo_mapa.png (el papel).
+"""
+
 import math
 from pathlib import Path
 
@@ -20,6 +28,18 @@ MAP_IMAGES = {
     "mapa1": "mapa_contorno.png",
     "mapa2": "mapa2_contorno.png",
 }
+
+# Zona del mundo (x, y, ancho, alto) que cubre cada imagen de arriba. Las
+# imagenes estan recortadas justo al borde de la forma (tools/make_mapa_
+# contorno.py), asi la forma queda centrada en el papel. Si regeneras las
+# imagenes, actualiza estos numeros con lo que imprime el script.
+MAP_BOUNDS = {
+    "mapa1": (139, 0, 1567, 1049),
+    "mapa2": (8, 8, 1984, 1592),
+}
+
+# Texto neutro (sin voseo)
+PLAYER_TEXT = "Tú"
 
 BG_NAMES = (
     "fondo_mapa.png",
@@ -61,6 +81,11 @@ ZONE_LABELS = {
 }
 
 LABEL_OUTLINE = (0, 0, 0)
+
+# Salas chicas: el nombre no entra adentro (y taparia los cofres), asi que
+# va ARRIBA de la sala, centrado sobre ella. Las salas grandes lo llevan
+# adentro, en el medio.
+LABEL_ABOVE = {"cofres", "tienda"}
 
 PLAYER_COLOR = (255, 215, 110)
 CHEST_READY = (120, 225, 120)
@@ -355,7 +380,7 @@ class DungeonMapView:
 
     def _draw_zone_labels(self, screen, to_screen, alpha, screen_h, subs=None):
 
-        base = max(15, int(screen_h / 34))
+        base = max(14, int(screen_h / 40))
 
         for zone in ZONES:
 
@@ -375,19 +400,35 @@ class DungeonMapView:
 
             main.set_alpha(alpha)
 
-            if sub is None:
+            small = None
 
-                screen.blit(main, main.get_rect(center=(cx, cy)))
+            if sub is not None:
+
+                small = self._label(sub, max(12, base - 4), color)
+
+                small.set_alpha(alpha)
+
+            if zone.id in LABEL_ABOVE:
+
+                # bloque (nombre + estado) apoyado sobre el borde de arriba
+                _, ty = to_screen(zone.rect.centerx, zone.rect.top)
+
+                block = main.get_height()
+
+                if small is not None:
+                    block += small.get_height() - 2
+
+                cy = ty - 6 - block / 2
+
+            if small is None:
+
+                screen.blit(main, main.get_rect(center=(int(cx), int(cy))))
 
                 continue
 
-            small = self._label(sub, max(13, base - 5), color)
-
-            small.set_alpha(alpha)
-
             total = main.get_height() + small.get_height() - 2
 
-            top = cy - total // 2
+            top = int(cy - total // 2)
 
             screen.blit(main, main.get_rect(midtop=(cx, top)))
 
@@ -456,7 +497,7 @@ class DungeonMapView:
 
             sx, sy = to_screen(*player)
 
-            tag = self._label("Vos", max(15, int(screen_h / 40)), PLAYER_COLOR)
+            tag = self._label(PLAYER_TEXT, max(15, int(screen_h / 40)), PLAYER_COLOR)
             tag.set_alpha(alpha)
 
             screen.blit(
@@ -467,7 +508,7 @@ class DungeonMapView:
         items = []
 
         if player is not None:
-            items.append(("player", "Vos"))
+            items.append(("player", PLAYER_TEXT))
 
         if chests:
             items.append(("ready", "Cofre listo"))
@@ -554,16 +595,25 @@ class DungeonMapView:
         screen.blit(self._dim, (0, 0))
 
         bg_top = None
+        bg_bottom = None
 
         if bg is not None:
 
-            bg_rect = bg.get_rect(center=(sw // 2, sh // 2))
+            # el PNG tiene margen transparente desigual: se centra la parte
+            # visible del papel, no la imagen entera
+            vis = bg.get_bounding_rect()
+
+            bg_rect = bg.get_rect(center=(
+                sw // 2 - (vis.centerx - bg.get_width() // 2),
+                sh // 2 - (vis.centery - bg.get_height() // 2),
+            ))
 
             bg.set_alpha(a)
 
             screen.blit(bg, bg_rect)
 
-            bg_top = bg_rect.top
+            bg_top = bg_rect.top + vis.top
+            bg_bottom = bg_rect.top + vis.bottom
 
         image = self._ensure_image(map_name, (sw, sh))
 
@@ -579,9 +629,12 @@ class DungeonMapView:
 
             fit = _fit(walkable, (sw, sh), box)
 
-            if fit is not None:
+            if map_name in MAP_BOUNDS:
+                bounds = pygame.Rect(MAP_BOUNDS[map_name])
+            else:
+                bounds = None if fit is None else fit[1]
 
-                bounds = fit[1]
+            if bounds is not None:
 
                 def to_screen(x, y, rect=rect, bounds=bounds):
                     return (
@@ -591,7 +644,7 @@ class DungeonMapView:
 
                 self._draw_extras(
                     screen, to_screen, a, sh, map_name, info,
-                    rect.bottom if bg is None else bg_rect.bottom
+                    rect.bottom if bg is None else bg_bottom
                 )
 
         else:
@@ -628,7 +681,7 @@ class DungeonMapView:
                 self._draw_extras(
                     screen, to_screen, a, sh, map_name, info,
                     pos[1] + self._line.get_height()
-                    if bg is None else bg_rect.bottom
+                    if bg is None else bg_bottom
                 )
 
         if bg_top is not None:
