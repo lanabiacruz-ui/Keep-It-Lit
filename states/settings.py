@@ -107,6 +107,25 @@ class Settings:
         "fps": (512, 730, 502, None),
     }
     CONTROLS_POS = (1028, 382)      # esquina izquierda x, centro y
+    GUIDE_POS = (1028, 422)
+    GUIDE_X1 = 508
+    GUIDE_X2 = 1188
+    GUIDE_TAB_Y = 300
+    GUIDE_TAB_H = 24
+    GUIDE_TOP = 324
+    GUIDE_ROW_H = 70
+    GUIDE_KEY_W = 124
+    GUIDE_CHIP_H = 19
+    GUIDE_GAP = 12
+    GUIDE_TAB_NAMES = (
+        "Movimiento",
+        "Acciones",
+        "Inventario",
+        "Combos",
+        "Mouse",
+        "Menús",
+    )
+    GOLD = (255, 226, 150)
     FONT_SIZE = 34
     SMALL_FONT_SIZE = 23
     NAV_CX = None                   # None = centro de LEFT..RIGHT
@@ -117,17 +136,24 @@ class Settings:
     # queda en el hueco de las manos.
     TABLET_LAYOUT = {
         "ROWS": {
-            "music": (500, 606, 318, 806),
-            "sfx": (500, 606, 374, 806),
-            "flash": (500, 606, 430, None),
-            "fullscreen": (888, 1110, 318, None),
-            "hints": (888, 1110, 374, None),
-            "fps": (888, 1110, 430, None),
+            "music": (500, 606, 312, 806),
+            "sfx": (500, 606, 356, 806),
+            "flash": (500, 606, 400, None),
+            "fullscreen": (888, 1110, 312, None),
+            "hints": (888, 1110, 356, None),
+            "fps": (888, 1110, 400, None),
         },
         "TRACK_W": 190,
         "TOGGLE_SIZE": (72, 36),
         "CONTROLS_BTN": (170, 38),
-        "CONTROLS_POS": (787, 486),
+        "CONTROLS_POS": (660, 446),
+        "GUIDE_POS": (846, 446),
+        "GUIDE_X1": 496,
+        "GUIDE_X2": 1196,
+        "GUIDE_TAB_Y": 297,
+        "GUIDE_TAB_H": 24,
+        "GUIDE_TOP": 316,
+        "GUIDE_ROW_H": 66,
         "FONT_SIZE": 30,
         "SMALL_FONT_SIZE": 21,
         # vista de teclas
@@ -180,6 +206,8 @@ class Settings:
         self.sy = self.height / self.IMG_H
 
         self.view = "main"
+        self.guide_page = 0
+        self.font_cache = {}
 
         self.listening = None
         self.dragging = None
@@ -211,6 +239,10 @@ class Settings:
             None, max(14, round(self.SMALL_FONT_SIZE * self.sy))
         )
         self.key_font = pygame.font.Font(None, max(12, round(19 * self.sy)))
+        self.chip_font = pygame.font.Font(None, max(11, round(18 * self.sy)))
+        self.guide_tab_font = pygame.font.Font(
+            None, max(14, round(20 * self.sy))
+        )
         self.title_font = pygame.font.Font(None, max(16, round(26 * self.sy)))
 
         self.background = self._load_background(background)
@@ -271,6 +303,13 @@ class Settings:
             btn_h
         )
 
+        self.guide_rect = pygame.Rect(
+            round(self.GUIDE_POS[0] * self.sx),
+            round(self.GUIDE_POS[1] * self.sy) - btn_h // 2,
+            btn_w,
+            btn_h
+        )
+
         nav_w, nav_h = self._size(self.NAV_BTN)
 
         center_x = (
@@ -293,6 +332,38 @@ class Settings:
             nav_w,
             nav_h
         )
+
+        pager_w = round(self.reset_rect.width * 0.28)
+
+        self.prev_rect = pygame.Rect(
+            self.reset_rect.left,
+            self.reset_rect.top,
+            pager_w,
+            self.reset_rect.height
+        )
+
+        self.next_rect = pygame.Rect(
+            self.reset_rect.right - pager_w,
+            self.reset_rect.top,
+            pager_w,
+            self.reset_rect.height
+        )
+
+        tab_count = len(self.GUIDE_TAB_NAMES)
+        tab_gap = round(5 * self.sx)
+        tab_area = round((self.GUIDE_X2 - self.GUIDE_X1) * self.sx)
+        tab_w = (tab_area - tab_gap * (tab_count - 1)) // tab_count
+        tab_h = max(14, round(self.GUIDE_TAB_H * self.sy))
+
+        self.guide_tabs = [
+            pygame.Rect(
+                round(self.GUIDE_X1 * self.sx) + i * (tab_w + tab_gap),
+                round(self.GUIDE_TAB_Y * self.sy) - tab_h // 2,
+                tab_w,
+                tab_h
+            )
+            for i in range(tab_count)
+        ]
 
         self.key_rects = {}
         self.label_pos = {}
@@ -342,6 +413,32 @@ class Settings:
         self.img_controls_hover = self._load(
             "btn_controles_hover.png", self.controls_rect.size
         )
+
+        self.img_guide = self._load("btn_guia.png", self.guide_rect.size)
+        self.img_guide_hover = self._load(
+            "btn_guia_hover.png", self.guide_rect.size
+        )
+
+        tab_size = self.guide_tabs[0].size
+
+        self.img_tab = self._load("guia_tab.png", tab_size)
+        self.img_tab_hover = self._load("guia_tab_hover.png", tab_size)
+        self.img_tab_active = self._load("guia_tab_activa.png", tab_size)
+
+        arrow_size = self.prev_rect.size
+
+        self.img_arrow = {
+            -1: self._load("guia_flecha_izq.png", arrow_size),
+            1: self._load("guia_flecha_der.png", arrow_size),
+        }
+
+        self.img_arrow_hover = {
+            -1: self._load("guia_flecha_izq_hover.png", arrow_size),
+            1: self._load("guia_flecha_der_hover.png", arrow_size),
+        }
+
+        self.img_chip_raw = self._load_raw("guia_tecla.png")
+        self.chip_cache = {}
 
         self.img_back = self._load("btn_volver_ajustes.png", self.back_rect.size)
         self.img_back_hover = self._load(
@@ -530,6 +627,16 @@ class Settings:
 
             return None
 
+        if (
+            event.type == pygame.MOUSEWHEEL
+            and self.view == "guide"
+            and event.y != 0
+        ):
+
+            self._guide_move(-1 if event.y > 0 else 1)
+
+            return None
+
         if event.type == pygame.KEYDOWN:
             return self._on_key(event)
 
@@ -569,12 +676,20 @@ class Settings:
 
         if event.key == pygame.K_ESCAPE:
 
-            if self.view == "controls":
+            if self.view in ("controls", "guide"):
 
                 self.view = "main"
                 return None
 
             return "back"
+
+        if self.view == "guide":
+
+            if event.key in (pygame.K_LEFT, pygame.K_a):
+                self._guide_move(-1)
+
+            elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                self._guide_move(1)
 
         return None
 
@@ -634,7 +749,18 @@ class Settings:
 
                 return None
 
+            if self.guide_rect.collidepoint(pos):
+
+                self.view = "guide"
+                self.guide_page = 0
+                self.listening = None
+
+                return None
+
             return None
+
+        if self.view == "guide":
+            return self._on_guide_click(pos)
 
         if self.back_rect.collidepoint(pos):
 
@@ -663,6 +789,58 @@ class Settings:
         return None
 
 
+    def _guide_flat(self):
+
+        flat = []
+
+        for cat, entries in enumerate(self._guide_pages()):
+
+            for start in range(0, len(entries), 4):
+                flat.append((cat, entries[start:start + 4]))
+
+        return flat
+
+    def _guide_move(self, step):
+
+        count = len(self._guide_flat())
+
+        self.guide_page = (self.guide_page + step) % count
+
+    def _on_guide_click(self, pos):
+
+        if self.back_rect.collidepoint(pos):
+
+            self.view = "main"
+
+            return None
+
+        if self.prev_rect.collidepoint(pos):
+
+            self._guide_move(-1)
+
+            return None
+
+        if self.next_rect.collidepoint(pos):
+
+            self._guide_move(1)
+
+            return None
+
+        for index, rect in enumerate(self.guide_tabs):
+
+            if rect.collidepoint(pos):
+
+                for number, (cat, _) in enumerate(self._guide_flat()):
+
+                    if cat == index:
+
+                        self.guide_page = number
+                        break
+
+                return None
+
+        return None
+
     def update(self, dt):
 
         if self.message_timer > 0.0:
@@ -681,6 +859,11 @@ class Settings:
 
             self.screen.blit(self.background, (0, 0))
             self._draw_main(mouse)
+
+        elif self.view == "guide":
+
+            self.screen.blit(self.controls_background, (0, 0))
+            self._draw_guide(mouse)
 
         else:
 
@@ -850,6 +1033,669 @@ class Settings:
             mouse,
             "Controles"
         )
+
+        self._draw_button(
+            self.guide_rect,
+            self.img_guide,
+            self.img_guide_hover,
+            mouse,
+            "Guía de teclas"
+        )
+
+    def _font(self, size):
+
+        size = max(10, int(size))
+
+        font = self.font_cache.get(size)
+
+        if font is None:
+
+            font = pygame.font.Font(None, size)
+            self.font_cache[size] = font
+
+        return font
+
+    def _wrap(self, font, text, width):
+
+        lines = []
+        line = ""
+
+        for word in text.split(" "):
+
+            test = word if not line else line + " " + word
+
+            if not line or font.size(test)[0] <= width:
+                line = test
+
+            else:
+
+                lines.append(line)
+                line = word
+
+        if line:
+            lines.append(line)
+
+        return lines
+
+    def _fit_lines(self, text, width, base_size, max_lines):
+
+        size = max(10, int(base_size))
+
+        while True:
+
+            font = self._font(size)
+            lines = self._wrap(font, text, width)
+
+            if len(lines) <= max_lines:
+                return font, lines
+
+            if size <= 11:
+                break
+
+            size -= 1
+
+        lines = lines[:max_lines]
+
+        while lines[-1] and font.size(lines[-1] + "...")[0] > width:
+            lines[-1] = lines[-1][:-1]
+
+        lines[-1] = lines[-1].rstrip() + "..."
+
+        return font, lines
+
+    def _guide_pages(self):
+
+        key = controls.label
+        plus = ("sep", "+")
+        also = ("sep", "/")
+
+        return [
+            [
+                (
+                    [
+                        key("up"), key("left"), key("down"), key("right"),
+                        also, "FLECHAS"
+                    ],
+                    "Moverte",
+                    "Camina por el mapa en las cuatro direcciones."
+                ),
+                (
+                    ["ESPACIO"],
+                    "Saltar",
+                    "Esquiva las ondas y los barridos del jefe de la "
+                    "zona 2."
+                ),
+                (
+                    ["ESPACIO"],
+                    "Soltarte de una trampa",
+                    "Si una trampa te atrapa, púlsalo rápido para "
+                    "liberarte."
+                ),
+                (
+                    [key("emotes")],
+                    "Baile",
+                    "Abre la rueda de bailes para elegir uno."
+                ),
+            ],
+            [
+                (
+                    [key("pickup")],
+                    "Recoger",
+                    "Toma objetos y luces. Para tomar otra luz, suelta "
+                    "antes la tuya."
+                ),
+                (
+                    [key("drop")],
+                    "Soltar",
+                    "Suelta el objeto elegido. Con la luz elegida, "
+                    "suelta la luz."
+                ),
+                (
+                    [key("use")],
+                    "Usar / Tienda",
+                    "Abre la tienda, usa cofres y la puerta final, o "
+                    "el objeto elegido."
+                ),
+                (
+                    [key("magnet")],
+                    "Imán",
+                    "Activa o desactiva el modo imán (necesitas tener "
+                    "el imán)."
+                ),
+                (
+                    [key("attack_mode")],
+                    "Cambiar golpe",
+                    "Alterna entre golpe común y bola de fuego (solo "
+                    "con la antorcha)."
+                ),
+                (
+                    [key("equipped")],
+                    "Luz equipada",
+                    "Elige la luz del casillero aparte, la que te "
+                    "ilumina."
+                ),
+            ],
+            [
+                (
+                    [
+                        key("slot1"), key("slot2"),
+                        key("slot3"), key("slot4")
+                    ],
+                    "Casilleros",
+                    "Eligen un casillero del inventario."
+                ),
+                (
+                    [key("potion1"), key("potion2")],
+                    "Pociones",
+                    "Eligen las pociones de los marcos violeta."
+                ),
+                (
+                    [key("equipped")],
+                    "Luz equipada",
+                    "Elige el casillero aparte donde va tu luz."
+                ),
+                (
+                    ["RUEDA"],
+                    "Cambiar casillero",
+                    "Recorre los casilleros y la luz equipada."
+                ),
+                (
+                    ["CLIC IZQ"],
+                    "Mover objetos",
+                    "Arrastra un objeto a otro casillero para cambiarlo "
+                    "de lugar."
+                ),
+                (
+                    ["CLIC DER"],
+                    "Mapa",
+                    "Con el Mapa elegido, mantén el clic derecho para "
+                    "verlo."
+                ),
+            ],
+            [
+                (
+                    ["CTRL", plus, key("drop")],
+                    "Soltar todo",
+                    "Suelta todo el inventario. La luz equipada no se "
+                    "suelta."
+                ),
+                (
+                    ["SHIFT", plus, key("drop")],
+                    "Soltar un montón",
+                    "Suelta todo el montón del casillero elegido."
+                ),
+                (
+                    ["CTRL", plus, "CLIC IZQ"],
+                    "Tirar al tacho",
+                    "Sobre un tacho, tira todo el montón elegido en vez "
+                    "de uno solo."
+                ),
+                (
+                    ["SHIFT", plus, "CLIC DER"],
+                    "Quitar 5 en la tienda",
+                    "En la tienda, quita 5 unidades de un casillero en "
+                    "vez de 1."
+                ),
+            ],
+            [
+                (
+                    ["CLIC IZQ"],
+                    "Atacar",
+                    "Golpea con la luz equipada. Mantenlo para seguir "
+                    "atacando."
+                ),
+                (
+                    ["CLIC DER"],
+                    "Usar objeto",
+                    "Usa el objeto del casillero elegido, igual que "
+                    f"{key('use')}."
+                ),
+                (
+                    ["CLIC IZQ"],
+                    "Colocar",
+                    "Pon la construcción que llevas (cofre, fogata...) "
+                    "donde apuntes."
+                ),
+                (
+                    ["CLIC DER"],
+                    "Abrir construcciones",
+                    "Sobre un cofre, bolsa, yunque o ruleta abre su "
+                    "panel."
+                ),
+                (
+                    ["CLIC IZQ", also, "DER"],
+                    "Cofre o bolsa",
+                    "En su panel: izquierdo pasa el montón completo; "
+                    "derecho, solo uno."
+                ),
+                (
+                    ["CLIC CENTRAL"],
+                    "Info en la tienda",
+                    "En la tienda, muestra qué hace cada objeto."
+                ),
+            ],
+            [
+                (
+                    ["ESC"],
+                    "Pausa y volver",
+                    "Abre la pausa en partida y retrocede en cualquier "
+                    "pantalla."
+                ),
+                (
+                    ["TAB"],
+                    "Objetivos y tienda",
+                    "Minimiza el cuadro de objetivos. En la tienda "
+                    "cambia de pestaña."
+                ),
+                (
+                    ["ESC", also, key("use")],
+                    "Cerrar tienda",
+                    "Con la tienda abierta, cierra la pantalla."
+                ),
+                (
+                    ["K"],
+                    "Saltar tutorial",
+                    "Quita el tutorial cuando el juego permite "
+                    "saltarlo."
+                ),
+                (
+                    ["ENTER", also, "ESPACIO"],
+                    "Avanzar",
+                    "Pasa el cómic y el tutorial, y confirma en los "
+                    "menús."
+                ),
+                (
+                    ["F3", also, "F4"],
+                    "Ayudas visuales",
+                    "F3 muestra las cajas de objetos; F4, la zona de "
+                    "tus golpes."
+                ),
+            ],
+        ]
+
+    def _draw_chips(self, keys, x, y, max_w):
+
+        chip_h = max(14, round(self.GUIDE_CHIP_H * self.sy))
+        step = chip_h + max(2, round(2 * self.sy))
+        pad = round(6 * self.sx)
+        gap = max(2, round(3 * self.sx))
+
+        def chip_image(label):
+
+            image = self.chip_font.render(label, True, (36, 30, 26))
+
+            width = max(chip_h, image.get_width() + 2 * pad)
+
+            if width > max_w:
+
+                scale = (max_w - 2 * pad) / max(1, image.get_width())
+
+                image = pygame.transform.smoothscale(
+                    image,
+                    (
+                        max(1, round(image.get_width() * scale)),
+                        max(1, round(image.get_height() * scale))
+                    )
+                )
+
+                width = max_w
+
+            return image, width
+
+        cx = x
+        cy = y
+
+        index = 0
+
+        while index < len(keys):
+
+            token = keys[index]
+
+            if isinstance(token, tuple):
+
+                sep_w = self.chip_font.size(token[1])[0]
+
+                need = sep_w + gap
+
+                if index + 1 < len(keys) and not isinstance(
+                    keys[index + 1], tuple
+                ):
+                    need += chip_image(str(keys[index + 1]))[1]
+
+                if cx > x and cx + need > x + max_w:
+
+                    cx = x
+                    cy += step
+
+                self._text(
+                    self.chip_font,
+                    token[1],
+                    self.TEXT,
+                    midleft=(cx, cy + chip_h // 2)
+                )
+
+                cx += sep_w + gap
+                index += 1
+
+                continue
+
+            image, width = chip_image(str(token))
+
+            if cx > x and cx + width > x + max_w:
+
+                cx = x
+                cy += step
+
+            rect = pygame.Rect(cx, cy, width, chip_h)
+
+            plate = self._chip_surface(width, chip_h)
+
+            if plate is not None:
+
+                self.screen.blit(plate, rect)
+
+            else:
+
+                pygame.draw.rect(
+                    self.screen,
+                    (20, 48, 110),
+                    rect.move(0, 2),
+                    border_radius=4
+                )
+
+                pygame.draw.rect(
+                    self.screen, (232, 236, 246), rect, border_radius=4
+                )
+
+                pygame.draw.rect(
+                    self.screen, (70, 84, 122), rect, 1, border_radius=4
+                )
+
+            self.screen.blit(image, image.get_rect(center=rect.center))
+
+            cx += width + gap
+            index += 1
+
+    def _chip_surface(self, width, height):
+
+        raw = self.img_chip_raw
+
+        if raw is None:
+            return None
+
+        key = (width, height)
+
+        cached = self.chip_cache.get(key)
+
+        if cached is not None:
+            return cached
+
+        cap = max(2, min(width // 2, round(height * 0.38)))
+
+        src_cap = max(1, round(raw.get_width() * 0.2))
+
+        surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+        left = raw.subsurface(
+            pygame.Rect(0, 0, src_cap, raw.get_height())
+        )
+        right = raw.subsurface(
+            pygame.Rect(
+                raw.get_width() - src_cap, 0, src_cap, raw.get_height()
+            )
+        )
+        middle = raw.subsurface(
+            pygame.Rect(
+                src_cap, 0,
+                raw.get_width() - 2 * src_cap, raw.get_height()
+            )
+        )
+
+        surface.blit(
+            pygame.transform.smoothscale(left, (cap, height)), (0, 0)
+        )
+
+        surface.blit(
+            pygame.transform.smoothscale(
+                middle, (max(1, width - 2 * cap), height)
+            ),
+            (cap, 0)
+        )
+
+        surface.blit(
+            pygame.transform.smoothscale(right, (cap, height)),
+            (width - cap, 0)
+        )
+
+        self.chip_cache[key] = surface
+
+        return surface
+
+    def _chips_total(self, keys):
+
+        chip_h = max(14, round(self.GUIDE_CHIP_H * self.sy))
+        pad = round(6 * self.sx)
+        gap = max(2, round(3 * self.sx))
+
+        total = 0
+
+        for token in keys:
+
+            if isinstance(token, tuple):
+                total += self.chip_font.size(token[1])[0] + gap
+
+            else:
+
+                total += max(
+                    chip_h,
+                    self.chip_font.size(str(token))[0] + 2 * pad
+                ) + gap
+
+        return total - gap
+
+    def _draw_entry(self, rect, entry, key_w):
+
+        keys, title, desc = entry
+
+        gap = round(8 * self.sx)
+
+        self._draw_chips(keys, rect.left, rect.top, key_w)
+
+        text_x = rect.left + key_w + gap
+        text_w = rect.width - key_w - gap
+
+        title_font, title_lines = self._fit_lines(
+            title, text_w, 25 * self.sy, 1
+        )
+
+        title_h = title_font.get_height()
+
+        self._text(
+            title_font,
+            title_lines[0],
+            self.GOLD,
+            midleft=(text_x, rect.top + title_h // 2)
+        )
+
+        desc_font, desc_lines = self._fit_lines(
+            desc, text_w, 20 * self.sy, 2
+        )
+
+        line_h = desc_font.get_height()
+
+        y = rect.top + title_h + max(1, round(2 * self.sy))
+
+        for line in desc_lines:
+
+            self._text(
+                desc_font,
+                line,
+                self.TEXT,
+                midleft=(text_x, y + line_h // 2)
+            )
+
+            y += line_h
+
+    def _draw_pager(self, mouse):
+
+        for rect, direction in ((self.prev_rect, -1), (self.next_rect, 1)):
+
+            hovered = rect.collidepoint(mouse)
+
+            picture = (
+                self.img_arrow_hover[direction] if hovered
+                else self.img_arrow[direction]
+            ) or self.img_arrow[direction]
+
+            if picture is not None:
+
+                self.screen.blit(picture, rect)
+
+                continue
+
+            pygame.draw.rect(
+                self.screen,
+                (70, 132, 206) if hovered else (50, 104, 178),
+                rect,
+                border_radius=6
+            )
+
+            pygame.draw.rect(
+                self.screen, (26, 64, 132), rect, 2, border_radius=6
+            )
+
+            cx, cy = rect.center
+            half = max(4, rect.height // 5)
+
+            if direction < 0:
+
+                points = [
+                    (cx + half // 2, cy - half),
+                    (cx + half // 2, cy + half),
+                    (cx - half // 2, cy)
+                ]
+
+            else:
+
+                points = [
+                    (cx - half // 2, cy - half),
+                    (cx - half // 2, cy + half),
+                    (cx + half // 2, cy)
+                ]
+
+            pygame.draw.polygon(self.screen, self.TEXT, points)
+
+        self._text(
+            self.guide_tab_font,
+            f"{self.guide_page + 1}/{len(self._guide_flat())}",
+            self.TEXT,
+            center=(
+                (self.prev_rect.right + self.next_rect.left) // 2,
+                self.prev_rect.centery
+            )
+        )
+
+    def _draw_guide(self, mouse):
+
+        self._draw_button(
+            self.back_rect,
+            self.img_back,
+            self.img_back_hover,
+            mouse,
+            "Volver"
+        )
+
+        self._draw_pager(mouse)
+
+        flat = self._guide_flat()
+        current, entries = flat[min(self.guide_page, len(flat) - 1)]
+
+        for index, rect in enumerate(self.guide_tabs):
+
+            active = index == current
+            hovered = rect.collidepoint(mouse)
+
+            if active:
+                picture = self.img_tab_active
+            elif hovered:
+                picture = self.img_tab_hover
+            else:
+                picture = self.img_tab
+
+            if picture is not None:
+
+                self.screen.blit(picture, rect)
+
+            else:
+
+                if active:
+                    fill = (16, 40, 98)
+                elif hovered:
+                    fill = (74, 136, 210)
+                else:
+                    fill = (50, 104, 178)
+
+                pygame.draw.rect(self.screen, fill, rect, border_radius=6)
+
+                pygame.draw.rect(
+                    self.screen,
+                    self.ACCENT if active else (26, 64, 132),
+                    rect,
+                    2,
+                    border_radius=6
+                )
+
+            tab_font, tab_lines = self._fit_lines(
+                self.GUIDE_TAB_NAMES[index],
+                rect.width - round(10 * self.sx),
+                20 * self.sy,
+                1
+            )
+
+            self._text(
+                tab_font,
+                tab_lines[0],
+                self.GOLD if active else self.TEXT,
+                center=rect.center
+            )
+
+        area_x = round(self.GUIDE_X1 * self.sx)
+        area_w = round((self.GUIDE_X2 - self.GUIDE_X1) * self.sx)
+        gap = round(self.GUIDE_GAP * self.sx)
+        col_w = (area_w - gap) // 2
+        row_h = round(self.GUIDE_ROW_H * self.sy)
+        top = round(self.GUIDE_TOP * self.sy)
+
+        per_col = 2
+
+        key_cap = round(self.GUIDE_KEY_W * self.sx)
+
+        key_widths = [
+            min(
+                key_cap,
+                max(
+                    [
+                        self._chips_total(entry[0])
+                        for entry in entries[start:start + per_col]
+                    ] or [0]
+                ) + round(2 * self.sx)
+            )
+            for start in (0, per_col)
+        ]
+
+        for index, entry in enumerate(entries):
+
+            col = index // per_col
+            row = index % per_col
+
+            rect = pygame.Rect(
+                area_x + col * (col_w + gap),
+                top + row * row_h,
+                col_w,
+                row_h
+            )
+
+            self._draw_entry(rect, entry, key_widths[col])
 
     def _draw_controls(self, mouse):
 
