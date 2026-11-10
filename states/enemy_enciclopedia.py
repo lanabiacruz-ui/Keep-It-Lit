@@ -6,6 +6,7 @@ from pathlib import Path
 import pygame
 
 
+from core.fonts import load_font
 DATA_PATH = (
     Path(__file__).resolve().parent.parent
     / "data"
@@ -924,7 +925,7 @@ class EnemyEncyclopedia:
 
         if font is None:
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
 
             self._font_cache[size] = font
 

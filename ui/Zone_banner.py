@@ -3,6 +3,7 @@ from pathlib import Path
 import pygame
 
 
+from core.fonts import load_font
 BANNER_IMAGE = (
     Path(__file__).resolve().parent.parent
     / "assets"
@@ -35,7 +36,7 @@ class ZoneBanner:
 
         self.width, self.height = screen_size
 
-        self.font = pygame.font.Font(None, FONT_SIZE)
+        self.font = load_font(FONT_SIZE)
 
         self.age = None     
         self.image = None

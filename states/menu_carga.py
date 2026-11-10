@@ -1,4 +1,5 @@
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from core.Save_manager import name_exists
@@ -41,8 +42,8 @@ class MenuCarga:
 
         self.text_max_width = self.input_rect.width - 32
 
-        self.font = pygame.font.Font(None, 24)
-        self.small_font = pygame.font.Font(None, 24)
+        self.font = load_font(24)
+        self.small_font = load_font(24)
 
         self.name = ""
         self.message = ""

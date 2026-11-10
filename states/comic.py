@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 from core import story
 
@@ -371,7 +372,7 @@ class Comic:
 
         while True:
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
 
             items = []
 

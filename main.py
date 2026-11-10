@@ -2,6 +2,7 @@ import sys
 import ctypes
 import pygame
 
+from core.fonts import load_font
 # Windows: darle al juego su propio ID para que la barra de tareas
 # no lo agrupe con Python y muestre el ícono del juego.
 if sys.platform == "win32":
@@ -26,6 +27,7 @@ from states.skins_menu import SkinsMenu
 from ui.slide_transition import SlideTransition
 from ui.map_reveal import MapReveal
 from ui.zoom_transition import ZoomTransition
+from ui.cursor import TorchCursor
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
@@ -72,12 +74,16 @@ except pygame.error:
 
 poner_icono()  # otra vez, ya con la ventana creada
 
+# cursor propio: antorcha (se oculta el del sistema)
+pygame.mouse.set_visible(False)
+torch_cursor = TorchCursor()
+
 pygame.display.set_caption(
     "Keep It Lit"
 )
 
 clock = pygame.time.Clock()
-fps_font = pygame.font.Font(None, 28)
+fps_font = load_font(28)
 STARTUP_SOUND_HOLD = 5.4
 
 startup = Startup(screen, duration=STARTUP_SOUND_HOLD)
@@ -681,6 +687,8 @@ while running:
         fps_shadow = fps_font.render(f"{clock.get_fps():.0f} FPS", True, (0, 0, 0))
         screen.blit(fps_shadow, (13, 11))
         screen.blit(fps_text, (11, 9))
+
+    torch_cursor.draw(screen)
 
     pygame.display.flip()
 

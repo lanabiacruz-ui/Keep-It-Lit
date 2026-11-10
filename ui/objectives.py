@@ -4,6 +4,7 @@ from pathlib import Path
 import pygame
 
 
+from core.fonts import load_font
 UI_DIR = Path(__file__).resolve().parent.parent / "assets" / "maps" / "ui"
 
 OBJECTIVE_IMAGE = "objetivo.png"
@@ -53,10 +54,10 @@ class Objectives:
         self.width, self.height = screen_size
         self.objectives = list(objectives)
 
-        self.title_font = pygame.font.Font(None, 22)
-        self.hint_font = pygame.font.Font(None, 20)
+        self.title_font = load_font(22)
+        self.hint_font = load_font(20)
         self.skip_requested = False
-        self.font = pygame.font.Font(None, 26)
+        self.font = load_font(26)
 
         self.frame_normal = self._load_frame(OBJECTIVE_IMAGE)
         self.frame_done = self._load_frame(DONE_IMAGE)
@@ -128,7 +129,7 @@ class Objectives:
 
         for size in range(FONT_MAX, FONT_MIN - 1, -1):
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
             lines = self._wrap(font, text, area.width)
 
             if font.get_linesize() * len(lines) <= area.height:

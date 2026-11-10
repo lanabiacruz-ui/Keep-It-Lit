@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.achievements import achievements
 from core.audio_manager import audio
+from core.surface_cache import scaled, render_text
 from world.fireball import FIRE_SPEED
 from world import pathing
 from world import yunque
@@ -361,7 +363,7 @@ def load_image(path, size=None):
 def get_font(size):
 
     if size not in _fonts:
-        _fonts[size] = pygame.font.Font(None, size)
+        _fonts[size] = load_font(size)
 
     return _fonts[size]
 
@@ -370,8 +372,8 @@ def draw_text(screen, text, size, color, **anchor):
 
     font = get_font(size)
 
-    shadow = font.render(text, True, (0, 0, 0))
-    label = font.render(text, True, color)
+    shadow = render_text(font, text, (0, 0, 0))
+    label = render_text(font, text, color)
 
     rect = label.get_rect(**anchor)
 
@@ -2057,7 +2059,7 @@ class Mosquito(Enemy):
 
         if self.attached:
 
-            frame = pygame.transform.smoothscale(
+            frame = scaled(
                 frame,
                 (max(1, int(frame.get_width() * 0.85)),
                  max(1, int(frame.get_height() * 0.85)))
@@ -2252,7 +2254,7 @@ class Shot:
         size = max(1, int(img.get_width() * pulse))
 
         if size != img.get_width():
-            img = pygame.transform.scale(img, (size, size))
+            img = scaled(img, (size, size), smooth=False)
 
         center = camera.apply(self.rect).center
 
@@ -6817,7 +6819,7 @@ class Arena:
                 img = self.sealed_img
 
                 if img.get_size() != rect.size:
-                    img = pygame.transform.smoothscale(img, rect.size)
+                    img = scaled(img, rect.size)
 
                 screen.blit(img, rect)
 
@@ -7089,7 +7091,7 @@ class Arena:
 
             if self.coin_icon is not None:
 
-                coin = pygame.transform.smoothscale(self.coin_icon, (32, 32))
+                coin = scaled(self.coin_icon, (32, 32))
                 layer.blit(coin, coin.get_rect(center=(local.centerx - 120, y)))
 
             draw_text(
@@ -7097,7 +7099,7 @@ class Arena:
                 midleft=(local.centerx - 98, y)
             )
 
-            gem = pygame.transform.smoothscale(self.gem_icon, (32, 32))
+            gem = scaled(self.gem_icon, (32, 32))
 
             layer.blit(gem, gem.get_rect(center=(local.centerx + 50, y)))
 
@@ -7115,7 +7117,7 @@ class Arena:
 
             if self.coin_icon is not None:
 
-                coin = pygame.transform.smoothscale(self.coin_icon, (32, 32))
+                coin = scaled(self.coin_icon, (32, 32))
                 layer.blit(coin, coin.get_rect(center=(local.centerx - 52, y)))
 
         layer.set_alpha(alpha)

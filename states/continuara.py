@@ -2,6 +2,7 @@ import math
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 
 
@@ -52,7 +53,7 @@ class Continuara:
 
         size = max(40, round(self.height * 0.12))
 
-        font = pygame.font.Font(None, size)
+        font = load_font(size)
 
         tracking = max(2, round(self.height * 0.006))
 

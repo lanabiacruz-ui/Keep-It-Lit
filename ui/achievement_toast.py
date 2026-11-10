@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.achievements import achievements
 
 
@@ -24,8 +25,8 @@ class AchievementToast:
         self.box_w = max(260, round(380 * scale))
         self.box_h = max(54, round(66 * scale))
 
-        self.top_font = pygame.font.Font(None, max(16, round(22 * scale)))
-        self.title_font = pygame.font.Font(None, max(20, round(32 * scale)))
+        self.top_font = load_font(max(16, round(22 * scale)))
+        self.title_font = load_font(max(20, round(32 * scale)))
 
         self.bg = None
 

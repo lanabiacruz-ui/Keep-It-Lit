@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 
+from core.fonts import load_font
 class PauseMenu:
 
     IMG_W = 1637
@@ -48,7 +49,7 @@ class PauseMenu:
         self.resize()
 
     def _make_label_font(self):
-        font = pygame.font.Font(None, max(20, round(52 * self.sy)))
+        font = load_font(max(20, round(52 * self.sy)))
         font.set_italic(True)
         return font
 
@@ -116,7 +117,7 @@ class PauseMenu:
             max_w = rect.width * 0.86
 
             while True:
-                font = pygame.font.Font(None, size)
+                font = load_font(size)
                 font.set_italic(True)
                 surf = font.render(text, True, self.LABEL_COLOR)
 
@@ -139,7 +140,7 @@ class PauseMenu:
         pygame.draw.circle(self.screen, (60, 40, 8), center, radius + 3)
         pygame.draw.circle(self.screen, (255, 205, 70), center, radius)
 
-        font = pygame.font.Font(None, max(16, round(radius * 1.6)))
+        font = load_font(max(16, round(radius * 1.6)))
         text = font.render(str(min(99, self.pending_enemies)), True, (60, 34, 4))
 
         self.screen.blit(text, text.get_rect(center=center))

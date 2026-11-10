@@ -1,4 +1,5 @@
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from core.Save_manager import (
@@ -273,7 +274,7 @@ class ContinueGame:
     def _name_font(self, size):
 
         if size not in self.name_fonts:
-            self.name_fonts[size] = pygame.font.Font(None, size)
+            self.name_fonts[size] = load_font(size)
 
         return self.name_fonts[size]
 

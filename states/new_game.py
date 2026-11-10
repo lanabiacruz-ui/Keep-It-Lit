@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.accessibility import flash_safe, flash_level, tutorial_hints
 from core.audio_manager import audio
 from core.controls import controls, SLOT_ACTIONS
@@ -968,7 +969,7 @@ class NewGame:
         font = self._font_cache.get(size)
 
         if font is None:
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
             self._font_cache[size] = font
 
         return font
@@ -2474,7 +2475,7 @@ class NewGame:
 
         if count > 1:
 
-            font = pygame.font.Font(None, 22)
+            font = load_font(22)
             txt = font.render(str(count), True, (255, 255, 255))
             shadow = font.render(str(count), True, (20, 20, 24))
 
@@ -6440,7 +6441,7 @@ class NewGame:
             pygame.draw.rect(
                 key, (70, 82, 92), (2, 2, 28, 28), 2, border_radius=7
             )
-            font = pygame.font.Font(None, 26)
+            font = load_font(26)
             txt = font.render("O", True, (40, 48, 56))
             key.blit(txt, txt.get_rect(center=(16, 16)))
 

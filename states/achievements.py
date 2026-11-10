@@ -1,4 +1,5 @@
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from core.achievements import achievements, ACHIEVEMENTS
@@ -305,7 +306,7 @@ class AchievementsMenu:
         font = self._fonts.get(size)
 
         if font is None:
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
             self._fonts[size] = font
 
         return font

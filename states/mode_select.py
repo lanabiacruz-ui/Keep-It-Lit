@@ -1,4 +1,5 @@
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from core.Save_manager import MODE_NORMAL, MODE_HARDCORE
@@ -64,10 +65,10 @@ class ModeSelect:
             "btn_hardcore_hover.png", size
         )
 
-        self.title_font = pygame.font.Font(None, max(18, int(34 * self.sy)))
-        self.button_font = pygame.font.Font(None, max(18, int(44 * self.sy)))
-        self.desc_font = pygame.font.Font(None, max(14, int(28 * self.sy)))
-        self.small_font = pygame.font.Font(None, 24)
+        self.title_font = load_font(max(18, int(34 * self.sy)))
+        self.button_font = load_font(max(18, int(44 * self.sy)))
+        self.desc_font = load_font(max(14, int(28 * self.sy)))
+        self.small_font = load_font(24)
 
         self.selected = 0
 

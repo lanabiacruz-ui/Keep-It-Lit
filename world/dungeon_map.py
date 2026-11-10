@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from world.zones import ZONES
 
 
@@ -347,7 +348,7 @@ class DungeonMapView:
     def _font(self, size):
 
         if size not in self._fonts:
-            self._fonts[size] = pygame.font.Font(None, size)
+            self._fonts[size] = load_font(size)
 
         return self._fonts[size]
 

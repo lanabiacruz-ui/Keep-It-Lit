@@ -3,6 +3,7 @@ import math
 
 import pygame
 
+from core.fonts import load_font
 from world.zones import ZONES
 
 
@@ -193,9 +194,9 @@ class Guide:
 
         self.t = 0.0
 
-        self.font = pygame.font.Font(None, 24)
-        self.title_font = pygame.font.Font(None, 20)
-        self.dist_font = pygame.font.Font(None, 22)
+        self.font = load_font(24)
+        self.title_font = load_font(20)
+        self.dist_font = load_font(22)
 
         self._arrow_cache = {}
         self._chevron_cache = {}

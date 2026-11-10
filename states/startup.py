@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 
+from core.fonts import load_font
 # Duracion "de diseno" de la secuencia, en segundos. Coincide con el largo
 # del sonido de inicio (intro.ogg ~5.5 s). Si la Startup recibe otra
 # duracion, toda la secuencia se estira o se achica en proporcion.
@@ -194,7 +195,7 @@ class Startup:
         self.fade_surf.fill((0, 0, 0))
 
         # frase final con las letras separadas
-        font = pygame.font.Font(None, max(18, round(h * 0.036)))
+        font = load_font(max(18, round(h * 0.036)))
 
         self.tagline = self._spaced_text(
             font, self.TAGLINE, (205, 188, 160), round(h * 0.012)

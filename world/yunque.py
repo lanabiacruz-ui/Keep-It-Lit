@@ -42,6 +42,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from world.items import HUD_DIR
 
 UI_DIR = HUD_DIR.parent / "ui"
@@ -414,7 +415,7 @@ class AnvilPanel:
         f = self._fonts.get(size)
 
         if f is None:
-            f = pygame.font.Font(None, size)
+            f = load_font(size)
             self._fonts[size] = f
 
         return f

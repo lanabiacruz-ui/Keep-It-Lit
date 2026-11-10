@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core import accessibility
 from core.audio_manager import audio
 from core.controls import controls, GROUPS
@@ -239,12 +240,12 @@ class Settings:
         self.small_font = pygame.font.Font(
             None, max(14, round(self.SMALL_FONT_SIZE * self.sy))
         )
-        self.key_font = pygame.font.Font(None, max(12, round(19 * self.sy)))
-        self.chip_font = pygame.font.Font(None, max(11, round(18 * self.sy)))
+        self.key_font = load_font(max(12, round(19 * self.sy)))
+        self.chip_font = load_font(max(11, round(18 * self.sy)))
         self.guide_tab_font = pygame.font.Font(
             None, max(14, round(20 * self.sy))
         )
-        self.title_font = pygame.font.Font(None, max(16, round(26 * self.sy)))
+        self.title_font = load_font(max(16, round(26 * self.sy)))
 
         self.background = self._load_background(background)
 
@@ -1062,7 +1063,7 @@ class Settings:
 
         if font is None:
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
             self.font_cache[size] = font
 
         return font

@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 
+from core.fonts import load_font
 HUD_DIR = (
     Path(__file__).resolve().parent.parent
     / "assets"
@@ -81,7 +82,7 @@ def _placeholder_fill(color, label):
 
     try:
 
-        font = pygame.font.Font(None, 22)
+        font = load_font(22)
         text = font.render(label, True, (40, 25, 15))
         surf.blit(text, text.get_rect(center=rect.center))
 
@@ -232,7 +233,7 @@ class EffectsBar:
         screen.blit(img, (x, y))
 
         if self.alert_font is None:
-            self.alert_font = pygame.font.Font(None, 24)
+            self.alert_font = load_font(24)
 
         text = EFFECTS["mosquito"]["label"]
         color = EFFECTS["mosquito"]["color"]

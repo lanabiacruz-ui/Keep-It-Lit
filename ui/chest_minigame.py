@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.controls import controls
 
 
@@ -75,7 +76,7 @@ class ChestMinigame:
         )
         self.dim.fill((0, 0, 0, 150))
 
-        self.font = pygame.font.Font(None, 26)
+        self.font = load_font(26)
 
         self.length = BARRA_W - BARRA_MARGIN * 2
 

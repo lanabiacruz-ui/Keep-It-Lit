@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -374,9 +375,9 @@ class Tutorial:
 
         self.group_rect = self.char_rect.union(self.frame_rect)
 
-        self.hint_font = pygame.font.Font(None, 21)
-        self.counter_font = pygame.font.Font(None, 20)
-        self.name_font = pygame.font.Font(None, 22)
+        self.hint_font = load_font(21)
+        self.counter_font = load_font(20)
+        self.name_font = load_font(22)
 
         self.pad_x = 22
         self.pad_y = 14
@@ -548,7 +549,7 @@ class Tutorial:
 
         if font is None:
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
 
             self._fonts[size] = font
 
@@ -1023,7 +1024,7 @@ class Tutorial:
         parts = []
 
         if self.index > 0:
-            parts.append("← volver")
+            parts.append("« volver")
 
         parts.append("cerrar" if last and done else "seguir")
 

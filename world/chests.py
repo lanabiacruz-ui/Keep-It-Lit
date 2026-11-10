@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from world.items import WorldItem
 
 
@@ -266,7 +267,7 @@ class ChestManager:
                 Chest(chest_id, x, y, cooldown, uses_left)
             )
 
-        self.font = pygame.font.Font(None, 24)
+        self.font = load_font(24)
 
         print(f"[cofres] {len(self.chests)} cofres en el mapa")
 

@@ -35,6 +35,7 @@ import random
 import pygame
 
 
+from core.fonts import load_font
 BOSS_NAME = "PIÑA COLOSAL"
 
 # Vida total. El golpe del jugador hace 1 (fosforo/vela) o 2 (antorcha).
@@ -1263,7 +1264,7 @@ def _font(size):
 
     if f is None:
 
-        f = _fonts[size] = pygame.font.Font(None, size)
+        f = _fonts[size] = load_font(size)
 
     return f
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core import skins as skin_lib
 from core.controls import controls
 
@@ -270,12 +271,12 @@ class ShopUI:
         self.scroll = 0.0
         self.cart_scroll = 0.0
 
-        self.title_font = pygame.font.Font(None, 46)
-        self.section_font = pygame.font.Font(None, 26)
-        self.name_font = pygame.font.Font(None, 28)
-        self.small_font = pygame.font.Font(None, 23)
-        self.tiny_font = pygame.font.Font(None, 21)
-        self.button_font = pygame.font.Font(None, 30)
+        self.title_font = load_font(46)
+        self.section_font = load_font(26)
+        self.name_font = load_font(28)
+        self.small_font = load_font(23)
+        self.tiny_font = load_font(21)
+        self.button_font = load_font(30)
         self._font_cache = {}
 
         self.panel = pygame.Rect(0, 0, self.PANEL_W, self.PANEL_H)
@@ -1479,7 +1480,7 @@ class ShopUI:
         font = self._font_cache.get(size)
 
         if font is None:
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
             self._font_cache[size] = font
 
         return font

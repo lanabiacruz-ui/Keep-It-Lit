@@ -14,6 +14,7 @@ import random
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 from core.music_manager import music
 
@@ -456,7 +457,7 @@ class BossCinematic:
         font = self._fonts.get(size)
 
         if font is None:
-            font = self._fonts[size] = pygame.font.Font(None, size)
+            font = self._fonts[size] = load_font(size)
 
         return font
 

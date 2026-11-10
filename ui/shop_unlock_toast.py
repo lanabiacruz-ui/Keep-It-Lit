@@ -1,5 +1,6 @@
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 from world.items import load_icon
 from ui.hud import HUD_DIR
@@ -50,9 +51,9 @@ class ShopUnlockToast:
         self.box_w = max(320, round(480 * scale))
         self.box_h = max(70, round(100 * scale))
 
-        self.top_font = pygame.font.Font(None, max(18, round(26 * scale)))
-        self.name_font = pygame.font.Font(None, max(22, round(36 * scale)))
-        self.sub_font = pygame.font.Font(None, max(16, round(22 * scale)))
+        self.top_font = load_font(max(18, round(26 * scale)))
+        self.name_font = load_font(max(22, round(36 * scale)))
+        self.sub_font = load_font(max(16, round(22 * scale)))
 
         self.outline = max(1, round(2 * scale))
 

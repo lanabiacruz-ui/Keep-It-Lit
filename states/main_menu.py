@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 from core import story
 from ui import room_light
@@ -253,8 +254,8 @@ class MainMenu:
         self.menu_y = 245
         self.option_height = 33
 
-        self.font = pygame.font.Font(None,42)
-        self.small_font = pygame.font.Font(None,24)
+        self.font = load_font(42)
+        self.small_font = load_font(24)
 
         self._setup_effects()
 

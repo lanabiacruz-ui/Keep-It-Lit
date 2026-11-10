@@ -3,6 +3,7 @@ import random
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 from ui.tutorial import (
     CHARACTER_IMAGE,
@@ -73,8 +74,8 @@ class Companion:
 
         self.character = pygame.transform.smoothscale(char, (w, char_height))
 
-        self.font = pygame.font.Font(None, BUBBLE_FONT)
-        self.name_font = pygame.font.Font(None, 20)
+        self.font = load_font(BUBBLE_FONT)
+        self.name_font = load_font(20)
 
         self.rest_rect = self.character.get_rect(
             bottomright=(self.width - margin, self.height - margin)

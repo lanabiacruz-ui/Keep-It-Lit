@@ -1,6 +1,7 @@
 import math
 
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from world.items import load_icon
@@ -270,7 +271,7 @@ class Hud:
             bars_top + self.vida_frame.get_height() + gap_bars
         )
 
-        self.countdown_font = pygame.font.Font(None, 90)
+        self.countdown_font = load_font(90)
 
         giveup = self._load_optional(GIVEUP_IMAGE)
         giveup_hover = self._load_optional(GIVEUP_IMAGE_HOVER)
@@ -291,10 +292,10 @@ class Hud:
 
         self.giveup_rect = None
 
-        self.tip_title_font = pygame.font.Font(None, 26)
-        self.tip_font = pygame.font.Font(None, 22)
-        self.msg_font = pygame.font.Font(None, 28)
-        self.count_font = pygame.font.Font(None, 26)
+        self.tip_title_font = load_font(26)
+        self.tip_font = load_font(22)
+        self.msg_font = load_font(28)
+        self.count_font = load_font(26)
 
         self._slot_icons = {}
 
@@ -362,7 +363,7 @@ class Hud:
             )
         )
 
-        self.coin_font = pygame.font.Font(None, 32)
+        self.coin_font = load_font(32)
 
         self.gain_font = None
 
@@ -411,7 +412,7 @@ class Hud:
             surf, (235, 225, 215), surf.get_rect(), 3, border_radius=14
         )
 
-        font = pygame.font.Font(None, 34)
+        font = load_font(34)
         label = font.render("Terminar", True, (255, 255, 255))
 
         surf.blit(label, label.get_rect(center=surf.get_rect().center))
@@ -554,7 +555,7 @@ class Hud:
             font = cache.get(size)
 
             if font is None:
-                font = cache[size] = pygame.font.Font(None, size)
+                font = cache[size] = load_font(size)
 
             if font.size(message)[0] <= max_w:
                 lines = [message]
@@ -721,7 +722,7 @@ class Hud:
             gain_text = f"+{format_coins(coin_gain)}"
 
             if self.gain_font is None:
-                self.gain_font = pygame.font.Font(None, 30)
+                self.gain_font = load_font(30)
 
             alpha = int(255 * max(0.0, min(1.0, coin_gain_alpha)))
 

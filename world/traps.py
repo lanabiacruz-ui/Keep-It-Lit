@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.accessibility import flash_level, flash_safe
 from core.audio_manager import audio
 
@@ -51,7 +52,7 @@ _fonts = {}
 
 def _font(size):
     if size not in _fonts:
-        _fonts[size] = pygame.font.Font(None, size)
+        _fonts[size] = load_font(size)
     return _fonts[size]
 
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from world.items import WorldItem, LightItem, HUD_DIR, set_expiry
 from world.lights import LIGHTS
 
@@ -337,7 +338,7 @@ class Shopkeeper:
             surf, (230, 230, 240), surf.get_rect(), 2, border_radius=6
         )
 
-        font = pygame.font.Font(None, 30)
+        font = load_font(30)
         letter = font.render("F", True, (255, 255, 255))
 
         surf.blit(letter, letter.get_rect(center=(16, 16)))

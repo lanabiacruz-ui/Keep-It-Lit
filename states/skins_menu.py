@@ -1,5 +1,6 @@
 import re
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from core import skins as skin_lib
@@ -78,8 +79,8 @@ class SkinsMenu:
 
         self.name_size = max(14, round(21 * self.sy))
         self.name_min = max(11, round(16 * self.sy))
-        self.small_font = pygame.font.Font(None, max(13, round(18 * self.sy)))
-        self.tag_font = pygame.font.Font(None, max(12, round(17 * self.sy)))
+        self.small_font = load_font(max(13, round(18 * self.sy)))
+        self.tag_font = load_font(max(12, round(17 * self.sy)))
         self.controls_font = pygame.font.Font(
             None, max(14, round(20 * self.sy))
         )
@@ -435,7 +436,7 @@ class SkinsMenu:
 
         for size in range(self.name_size, self.name_min - 1, -1):
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
 
             if font.size(text)[0] <= width:
 
@@ -451,7 +452,7 @@ class SkinsMenu:
 
             for size in range(self.name_size - 2, self.name_min - 3, -1):
 
-                font = pygame.font.Font(None, size)
+                font = load_font(size)
 
                 for cut in range(1, len(words)):
 
@@ -477,7 +478,7 @@ class SkinsMenu:
 
             else:
 
-                font = pygame.font.Font(None, self.name_min)
+                font = load_font(self.name_min)
 
                 surf = font.render(text, True, color)
 
@@ -729,7 +730,7 @@ class SkinsMenu:
 
         while True:
 
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
 
             line = font.render(text, True, (235, 242, 255))
 

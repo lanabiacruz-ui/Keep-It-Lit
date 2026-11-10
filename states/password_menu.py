@@ -1,4 +1,5 @@
 import pygame
+from core.fonts import load_font
 from pathlib import Path
 
 from core.Save_manager import PASSWORD_MIN, PASSWORD_MAX
@@ -51,9 +52,9 @@ class PasswordMenu:
 
         self.text_max_width = self.eye_rect.left - self.input_rect.left - 12
 
-        self.font = pygame.font.Font(None, 24)
-        self.label_font = pygame.font.Font(None, max(18, int(30 * self.sy)))
-        self.small_font = pygame.font.Font(None, 24)
+        self.font = load_font(24)
+        self.label_font = load_font(max(18, int(30 * self.sy)))
+        self.small_font = load_font(24)
 
         self.text = ""
         self.message = ""

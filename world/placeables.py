@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
 from world import items as _items
 from world.items import HUD_DIR, load_icon
@@ -195,7 +196,7 @@ _CAP_FONT = []
 def _cap_font():
 
     if not _CAP_FONT:
-        _CAP_FONT.append(pygame.font.Font(None, 22))
+        _CAP_FONT.append(load_font(22))
 
     return _CAP_FONT[0]
 
@@ -1347,7 +1348,7 @@ class PlaceableManager:
         font = self._fonts.get(size)
 
         if font is None:
-            font = pygame.font.Font(None, size)
+            font = load_font(size)
             self._fonts[size] = font
 
         return font

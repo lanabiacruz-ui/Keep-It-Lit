@@ -4,7 +4,9 @@ from pathlib import Path
 
 import pygame
 
+from core.fonts import load_font
 from core.audio_manager import audio
+from core.surface_cache import scaled
 from world.doors import Door, DOORS_DIR
 from world.items import get_gem_icon, get_green_gem_icon
 
@@ -159,7 +161,7 @@ def _pillar(width, height, level):
 def _font(size):
 
     if size not in _font_cache:
-        _font_cache[size] = pygame.font.Font(None, size)
+        _font_cache[size] = load_font(size)
 
     return _font_cache[size]
 
@@ -272,7 +274,7 @@ def draw_placed_gems(screen, camera, clock):
 
         icon = get_gem_icon() if key == "clara" else get_green_gem_icon()
         size = max(1, int(14 * zoom))
-        icon = pygame.transform.scale(icon, (size, size))
+        icon = scaled(icon, (size, size), smooth=False)
 
         screen.blit(icon, icon.get_rect(center=(int(sx), int(sy))))
 
@@ -877,8 +879,8 @@ class FinalDoor(Door):
             if self.slots[key]:
 
                 icon = get_gem_icon() if key == "clara" else get_green_gem_icon()
-                size = int(14 * zoom)
-                icon = pygame.transform.scale(icon, (size, size))
+                size = max(1, int(14 * zoom))
+                icon = scaled(icon, (size, size), smooth=False)
 
                 screen.blit(icon, icon.get_rect(center=(int(sx), int(sy))))
 
