@@ -108,6 +108,18 @@ TEXTS = [
         "cheer": "¡Entrenamiento básico completo! Ahora, a salir de aquí. Yo te espero... bueno, no: te sigo.",
     },
 
+    # 6b - baile (Six Seven)
+    {
+        "text": "Haz un baile: abre la rueda de bailes con B y elige Six Seven.",
+        "tuto": [
+            "Antes de seguir tengo un pedido muy importante: ¡hazme un Six Seven! Sí, ahora. Es una orden oficial de fantasma y no se discute.",
+            "Presiona [[B]] para abrir la rueda de bailes, apunta con el mouse a Six Seven y haz click. Las manos van así: una sube y la otra baja, como una balanza. ¡Six... seveeen!",
+            "Y ya que estás en onda, te enseño a bailar: en esa misma rueda también hay un Dab y un Saludo. Pruébalos cuando quieras. Yo bailo flotando desde hace años y nadie se queja.",
+        ],
+        "hint": "Presiona [[B]], elige Six Seven en la rueda y haz click. Yo lo haría, pero me falta cuerpo para eso.",
+        "cheer": "¡SIX SEVEN! Perfecto. Eres oficialmente el mejor bailarín de la mazmorra. Y yo, el mejor maestro.",
+    },
+
     # 7 - puerta de la cabana
     {
         "text": (

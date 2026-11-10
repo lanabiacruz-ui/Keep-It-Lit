@@ -1498,6 +1498,13 @@ class NewGame:
                 ("TAB: ocultar el objetivo", "tab" in g.tuto_flags),
             ]
 
+        def dance_checks(g):
+
+            return [
+                ("Abrir la rueda de bailes (B)", "emote_open" in g.tuto_flags),
+                ("Hacer el Six Seven", "six_seven" in g.tuto_flags),
+            ]
+
         objectives = [
 
             {
@@ -1580,6 +1587,17 @@ class NewGame:
                 ],
                 "checks": help_checks,
                 "done": checks_done(help_checks),
+            },
+            {
+                "text": (
+                    "Haz un baile: abre la rueda de bailes con B y "
+                    "elige Six Seven."
+                ),
+                "tuto": [
+                    "BAILE: presiona B para abrir la rueda de bailes y elige Six Seven.",
+                ],
+                "checks": dance_checks,
+                "done": checks_done(dance_checks),
             },
             {
                 "text": (
@@ -5036,7 +5054,8 @@ class NewGame:
                 chosen = self.emote_wheel.pop_selected()
 
                 if chosen:
-                    self.player.play_emote(chosen)
+                    if self.player.play_emote(chosen) and chosen == "six_seven":
+                        self.tuto_flags.add("six_seven")
 
                 return None
 
@@ -5047,6 +5066,7 @@ class NewGame:
         ):
 
             self.emote_wheel.open()
+            self.tuto_flags.add("emote_open")
 
             return None
         if event.type == pygame.KEYDOWN:

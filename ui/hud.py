@@ -486,13 +486,13 @@ class Hud:
 
                 title = self.tip_title_font.render(
                     d.get("nombre", item_id), True,
-                    (255, 244, 255) if potion else (40, 46, 56)
+                    (68, 47, 84) if potion else (40, 46, 56)
                 )
 
                 lines = [
                     self.tip_font.render(
                         t, True,
-                        (240, 228, 250) if potion else (55, 62, 74)
+                        (68, 47, 84) if potion else (55, 62, 74)
                     )
                     for t in self._wrap(
                         self.tip_font, d.get("descripcion", ""), 230
