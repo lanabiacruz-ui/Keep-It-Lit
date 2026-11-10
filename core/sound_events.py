@@ -1,4 +1,5 @@
 import math
+import random
 
 from core.audio_manager import audio
 
@@ -7,6 +8,8 @@ CRACKLE_INTERVAL = 1.15
 CRACKLE_RANGE = 420.0
 HEART_INTERVAL = 0.95
 HEART_LIFE = 0.2
+
+STEP_SOUNDS = ("step_a", "step_b", "step_c", "step_d")
 
 DENY_PREFIXES = (
     "no te alcanzan",
@@ -45,7 +48,7 @@ class SoundWatcher:
         self.game = None
         self.prev = None
         self.step_t = 0.0
-        self.step_flip = False
+        self.step_last = None
         self.crackle_t = 0.0
         self.slime_flash = {}
         self.broken = False
@@ -315,10 +318,7 @@ class SoundWatcher:
         if pop is not None:
 
             if stepped:
-
-                self.step_flip = not self.step_flip
-
-                play("step_a" if self.step_flip else "step_b")
+                self._play_step(play)
 
             return
 
@@ -327,9 +327,18 @@ class SoundWatcher:
         if self.step_t >= STEP_INTERVAL:
 
             self.step_t = 0.0
-            self.step_flip = not self.step_flip
 
-            play("step_a" if self.step_flip else "step_b")
+            self._play_step(play)
+
+    def _play_step(self, play):
+        """4 pisadas distintas, nunca la misma dos veces seguidas, y con un
+        poco de variacion de volumen para que no suene a metronomo."""
+
+        choices = [s for s in STEP_SOUNDS if s != self.step_last]
+
+        self.step_last = random.choice(choices)
+
+        play(self.step_last, 1.0, 0.14)
 
     def _crackle(self, game, dt, play):
 

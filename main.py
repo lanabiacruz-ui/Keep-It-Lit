@@ -31,6 +31,7 @@ from ui.cursor import TorchCursor
 
 from core.Save_manager import create_new_save, load_save
 from core.audio_manager import audio
+from core.ui_sounds import ui_sound
 from core.accessibility import show_fps
 from core.music_manager import music
 from core.sound_events import watcher
@@ -273,19 +274,11 @@ while running:
 
         if current_state in UI_SOUND_STATES:
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-
-                audio.play("ui_confirm")
-
-            elif event.type == pygame.KEYDOWN:
-
-                if event.key == pygame.K_ESCAPE:
-
-                    audio.play("ui_back")
-
-                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-
-                    audio.play("ui_confirm")
+            # en las pantallas donde se escribe, WASD no es navegacion
+            ui_sound(
+                event,
+                letters=current_state not in ("name_input", "password_set"),
+            )
 
         if current_state == "menu":
 

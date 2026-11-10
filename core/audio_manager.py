@@ -1,4 +1,6 @@
 import json
+import math
+import random
 import time
 from pathlib import Path
 
@@ -89,6 +91,59 @@ SOUNDS = {
     "pina_c":         (0.38, 0.0),
     "pina_boing":     (0.55, 0.10),
     "pina_intro":     (0.75, 0.50),
+
+    # --- v0.2.1: generados por tools/make_sounds_extra.py ---
+    "hit_wood": (0.30, 0.06),
+    "hit_squish": (0.25, 0.06),
+    "hit_squeak": (0.23, 0.06),
+    "hit_stone": (0.37, 0.06),
+    "hit_metal": (0.42, 0.06),
+    "hit_glass": (0.41, 0.06),
+    "hit_pina": (0.31, 0.06),
+    "die_wood": (0.49, 0.05),
+    "die_bug": (0.60, 0.05),
+    "die_stone": (0.41, 0.05),
+    "die_metal": (0.56, 0.05),
+    "die_pina": (0.48, 0.05),
+    "golem_roar": (0.56, 0.8),
+    "golem_rock": (0.55, 0.08),
+    "golem_wave": (0.67, 0.3),
+    "golem_wallhit": (0.75, 0.5),
+    "golem_beam_charge": (0.31, 0.8),
+    "golem_beam": (0.57, 0.5),
+    "golem_sweep": (0.36, 0.5),
+    "golem_blast": (0.83, 0.8),
+    "golem_summon": (0.42, 0.8),
+    "golem_phase": (0.64, 1.0),
+    "golem_die": (1.00, 1.5),
+    "golem_crack": (0.71, 0.3),
+    "pina_bounce": (0.52, 0.12),
+    "pina_split": (0.50, 0.4),
+    "pina_merge": (0.38, 0.4),
+    "pina_summon": (0.57, 0.8),
+    "pina_phase": (0.66, 1.0),
+    "pina_roar": (0.43, 0.8),
+    "pina_die": (0.68, 1.2),
+    "pina_crack": (0.66, 0.3),
+    "bag_put": (0.28, 0.08),
+    "slot_swap": (0.26, 0.05),
+    "gulp": (0.31, 0.3),
+    "trash": (0.53, 0.1),
+    "lift": (0.43, 0.1),
+    "feed_fire": (0.29, 0.2),
+    "trap_free": (0.47, 0.3),
+    "trap_snap": (0.67, 0.4),
+    "crusher_warn": (0.38, 0.5),
+    "crusher_close": (0.26, 0.3),
+    "crusher_thud": (0.55, 0.4),
+    "crusher_open": (0.22, 0.5),
+    "fire_hit": (0.64, 0.06),
+    "fire_hit_heavy": (0.69, 0.1),
+    "emote": (0.27, 0.15),
+    "chest_fail": (0.39, 0.4),
+    "ui_move": (0.15, 0.04),
+    "step_c": (0.21, 0.0),
+    "step_d": (0.19, 0.0),
 }
 
 
@@ -173,7 +228,9 @@ class AudioManager:
             self._load(name)
 
 
-    def play(self, name, volume=1.0):
+    def play(self, name, volume=1.0, jitter=0.0):
+        """jitter: variacion al azar del volumen (0.1 = +-10%), para que un
+        sonido que se repite mucho (pisadas, golpes) no suene mecanico."""
 
         if not self.enabled or self.volume <= 0.0:
             return
@@ -192,9 +249,26 @@ class AudioManager:
 
         self._last[name] = now
 
+        if jitter > 0.0:
+            volume *= 1.0 + random.uniform(-jitter, jitter)
+
         sound.set_volume(max(0.0, min(1.0, base * volume * self.volume)))
 
         sound.play()
+
+    def play_at(self, name, source, listener, radius=520.0, volume=1.0):
+        """Sonido posicional: baja con la distancia entre 'source' y
+        'listener' (tuplas x, y) y se corta pasado 'radius'."""
+
+        dx = source[0] - listener[0]
+        dy = source[1] - listener[1]
+
+        k = 1.0 - math.hypot(dx, dy) / radius
+
+        if k <= 0.04:
+            return
+
+        self.play(name, volume * (k ** 1.3))
 
     def set_sfx_volume(self, value):
 

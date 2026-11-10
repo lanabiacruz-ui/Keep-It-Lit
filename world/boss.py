@@ -305,6 +305,8 @@ class Fragment:
 class PinaBoss:
 
     is_boss = True
+    HIT_SFX = "hit_pina"
+    DIE_SFX = None
     fixed = False
     contact_damage = False
     precise_hit = True

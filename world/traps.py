@@ -381,7 +381,8 @@ class ArenaTraps:
         if fx is not None:
             fx.shake(2.5 if flash_safe() else 3.5, 0.28)
 
-        audio.play("hit_heavy", 0.7)
+        audio.play("trap_snap")
+        audio.play("hit_heavy", 0.5)
 
         discover = getattr(game, "discover_enemy", None)
 
@@ -426,7 +427,7 @@ class ArenaTraps:
             if fx is not None:
                 fx.shake(1.8, 0.18)
 
-            audio.play("pickup", 0.6)
+            audio.play("trap_free")
 
             game.show_message(f"¡Te soltaste del {TRAP_NAME}!")
 

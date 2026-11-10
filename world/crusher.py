@@ -3,6 +3,8 @@ import random
 
 import pygame
 
+from core.audio_manager import audio
+
 
 CRUSH_DAMAGE = 0.35
 
@@ -82,7 +84,13 @@ class CrusherBlock:
         return self.progress > 0.0
 
 
-    def update(self, dt):
+    def _sfx(self, name, listener):
+        """Suena segun la distancia al jugador (varios bloques a la vez)."""
+
+        if listener is not None:
+            audio.play_at(name, self.rect.center, listener, radius=560.0)
+
+    def update(self, dt, listener=None):
 
         self.timer -= dt
 
@@ -96,6 +104,8 @@ class CrusherBlock:
                 self.timer = WARN_TIME
                 self._warn_t = 0.0
 
+                self._sfx("crusher_warn", listener)
+
         elif self.state == WARN:
 
             self._warn_t += dt
@@ -104,6 +114,8 @@ class CrusherBlock:
 
                 self.state = CLOSING
                 self.timer = CLOSE_TIME
+
+                self._sfx("crusher_close", listener)
 
         elif self.state == CLOSING:
 
@@ -115,6 +127,8 @@ class CrusherBlock:
                 self.state = CLOSED
                 self.timer = random.uniform(*CLOSED_TIME)
 
+                self._sfx("crusher_thud", listener)
+
         elif self.state == CLOSED:
 
             self.progress = 1.0
@@ -123,6 +137,8 @@ class CrusherBlock:
 
                 self.state = OPENING
                 self.timer = OPEN_ANIM_TIME
+
+                self._sfx("crusher_open", listener)
 
         elif self.state == OPENING:
 
@@ -248,7 +264,7 @@ class CrusherBlocks:
 
         for block in self.blocks:
 
-            block.update(dt)
+            block.update(dt, player.rect.center)
 
             if not block.solid:
                 continue

@@ -35,6 +35,14 @@ _NX, _NY = math.cos(TILT), -math.sin(TILT)     # perpendicular
 FLAME_LEN = 24
 HANDLE_LEN = 34
 
+# --- reaccion al clic (cuando usas la antorcha PNG) ---
+# "calor" 0..1: sube rapido al clickear/mantener y se apaga de a poco al soltar
+HEAT_RISE = 16.0       # velocidad de subida (por segundo)
+HEAT_FALL = 3.2        # velocidad de bajada al soltar (mas bajo = dura mas)
+CLICK_FLARE = 0.85     # calor minimo instantaneo en el momento del clic
+FLAME_BOTTOM = 0.46    # fraccion de la altura de la imagen donde termina la llama
+GLOW_RADIUS = 46
+
 
 def _pt(origin, t, w):
     """Punto a distancia t sobre el eje y w al costado."""
@@ -53,6 +61,32 @@ def _make_glow(radius):
         pygame.draw.circle(glow, (255, 150, 40, a), (radius, radius), r)
 
     return glow
+
+
+def _make_bright_flame(image):
+    """Copia de la imagen con SOLO la llama aclarada (amarillo/blanco calido).
+
+    Se dibuja encima de la antorcha normal con alpha = calor, asi la llama
+    "se prende mas" sin tocar el mango ni la cabeza de tela.
+    """
+    w, h = image.get_size()
+    bright = pygame.Surface((w, h), pygame.SRCALPHA)
+    limit = int(h * FLAME_BOTTOM)
+
+    for y in range(min(limit, h)):
+        for x in range(w):
+            r, g, b, a = image.get_at((x, y))
+            if a == 0 or r < 150:
+                continue
+            t = 0.62
+            bright.set_at((x, y), (
+                int(r + (255 - r) * t),
+                int(g + (238 - g) * t),
+                int(b + (165 - b) * t),
+                a,
+            ))
+
+    return bright
 
 
 class TorchCursor:
@@ -84,6 +118,15 @@ class TorchCursor:
         self._glow = _make_glow(40)
         self._last_ticks = pygame.time.get_ticks()
 
+        # reaccion al clic
+        self.heat = 0.0
+        self._was_pressed = False
+        self._bright = None
+        self._heat_glow = _make_glow(GLOW_RADIUS)
+
+        if self.image is not None:
+            self._bright = _make_bright_flame(self.image)
+
     # ------------------------------------------------------------------
     def _dt(self):
         now = pygame.time.get_ticks()
@@ -109,6 +152,58 @@ class TorchCursor:
         self.embers = [e for e in self.embers if e[4] > 0]
 
     # ------------------------------------------------------------------
+    def _draw_image(self, surface, mx, my, dt):
+        """Antorcha PNG; la llama se aviva al clickear o mantener presionado."""
+        pressed = pygame.mouse.get_pressed()[0]
+
+        # calor: salto instantaneo al clic, sube mientras mantenes, baja suave
+        if pressed:
+            if not self._was_pressed:
+                self.heat = max(self.heat, CLICK_FLARE)
+            self.heat = min(1.0, self.heat + HEAT_RISE * dt)
+        else:
+            self.heat = max(0.0, self.heat - HEAT_FALL * dt)
+        self._was_pressed = pressed
+
+        heat = self.heat
+        t = self.time
+        flick = math.sin(t * 17) * 0.5 + math.sin(t * 9.1 + 1.3) * 0.5
+
+        w, h = self.image.get_size()
+        ox, oy = mx - self._hotspot[0], my - self._hotspot[1]
+
+        # resplandor naranja detras (solo cuando hay calor)
+        if heat > 0.01:
+            glow_alpha = int(255 * heat * (0.8 + 0.2 * flick))
+            self._heat_glow.set_alpha(max(0, min(255, glow_alpha)))
+            surface.blit(
+                self._heat_glow,
+                (
+                    int(ox + w * 0.5 - GLOW_RADIUS),
+                    int(oy + h * 0.2 - GLOW_RADIUS),
+                ),
+            )
+
+        # antorcha normal
+        surface.blit(self.image, (ox, oy))
+
+        # llama aclarada encima, con parpadeo
+        if heat > 0.01 and self._bright is not None:
+            a = int(255 * heat * (0.85 + 0.15 * flick))
+            self._bright.set_alpha(max(0, min(255, a)))
+            surface.blit(self._bright, (ox, oy))
+
+        # chispas: aparecen con el calor
+        if heat > 0.05:
+            self._update_embers(dt, (mx, my), 1 + 4 * heat)
+            for x, y, _, _, life in self.embers:
+                k = max(0.0, min(1.0, life / 0.7))
+                c = (255, int(150 + 90 * k), int(40 + 60 * k))
+                pygame.draw.circle(surface, c, (int(x), int(y)), 1)
+        elif self.embers:
+            self._update_embers(dt, (mx, my), 0)
+
+    # ------------------------------------------------------------------
     def draw(self, surface):
         if not pygame.mouse.get_focused():
             return
@@ -118,9 +213,7 @@ class TorchCursor:
         self.time += dt
 
         if self.image is not None:
-            surface.blit(
-                self.image, (mx - self._hotspot[0], my - self._hotspot[1])
-            )
+            self._draw_image(surface, mx, my, dt)
             return
 
         pressed = pygame.mouse.get_pressed()[0]

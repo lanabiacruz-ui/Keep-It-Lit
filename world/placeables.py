@@ -154,7 +154,7 @@ def _use_trash(self, game, obj, whole):
     for _ in range(n):
         game._take_one(slot)
 
-    audio.play("pickup")
+    audio.play("trash")
 
     try:
         game.fx.poof(*obj.rect.center)
@@ -1598,7 +1598,7 @@ class PlaceableManager:
 
         game._take_one(slot)
 
-        audio.play("pickup")
+        audio.play("place")
 
         game.show_message(
             f"Pusiste {game._item_name(item_id)}"
@@ -1635,7 +1635,7 @@ class PlaceableManager:
         if self.open_obj is obj:
             self.open_obj = None
 
-        audio.play("pickup")
+        audio.play("lift")
 
         try:
             game.fx.poof(*obj.rect.center)
@@ -1780,7 +1780,7 @@ class PlaceableManager:
             for _ in range(n):
                 game._take_one(slot)
 
-        audio.play("pickup")
+        audio.play("trash")
 
         try:
             game.fx.poof(*obj.rect.center)
@@ -1969,7 +1969,7 @@ class PlaceableManager:
 
         obj.add_fuel(FUEL_PER_ITEM[obj.kind])
 
-        audio.play("pickup")
+        audio.play("feed_fire")
 
         return obj
 
@@ -2466,7 +2466,7 @@ class PlaceableManager:
             moved += 1
 
         if moved:
-            audio.play("pickup")
+            audio.play("bag_put")
 
     def _draw_hint(self, screen, panel, text, color=(170, 176, 192)):
 
@@ -2835,7 +2835,7 @@ class PlaceableManager:
         if self.open_obj is obj:
             self.open_obj = None
 
-        audio.play("pickup")
+        audio.play("lift")
 
         try:
             game.fx.poof(*tacho.rect.center)
@@ -2860,7 +2860,7 @@ class PlaceableManager:
             obj.draggable = False
             obj.relocating = False
 
-            audio.play("pickup")
+            audio.play("place")
 
     def _drag(self, game, obj, dt):
 

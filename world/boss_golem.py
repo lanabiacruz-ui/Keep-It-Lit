@@ -463,6 +463,8 @@ class GolemBossArt:
 class GolemBoss:
 
     is_boss = True
+    HIT_SFX = "hit_stone"
+    DIE_SFX = None
     always_draw = True
     uses_jump = True
     fixed = False
@@ -875,9 +877,13 @@ class GolemBoss:
             self.beam_hit = False
             self.beam_t = 0.0
 
+            self._emit("beam_charge", self.pos)
+
         elif name == "sweep":
 
             self.state = "sweep"
+
+            self._emit("sweep", self.pos)
 
         elif name == "blast":
 

@@ -8,6 +8,7 @@ import pygame
 from core.fonts import load_font
 from core.accessibility import flash_safe, flash_level, tutorial_hints
 from core.audio_manager import audio
+from core.ui_sounds import nav_key, ui_sound
 from core.controls import controls, SLOT_ACTIONS
 from core.trucos import trucos_activados
 from core.achievements import achievements
@@ -2224,7 +2225,7 @@ class NewGame:
 
         if box is not None:
 
-            audio.play("pickup")
+            audio.play("bag_put")
 
             self.show_message(
                 f"{self._item_name(item_id)} guardado en "
@@ -2424,7 +2425,7 @@ class NewGame:
 
         self.selected_slot = dst
 
-        audio.play("pickup")
+        audio.play("slot_swap")
 
         return True
 
@@ -2858,7 +2859,7 @@ class NewGame:
 
         self.fx.potion_burst(*self.player.rect.center, color)
 
-        audio.play("pickup")
+        audio.play("gulp")
 
     @property
     def invisible(self):
@@ -3478,9 +3479,15 @@ class NewGame:
             if self.debug_dano:
                 damage = 1000
 
-            target.take_damage(damage)
+            dealt = target.take_damage(damage)
 
             self._anvil_push(target)
+
+            # reaccion propia de cada enemigo (madera, piedra, metal...)
+            react = getattr(target, "HIT_SFX", None)
+
+            if react and dealt != 0:
+                audio.play(react, jitter=0.12)
 
 
     def flashbang(self, x, y):
@@ -3701,6 +3708,8 @@ class NewGame:
                 )
 
             if ball.dead:
+
+                audio.play("fire_hit_heavy" if ball.heavy else "fire_hit")
 
                 if hit is None:
                     self.fx.fire_burst(ball.x, ball.y, ball.heavy)
@@ -4964,11 +4973,21 @@ class NewGame:
             return None
 
 
+        # sub-menus de la pausa (en main.py solo cubre los menus de afuera)
+        if self.pause_view in ("settings", "enemies", "skins", "achievements"):
+            ui_sound(event)
+
         if self.pause_view == "pause":
+
+            if event.type == pygame.KEYDOWN and nav_key(event.key):
+                audio.play("ui_move")
 
             result = self.pause_menu.handle_event(
                 event
             )
+
+            if result and result != "resume":
+                audio.play("ui_confirm")
 
             if result == "resume":
 
@@ -5158,7 +5177,12 @@ class NewGame:
                 chosen = self.emote_wheel.pop_selected()
 
                 if chosen:
-                    if self.player.play_emote(chosen) and chosen == "six_seven":
+                    played = self.player.play_emote(chosen)
+
+                    if played:
+                        audio.play("emote")
+
+                    if played and chosen == "six_seven":
                         self.tuto_flags.add("six_seven")
 
                 return None
@@ -5746,11 +5770,15 @@ class NewGame:
 
             if result == "win":
 
+                audio.play("chest_win")
+
                 self._finish_chest(
                     True
                 )
 
             elif result == "fail":
+
+                audio.play("chest_fail")
 
                 self._finish_chest(
                     False
