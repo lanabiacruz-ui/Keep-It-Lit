@@ -78,6 +78,17 @@ SOUNDS = {
     "tonto_a":        (0.34, 0.0),
     "tonto_b":        (0.34, 0.0),
     "tonto_c":        (0.34, 0.0),
+    # voces de los jefes (tools/make_boss_voices.py)
+    "golem_a":        (0.55, 0.0),
+    "golem_b":        (0.55, 0.0),
+    "golem_c":        (0.55, 0.0),
+    "golem_thud":     (0.85, 0.15),
+    "golem_intro":    (0.95, 0.50),
+    "pina_a":         (0.38, 0.0),
+    "pina_b":         (0.38, 0.0),
+    "pina_c":         (0.38, 0.0),
+    "pina_boing":     (0.55, 0.10),
+    "pina_intro":     (0.75, 0.50),
 }
 
 

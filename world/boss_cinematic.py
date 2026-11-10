@@ -33,6 +33,13 @@ BARS_OUT = 0.7
 
 VICTORY_TITLE = 3.4
 
+# El jefe se presenta con un dialogo (ui/boss_dialog.py) cuando el titulo ya
+# se leyo entero: el juego se congela con el titulo y las barras de cine
+# todavia en pantalla, y sigue cuando se cierra el dialogo. Tiene que ser
+# menor que TITLE_FIRST / TITLE_SHORT - 0.6 (ahi el titulo empieza a irse).
+DIALOG_AT_FIRST = 1.7
+DIALOG_AT_SHORT = 1.15
+
 BOSS_TAG = "JEFE DE LA ZONA 1"
 BOSS_LABEL = "PIÑA COLOSAL"
 BOSS_SUB = "Esquiva sus fragmentos y pégale cuando esté entera"
@@ -91,6 +98,10 @@ class BossCinematic:
 
         self.first = False
 
+        # pedido de dialogo de presentacion (lo recoge la arena)
+        self.dialog_pending = False
+        self._dialog_done = False
+
         self.tag = BOSS_TAG
         self.label = BOSS_LABEL
         self.sub = BOSS_SUB
@@ -115,6 +126,18 @@ class BossCinematic:
         self.title = None
         self.title_t = None
         self.boss_ref = None
+        self.dialog_pending = False
+
+    def take_dialog(self):
+        """Si el jefe tiene que presentarse, devuelve True (primera vez) o
+        False (las demas veces) y consume el pedido. Si no, None."""
+
+        if not self.dialog_pending:
+            return None
+
+        self.dialog_pending = False
+
+        return self.first
 
     def _begin(self, mode):
 
@@ -126,6 +149,8 @@ class BossCinematic:
         self.title_t = None
         self._shake_cd = 0.0
         self._ember_acc = 0.0
+        self.dialog_pending = False
+        self._dialog_done = False
 
     def intro_time(self, first):
 
@@ -314,6 +339,17 @@ class BossCinematic:
         if self.title_t is not None:
 
             self.title_t += dt
+
+            # el titulo ya se leyo: el jefe se presenta (solo en la entrada)
+            if (
+                self.mode == "intro"
+                and not self._dialog_done
+                and self.title_t >= (
+                    DIALOG_AT_FIRST if self.first else DIALOG_AT_SHORT
+                )
+            ):
+                self._dialog_done = True
+                self.dialog_pending = True
 
             if self.title_t >= self.title_len and self.closing is None:
                 self.closing = 0.0

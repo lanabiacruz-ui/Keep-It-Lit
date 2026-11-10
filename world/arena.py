@@ -14,6 +14,7 @@ from world.items import (
     WorldItem, coin_id_for, split_coins, get_gem_icon, get_green_gem_icon
 )
 from world.boss_cinematic import BossCinematic
+from ui.boss_dialog import GolemDialog, PinaDialog
 from world.boss_golem import GolemBoss, GolemBossArt
 from world.boss import (
     PinaBoss, BossArt, draw_boss_bar, SUMMON_COUNT, CONTACT_PUSH, BOSS_NAME
@@ -5392,6 +5393,21 @@ class Arena:
 
         cin.start_intro(game, first, boss)
 
+    def _boss_dialog(self, game, first):
+        """Presentacion del jefe: Golem o Piña con su propia voz.
+
+        first=True: charla completa. False: una sola frase al azar."""
+
+        golem = self.cfg.boss_kind == "golem"
+
+        dialog_class = GolemDialog if golem else PinaDialog
+
+        audio.play("golem_intro" if golem else "pina_intro")
+
+        game.tutorial = dialog_class.for_visit(
+            (game.width, game.height), bool(first)
+        )
+
     def _boss_sound(self, event):
 
         if event in ("roar", "summon"):
@@ -5637,6 +5653,11 @@ class Arena:
         boss.events = []
 
         self.cinematic.update(dt, game, boss)
+
+        # el jefe se presenta con su dialogo (el juego queda congelado
+        # mientras game.tutorial esta abierto, ver NewGame.update)
+        if self.cinematic.dialog_pending and game.tutorial is None:
+            self._boss_dialog(game, self.cinematic.take_dialog())
 
         if boss.summon_request:
 

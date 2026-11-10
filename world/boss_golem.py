@@ -58,6 +58,11 @@ REF_ZOOM = 4
 
 DEFAULT_BASE = 48.0
 
+# Que tan grande se ve y se siente el golem (1.0 = tamaño original del
+# dibujo). Escala el cuerpo, el hitbox, el barrido y la luz. Si lo queres
+# mas grande o mas chico, cambia solo este numero.
+SIZE_SCALE = 1.6
+
 PHASE2_SPEED = 1.5
 
 ANIM_FRAME = 0.18
@@ -144,7 +149,7 @@ BLAST_PUSH = 1900.0      # CONTACT_PUSH es 300: esto lo manda MUY lejos
 # --- barrido de brazos (fase 2, se salta)
 SWEEP_WIND = 0.6
 SWEEP_TIME = 3.2
-SWEEP_REACH = 54.0
+SWEEP_REACH = 54.0 * SIZE_SCALE    # el brazo crece junto con el golem
 SWEEP_HALF = 7.0
 SWEEP_RATE = 250.0
 SWEEP_MOVE = 45.0
@@ -447,7 +452,9 @@ class GolemBossArt:
         self.rock = rock if rock is not None else _placeholder_rock()
 
         self.base_size = body[0].get_width() / float(REF_ZOOM)
-        self.sweep_size = self.sweep[0].get_width() / float(REF_ZOOM)
+        self.sweep_size = (
+            self.sweep[0].get_width() / float(REF_ZOOM) * SIZE_SCALE
+        )
 
 
 # ------------------------------------------------------------------------ jefe
@@ -481,7 +488,9 @@ class GolemBoss:
         self.room = room
         self.art = art
 
-        self.base = float(art.base_size) if art.base_size > 4 else DEFAULT_BASE
+        self.base = (
+            float(art.base_size) if art.base_size > 4 else DEFAULT_BASE
+        ) * SIZE_SCALE
 
         self.pos = pygame.Vector2(x, y)
         self.center = pygame.Vector2(room.center)
