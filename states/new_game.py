@@ -70,7 +70,12 @@ from ui.shop_plan import (
 )
 from ui.tutorial import Tutorial
 from ui.tutorial_texts import apply_texts
-from ui.shop_dialog import ShopkeeperDialog
+from ui.shop_dialog import (
+    SHOPKEEPER_PAGES,
+    SHOPKEEPER_REACTIONS,
+    SHOPKEEPER_RED_PAGES,
+    ShopkeeperDialog,
+)
 from ui.guide import Guide
 from ui.Zone_banner import ZoneBanner
 from ui.achievement_toast import AchievementToast
@@ -471,6 +476,7 @@ class NewGame:
 
         # transicion comic -> mapa: la interfaz aparece con fundido
         self.cine_ui_alpha = 1.0
+        self.cine_player_boost = 0.0
         self._cine_base = None
         self._cine_top = None
 
@@ -614,6 +620,15 @@ class NewGame:
         self.shop_intro_seen = bool(
             self.save_data.get("shop_intro_seen", False)
         )
+
+        # Escupin se sorprende una sola vez si te ve con una skin roja
+        self.shop_red_seen = bool(
+            self.save_data.get("shop_red_seen", False)
+        )
+
+        # otras reacciones de Escupin (una vez cada una) y visitas
+        self.shop_said = set(self.save_data.get("shop_said", []))
+        self.shop_visits = int(self.save_data.get("shop_visits", 0))
 
         self.gems_green = int(self.save_data.get("gems_green", 0))
 
@@ -3863,19 +3878,99 @@ class NewGame:
 
         return out
 
+    def _wearing_red_skin(self):
+        """True si la skin elegida es roja (ej. Pirotecnico)."""
+
+        try:
+            skin = skin_lib.get(skin_lib.get_skin())
+        except Exception:
+            return False
+
+        color = skin.get("color") if skin else None
+
+        if not color:
+            return False
+
+        r, g, b = color[:3]
+
+        return r >= 170 and g <= 90 and b <= 90
+
+    def _shop_reaction(self):
+        """Id de la reaccion que toca ahora (o None). Cada una se dice
+        una sola vez."""
+
+        said = self.shop_said
+
+        try:
+            skin = skin_lib.get_skin()
+        except Exception:
+            skin = None
+
+        checks = (
+            ("elegante", skin in ("pago_1", "pago_3")),
+            ("rico", self.coins >= 300),
+            ("sin_monedas", self.coins == 0 and self.shop_visits >= 3),
+            ("gemas", self.gems + self.gems_green >= 5),
+            ("visitas", self.shop_visits >= 10),
+        )
+
+        for key, ok in checks:
+
+            if ok and key not in said:
+                return key
+
+        return None
+
     def _talk_to_shopkeeper(self):
         """La primera vez, Escupin te cuenta un poquito antes de abrir la
-        tienda. Despues la tienda se abre directo."""
+        tienda. Si te ve con una skin roja se sorprende (una sola vez).
+        Despues la tienda se abre directo."""
 
-        if self.shop_intro_seen or self.tutorial is not None:
+        if self.tutorial is not None:
 
             self._open_shop()
 
             return
 
-        self.shop_intro_seen = True
+        pages = []
 
-        self.tutorial = ShopkeeperDialog((self.width, self.height))
+        if not self.shop_red_seen and self._wearing_red_skin():
+
+            self.shop_red_seen = True
+
+            pages += SHOPKEEPER_RED_PAGES
+
+        first_visit = not self.shop_intro_seen
+
+        if first_visit:
+
+            self.shop_intro_seen = True
+
+            pages += SHOPKEEPER_PAGES
+
+        self.shop_visits += 1
+
+        # una reaccion como maximo por visita, y nunca en la primera
+        if not pages:
+
+            reaction = self._shop_reaction()
+
+            if reaction is not None:
+
+                self.shop_said.add(reaction)
+
+                pages += SHOPKEEPER_REACTIONS[reaction]
+
+        if not pages:
+
+            self._open_shop()
+
+            return
+
+        self.tutorial = ShopkeeperDialog(
+            (self.width, self.height),
+            pages=pages
+        )
 
     def _after_dialog(self, closed):
         """Cuando termina la charla del vendedor, se abre la tienda."""
@@ -4169,6 +4264,9 @@ class NewGame:
             "boss_intro_seen": self.boss_intro_seen,
             "boss2_intro_seen": self.boss2_intro_seen,
             "shop_intro_seen": self.shop_intro_seen,
+            "shop_red_seen": self.shop_red_seen,
+            "shop_said": sorted(self.shop_said),
+            "shop_visits": self.shop_visits,
             "gems": self.gems,
             "gems_green": self.gems_green,
 
@@ -6488,6 +6586,31 @@ class NewGame:
         self._check_shop_unlocks()
         self.shop_unlock_toast.draw(self.screen)
 
+    def _draw_player_boost(self):
+
+        # vuelve a dibujar al personaje por encima de la oscuridad para
+        # que se lo vea bien durante la transicion (sin agregar luz)
+        screen = self.screen
+
+        rect = self.camera.apply(self.player.image_rect).inflate(48, 48)
+
+        rect = rect.clip(screen.get_rect())
+
+        if rect.width < 2 or rect.height < 2:
+            return
+
+        dark = screen.subsurface(rect).copy()
+
+        self.player.draw(screen, self.camera)
+
+        lit = screen.subsurface(rect).copy()
+
+        screen.blit(dark, rect)
+
+        lit.set_alpha(int(255 * min(1.0, self.cine_player_boost)))
+
+        screen.blit(lit, rect)
+
     def _cine_ui_begin(self):
 
         # guarda el mundo ya dibujado (sin interfaz) mientras la
@@ -6645,6 +6768,9 @@ class NewGame:
         )
 
         self._draw_warm_glows(sources)
+
+        if self.cine_player_boost > 0.01:
+            self._draw_player_boost()
 
         if self.has_match and self._light_radius_px >= 8:
 

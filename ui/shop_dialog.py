@@ -41,6 +41,42 @@ SHOPKEEPER_PAGES = [
 ]
 
 
+# Si lo visitas con una skin roja, se sorprende (una sola vez).
+SHOPKEEPER_RED_PAGES = [
+    "¡¡EHHH!! ¡Espera, espera! ¡Estás rojo! ¡ROJO! ¡Como yo! Jiji... "
+    "¡Nunca vi a otro rojo por acá!",
+
+    "¿Te sopló el Oscuro a ti también? No, ¿no? Bueno, jeje. "
+    "¡Igual los rojos nos entendemos!",
+]
+
+
+# Reacciones de una sola vez (maximo una por visita). Ver
+# NewGame._shop_reaction para cuando se dispara cada una.
+SHOPKEEPER_REACTIONS = {
+    "elegante": [
+        "¿Y ese traje? ¡Qué elegante! ¿Vas a una fiesta? Yo no fui "
+        "invitado... jeje. ¡Pero me gusta!",
+    ],
+    "rico": [
+        "¡¡¡Cuántas monedas!!! Jiji. ¿Me regalas una? No, no, es broma. "
+        "¡Mejor gástalas aquí!",
+    ],
+    "sin_monedas": [
+        "¿No traes monedas? ¿Vienes a mirar nomás? ¡Yo también miro "
+        "cosas! Jeje. Mira todo lo que quieras.",
+    ],
+    "gemas": [
+        "¡Qué brillo! ¿Eso son gemas? ¡Qué lindas! No me las des, ¿eh? "
+        "Solo quería decirlo. Jiji.",
+    ],
+    "visitas": [
+        "¿Otra vez tú? Jeje, ya te conozco. ¡Eres mi mejor cliente! "
+        "Bueno... el único. ¡Pero el mejor!",
+    ],
+}
+
+
 # colores del vendedor: marron rojizo, como su piel en el mapa
 SHOPKEEPER_THEME = dict(
     DEFAULT_THEME,
