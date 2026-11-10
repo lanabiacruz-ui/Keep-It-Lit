@@ -24,6 +24,7 @@ from states.settings import Settings, load_settings
 from states.achievements import AchievementsMenu
 from states.skins_menu import SkinsMenu
 from ui.slide_transition import SlideTransition
+from ui.map_reveal import MapReveal
 from ui.zoom_transition import ZoomTransition
 
 from core.Save_manager import create_new_save, load_save
@@ -431,7 +432,9 @@ while running:
 
                 game._intro_pending = True
 
-                transition = SlideTransition(screen.copy())
+                # el comic termina en negro: la luz nace sobre el
+                # personaje y revela el mapa
+                transition = MapReveal(game, screen.copy())
 
                 current_state = "gameplay"
 

@@ -2,7 +2,7 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-09T21:19:43",
+    "last_played": "2026-11-09T22:03:46",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
     "x": 964,
@@ -41,26 +41,26 @@
         ]
     ],
     "collected": [
-        "moneda5_pasillo_cofres#0",
-        "madera_02#0",
-        "moneda_pasillo_cabana#1",
-        "madera_03#0",
+        "madera_04#0",
         "moneda_pasillo_cabana#0",
+        "aceite_01#0",
+        "moneda_sala_cofres#1",
+        "moneda_sala_central#1",
+        "madera_05#0",
         "moneda_sala_cofres#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_der#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_cabana#1",
         "moneda_pasillo_izq#0",
         "moneda_pasillo_cofres#0",
-        "moneda_sala_central#1",
-        "moneda_pasillo_tienda#0",
-        "madera_01#0",
-        "moneda_pasillo_der#0",
-        "aceite_01#0",
-        "madera_04#0",
-        "madera_05#0",
         "cera_01#0",
-        "moneda_sala_cofres#1",
-        "moneda_sala_central#0",
+        "madera_03#0",
         "moneda5_sala_cofres#0",
-        "moneda_pasillo_tienda#1"
+        "moneda_pasillo_tienda#0",
+        "moneda5_pasillo_cofres#0",
+        "madera_01#0",
+        "madera_02#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -256,7 +256,7 @@
             "t": "fogata",
             "x": 940,
             "y": 425,
-            "fuel": 348.93
+            "fuel": 338.63
         }
     ],
     "enemies_seen": [
@@ -330,7 +330,7 @@
             "x": 936,
             "y": 155,
             "map": "mapa1",
-            "ttl": 289.0
+            "ttl": 278.7
         }
     ],
     "ganzua_uses": 2,

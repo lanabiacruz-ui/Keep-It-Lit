@@ -340,6 +340,12 @@ class Tutorial:
 
         self.character = self._scale_character(char, char_height)
 
+        self.char_outline = None
+
+        # Cenizo se ve mas: cuerpo mas claro y contorno azul brillante
+        if self.THEME["name"] == HELPER_NAME:
+            self.character, self.char_outline = self._brighten(self.character)
+
         frame_height = int(
             frame.get_height() * frame_width / frame.get_width()
         )
@@ -493,10 +499,26 @@ class Tutorial:
         return image.subsurface(area).copy()
 
     @staticmethod
+    def _brighten(char):
+        """Cuerpo mas luminoso (sin tocar la transparencia) y silueta
+        clara para dibujar de contorno."""
+
+        lit = char.copy()
+
+        lit.fill((55, 70, 100, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+        outline = pygame.mask.from_surface(char, 40).to_surface(
+            setcolor=(190, 225, 255, 255),
+            unsetcolor=(0, 0, 0, 0),
+        )
+
+        return lit, outline
+
+    @staticmethod
     def _make_glow(char_height, color=GLOW_COLOR):
         """Halo azul detras del ayudante: es un fantasma que cuida tu luz."""
 
-        size = int(char_height * 1.5)
+        size = int(char_height * 2.0)
 
         glow = pygame.Surface((size, size), pygame.SRCALPHA)
 
@@ -504,7 +526,7 @@ class Tutorial:
 
         for r in range(center, 0, -3):
 
-            alpha = int(46 * (1 - r / center) ** 2)
+            alpha = int(120 * (1 - r / center) ** 1.6)
 
             pygame.draw.circle(glow, (*color, alpha), (center, center), r)
 
@@ -927,6 +949,21 @@ class Tutorial:
             t = 1 - self.hop / self.HOP_TIME
 
             bob -= int(math.sin(t * math.pi) * 14)
+
+        if self.char_outline is not None:
+
+            pulse_o = 0.75 + 0.25 * math.sin(self.age * 2.6)
+
+            self.char_outline.set_alpha(int(255 * pulse_o))
+
+            for ox, oy in (
+                (-3, 0), (3, 0), (0, -3), (0, 3),
+                (-2, -2), (2, -2), (-2, 2), (2, 2)
+            ):
+                screen.blit(
+                    self.char_outline,
+                    self.char_rect.move(dx + ox, bob + oy)
+                )
 
         screen.blit(
             self.character,

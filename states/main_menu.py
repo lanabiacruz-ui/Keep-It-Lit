@@ -400,16 +400,18 @@ class MainMenu:
 
         surface, pos = patch
 
-        if self._tint is not None:
-
-            surface = surface.copy()
-
-            surface.fill(self._tint, special_flags=pygame.BLEND_RGBA_MULT)
-
-        # sobre otra pantalla, el fondo ya esta a oscuras: el parche del
-        # escritorio tiene que quedar igual de oscuro
+        # primero la luz de la cabaña y despues la capa oscura (mismo orden
+        # que el fondo: luz -> overlay), si no el parche queda mas claro
+        # que el escritorio y se ve el "fantasma" del gato
         if dark and room_light.is_dark():
             surface = room_light.darken_sprite(surface, pos)
+
+        elif self._tint is not None:
+            surface = surface.copy()
+
+        if self._tint is not None:
+
+            surface.fill(self._tint, special_flags=pygame.BLEND_RGBA_MULT)
 
         self.screen.blit(surface, pos)
 

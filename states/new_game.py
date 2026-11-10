@@ -469,6 +469,11 @@ class NewGame:
         self._intro_pending = False
         self.intro_t = None
 
+        # transicion comic -> mapa: la interfaz aparece con fundido
+        self.cine_ui_alpha = 1.0
+        self._cine_base = None
+        self._cine_top = None
+
         self.hud = Hud((self.width, self.height))
 
         self.pause_menu = PauseMenu(self.screen)
@@ -6483,6 +6488,39 @@ class NewGame:
         self._check_shop_unlocks()
         self.shop_unlock_toast.draw(self.screen)
 
+    def _cine_ui_begin(self):
+
+        # guarda el mundo ya dibujado (sin interfaz) mientras la
+        # interfaz todavia esta apareciendo (buffer reutilizado)
+        if self.cine_ui_alpha >= 1.0:
+            self._cine_active = False
+            return
+
+        if self._cine_base is None:
+            self._cine_base = pygame.Surface(self.screen.get_size())
+            self._cine_top = pygame.Surface(self.screen.get_size())
+
+        self._cine_base.blit(self.screen, (0, 0))
+        self._cine_active = True
+
+    def _cine_ui_end(self):
+
+        if not getattr(self, "_cine_active", False):
+            return
+
+        self._cine_active = False
+
+        alpha = max(0.0, min(1.0, self.cine_ui_alpha))
+
+        if alpha <= 0.0:
+            self.screen.blit(self._cine_base, (0, 0))
+            return
+
+        self._cine_top.blit(self.screen, (0, 0))
+        self.screen.blit(self._cine_base, (0, 0))
+        self._cine_top.set_alpha(int(255 * alpha))
+        self.screen.blit(self._cine_top, (0, 0))
+
     def _draw_scene(self):
 
         self.world_map.draw(
@@ -6723,6 +6761,8 @@ class NewGame:
                     )
                 )
 
+        self._cine_ui_begin()
+
         self.dungeon_map.draw(
             self.screen,
             self.collision_map.walkable,
@@ -6861,6 +6901,8 @@ class NewGame:
 
             if self.tutorial is not None:
                 self.tutorial.draw(self.screen)
+
+        self._cine_ui_end()
 
         if self.state in ("dying", "lost"):
 
