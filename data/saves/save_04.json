@@ -2,56 +2,56 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-09T00:18:14",
+    "last_played": "2026-11-11T11:00:53",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 944,
-    "y": 157,
-    "coins": 392106,
+    "x": 740,
+    "y": 513,
+    "coins": 391011,
     "gems": 0,
     "gems_green": 0,
-    "has_match": true,
+    "has_match": false,
     "light": "antorcha",
-    "vida": 1.0,
-    "escudo": 0.0,
+    "vida": 0.0,
+    "escudo": 0.5,
     "inventory": [
         [
             "aceite",
-            13
+            4
         ],
         [
-            "aceite",
-            10
+            "polvora",
+            14
         ],
         [
-            "ganzua",
-            11
+            "repelente",
+            14
         ],
         [
             "hongo_azul",
-            15
+            13
         ],
         null,
         null
     ],
     "collected": [
         "moneda_pasillo_cabana#0",
-        "moneda_pasillo_cofres#0",
-        "moneda_pasillo_tienda#1",
-        "moneda_sala_central#1",
-        "moneda_sala_central#0",
         "moneda_pasillo_cabana#1",
-        "moneda5_pasillo_cofres#0",
-        "moneda_pasillo_der#0",
         "moneda_sala_cofres#0",
-        "moneda_pasillo_tienda#0",
+        "moneda5_pasillo_cofres#0",
+        "moneda_sala_central#0",
         "madera_10#0",
-        "moneda_pasillo_izq#0"
+        "moneda_pasillo_cofres#0",
+        "moneda_pasillo_der#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_izq#0",
+        "moneda_pasillo_tienda#0",
+        "moneda_sala_central#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
-    "arena_completed": true,
-    "arena_left_wave": 10,
+    "arena_completed": false,
+    "arena_left_wave": 11,
     "arena_left_completed": false,
     "broken_doors": [
         "cabana",
@@ -62,9 +62,7 @@
         "sala_der",
         "sala_izq",
         "sup_central_abajo",
-        "sup_der_sala",
-        "sup_izq_central",
-        "sup_izq_sala"
+        "sup_der_sala"
     ],
     "final_door_slots": {
         "clara": true,
@@ -89,6 +87,8 @@
         "guardian",
         "guardian_tirador",
         "hongun",
+        "jefe_golem",
+        "jefe_pina",
         "mosquito",
         "pino",
         "pino_brava",
@@ -99,11 +99,11 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 114,
+        "items_used": 134,
         "chests_opened": 16,
-        "purchases": 15,
-        "fireballs": 0,
-        "kills": 68
+        "purchases": 17,
+        "fireballs": 27,
+        "kills": 69
     },
     "zones_seen": [
         "central",
@@ -119,19 +119,25 @@
             15
         ],
         [
-            "aceite",
+            "polvora",
             15
         ],
         [
-            "aceite",
+            "repelente",
             15
         ],
         [
             "hongo_azul",
             15
         ],
-        null,
-        null,
+        [
+            "pocion_ira",
+            1
+        ],
+        [
+            "pocion_ascua",
+            1
+        ],
         [
             "antorcha",
             1
@@ -140,10 +146,388 @@
     "tuto_seen": [
         0
     ],
-    "death_drops": [],
+    "death_drops": [
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 944,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 129.8
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 950,
+            "y": 182,
+            "map": "mapa1",
+            "ttl": 130.0
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 939,
+            "y": 180,
+            "map": "mapa1",
+            "ttl": 130.1
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 955,
+            "y": 181,
+            "map": "mapa1",
+            "ttl": 130.3
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 932,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 130.4
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 936,
+            "y": 180,
+            "map": "mapa1",
+            "ttl": 130.5
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 954,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 130.7
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 933,
+            "y": 179,
+            "map": "mapa1",
+            "ttl": 130.9
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 956,
+            "y": 185,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 962,
+            "y": 173,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 930,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 929,
+            "y": 179,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 955,
+            "y": 181,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 936,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 968,
+            "y": 168,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 945,
+            "y": 183,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 943,
+            "y": 155,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 938,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 932,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 952,
+            "y": 181,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 927,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 924,
+            "y": 171,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 942,
+            "y": 191,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 947,
+            "y": 195,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 950,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 936,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 944,
+            "y": 157,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 934,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 943,
+            "y": 157,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 944,
+            "y": 187,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 953,
+            "y": 159,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "ganzua",
+            "x": 928,
+            "y": 175,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 936,
+            "y": 185,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 928,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 942,
+            "y": 189,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 932,
+            "y": 165,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 962,
+            "y": 166,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 942,
+            "y": 193,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 956,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 943,
+            "y": 185,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 957,
+            "y": 159,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 946,
+            "y": 181,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 941,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 932,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 954,
+            "y": 187,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 940,
+            "y": 178,
+            "map": "mapa1",
+            "ttl": 131.5
+        },
+        {
+            "k": "light",
+            "id": "antorcha",
+            "life": 1.0,
+            "x": 886,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 151.5
+        }
+    ],
     "ganzua_uses": 0,
-    "boss_intro_seen": false,
-    "boss2_intro_seen": false,
+    "boss_intro_seen": true,
+    "boss2_intro_seen": true,
     "enemies_claimed": [
         "pino_brava"
     ],
@@ -181,5 +565,11 @@
         "tacho",
         "yunque"
     ],
-    "finished": false
+    "finished": false,
+    "shop_intro_seen": true,
+    "shop_red_seen": false,
+    "shop_said": [
+        "rico"
+    ],
+    "shop_visits": 5
 }

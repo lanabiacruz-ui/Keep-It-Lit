@@ -21,6 +21,7 @@ from world.spawn import get_spawn_point
 from player.player import Player
 from world.lighting import PlayerLight
 from world.fx import FxManager
+from world.use_anim import UseAnimManager
 from world.items import (
     LightItem,
     WorldItem,
@@ -472,6 +473,7 @@ class NewGame:
         )
 
         self.fx = FxManager()
+        self.use_anims = UseAnimManager()
         self._intro_pending = False
         self.intro_t = None
 
@@ -2590,6 +2592,8 @@ class NewGame:
 
                 self.tuto_flags.add("used")
 
+                self.use_anims.play(item_id)
+
                 self.show_message(
                     f"Ganzúa: te quedan {usos - self.ganzua_uses} usos"
                 )
@@ -2603,6 +2607,8 @@ class NewGame:
         self.count_stat("items_used")
 
         self.tuto_flags.add("used")
+
+        self.use_anims.play(item_id)
 
         if fed_obj is not None:
 
@@ -3219,6 +3225,7 @@ class NewGame:
     def _update_fx(self, dt):
 
         self.fx.update(dt)
+        self.use_anims.update(dt)
 
         if self.intro_t is not None:
 
@@ -6824,6 +6831,10 @@ class NewGame:
             )
 
         self.fx.draw(self.screen, self.camera)
+
+        self.use_anims.draw(
+            self.screen, self.camera, self.player.image_rect.center
+        )
 
         if (
             self.doors.final_door is not None

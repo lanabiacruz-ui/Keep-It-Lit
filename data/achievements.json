@@ -15,14 +15,15 @@
         "region_1": "2026-11-07T19:38:56",
         "exterminador": "2026-11-07T22:10:08",
         "gelatinero": "2026-11-08T13:54:10",
-        "saqueador": "2026-11-09T00:06:01"
+        "saqueador": "2026-11-09T00:06:01",
+        "ultimo_segundo": "2026-11-11T09:58:48"
     },
     "counters": {
-        "defeats": 36,
-        "fireballs": 307,
-        "slimes": 35,
-        "chests": 59,
-        "kills": 260,
-        "doors": 59
+        "defeats": 49,
+        "fireballs": 334,
+        "slimes": 42,
+        "chests": 68,
+        "kills": 343,
+        "doors": 88
     }
 }
