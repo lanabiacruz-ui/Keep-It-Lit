@@ -7,6 +7,14 @@ import pygame
 
 from core.fonts import load_font
 from core.audio_manager import audio
+from core.player_name import (
+    NAME_MAX,
+    FORBIDDEN,
+    clean_name,
+    get_name,
+    set_name,
+    with_name,
+)
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -15,6 +23,8 @@ UI_DIR = ROOT_DIR / "assets" / "maps" / "ui"
 
 # Nombre del ayudante. Lo usan el tutorial y el cartelito de ayuda.
 HELPER_NAME = "Cenizo"
+
+ASK_MARK = "@pedir_nombre@"
 
 CHARACTER_IMAGE = "botayuda.png"
 FRAME_IMAGE = "texto.png"
@@ -314,8 +324,31 @@ class Tutorial:
         self.skip_all = False
 
         self.width, self.height = screen_size
-        self.pages = list(pages or TUTORIAL_PAGES)
         self.margin = margin
+
+        raw_pages = list(pages or TUTORIAL_PAGES)
+
+        self.ask_pages = set()
+        self._raw_pages = []
+
+        for page in raw_pages:
+
+            if page.startswith(ASK_MARK):
+
+                if get_name():
+                    continue
+
+                self.ask_pages.add(len(self._raw_pages))
+                page = page[len(ASK_MARK):]
+
+            self._raw_pages.append(page)
+
+        self.name_text = ""
+        self.name_done = False
+        self.name_shake = 0.0
+        self._text_on = False
+
+        self.pages = [with_name(p) for p in self._raw_pages]
 
         self.parsed = [parse_markup(p) for p in self.pages]
 
@@ -565,6 +598,9 @@ class Tutorial:
 
             max_h = self.frame_rect.height - 56
 
+            if index in self.ask_pages:
+                max_h -= 44
+
             size = self.START_FONT
 
             while True:
@@ -704,6 +740,76 @@ class Tutorial:
         self.phase = "out"
         self.phase_time = 0.0
 
+    def _awaiting_name(self):
+
+        return self.index in self.ask_pages and not self.name_done
+
+    def _refresh_pages(self):
+
+        self.pages = [with_name(p) for p in self._raw_pages]
+        self.parsed = [parse_markup(p) for p in self.pages]
+        self._lines_cache.clear()
+
+    def _confirm_name(self):
+
+        name = clean_name(self.name_text)
+
+        if not name:
+
+            self.name_shake = 0.3
+
+            return True
+
+        set_name(name)
+
+        self.name_done = True
+
+        self._refresh_pages()
+
+        return self._advance()
+
+    def _name_event(self, event):
+
+        if event.type == pygame.TEXTINPUT:
+
+            for char in event.text:
+
+                if len(self.name_text) >= NAME_MAX:
+                    break
+
+                if not char.isprintable() or char in FORBIDDEN:
+                    continue
+
+                if char == " " and not self.name_text:
+                    continue
+
+                self.name_text += char
+
+            return True
+
+        if event.type != pygame.KEYDOWN:
+            return False
+
+        if event.key == pygame.K_ESCAPE:
+            return False
+
+        if event.key == pygame.K_BACKSPACE:
+
+            if not self.name_text:
+                return self._back()
+
+            self.name_text = self.name_text[:-1]
+
+            return True
+
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            return self._confirm_name()
+
+        if event.key == pygame.K_LEFT:
+            return self._back()
+
+        return True
+
     def _advance(self):
 
         if not self._typing_done():
@@ -711,6 +817,9 @@ class Tutorial:
             self.shown = len(self._flat())
 
             return True
+
+        if self._awaiting_name():
+            return self._confirm_name()
 
         if self.index >= len(self.pages) - 1:
 
@@ -759,13 +868,20 @@ class Tutorial:
 
             return False
 
+        if self._awaiting_name() and self._typing_done():
+            return self._name_event(event)
+
         if event.type != pygame.KEYDOWN:
             return False
 
         if event.key == pygame.K_ESCAPE:
             return False
 
-        if self.can_skip and event.key == pygame.K_k:
+        if (
+            self.can_skip
+            and event.key == pygame.K_k
+            and not self._awaiting_name()
+        ):
 
             self.skip_all = True
             self._close()
@@ -792,6 +908,15 @@ class Tutorial:
 
         self.age += dt
         self.phase_time += dt
+
+        if self.name_shake > 0:
+            self.name_shake = max(0.0, self.name_shake - dt)
+
+        if self._awaiting_name() and not self._text_on:
+
+            pygame.key.start_text_input()
+
+            self._text_on = True
 
         self._update_typing(dt)
         self._update_fx(dt)
@@ -868,6 +993,60 @@ class Tutorial:
                 pygame.draw.circle(screen, color, (x, y), 3)
 
             x += gap
+
+    def _draw_name_box(self, screen, frame_pos):
+
+        t = self.THEME
+
+        shake = 0
+
+        if self.name_shake > 0:
+            shake = int(math.sin(self.name_shake * 70) * 5)
+
+        box = pygame.Rect(
+            frame_pos.left + self.pad_x + shake,
+            frame_pos.bottom - 66,
+            frame_pos.width - self.pad_x * 2,
+            32
+        )
+
+        pygame.draw.rect(screen, (250, 253, 255), box, border_radius=8)
+        pygame.draw.rect(
+            screen, t["frame_border"], box, width=2, border_radius=8
+        )
+
+        font = self._font_size(24)
+
+        if self.name_text:
+
+            label = font.render(self.name_text, True, t["text"])
+
+            screen.blit(
+                label,
+                label.get_rect(midleft=(box.left + 10, box.centery))
+            )
+
+            caret_x = box.left + 10 + label.get_width() + 2
+
+        else:
+
+            label = font.render("Escribe tu nombre", True, t["hint"])
+
+            label.set_alpha(150)
+
+            screen.blit(
+                label,
+                label.get_rect(midleft=(box.left + 10, box.centery))
+            )
+
+            caret_x = box.left + 10
+
+        if int(self.age * 2) % 2 == 0:
+
+            pygame.draw.line(
+                screen, t["text"],
+                (caret_x, box.top + 6), (caret_x, box.bottom - 6), 2
+            )
 
     def _draw_name_tag(self, screen, frame_pos):
 
@@ -992,6 +1171,9 @@ class Tutorial:
             (frame_pos.height - block_h) // 2 - 4
         )
 
+        if self.index in self.ask_pages:
+            top = frame_pos.top + self.pad_y + 8
+
         remaining = (
             sum(len(text) for text, _ in lines)
             if self.phase == "out" else self.shown
@@ -1016,6 +1198,9 @@ class Tutorial:
         if self.phase != "show" or self.age < self.INPUT_DELAY:
             return
 
+        if self._awaiting_name() and self._typing_done():
+            self._draw_name_box(screen, frame_pos)
+
         # ayuda de teclas, abajo del globo
         done = self._typing_done()
 
@@ -1026,7 +1211,10 @@ class Tutorial:
         if self.index > 0:
             parts.append("« volver")
 
-        parts.append("cerrar" if last and done else "seguir")
+        if self._awaiting_name():
+            parts.append("Enter: listo")
+        else:
+            parts.append("cerrar" if last and done else "seguir")
 
         text = "   ".join(parts)
 
@@ -1039,7 +1227,7 @@ class Tutorial:
         screen.blit(hint, hint_pos)
 
         # triangulito que parpadea cuando se puede seguir
-        if done:
+        if done and not self._awaiting_name():
 
             tx = frame_pos.right - 18
             ty = frame_pos.bottom - 17 + int(math.sin(self.age * 6) * 2)

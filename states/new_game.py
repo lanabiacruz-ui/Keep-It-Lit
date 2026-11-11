@@ -73,6 +73,7 @@ from ui.shop_plan import (
 )
 from ui.tutorial import Tutorial
 from ui.tutorial_texts import apply_texts
+from core import player_name as hero_name
 from ui.shop_dialog import (
     SHOPKEEPER_PAGES,
     SHOPKEEPER_REACTIONS,
@@ -524,6 +525,8 @@ class NewGame:
                 self.stats[key] = int(saved_stats.get(key, 0))
 
         self.zones_seen = set(self.save_data.get("zones_seen", []))
+
+        hero_name.set_name(self.save_data.get("hero_name", ""))
 
         objective_list = self._build_objectives()
 
@@ -4339,6 +4342,7 @@ class NewGame:
             "zones_seen": sorted(self.zones_seen),
             "shop_unlocked": sorted(self._shop_unlocked or []),
             "tuto_seen": sorted(self.tuto_seen),
+            "hero_name": hero_name.get_name(),
             "death_drops": self._collect_drops_for_save(),
         }
 

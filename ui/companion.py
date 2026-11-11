@@ -5,6 +5,7 @@ import pygame
 
 from core.fonts import load_font
 from core.audio_manager import audio
+from core.player_name import with_name
 from ui.tutorial import (
     CHARACTER_IMAGE,
     HELPER_NAME,
@@ -19,6 +20,8 @@ from ui.tutorial import (
 
 CHEERS = [
     "¡Eso es!",
+    "¡Bien, {nombre}!",
+    "¡Así se hace, {nombre}!",
     "¡Bien hecho! Tu luz brilla más.",
     "¡Lo lograste! Eres un crack.",
     "¡Pan comido para ti!",
@@ -32,12 +35,12 @@ CHEERS = [
 ]
 
 FAREWELL = (
-    "¡Terminaste el entrenamiento! Ya sabes lo básico. "
+    "¡Terminaste el entrenamiento, {nombre}! Ya sabes lo básico. "
     "Yo me quedo por aquí, flotando sin hacer nada, que es mi especialidad. ¡Que tu luz nunca se apague!"
 )
 
 LOW_LIGHT = [
-    "¡Ey, tu luz está bajita! Usa madera, resina o aceite con [[F]]. ¡No te sumes al club de los fantasmas todavía!",
+    "¡Ey, {nombre}, tu luz está bajita! Usa madera, resina o aceite con [[F]]. ¡No te sumes al club de los fantasmas todavía!",
     "¡Se está apagando! Come algo de luz antes de que sea tarde. ¡Todavía no tengo con quién jugar a las cartas!",
 ]
 
@@ -114,6 +117,8 @@ class Companion:
 
         if self.busy and priority < self.priority:
             return False
+
+        text = with_name(text)
 
         self.text = text
         self.kind = kind

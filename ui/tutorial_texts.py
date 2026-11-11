@@ -13,6 +13,8 @@ Si se agregan o sacan objetivos en new_game.py hay que actualizar esta
 lista: si el largo no coincide, no se aplica nada.
 """
 
+from ui.tutorial import ASK_MARK
+
 TEXTS = [
 
     # 0 - fosforo
@@ -23,8 +25,13 @@ TEXTS = [
         ),
         "tuto": [
             "¡Buuu! Jaja, perdón, es el trabajo. Soy [[Cenizo]], el fantasma de las cenizas, y voy a ayudarte a sobrevivir en este lugar tan oscuro. Yo ya fallé en lo de sobrevivir, pero de consejos entiendo.",
+            ASK_MARK + "Antes de seguir: ¿cómo te llamas?",
+            "¡{nombre}! Qué buen nombre. Lo voy a recordar, te lo prometo: los fantasmas tenemos mucha memoria, es de lo poco que nos queda.",
+            "Te cuento dónde estás: hasta hace poco este mundo tenía luz en cada rincón. Entonces llegó una noche en que todo se apagó y, desde ese momento, la oscuridad se come a quien se queda sin llama.",
+            "Por eso tu luz no es solo una luz: es tu vida y tu arma al mismo tiempo. Más adelante te cuento el resto de la historia. Primero, a sobrevivir.",
             "Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y con cada golpe. Si se apaga, pierdes. Te lo digo por experiencia: yo me apagué hace rato.",
-            "Ahora no tienes ni una chispa. Sigue la flecha naranja con [[W]] [[A]] [[S]] [[D]] hasta el fósforo y agárralo con [[E]]. ¡Tienes {countdown} segundos, y yo no puedo apurarte porque floto!",
+            "Mira abajo: la barra naranja es tu luz y la del escudo empieza vacía (se llena con cosas como el hongo azul). Tus monedas se cuentan aparte y tus casilleros están al final de la pantalla, con un lugar separado para la luz que llevas.",
+            "Ahora no tienes ni una chispa, {nombre}. Sigue la flecha naranja con [[W]] [[A]] [[S]] [[D]] hasta el fósforo y agárralo con [[E]]. ¡Tienes {countdown} segundos, y yo no puedo apurarte porque floto!",
         ],
         "hint": "Sigue la flecha naranja hasta el fósforo y presiona [[E]] al llegar. ¡Rápido, que el tiempo corre y yo no tengo reloj!",
         "cheer": "¡Fuego! Ya tienes tu primera lucecita. Sniff... crecen tan rápido.",
@@ -34,7 +41,7 @@ TEXTS = [
     {
         "text": "Practica moverte con las cuatro teclas: W, A, S y D.",
         "tuto": [
-            "¡Ya tienes luz! Primero lo básico: presiona [[W]] [[A]] [[S]] [[D]], una por una. La lista de arriba se tilda sola. Yo no necesito teclas: atravieso paredes.",
+            "¡Ya tienes luz, {nombre}! Primero lo básico: presiona [[W]] [[A]] [[S]] [[D]], una por una. La lista de arriba se tilda sola. Yo no necesito teclas: atravieso paredes.",
         ],
         "hint": "Prueba cada tecla de la lista: las que faltan están sin tildar. No es tan difícil, te lo juro.",
         "cheer": "¡Ya caminas como un campeón! Un campeón con piernas, qué lujo.",
@@ -50,7 +57,7 @@ TEXTS = [
             "Atacar: [[CLICK IZQ.]]. Golpeas con tu propia luz, pero cada golpe la gasta un poquito: no le pegues al aire (salvo ahora, que es práctica). Yo le pegaba al aire y mira cómo terminé. ¡Pruébalo!",
         ],
         "hint": "Haz click izquierdo en cualquier lado. Es solo una prueba, no te va a retar nadie. Yo menos.",
-        "cheer": "¡Pum! Pegas fuerte. Menos mal que soy intocable.",
+        "cheer": "¡Pum! Pegas fuerte, {nombre}. Menos mal que soy intocable.",
     },
 
     # 3 - agarrar
@@ -63,7 +70,7 @@ TEXTS = [
             "Agarrar: acércate a un objeto del piso (madera, resina, aceite) y presiona [[E]]. Sirven para recargar tu luz: son como el desayuno, pero para llamas. ¡Sigue la flecha!",
         ],
         "hint": "Camina hasta el objeto que marca la flecha y presiona [[E]] cuando estés cerca. Yo lo agarraría, pero mis manos son decorativas.",
-        "cheer": "¡Botín conseguido! Ahora eres oficialmente un acumulador.",
+        "cheer": "¡Botín conseguido, {nombre}! Ahora eres oficialmente un acumulador.",
     },
 
     # 4 - casilleros
@@ -77,7 +84,7 @@ TEXTS = [
             "También puedes recorrerlos con la [[RUEDA]] del mouse. Prueba todo: la lista se tilda sola, como por arte de magia. Magia fantasmal, claro.",
         ],
         "hint": "Presiona las teclas del 1 al 7 y gira la rueda del mouse. Faltan las que están sin tildar. Sí, hay que apretarlas todas: ni los fantasmas tenemos atajos.",
-        "cheer": "¡Ya manejas el inventario como un pro! Hasta yo me perdí un poquito.",
+        "cheer": "¡Ya manejas el inventario como un pro, {nombre}! Hasta yo me perdí un poquito.",
     },
 
     # 5 - usar y soltar
@@ -88,6 +95,7 @@ TEXTS = [
         ),
         "tuto": [
             "Usar: elige un casillero con algo y presiona [[F]] o [[CLICK DER.]]. Soltar: [[Q]] tira el objeto elegido (junto a una bolsa o un cofre, va adentro).",
+            "Atajos para soltar: [[SHIFT]] + [[Q]] suelta toda la casilla de una vez y [[CTRL]] + [[Q]] suelta todo lo que llevas encima. Son útiles para armar tu base rápido, pero úsalos con cuidado.",
             "Lo que queda en el piso se esfuma a los 5 minutos, como cualquier buen fantasma. ¡Pero lo puedes volver a agarrar con [[E]] antes!",
             "Madera: +25% de luz. Resina: +90% de a poco. Aceite: te deja en 75% y te da velocidad. Úsalos ANTES de quedarte a oscuras. Después no vas a poder leer este cartel, y me ofendo.",
         ],
@@ -206,7 +214,7 @@ TEXTS = [
         ),
         "tuto": [
             "Lo comprado: el vendedor lo escupe al piso, cerca de él. Sí, lo escupe. No preguntes. Acércate y presiona [[E]] para agarrarlo.",
-            "Tip: con el imán ([[O]]) los objetos sueltos vuelan solos hacia ti.",
+            "Imán: con el imán, presiona [[O]] para prenderlo o apagarlo. Prendido, los objetos del piso vuelan solos hacia ti y no necesitas apretar [[E]] en cada uno. Si quieres elegir qué agarrar, apágalo con [[O]] otra vez.",
         ],
         "hint": "Mira el piso cerca del vendedor y presiona [[E]] sobre lo que escupió. Está un poco baboso, pero funciona igual.",
         "cheer": "¡Ñam! Ya es tuyo. Que aproveche.",
@@ -307,6 +315,7 @@ TEXTS = [
         ),
         "tuto": [
             "Antorcha: se desbloquea en la tienda al terminar la oleada {antorcha_wave} (en la Zona 1). Con [[G]] cambias de golpe y lanzas una bola de fuego. ¡Pruébala! Y no me apuntes a mí, que ya soy ceniza.",
+            "Combo de fuego: lanza dos bolas normales y la tercera sale de color celeste y pega el doble. Si la ves celeste, esa es la fuerte. Cada bola gasta luz, así que no dispares por aburrimiento.",
         ],
         "hint": "La antorcha se desbloquea en la tienda al terminar la oleada {antorcha_wave}. Con ella equipada, usa [[G]] para cambiar de golpe.",
         "cheer": "¡FUEGO! Eres un pirotécnico. Quemas muy bien.",
@@ -337,21 +346,26 @@ TEXTS = [
             "jefe y una gema verde clara te esperan."
         ),
         "tuto": [
-            "¡Último tramo! Completa Orkun: 10 oleadas, un jefe y una gema verde clara te esperan. Su jefe suelta una llave dorada para la Zona 2. Sí, son 10. Cuéntalas conmigo, aunque no tengo dedos.",
+            "¡Último tramo, {nombre}! Completa Orkun: 10 oleadas, un jefe y una gema verde clara te esperan. Su jefe suelta una llave dorada para la Zona 2. Sí, son 10. Cuéntalas conmigo, aunque no tengo dedos.",
             "A los jefes se los esquiva saltando con [[ESPACIO]]. Mira bien sus movimientos antes de atacar. ¡Tú puedes! Y si no puedes... también te quiero.",
+            "Dicen que la Piña Colosal fue una semilla común hasta que el Oscuro sopló sobre ella. Ahora es enorme, rebota por todos lados y habla un idioma que nadie entiende. Yo tampoco. Pero sus saltos sí se entienden: míralos bien.",
         ],
         "hint": "Orkun es la zona de la derecha. Completa sus 10 oleadas y vence al jefe.",
-        "cheer": "¡Orkun es tuyo! Y con gema verde. Brillas más que yo, qué envidia.",
+        "cheer": "¡Orkun es tuyo, {nombre}! Y con gema verde. Brillas más que yo, qué envidia.",
     },
 
     # 23 - Stonun
     {
+        "tuto": [
+            "Stonun es la zona de la izquierda y es MUCHO más difícil que Orkun. No entres sin haber terminado Orkun, sin una buena luz (vela o antorcha) y sin objetos en tus casilleros.",
+            "Allí manda el Guardián y, al final de las 10 oleadas, te espera el Golem Colosal: una montaña que se hizo guardián y que no olvida a nadie. Salta sus ondas con [[ESPACIO]] y ten paciencia.",
+        ],
         "text": (
             "Ahora sí, Stonun (zona 2, izquierda, la del "
             "Guardián): 10 oleadas y una gema verde oscuro."
         ),
         "hint": "Stonun es la zona de la izquierda. La llave dorada del jefe de Orkun abre su puerta de oro.",
-        "cheer": "¡Stonun conquistada! Eres imparable. Ya me da miedo hasta a mí.",
+        "cheer": "¡Stonun conquistada, {nombre}! Eres imparable. Ya me da miedo hasta a mí.",
     },
 
     # 24 - enciclopedia
@@ -360,14 +374,21 @@ TEXTS = [
             "Completa la enciclopedia: descubre las {creatures} "
             "criaturas del juego (la abres desde la pausa con ESC)."
         ),
+        "tuto": [
+            "Último repaso, {nombre}: te enseñé muchas teclas y seguro se te olvidó alguna. [[B]] abre los bailes, [[O]] prende el imán, [[G]] cambia el golpe, [[TAB]] esconde el objetivo y la [[RUEDA]] cambia de casillero.",
+            "Más: [[Q]] suelta, [[SHIFT]] + [[Q]] suelta toda la casilla, [[CTRL]] + [[Q]] suelta todo, [[F]] usa o abre la tienda y [[ESC]] pausa. Si cambias teclas en Ajustes, la guía de ahí te las recuerda.",
+            "Y si tienes el Mapa en un casillero, elígelo y haz click derecho: te muestra el mundo con los nombres de las zonas. Ahora sí, el resto es cosa tuya. Yo sigo flotando por aquí.",
+        ],
         "hint": "Abre la pausa con [[ESC]] y mira la enciclopedia. Las criaturas se descubren peleando contra ellas.",
-        "cheer": "¡Enciclopedia completa! Eres una leyenda. Escribo tu nombre en la pared. Con ceniza.",
+        "cheer": "¡Enciclopedia completa! Eres una leyenda, {nombre}. Escribo tu nombre en la pared. Con ceniza.",
     },
 ]
 
 
 def apply_texts(objectives, **ctx):
     """Pisa los textos de la lista de objetivos con los de TEXTS."""
+
+    ctx.setdefault("nombre", "{nombre}")
 
     if len(objectives) != len(TEXTS):
 
