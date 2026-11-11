@@ -803,10 +803,6 @@ class Enemy:
     fixed = False
     contact_damage = True
 
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_pina"
-    DIE_SFX = "die_pina"
-
     room = ROOM
 
     def __init__(self, x, y, hp, max_speed, spawn_delay=0.0):
@@ -1748,10 +1744,6 @@ class Mosquito(Enemy):
     fixed = False
     contact_damage = False
 
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_squeak"
-    DIE_SFX = "die_bug"
-
     def __init__(self, x, y, hp, spawn_delay=0.0):
 
         super().__init__(x, y, hp, MOSQUITO_ATTACK_SPEED, spawn_delay)
@@ -1840,9 +1832,6 @@ class Mosquito(Enemy):
     def _start_attack(self):
 
         self.phase = "attack"
-
-        # el zumbido de la picada (mosquito.wav existia pero no sonaba nunca)
-        audio.play_at("mosquito", self.pos, self.last_target, radius=450.0)
 
         to_player = self.last_target - self.pos
 
@@ -2277,10 +2266,6 @@ class Tronco(Enemy):
     fixed = True
     contact_damage = False
 
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_wood"
-    DIE_SFX = "die_wood"
-
     IDLE = "idle"
     WINDUP = "windup"
     SHOOT = "shoot"
@@ -2628,10 +2613,6 @@ class Hongun(Enemy):
 
     fixed = False
     contact_damage = False
-
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_squish"
-    DIE_SFX = None
 
     WANDER = "wander"
     CHASE = "chase"
@@ -2986,10 +2967,6 @@ class Destello(Enemy):
 
     fixed = False
     contact_damage = False
-
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_glass"
-    DIE_SFX = None
 
     WANDER = "wander"
     ALERT = "alert"
@@ -3445,10 +3422,6 @@ class Golem(Enemy):
 
     fixed = False
     contact_damage = False
-
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_stone"
-    DIE_SFX = "die_stone"
 
     WANDER = "wander"
     ALERT = "alert"
@@ -4009,10 +3982,6 @@ class Guardian(Enemy):
 
     fixed = False
     contact_damage = False
-
-    # sonidos propios (ver tools/make_sounds_extra.py)
-    HIT_SFX = "hit_metal"
-    DIE_SFX = "die_metal"
 
     WANDER = "wander"
     CHASE = "chase"
@@ -4946,22 +4915,6 @@ class RewardChest:
         screen.blit(glow, glow.get_rect(center=(cx, cy)))
 
 
-# un sonido propio por cada evento de cada jefe (tools/make_sounds_extra.py)
-GOLEM_SFX = {
-    "roar": "golem_roar", "rock": "golem_rock", "wave": "golem_wave",
-    "wallhit": "golem_wallhit", "beam": "golem_beam",
-    "beam_charge": "golem_beam_charge", "sweep": "golem_sweep",
-    "blast": "golem_blast", "summon": "golem_summon",
-    "phase": "golem_phase", "die": "golem_die", "crack": "golem_crack",
-}
-
-PINA_SFX = {
-    "roar": "pina_roar", "bounce": "pina_bounce", "split": "pina_split",
-    "merge": "pina_merge", "summon": "pina_summon", "phase": "pina_phase",
-    "die": "pina_die", "crack": "pina_crack", "shatter": "pina_crack",
-}
-
-
 class ArenaConfig:
 
     def __init__(self, key, title, room, trigger, exit_pos, gate,
@@ -5459,13 +5412,6 @@ class Arena:
 
     def _boss_sound(self, event):
 
-        table = GOLEM_SFX if self.cfg.boss_kind == "golem" else PINA_SFX
-
-        if event in table:
-            audio.play(table[event])
-            return
-
-        # eventos sin sonido propio: los de siempre
         if event in ("roar", "summon"):
             audio.play("alert")
         elif event in ("split", "phase", "die", "blast"):
@@ -5494,7 +5440,7 @@ class Arena:
             fx.shake(9.0, 0.7)
 
             audio.play("boss_slam")
-            self._boss_sound("die")
+            audio.play("boss_roar")
 
         elif event in ("wave", "rock", "wallhit", "beam", "shatter", "blast"):
 
@@ -5523,7 +5469,7 @@ class Arena:
 
         elif event == "crack":
 
-            self._boss_sound("crack")
+            audio.play("explosion")
 
             fx.shake(7.0, 0.45)
 
@@ -6388,7 +6334,10 @@ class Arena:
             if getattr(game, "placeables", None) is not None else ()
         )
 
-        invisible = bool(getattr(game, "invisible", False))
+        # sin luz (cuenta regresiva de 10 s) pasa lo mismo que con la pocion
+        # de invisibilidad: los monstruos pierden al jugador y van al ultimo
+        # lugar donde lo vieron. Asi se puede buscar otra luz sin que te maten.
+        invisible = bool(getattr(game, "invisible", False)) or not light_on
 
         if invisible:
 
@@ -6471,6 +6420,9 @@ class Arena:
             if (enemy.spawning or enemy.touch_cd > 0 or enemy.dead
                     or not enemy.contact_damage or getattr(enemy, "attached", False)):
                 continue
+            # sin luz los monstruos no te atacan (ni te empujan)
+            if not light_on and not isinstance(enemy, BOSS_TYPES):
+                continue
             if enemy.rect.colliderect(body):
                 if p.hurt(enemy.pos):
                     game.take_damage(damage, common=_is_common(enemy), source=enemy)
@@ -6541,7 +6493,7 @@ class Arena:
                     achievements.unlock("desactivado")
 
                 if not getattr(enemy, "boom", False):
-                    self._death_puff(enemy.pos, enemy)
+                    self._death_puff(enemy.pos)
 
         self.enemies = [e for e in self.enemies if not e.dead]
         self.enemies.extend(splits)
@@ -6735,7 +6687,7 @@ class Arena:
         p = game.player
         pos = pygame.Vector2(enemy.pos)
 
-        audio.play("explosion")
+        audio.play("hongun_boom")
 
         self.blasts.append({"x": pos.x, "y": pos.y, "t": 0.0})
 
@@ -6782,9 +6734,9 @@ class Arena:
 
         game.flashbang(pos.x, pos.y)
 
-    def _death_puff(self, pos, enemy=None):
+    def _death_puff(self, pos):
 
-        audio.play(getattr(enemy, "DIE_SFX", None) or "enemy_die", jitter=0.1)
+        audio.play("enemy_die")
 
         for _ in range(10):
 

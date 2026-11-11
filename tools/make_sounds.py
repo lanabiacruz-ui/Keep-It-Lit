@@ -228,6 +228,37 @@ def explosion():
     return mix(rumble * 1.1, crack * 0.8, boom * 1.2)
 
 
+def hongun_boom():
+    # explosion del hongun: reventon humedo de esporas, no un estruendo seco
+    # 1) crack inicial cortito
+    crack = highpass(lowpass(noise(0.06), 6000), 700) * env(int(SR * 0.06), 0.001, 50)
+    # 2) "pop" que cae de agudo a grave
+    pop = sine(sweep(520, 70, 0.22, 0.5), 0.22) * env(int(SR * 0.22), 0.001, 16)
+    # 3) golpe grave que se siente en el pecho
+    sub = sine(sweep(95, 34, 0.5, 0.6), 0.5) * env(int(SR * 0.5), 0.002, 7)
+    # 4) squelch: tono con vibrato que cae (la parte "splat")
+    n_sq = int(SR * 0.28)
+    f = Sig(
+        700 * (1 - 0.75 * i / n_sq) * (1 + 0.25 * math.sin(2 * math.pi * 38 * i / SR))
+        for i in range(n_sq)
+    )
+    squelch = sine(f, 0.28) * env(n_sq, 0.003, 11) * 0.45
+    # 5) nube de esporas: siseo agudo que se apaga
+    spores = highpass(lowpass(noise(0.55), 8000), 2200) * env(int(SR * 0.55), 0.012, 6.5) * 0.5
+    # 6) burbujitas que quedan flotando despues
+    bubbles = mix(*[
+        delay(
+            sine(sweep(f0, f0 * 0.45, 0.07, 0.6), 0.07) * env(int(SR * 0.07), 0.002, 28),
+            d, g,
+        )
+        for d, f0, g in (
+            (0.10, 620, 0.5), (0.17, 880, 0.4), (0.25, 540, 0.35),
+            (0.33, 760, 0.25), (0.42, 980, 0.18),
+        )
+    ])
+    return mix(crack * 0.8, pop, sub * 1.2, squelch, spores, bubbles)
+
+
 def flashbang():
     bang = lowpass(noise(0.35), 7000) * env(int(SR * 0.35), 0.001, 12)
     boom = sine(sweep(140, 45, 0.4), 0.4) * env(int(SR * 0.4), 0.001, 8)
@@ -657,7 +688,7 @@ SOUNDS = {
     "coin": coin, "coin_big": coin_big, "pickup": pickup, "gem": gem,
     "swing": swing, "hit": hit, "hit_heavy": hit_heavy, "hurt": hurt,
     "enemy_die": enemy_die, "fireball": fireball, "shot": shot,
-    "explosion": explosion, "flashbang": flashbang,
+    "explosion": explosion, "hongun_boom": hongun_boom, "flashbang": flashbang,
     "door_hit": door_hit, "door_resist": door_resist,
     "door_break": door_break, "chest_open": chest_open, "chest_win": chest_win, "buy": buy,
     "wave_clear": wave_clear, "click": click, "light_out": light_out,
