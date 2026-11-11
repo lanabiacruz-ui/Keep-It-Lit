@@ -19,6 +19,7 @@ from world.collision import CollisionMap
 from world.camera import Camera
 from world.spawn import get_spawn_point
 from player.player import Player
+from player.held_item import HeldItemRenderer
 from world.lighting import PlayerLight
 from world.fx import FxManager
 from world.use_anim import UseAnimManager
@@ -474,6 +475,7 @@ class NewGame:
 
         self.fx = FxManager()
         self.use_anims = UseAnimManager()
+        self.held_item = HeldItemRenderer()
         self._intro_pending = False
         self.intro_t = None
 
@@ -2522,6 +2524,7 @@ class NewGame:
             return
 
         if self.placeables.try_use(self, slot):
+            self.held_item.kick()
             return
 
         item = self.item_defs.get(item_id, {})
@@ -2593,6 +2596,7 @@ class NewGame:
                 self.tuto_flags.add("used")
 
                 self.use_anims.play(item_id)
+                self.held_item.kick()
 
                 self.show_message(
                     f"Ganzúa: te quedan {usos - self.ganzua_uses} usos"
@@ -2609,6 +2613,7 @@ class NewGame:
         self.tuto_flags.add("used")
 
         self.use_anims.play(item_id)
+        self.held_item.kick()
 
         if fed_obj is not None:
 
@@ -3226,6 +3231,7 @@ class NewGame:
 
         self.fx.update(dt)
         self.use_anims.update(dt)
+        self.held_item.update(dt)
 
         if self.intro_t is not None:
 
@@ -6689,9 +6695,20 @@ class NewGame:
         for arena in self.arenas:
             arena.draw_world(self.screen, self.camera)
 
+        held_id = self._selected_item()
+
+        # mirando hacia arriba la mano queda detras del cuerpo
+        self.held_item.draw(
+            self.screen, self.camera, self.player, held_id, behind=True
+        )
+
         self.player.draw(
             self.screen,
             self.camera
+        )
+
+        self.held_item.draw(
+            self.screen, self.camera, self.player, held_id, behind=False
         )
 
         sources = []

@@ -2,12 +2,12 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-11T11:41:21",
+    "last_played": "2026-11-11T20:01:19",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 1024,
-    "y": 147,
-    "coins": 190778,
+    "x": 903,
+    "y": 142,
+    "coins": 190350,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
@@ -17,44 +17,38 @@
     "inventory": [
         [
             "aceite",
-            7
+            1
         ],
         [
             "polvora",
-            6
+            1
         ],
         null,
         null,
-        [
-            "pocion_ascua",
-            1
-        ],
-        [
-            "pocion_invisibilidad",
-            1
-        ]
+        null,
+        null
     ],
     "collected": [
-        "moneda_pasillo_cabana#1",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_central#1",
+        "moneda_pasillo_tienda#0",
         "moneda_pasillo_cofres#0",
+        "madera_01#0",
+        "cera_01#0",
+        "moneda_pasillo_der#0",
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_izq#0",
+        "madera_05#0",
         "moneda_sala_cofres#0",
         "moneda5_sala_cofres#0",
-        "madera_05#0",
-        "moneda_pasillo_tienda#0",
-        "madera_01#0",
-        "aceite_01#0",
-        "madera_03#0",
-        "madera_04#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_der#0",
-        "cera_01#0",
         "moneda_pasillo_tienda#1",
-        "moneda_sala_cofres#1",
         "madera_02#0",
+        "madera_03#0",
+        "aceite_01#0",
         "moneda_sala_central#0",
-        "moneda_pasillo_izq#0"
+        "moneda5_pasillo_cofres#0",
+        "madera_04#0",
+        "moneda_pasillo_cabana#1",
+        "moneda_sala_central#1",
+        "moneda_sala_cofres#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -84,7 +78,7 @@
     "placeables": [
         {
             "t": "faro",
-            "x": 1034,
+            "x": 1025,
             "y": 170,
             "fuel": 0.0
         },
@@ -129,7 +123,7 @@
         },
         {
             "t": "faro",
-            "x": 1034,
+            "x": 1035,
             "y": 155,
             "fuel": 0.0
         },
@@ -270,9 +264,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1567,
+        "items_used": 1588,
         "chests_opened": 95,
-        "purchases": 107,
+        "purchases": 111,
         "fireballs": 3083,
         "kills": 369
     },
@@ -317,16 +311,7 @@
     "tuto_seen": [
         0
     ],
-    "death_drops": [
-        {
-            "k": "item",
-            "id": "madera",
-            "x": 897,
-            "y": 175,
-            "map": "mapa1",
-            "ttl": 259.5
-        }
-    ],
+    "death_drops": [],
     "ganzua_uses": 2,
     "boss_intro_seen": true,
     "enemies_claimed": [
@@ -405,5 +390,5 @@
         "rico",
         "visitas"
     ],
-    "shop_visits": 14
+    "shop_visits": 20
 }
