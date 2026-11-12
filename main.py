@@ -2,6 +2,11 @@ import sys
 import ctypes
 import pygame
 
+# Modo "todo desbloqueado" / reinicio (data/modo_juego.json): tiene que
+# correr ANTES de cargar logros, skins y ajustes
+from core.modo_juego import aplicar_modo
+aplicar_modo()
+
 from core.fonts import load_font
 # Windows: darle al juego su propio ID para que la barra de tareas
 # no lo agrupe con Python y muestre el ícono del juego.

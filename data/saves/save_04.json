@@ -2,22 +2,22 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-11T11:00:53",
+    "last_played": "2026-11-11T21:15:06",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 740,
-    "y": 513,
-    "coins": 391011,
+    "x": 872,
+    "y": 120,
+    "coins": 388206,
     "gems": 0,
     "gems_green": 0,
     "has_match": false,
     "light": "antorcha",
     "vida": 0.0,
-    "escudo": 0.5,
+    "escudo": 0.0,
     "inventory": [
         [
             "aceite",
-            4
+            6
         ],
         [
             "polvora",
@@ -25,28 +25,34 @@
         ],
         [
             "repelente",
-            14
+            15
         ],
         [
             "hongo_azul",
-            13
+            15
         ],
-        null,
-        null
+        [
+            "pocion_ira",
+            1
+        ],
+        [
+            "pocion_ascua",
+            1
+        ]
     ],
     "collected": [
         "moneda_pasillo_cabana#0",
-        "moneda_pasillo_cabana#1",
-        "moneda_sala_cofres#0",
         "moneda5_pasillo_cofres#0",
-        "moneda_sala_central#0",
-        "madera_10#0",
-        "moneda_pasillo_cofres#0",
         "moneda_pasillo_der#0",
-        "moneda_pasillo_tienda#1",
         "moneda_pasillo_izq#0",
         "moneda_pasillo_tienda#0",
-        "moneda_sala_central#1"
+        "moneda_pasillo_cabana#1",
+        "moneda_sala_cofres#0",
+        "moneda_sala_central#1",
+        "madera_10#0",
+        "moneda_pasillo_cofres#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_tienda#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 11,
@@ -99,11 +105,11 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 134,
+        "items_used": 168,
         "chests_opened": 16,
-        "purchases": 17,
-        "fireballs": 27,
-        "kills": 69
+        "purchases": 20,
+        "fireballs": 84,
+        "kills": 72
     },
     "zones_seen": [
         "central",
@@ -149,380 +155,1172 @@
     "death_drops": [
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 944,
+            "id": "aceite",
+            "x": 1009,
+            "y": 169,
+            "map": "mapa1",
+            "ttl": 137.1
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1018,
+            "y": 170,
+            "map": "mapa1",
+            "ttl": 137.2
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 960,
+            "y": 160,
+            "map": "mapa1",
+            "ttl": 137.2
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1016,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 137.4
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 996,
+            "y": 175,
+            "map": "mapa1",
+            "ttl": 137.4
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 917,
+            "y": 161,
+            "map": "mapa1",
+            "ttl": 137.6
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 914,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 137.6
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 902,
+            "y": 146,
+            "map": "mapa1",
+            "ttl": 137.8
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1003,
             "y": 164,
             "map": "mapa1",
-            "ttl": 129.8
+            "ttl": 137.8
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 950,
-            "y": 182,
+            "id": "polvora",
+            "x": 951,
+            "y": 157,
             "map": "mapa1",
-            "ttl": 130.0
+            "ttl": 137.9
         },
         {
             "k": "item",
-            "id": "ganzua",
+            "id": "polvora",
+            "x": 981,
+            "y": 163,
+            "map": "mapa1",
+            "ttl": 138.0
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 965,
+            "y": 170,
+            "map": "mapa1",
+            "ttl": 138.1
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 910,
+            "y": 168,
+            "map": "mapa1",
+            "ttl": 138.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 894,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 138.3
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 909,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 138.4
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1013,
+            "y": 170,
+            "map": "mapa1",
+            "ttl": 138.5
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 894,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 138.6
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 982,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 138.7
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 893,
+            "y": 149,
+            "map": "mapa1",
+            "ttl": 138.8
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 926,
+            "y": 168,
+            "map": "mapa1",
+            "ttl": 138.9
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 975,
+            "y": 169,
+            "map": "mapa1",
+            "ttl": 139.0
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 961,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 139.1
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 943,
+            "y": 146,
+            "map": "mapa1",
+            "ttl": 139.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 962,
+            "y": 157,
+            "map": "mapa1",
+            "ttl": 139.3
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 985,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 139.4
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 961,
+            "y": 173,
+            "map": "mapa1",
+            "ttl": 139.5
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 991,
+            "y": 175,
+            "map": "mapa1",
+            "ttl": 139.5
+        },
+        {
+            "k": "item",
+            "id": "repelente",
             "x": 939,
-            "y": 180,
+            "y": 174,
             "map": "mapa1",
-            "ttl": 130.1
+            "ttl": 139.6
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 955,
-            "y": 181,
+            "id": "repelente",
+            "x": 979,
+            "y": 154,
             "map": "mapa1",
-            "ttl": 130.3
+            "ttl": 139.7
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 932,
-            "y": 172,
+            "id": "repelente",
+            "x": 997,
+            "y": 153,
             "map": "mapa1",
-            "ttl": 130.4
+            "ttl": 139.8
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 936,
-            "y": 180,
+            "id": "repelente",
+            "x": 903,
+            "y": 157,
             "map": "mapa1",
-            "ttl": 130.5
+            "ttl": 139.9
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 954,
-            "y": 172,
+            "id": "repelente",
+            "x": 934,
+            "y": 153,
             "map": "mapa1",
-            "ttl": 130.7
+            "ttl": 140.0
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 933,
-            "y": 179,
+            "id": "hongo_azul",
+            "x": 1013,
+            "y": 174,
             "map": "mapa1",
-            "ttl": 130.9
+            "ttl": 140.1
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 893,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 140.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 953,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 140.3
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 995,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 140.4
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 885,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 140.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 900,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 140.6
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 943,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 140.7
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 907,
+            "y": 149,
+            "map": "mapa1",
+            "ttl": 140.8
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 982,
+            "y": 146,
+            "map": "mapa1",
+            "ttl": 140.9
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 926,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 141.0
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 942,
+            "y": 285,
+            "map": "mapa1",
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "aceite",
             "x": 956,
-            "y": 185,
+            "y": 305,
             "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 962,
-            "y": 173,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 930,
-            "y": 158,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 929,
-            "y": 179,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 955,
-            "y": 181,
-            "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "aceite",
             "x": 936,
-            "y": 156,
+            "y": 302,
             "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 968,
-            "y": 168,
-            "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "aceite",
             "x": 945,
-            "y": 183,
+            "y": 286,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "aceite",
             "x": 943,
-            "y": 155,
+            "y": 273,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "aceite",
-            "x": 938,
-            "y": 174,
+            "x": 941,
+            "y": 312,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
-            "id": "aceite",
-            "x": 932,
-            "y": 156,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 952,
-            "y": 181,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 927,
-            "y": 167,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 924,
-            "y": 171,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 942,
-            "y": 191,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 947,
-            "y": 195,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 950,
-            "y": 164,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
+            "id": "polvora",
             "x": 936,
-            "y": 156,
+            "y": 287,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
-            "id": "aceite",
-            "x": 944,
-            "y": 157,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 934,
-            "y": 162,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "aceite",
+            "id": "polvora",
             "x": 943,
-            "y": 157,
+            "y": 282,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
-            "id": "ganzua",
-            "x": 944,
-            "y": 187,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "ganzua",
-            "x": 953,
-            "y": 159,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "ganzua",
-            "x": 928,
-            "y": 175,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 936,
-            "y": 185,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 928,
-            "y": 172,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 942,
-            "y": 189,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 932,
-            "y": 165,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 962,
-            "y": 166,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 942,
-            "y": 193,
-            "map": "mapa1",
-            "ttl": 131.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
+            "id": "polvora",
             "x": 956,
-            "y": 156,
+            "y": 307,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
-            "id": "hongo_azul",
+            "id": "polvora",
+            "x": 953,
+            "y": 280,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
             "x": 943,
-            "y": 185,
+            "y": 306,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 936,
+            "y": 287,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 947,
+            "y": 314,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 944,
+            "y": 284,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 943,
+            "y": 282,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 937,
+            "y": 284,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 938,
+            "y": 292,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 938,
+            "y": 297,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 948,
+            "y": 282,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 933,
+            "y": 305,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 939,
+            "y": 288,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 953,
+            "y": 278,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 945,
+            "y": 287,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 934,
+            "y": 283,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 940,
+            "y": 277,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 948,
+            "y": 284,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 947,
+            "y": 312,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 956,
+            "y": 302,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 939,
+            "y": 277,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 954,
+            "y": 305,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 939,
+            "y": 298,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 955,
+            "y": 311,
+            "map": "mapa1",
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 957,
-            "y": 159,
+            "x": 937,
+            "y": 290,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 942,
+            "y": 288,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 945,
+            "y": 279,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 938,
+            "y": 310,
+            "map": "mapa1",
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "hongo_azul",
             "x": 946,
-            "y": 181,
+            "y": 305,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 214.2
         },
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 941,
+            "x": 955,
+            "y": 302,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 952,
+            "y": 280,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 956,
+            "y": 313,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 949,
+            "y": 270,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 939,
+            "y": 289,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 948,
+            "y": 316,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 946,
+            "y": 287,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "pocion_ascua",
+            "x": 936,
+            "y": 277,
+            "map": "mapa1",
+            "ttl": 214.2
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 993,
+            "y": 160,
+            "map": "mapa1",
+            "ttl": 230.3
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 926,
+            "y": 152,
+            "map": "mapa1",
+            "ttl": 230.3
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 985,
             "y": 162,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 230.4
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1016,
+            "y": 161,
+            "map": "mapa1",
+            "ttl": 230.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 965,
+            "y": 154,
+            "map": "mapa1",
+            "ttl": 230.5
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 892,
+            "y": 169,
+            "map": "mapa1",
+            "ttl": 230.6
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 990,
+            "y": 165,
+            "map": "mapa1",
+            "ttl": 230.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 968,
+            "y": 147,
+            "map": "mapa1",
+            "ttl": 230.7
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 982,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 230.8
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1009,
+            "y": 152,
+            "map": "mapa1",
+            "ttl": 230.9
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 991,
+            "y": 161,
+            "map": "mapa1",
+            "ttl": 230.9
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1018,
+            "y": 160,
+            "map": "mapa1",
+            "ttl": 231.0
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 887,
+            "y": 147,
+            "map": "mapa1",
+            "ttl": 231.0
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1011,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 231.1
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1017,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 231.2
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 960,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 231.3
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1012,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 231.3
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1015,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 231.4
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 898,
+            "y": 159,
+            "map": "mapa1",
+            "ttl": 231.5
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 951,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 231.6
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 930,
+            "y": 148,
+            "map": "mapa1",
+            "ttl": 231.6
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 901,
+            "y": 166,
+            "map": "mapa1",
+            "ttl": 231.7
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 989,
+            "y": 147,
+            "map": "mapa1",
+            "ttl": 231.8
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 915,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 231.8
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 942,
+            "y": 174,
+            "map": "mapa1",
+            "ttl": 231.9
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 929,
+            "y": 157,
+            "map": "mapa1",
+            "ttl": 231.9
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 994,
+            "y": 149,
+            "map": "mapa1",
+            "ttl": 232.0
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 902,
+            "y": 152,
+            "map": "mapa1",
+            "ttl": 232.1
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 911,
+            "y": 155,
+            "map": "mapa1",
+            "ttl": 232.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 888,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 232.2
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 971,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 232.3
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 931,
+            "y": 175,
+            "map": "mapa1",
+            "ttl": 232.4
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 916,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 232.4
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 910,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 232.5
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 990,
+            "y": 176,
+            "map": "mapa1",
+            "ttl": 232.6
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 943,
+            "y": 159,
+            "map": "mapa1",
+            "ttl": 232.6
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1004,
+            "y": 159,
+            "map": "mapa1",
+            "ttl": 232.7
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 880,
+            "y": 163,
+            "map": "mapa1",
+            "ttl": 232.8
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 978,
+            "y": 166,
+            "map": "mapa1",
+            "ttl": 232.8
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 1011,
+            "y": 160,
+            "map": "mapa1",
+            "ttl": 232.9
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 960,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 233.0
+        },
+        {
+            "k": "item",
+            "id": "repelente",
+            "x": 992,
+            "y": 159,
+            "map": "mapa1",
+            "ttl": 233.0
         },
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 932,
-            "y": 156,
+            "x": 883,
+            "y": 167,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 233.1
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 959,
+            "y": 153,
+            "map": "mapa1",
+            "ttl": 233.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 980,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 233.3
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 1003,
+            "y": 172,
+            "map": "mapa1",
+            "ttl": 233.3
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 987,
+            "y": 163,
+            "map": "mapa1",
+            "ttl": 233.4
         },
         {
             "k": "item",
             "id": "hongo_azul",
             "x": 954,
-            "y": 187,
+            "y": 169,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 233.5
         },
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 940,
-            "y": 178,
+            "x": 889,
+            "y": 167,
             "map": "mapa1",
-            "ttl": 131.5
+            "ttl": 233.5
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 948,
+            "y": 168,
+            "map": "mapa1",
+            "ttl": 233.6
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 995,
+            "y": 167,
+            "map": "mapa1",
+            "ttl": 233.6
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 963,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 233.7
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 930,
+            "y": 173,
+            "map": "mapa1",
+            "ttl": 233.8
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 938,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 233.8
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 979,
+            "y": 154,
+            "map": "mapa1",
+            "ttl": 233.9
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 974,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 234.0
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 958,
+            "y": 164,
+            "map": "mapa1",
+            "ttl": 234.0
+        },
+        {
+            "k": "item",
+            "id": "pocion_ascua",
+            "x": 896,
+            "y": 161,
+            "map": "mapa1",
+            "ttl": 234.1
         },
         {
             "k": "light",
             "id": "antorcha",
             "life": 1.0,
-            "x": 886,
-            "y": 176,
+            "x": 968,
+            "y": 159,
             "map": "mapa1",
-            "ttl": 151.5
+            "ttl": 234.2
         }
     ],
     "ganzua_uses": 0,
@@ -571,5 +1369,6 @@
     "shop_said": [
         "rico"
     ],
-    "shop_visits": 5
+    "shop_visits": 8,
+    "hero_name": ""
 }

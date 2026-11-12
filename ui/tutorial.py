@@ -42,11 +42,11 @@ TUTORIAL_PAGES = [
     "Agarrar: acércate a algo del piso y presiona [[E]]. Soltar: [[Q]]. Soltar toda la casilla: [[SHIFT + Q]]. Soltar todo: [[CTRL + Q]] (la luz equipada se queda).",
     "Lo que tiras al piso se esfuma a los [[5 MINUTOS]]. Si lo sueltas junto a una bolsa o un cofre, queda adentro para siempre.",
     "Inventario: [[1]] al [[4]] son tus casilleros, [[5]] y [[6]] las pociones y [[7]] tu luz. También sirve la [[RUEDA]] del mouse.",
-    "Usar un objeto: elígelo y presiona [[F]] o [[CLICK DER.]]. Si mantienes click izquierdo sobre un casillero, te cuento qué hace.",
-    "Recuperar luz: la madera suma 25%, la resina 90% de a poco y el aceite te deja en 75% y te da velocidad. ¡Úsalos ANTES de quedarte a oscuras!",
-    "Monedas: se juntan solas al acercarte. Dorada = 1, azul = 5, roja = 10. Con ellas compras cosas en la tienda: [[F]] cerca del vendedor.",
+    "Usar un objeto: elígelo y presiona [[F]] o [[CLICK DER.]]. Mantén click izquierdo sobre un casillero para ver qué hace ese objeto.",
+    "Los objetos te ayudan: la madera recupera luz y el aceite te da velocidad. ¡Úsalos ANTES de quedarte a oscuras!",
+    "Monedas: se juntan solas al acercarte. Dorada = 1, azul = 5, roja = 10. Las consigues en el piso, en cofres, matando slimes, ganando oleadas y cobrando la enciclopedia de criaturas. Con ellas compras cosas en la tienda: [[F]] cerca del vendedor.",
     "En la pausa ([[ESC]]) está la enciclopedia de criaturas. Toca COBRAR en cada criatura descubierta y te llevas monedas de regalo.",
-    "Salas de combate: empieza por la Zona 1 (Orkun, a la derecha). Su jefe suelta una llave dorada para la Zona 2. ¡Ojo con los mosquitos!",
+    "Salas de combate: empieza por la Zona 1 (Orkun, a la derecha). Su jefe suelta una llave dorada para la Zona 2.",
     "Eso es todo. Si te pierdes, abre la pausa con [[ESC]]. ¡Que tu luz nunca se apague!",
 ]
 
@@ -299,10 +299,10 @@ class Tutorial:
     START_FONT = 30
     MIN_FONT = 18
 
-    TYPE_SPEED = 32.0
+    TYPE_SPEED = 55.0
     BLIP_EVERY = 3
-    PAUSE_END = 0.45
-    PAUSE_COMMA = 0.22
+    PAUSE_END = 0.22
+    PAUSE_COMMA = 0.08
     PAUSE_DOTS = 0.14
     BLIPS = ("talk_a", "talk_b", "talk_c", "talk_d")
 

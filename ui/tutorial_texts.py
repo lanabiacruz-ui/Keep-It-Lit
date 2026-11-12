@@ -24,16 +24,15 @@ TEXTS = [
             "agárralo con E. Si en {countdown} segundos no tienes luz, pierdes."
         ),
         "tuto": [
-            "¡Buuu! Jaja, perdón, es el trabajo. Soy [[Cenizo]], el fantasma de las cenizas, y voy a ayudarte a sobrevivir en este lugar tan oscuro. Yo ya fallé en lo de sobrevivir, pero de consejos entiendo.",
+            "¡Buuu! Perdón, es el trabajo. Soy [[Cenizo]], un fantasma, y te voy a ayudar a sobrevivir acá. Yo ya fallé, pero de consejos entiendo.",
             ASK_MARK + "Antes de seguir: ¿cómo te llamas?",
-            "¡{nombre}! Qué buen nombre. Lo voy a recordar, te lo prometo: los fantasmas tenemos mucha memoria, es de lo poco que nos queda.",
-            "Te cuento dónde estás: hasta hace poco este mundo tenía luz en cada rincón. Entonces llegó una noche en que todo se apagó y, desde ese momento, la oscuridad se come a quien se queda sin llama.",
-            "Por eso tu luz no es solo una luz: es tu vida y tu arma al mismo tiempo. Más adelante te cuento el resto de la historia. Primero, a sobrevivir.",
-            "Tu luz es tu vida: la barra naranja de abajo. Se gasta con el tiempo y con cada golpe. Si se apaga, pierdes. Te lo digo por experiencia: yo me apagué hace rato.",
-            "Mira abajo: la barra naranja es tu luz y la del escudo empieza vacía (se llena con cosas como el hongo azul). Tus monedas se cuentan aparte y tus casilleros están al final de la pantalla, con un lugar separado para la luz que llevas.",
-            "Ahora no tienes ni una chispa, {nombre}. Sigue la flecha naranja con [[W]] [[A]] [[S]] [[D]] hasta el fósforo y agárralo con [[E]]. ¡Tienes {countdown} segundos, y yo no puedo apurarte porque floto!",
+            "¡{nombre}! Buen nombre. Los fantasmas tenemos mucha memoria: no lo olvido.",
+            "Este mundo tenía luz en cada rincón. Una noche todo se apagó, y ahora la oscuridad se come a quien se queda sin llama.",
+            "Tu luz es tu VIDA y tu ARMA a la vez. Es la barra naranja de abajo: se gasta con el tiempo y con cada golpe. Si se apaga, pierdes.",
+            "Abajo también tienes tus casilleros, donde guardas los objetos que encuentres.",
+            "Ahora no tienes ni una chispa, {nombre}. Ve hasta el fósforo con [[W]] [[A]] [[S]] [[D]] y agárralo con [[E]]. ¡Tienes {countdown} segundos!",
         ],
-        "hint": "Sigue la flecha naranja hasta el fósforo y presiona [[E]] al llegar. ¡Rápido, que el tiempo corre y yo no tengo reloj!",
+        "hint": "Sigue la flecha naranja hasta el fósforo y presiona [[E]] al llegar. ¡Rápido, que el tiempo corre!",
         "cheer": "¡Fuego! Ya tienes tu primera lucecita. Sniff... crecen tan rápido.",
     },
 
@@ -41,10 +40,10 @@ TEXTS = [
     {
         "text": "Practica moverte con las cuatro teclas: W, A, S y D.",
         "tuto": [
-            "¡Ya tienes luz, {nombre}! Primero lo básico: presiona [[W]] [[A]] [[S]] [[D]], una por una. La lista de arriba se tilda sola. Yo no necesito teclas: atravieso paredes.",
+            "¡Ya tienes luz! Prueba [[W]] [[A]] [[S]] [[D]], una por una. La lista de arriba se tilda sola.",
         ],
-        "hint": "Prueba cada tecla de la lista: las que faltan están sin tildar. No es tan difícil, te lo juro.",
-        "cheer": "¡Ya caminas como un campeón! Un campeón con piernas, qué lujo.",
+        "hint": "Prueba cada tecla de la lista: las que faltan están sin tildar.",
+        "cheer": "¡Ya caminas como un campeón! Con piernas y todo, qué lujo.",
     },
 
     # 2 - atacar
@@ -54,22 +53,22 @@ TEXTS = [
             "Cada golpe gasta un poco de luz."
         ),
         "tuto": [
-            "Atacar: [[CLICK IZQ.]]. Golpeas con tu propia luz, pero cada golpe la gasta un poquito: no le pegues al aire (salvo ahora, que es práctica). Yo le pegaba al aire y mira cómo terminé. ¡Pruébalo!",
+            "Atacar: [[CLICK IZQ.]]. Ojo: cada golpe gasta un poquito de luz, así que no le pegues al aire. Salvo ahora, que es práctica.",
         ],
-        "hint": "Haz click izquierdo en cualquier lado. Es solo una prueba, no te va a retar nadie. Yo menos.",
+        "hint": "Haz click izquierdo en cualquier lado. Es solo una prueba.",
         "cheer": "¡Pum! Pegas fuerte, {nombre}. Menos mal que soy intocable.",
     },
 
     # 3 - agarrar
     {
         "text": (
-            "Agarra un objeto del piso con E (madera, resina, aceite): "
+            "Agarra un objeto del piso con E (madera o aceite): "
             "sirven para que tu luz no se apague."
         ),
         "tuto": [
-            "Agarrar: acércate a un objeto del piso (madera, resina, aceite) y presiona [[E]]. Sirven para recargar tu luz: son como el desayuno, pero para llamas. ¡Sigue la flecha!",
+            "Hay objetos tirados por el mapa. Acércate a uno y presiona [[E]] para guardarlo en tus casilleros. Siguiendo la flecha lo encuentras.",
         ],
-        "hint": "Camina hasta el objeto que marca la flecha y presiona [[E]] cuando estés cerca. Yo lo agarraría, pero mis manos son decorativas.",
+        "hint": "Camina hasta el objeto que marca la flecha y presiona [[E]] cuando estés cerca.",
         "cheer": "¡Botín conseguido, {nombre}! Ahora eres oficialmente un acumulador.",
     },
 
@@ -80,26 +79,26 @@ TEXTS = [
             "la tecla 7 (tu luz) y la rueda del mouse."
         ),
         "tuto": [
-            "Inventario: tienes 4 casilleros ([[1]] al [[4]]), 2 marcos de pociones ([[5]] y [[6]]) y la tecla [[7]] elige tu luz equipada. Qué organizado, yo ni bolsillos tengo.",
-            "También puedes recorrerlos con la [[RUEDA]] del mouse. Prueba todo: la lista se tilda sola, como por arte de magia. Magia fantasmal, claro.",
+            "Tus casilleros: [[1]] al [[4]] guardan objetos, [[5]] y [[6]] son marcos extra, y [[7]] elige tu luz.",
+            "También puedes pasar de uno a otro con la [[RUEDA]] del mouse. Prueba todo: la lista se tilda sola.",
         ],
-        "hint": "Presiona las teclas del 1 al 7 y gira la rueda del mouse. Faltan las que están sin tildar. Sí, hay que apretarlas todas: ni los fantasmas tenemos atajos.",
-        "cheer": "¡Ya manejas el inventario como un pro, {nombre}! Hasta yo me perdí un poquito.",
+        "hint": "Presiona las teclas del 1 al 7 y gira la rueda del mouse. Faltan las que están sin tildar.",
+        "cheer": "¡Ya manejas el inventario como un pro, {nombre}!",
     },
 
-    # 5 - usar y soltar
+    # 5 - ver, usar y soltar
     {
         "text": (
-            "Usa un objeto (F o click derecho) y suelta otro con Q. "
-            "Si te quedas sin objetos, agarra más del piso."
+            "Mantén click izquierdo sobre un casillero para ver qué hace "
+            "el objeto, úsalo (F o click derecho) y suelta otro con Q."
         ),
         "tuto": [
-            "Usar: elige un casillero con algo y presiona [[F]] o [[CLICK DER.]]. Soltar: [[Q]] tira el objeto elegido (junto a una bolsa o un cofre, va adentro).",
-            "Atajos para soltar: [[SHIFT]] + [[Q]] suelta toda la casilla de una vez y [[CTRL]] + [[Q]] suelta todo lo que llevas encima. Son útiles para armar tu base rápido, pero úsalos con cuidado.",
-            "Lo que queda en el piso se esfuma a los 5 minutos, como cualquier buen fantasma. ¡Pero lo puedes volver a agarrar con [[E]] antes!",
-            "Madera: +25% de luz. Resina: +90% de a poco. Aceite: te deja en 75% y te da velocidad. Úsalos ANTES de quedarte a oscuras. Después no vas a poder leer este cartel, y me ofendo.",
+            "¿No sabes qué hace un objeto? ¡Pregúntale! Mantén apretado el [[CLICK IZQ.]] sobre su casillero y aparece un cartel con su nombre y su efecto. Suelta y se va.",
+            "Ya sabiendo qué hace, úsalo: elígelo y presiona [[F]] o [[CLICK DER.]]. Y para tirar uno al piso, [[Q]].",
+            "Lo que sueltas se esfuma a los 5 minutos, pero puedes volver a agarrarlo con [[E]].",
+            "Un consejo: usa tus objetos ANTES de quedarte a oscuras. Si no, ni vas a poder leer mis carteles, y me ofendo.",
         ],
-        "hint": "Elige un casillero con un objeto y presiona [[F]]. Después, con otro, presiona [[Q]] para soltarlo. Primero usar, después soltar. Como en la vida.",
+        "hint": "Mantén click izquierdo sobre un casillero con un objeto para ver qué hace. Después elige uno y presiona [[F]], y con otro presiona [[Q]].",
         "cheer": "¡Sabes cuidar tus recursos! Ni una chispa desperdiciada.",
     },
 
@@ -110,22 +109,21 @@ TEXTS = [
             "(ocultar el objetivo)."
         ),
         "tuto": [
-            "Ayuda: [[ESC]] abre la pausa (ahí está la enciclopedia de criaturas) y [[TAB]] esconde o muestra el objetivo. Prueba las dos. La pausa es mi botón favorito: nadie me apura.",
+            "[[ESC]] abre la pausa (ahí está la enciclopedia de criaturas) y [[TAB]] esconde o muestra el objetivo. Prueba las dos.",
         ],
-        "hint": "Presiona [[ESC]] y vuelve a apretarlo para seguir. Después prueba [[TAB]]. ¡Es un botón, no una bomba!",
-        "cheer": "¡Entrenamiento básico completo! Ahora, a salir de aquí. Yo te espero... bueno, no: te sigo.",
+        "hint": "Presiona [[ESC]] y vuelve a apretarlo para seguir. Después prueba [[TAB]].",
+        "cheer": "¡Entrenamiento básico completo! Ahora, a salir de aquí.",
     },
 
     # 6b - baile (Six Seven)
     {
         "text": "Haz un baile: abre la rueda de bailes con B y elige Six Seven.",
         "tuto": [
-            "Antes de seguir tengo un pedido muy importante: ¡hazme un Six Seven! Sí, ahora. Es una orden oficial de fantasma y no se discute.",
-            "Presiona [[B]] para abrir la rueda de bailes, apunta con el mouse a Six Seven y haz click. Las manos van así: una sube y la otra baja, como una balanza. ¡Six... seveeen!",
-            "Y ya que estás en onda, te enseño a bailar: en esa misma rueda también hay un Dab y un Saludo. Pruébalos cuando quieras. Yo bailo flotando desde hace años y nadie se queja.",
+            "Tengo un pedido muy importante: ¡hazme un Six Seven! Es una orden oficial de fantasma.",
+            "Presiona [[B]], apunta con el mouse a Six Seven y haz click. Ahí también hay un Dab y un Saludo.",
         ],
-        "hint": "Presiona [[B]], elige Six Seven en la rueda y haz click. Yo lo haría, pero me falta cuerpo para eso.",
-        "cheer": "¡SIX SEVEN! Perfecto. Eres oficialmente el mejor bailarín de la mazmorra. Y yo, el mejor maestro.",
+        "hint": "Presiona [[B]], elige Six Seven en la rueda y haz click.",
+        "cheer": "¡SIX SEVEN! Eres oficialmente el mejor bailarín de la mazmorra.",
     },
 
     # 7 - puerta de la cabana
@@ -135,9 +133,9 @@ TEXTS = [
             "hasta romperla. Cada golpe gasta luz."
         ),
         "tuto": [
-            "Puertas: golpéala con tu luz ([[CLICK IZQ.]]) hasta romperla. Cada golpe gasta luz, y cada tipo de puerta pide una luz distinta. Yo las atravieso, pero tengo ventajas. ¡Sigue la flecha!",
+            "Para salir hay que romper la puerta: golpéala con [[CLICK IZQ.]] hasta que ceda. Cada golpe gasta luz. ¡Sigue la flecha!",
         ],
-        "hint": "Acércate a la puerta que marca la flecha y dale click izquierdo varias veces. Insiste: la puerta es dura, pero tú más.",
+        "hint": "Acércate a la puerta que marca la flecha y haz click izquierdo varias veces.",
         "cheer": "¡CRASH! Puerta fuera de servicio. Perdón, vecino.",
     },
 
@@ -145,9 +143,9 @@ TEXTS = [
     {
         "text": "Sigue el camino al norte hasta la sala central.",
         "tuto": [
-            "Sigue el camino hacia el norte. La flecha te lleva a la sala central, que conecta todo el mapa. ¡Va a ser tu base! Vas a conocer cada rincón, a diferencia de mí, que nunca salí de aquí.",
+            "Sigue el camino hacia el norte. La flecha te lleva a la sala central, que conecta todo el mapa. ¡Va a ser tu base!",
         ],
-        "hint": "Ve siempre hacia el norte (arriba). La flecha te va marcando el camino. Norte es arriba. Sí, arriba. No, no es un chiste.",
+        "hint": "Ve siempre hacia el norte (arriba). La flecha te va marcando el camino.",
         "cheer": "¡Llegamos al centro del mapa! Yo flotaba, pero cuenta igual.",
     },
 
@@ -158,11 +156,11 @@ TEXTS = [
             "las sueltan los slimes (mátalos a golpes)."
         ),
         "tuto": [
-            "Monedas: sirven para comprar luces y objetos (a mí ya no me sirven, qué lástima). Se juntan solas al acercarte. Dorada = 1, azul = 5, roja = 10. ¡Junta 10!",
-            "Slimes: son tranquilos y no atacan. Pégales con tu luz hasta matarlos: sueltan 10 monedas y una gelea que cura al comerla. Sí, es una gelatina. Sí, se come.",
+            "Las monedas sirven para comprar cosas y las consigues del piso, de los cofres, matando slimes, ganando oleadas de enemigos (la forma más rentable) y cobrando recompensas en la enciclopedia de la pausa por cada criatura que descubres. Se juntan solas al acercarte: dorada = 1, azul = 5, roja = 10. ¡Junta 10!",
+            "Los slimes no atacan: pégales hasta matarlos y sueltan monedas y una gelea que cura al comerla. Sí, se come.",
         ],
-        "hint": "Sigue la flecha hasta las monedas del piso, o busca un slime y golpéalo. Con cariño, pero golpéalo.",
-        "cheer": "¡Tienes dinero! Ahora, a la tienda. No te las gastes todas en caramelos.",
+        "hint": "Sigue la flecha hasta las monedas del piso, o busca un slime y golpéalo.",
+        "cheer": "¡Tienes dinero! Ahora, a la tienda.",
     },
 
     # 10 - ir a la tienda
@@ -172,10 +170,10 @@ TEXTS = [
             "cerca del vendedor para hablarle."
         ),
         "tuto": [
-            "Tienda: está al norte de la sala central. Acércate al vendedor hasta que aparezca la tecla [[F]] y presiónala. Se cierra con [[E]] o [[ESC]]. Ojo, el vendedor tiene costumbres muy raras.",
-            "Ahí gastas tus monedas en luces, objetos y construcciones. Algunos productos se desbloquean al terminar cierta oleada en las salas de combate. Es como un centro comercial, pero con más oscuridad y menos aire acondicionado.",
+            "La tienda está al norte de la sala central. Acércate al vendedor hasta que aparezca la tecla [[F]] y presiónala. Para cerrarla: [[E]] o [[ESC]].",
+            "Ahí gastas monedas en luces, objetos y construcciones. Algunos productos se desbloquean al pasar oleadas en las salas de combate.",
         ],
-        "hint": "La tienda queda al norte de la sala central. Cuando estés cerca del vendedor, presiona [[F]]. No muerde. Escupe, pero no muerde.",
+        "hint": "La tienda queda al norte de la sala central. Cerca del vendedor, presiona [[F]].",
         "cheer": "¡Bienvenido a la tienda! Se aceptan monedas, no se aceptan quejas.",
     },
 
@@ -186,9 +184,10 @@ TEXTS = [
             "sobre un producto para ver qué hace."
         ),
         "tuto": [
-            "Info: apunta a un producto y haz click con la rueda del mouse (el botón del medio). Te explica qué hace y, en las luces, cuánto duran. Otro click la cierra. Sí, el botón del medio existe. Casi nadie lo usa, pobrecito.",
+            "En la tienda también puedes preguntar qué hace cada cosa: apunta a un producto y haz click con la [[RUEDA]] del mouse (el botón del medio).",
+            "Te muestra qué hace y, en las luces, cuánta luz da y cuánto dura. Otro click cierra el cartel. ¡Mira antes de comprar!",
         ],
-        "hint": "Con la tienda abierta, apunta a un producto y presiona la rueda del mouse como si fuera un botón. Porque es un botón. Sorpresa.",
+        "hint": "Con la tienda abierta, apunta a un producto y aprieta la rueda del mouse como si fuera un botón.",
         "cheer": "¡Informadísimo! Ya puedes dar una charla sobre madera.",
     },
 
@@ -199,11 +198,11 @@ TEXTS = [
             "y presiona Comprar."
         ),
         "tuto": [
-            "Comprar: click en un producto lo suma al carrito, click derecho saca uno y el botón x15 suma 15 de golpe. Abajo ves el total; la papelera vacía el carrito.",
-            "Cuando estés listo, presiona Comprar. Si no te alcanzan las monedas no cobra nada: saca algo o junta más. Te conviene un objeto (madera, cera...). Comprar sin dinero sería robar, y aquí somos gente de bien. Bueno, gente no, pero entiendes.",
+            "Comprar: click en un producto lo suma al carrito, click derecho saca uno y el botón x15 suma 15 de golpe. La papelera vacía el carrito.",
+            "Cuando estés listo, presiona Comprar. Si no te alcanza, saca algo o junta más monedas. Te conviene un objeto (madera, cera...).",
         ],
-        "hint": "Haz click en un producto para ponerlo en el carrito y después presiona el botón Comprar. ¡Es más fácil que hacer la fila del banco!",
-        "cheer": "¡Primera compra! Se siente bien, ¿no? Casi tan bien como estar vivo. Casi.",
+        "hint": "Haz click en un producto para ponerlo en el carrito y después presiona el botón Comprar.",
+        "cheer": "¡Primera compra! Se siente bien, ¿no?",
     },
 
     # 13 - agarrar lo comprado
@@ -213,10 +212,9 @@ TEXTS = [
             "con E."
         ),
         "tuto": [
-            "Lo comprado: el vendedor lo escupe al piso, cerca de él. Sí, lo escupe. No preguntes. Acércate y presiona [[E]] para agarrarlo.",
-            "Imán: con el imán, presiona [[O]] para prenderlo o apagarlo. Prendido, los objetos del piso vuelan solos hacia ti y no necesitas apretar [[E]] en cada uno. Si quieres elegir qué agarrar, apágalo con [[O]] otra vez.",
+            "El vendedor escupe lo que compras al piso, cerca de él. Sí, lo escupe. Acércate y presiona [[E]] para agarrarlo.",
         ],
-        "hint": "Mira el piso cerca del vendedor y presiona [[E]] sobre lo que escupió. Está un poco baboso, pero funciona igual.",
+        "hint": "Mira el piso cerca del vendedor y presiona [[E]] sobre lo que escupió.",
         "cheer": "¡Ñam! Ya es tuyo. Que aproveche.",
     },
 
@@ -227,9 +225,9 @@ TEXTS = [
             "pestaña Inventario."
         ),
         "tuto": [
-            "Inventario de la tienda: con [[TAB]] cambias entre Tienda e Inventario. Ahí armas tus casilleros y tu luz como quieras y compras todo junto con 'Comprar inventario'. ¡Pruébalo! Yo te dejaría el mío, pero está vacío.",
+            "Con [[TAB]] cambias entre Tienda e Inventario. En Inventario ordenas tus casilleros y tu luz como quieras, y compras todo junto con 'Comprar inventario'.",
         ],
-        "hint": "Abre la tienda con [[F]] y presiona [[TAB]] para cambiar de pestaña. Tranquilo, no hay examen.",
+        "hint": "Abre la tienda con [[F]] y presiona [[TAB]] para cambiar de pestaña.",
         "cheer": "¡Ya eres todo un comerciante!",
     },
 
@@ -241,10 +239,10 @@ TEXTS = [
             "abrirlo."
         ),
         "tuto": [
-            "Cofres: están en la sala de arriba a la izquierda. Acércate y presiona [[F]] (cuenta como un golpe) y después [[ESPACIO]] cuando el marcador esté en la zona marcada. Es un juego de timing, pero con tesoro.",
-            "Cada cofre se abre 10 veces seguidas y después descansa 3 minutos. Dan monedas, madera, cera, aceite... y con suerte una GANZÚA, que abre un cofre sin minijuego (3 usos). Un tesoro que se abre solo. Qué envidia.",
+            "Los cofres están en la sala de arriba a la izquierda. Acércate, presiona [[F]] y después [[ESPACIO]] cuando el marcador esté en la zona marcada. Es un juego de timing.",
+            "Cada cofre se abre 10 veces y después descansa 3 minutos. Dan monedas y objetos.",
         ],
-        "hint": "Sigue la flecha a la sala de cofres. Cerca de uno, presiona [[F]] y después [[ESPACIO]] en el momento justo. Ritmo, paciencia y un poco de suerte.",
+        "hint": "Sigue la flecha a la sala de cofres. Cerca de uno, presiona [[F]] y después [[ESPACIO]] en el momento justo.",
         "cheer": "¡Cofre abierto! ¿Qué habrá adentro? ¡Yo esperaba un fantasma amigo!",
     },
 
@@ -256,11 +254,10 @@ TEXTS = [
             "antes (casillero de luz y Q)."
         ),
         "tuto": [
-            "Luces: la vela ilumina más y dura más que el fósforo. Solo se consigue en la tienda (los cofres no la dan) y cuesta 55 monedas. Es el upgrade del fósforo: más luz, más drama.",
-            "Solo puedes llevar una luz. Con el fósforo en la mano, la vela no se cambia: primero suéltalo (elige el casillero de la luz y presiona [[Q]]).",
-            "Después agarra la vela con [[E]] y se equipa sola. ¡Junta las 55 monedas! Ahorra como una hormiga.",
+            "La vela ilumina más y dura más que el fósforo. Solo se vende en la tienda: 55 monedas.",
+            "Solo puedes llevar una luz. Primero suelta el fósforo (elige el casillero de la luz y presiona [[Q]]) y después agarra la vela con [[E]]: se equipa sola.",
         ],
-        "hint": "Necesitas 55 monedas. Compra la vela en la tienda, suelta el fósforo con [[Q]] y agarra la vela con [[E]]. Paciencia: las velas no se compran solas.",
+        "hint": "Necesitas 55 monedas. Compra la vela, suelta el fósforo con [[Q]] y agarra la vela con [[E]].",
         "cheer": "¡Una vela! Ahora sí hay luz de verdad. Qué elegante, pareces de cumpleaños.",
     },
 
@@ -271,9 +268,9 @@ TEXTS = [
             "central para romperla."
         ),
         "tuto": [
-            "Puertas: las grises de la sala central llevan a las zonas de combate. Se rompen solo con vela o antorcha: con un fósforo ni cosquillas. ¡Sigue la flecha!",
+            "La puerta gris de la sala central (a la derecha) lleva a Orkun, la primera zona de combate. Solo se rompe con vela o antorcha: con un fósforo, ni cosquillas.",
         ],
-        "hint": "Con la vela equipada, dale click izquierdo a la puerta gris que marca la flecha.",
+        "hint": "Con la vela equipada, haz click izquierdo sobre la puerta gris que marca la flecha.",
         "cheer": "¡Puerta rota! Se viene la acción. Yo miro desde aquí, con palomitas.",
     },
 
@@ -284,12 +281,12 @@ TEXTS = [
             "o sin escape (premio doble)."
         ),
         "tuto": [
-            "Zonas de combate: tienen oleadas de enemigos. Antes de entrar te avisa el nombre de la zona y, al entrar, eliges cómo jugar. Spoiler: hay enemigos.",
-            "Con escape: la salida queda abierta, así que si te complicas puedes irte caminando y volver después. Ideal para aprender (o para cobardes: no te juzgo, yo soy un fantasma asustado).",
-            "Sin escape (premio x2): la salida se cierra hasta terminar la oleada. No hay huida, pero ganas el doble de monedas. Si tu luz se apaga, pierdes. Bienvenido al club de los valientes... o de los locos.",
+            "Las zonas de combate tienen oleadas de enemigos. Al entrar eliges cómo jugar.",
+            "CON ESCAPE: la salida queda abierta. Si te complicas, te vas y vuelves después. Ideal para aprender.",
+            "SIN ESCAPE: la salida se cierra hasta terminar la oleada, pero ganas el doble de monedas. Si tu luz se apaga, pierdes.",
         ],
-        "hint": "Sigue la flecha hasta la zona de combate y elige una opción. Para empezar, te sugiero 'con escape'. Para morir con dignidad hay tiempo.",
-        "cheer": "¡A pelear! Cuida que tu luz no baje de la mitad. ¡Y no me mires, que me da vergüenza!",
+        "hint": "Sigue la flecha hasta la zona de combate y elige una opción. Para empezar, te sugiero 'con escape'.",
+        "cheer": "¡A pelear! Cuida que tu luz no baje de la mitad.",
     },
 
     # 19 - oleada
@@ -299,26 +296,12 @@ TEXTS = [
             "con tu luz y junta las monedas del premio."
         ),
         "tuto": [
-            "Combate: golpea a los enemigos con tu luz hasta eliminarlos a todos. Al terminar la oleada aparece el premio: ¡junta las monedas! Es la parte divertida, o eso dicen.",
-            "Cuidado con los mosquitos: se te pegan y te chupan la luz. Son como las visitas pesadas: no se van más. Mátalos rápido y usa tus objetos a tiempo.",
-            "Al completar todas las oleadas de una zona ganas una gema, que sirve para abrir la puerta final del mapa.",
+            "Golpea a los enemigos con tu luz hasta eliminarlos a todos. Al terminar la oleada aparece un premio en monedas: es la mejor forma de ganar plata, y cada oleada paga más que la anterior. ¡Júntalas!",
+            "Cada oleada es más difícil que la anterior y van apareciendo enemigos nuevos. En la enciclopedia de la pausa ([[ESC]]) ves cómo es cada uno.",
+            "Si completas todas las oleadas de una zona ganas una gema, que sirve para abrir la puerta final del mapa.",
         ],
-        "hint": "Golpea a los enemigos con [[CLICK IZQ.]]. Si hay mosquitos, empieza por ellos: te chupan la luz.",
-        "cheer": "¡Oleada superada! Qué guerrero. Hasta a mí me dio un escalofrío, y eso que estoy muerto.",
-    },
-
-    # 20 - antorcha
-    {
-        "text": (
-            "Consigue la antorcha: con G cambias de golpe y "
-            "lanzas una bola de fuego. ¡Pruébala!"
-        ),
-        "tuto": [
-            "Antorcha: se desbloquea en la tienda al terminar la oleada {antorcha_wave} (en la Zona 1). Con [[G]] cambias de golpe y lanzas una bola de fuego. ¡Pruébala! Y no me apuntes a mí, que ya soy ceniza.",
-            "Combo de fuego: lanza dos bolas normales y la tercera sale de color celeste y pega el doble. Si la ves celeste, esa es la fuerte. Cada bola gasta luz, así que no dispares por aburrimiento.",
-        ],
-        "hint": "La antorcha se desbloquea en la tienda al terminar la oleada {antorcha_wave}. Con ella equipada, usa [[G]] para cambiar de golpe.",
-        "cheer": "¡FUEGO! Eres un pirotécnico. Quemas muy bien.",
+        "hint": "Golpea a los enemigos con [[CLICK IZQ.]] hasta eliminarlos a todos y después junta las monedas del premio.",
+        "cheer": "¡Oleada superada! Hasta a mí me dio un escalofrío, y eso que estoy muerto.",
     },
 
     # 21 - construir
@@ -329,11 +312,8 @@ TEXTS = [
             "ponerla."
         ),
         "tuto": [
-            "Construir: la sección Construcción de la tienda vende bolsa, cofre, basurero, yunque, máquina, fogata y candil (el martillo está en Objetos). Hora de jugar a la casita.",
-            "La bolsa y el candil salen al piso y los mueves con click izquierdo mantenido. El cofre, el basurero, el yunque, la máquina y la fogata los eliges en tu casillero y haces click en el mapa: quedan fijos.",
-            "La FOGATA ilumina mucho y te devuelve luz si estás cerca: dale madera con [[F]]. El CANDIL es más chico, gasta cera y mantiene lejos a los mosquitos.",
-            "El BASURERO borra objetos: elige uno y haz click sobre él ([[CTRL]] + click borra toda la casilla). Con el MARTILLO desarmas lo que construiste y lo vuelves a mover.",
-            "La bolsa y el cofre guardan lo que sueltas o agarras con el inventario lleno, y lo de adentro nunca vence. A diferencia de la leche.",
+            "En la sección Construcción de la tienda hay cosas para armar tu base. Empieza por la FOGATA: ilumina mucho y te devuelve luz si estás cerca. Ponle madera con [[F]].",
+            "Para ponerla, elígela en tu casillero y haz click en el mapa: queda fija. Con el MARTILLO (en Objetos) la desarmas para moverla.",
         ],
         "hint": "Compra una fogata en la sección Construcción de la tienda, elígela en tu casillero y haz click en el mapa.",
         "cheer": "¡Tu primera base! Qué hogareño. Falta la alfombra de bienvenida.",
@@ -346,26 +326,25 @@ TEXTS = [
             "jefe y una gema verde clara te esperan."
         ),
         "tuto": [
-            "¡Último tramo, {nombre}! Completa Orkun: 10 oleadas, un jefe y una gema verde clara te esperan. Su jefe suelta una llave dorada para la Zona 2. Sí, son 10. Cuéntalas conmigo, aunque no tengo dedos.",
-            "A los jefes se los esquiva saltando con [[ESPACIO]]. Mira bien sus movimientos antes de atacar. ¡Tú puedes! Y si no puedes... también te quiero.",
-            "Dicen que la Piña Colosal fue una semilla común hasta que el Oscuro sopló sobre ella. Ahora es enorme, rebota por todos lados y habla un idioma que nadie entiende. Yo tampoco. Pero sus saltos sí se entienden: míralos bien.",
+            "¡Último tramo, {nombre}! Completa Orkun: 10 oleadas, un jefe y una gema verde clara. El jefe suelta una llave dorada para la Zona 2.",
+            "A los jefes se los esquiva saltando con [[ESPACIO]]. Mira bien sus movimientos antes de atacar.",
         ],
         "hint": "Orkun es la zona de la derecha. Completa sus 10 oleadas y vence al jefe.",
-        "cheer": "¡Orkun es tuyo, {nombre}! Y con gema verde. Brillas más que yo, qué envidia.",
+        "cheer": "¡Orkun es tuyo, {nombre}! Y con gema verde. Brillas más que yo.",
     },
 
     # 23 - Stonun
     {
         "tuto": [
-            "Stonun es la zona de la izquierda y es MUCHO más difícil que Orkun. No entres sin haber terminado Orkun, sin una buena luz (vela o antorcha) y sin objetos en tus casilleros.",
-            "Allí manda el Guardián y, al final de las 10 oleadas, te espera el Golem Colosal: una montaña que se hizo guardián y que no olvida a nadie. Salta sus ondas con [[ESPACIO]] y ten paciencia.",
+            "Stonun es la zona de la izquierda y es MUCHO más difícil. No entres sin haber terminado Orkun, sin una buena luz (vela o antorcha) y sin objetos en tus casilleros.",
+            "Ahí manda el Guardián y, al final, te espera el Golem Colosal. Salta sus ondas con [[ESPACIO]] y ten paciencia.",
         ],
         "text": (
             "Ahora sí, Stonun (zona 2, izquierda, la del "
             "Guardián): 10 oleadas y una gema verde oscuro."
         ),
         "hint": "Stonun es la zona de la izquierda. La llave dorada del jefe de Orkun abre su puerta de oro.",
-        "cheer": "¡Stonun conquistada, {nombre}! Eres imparable. Ya me da miedo hasta a mí.",
+        "cheer": "¡Stonun conquistada, {nombre}! Eres imparable.",
     },
 
     # 24 - enciclopedia
@@ -375,9 +354,9 @@ TEXTS = [
             "criaturas del juego (la abres desde la pausa con ESC)."
         ),
         "tuto": [
-            "Último repaso, {nombre}: te enseñé muchas teclas y seguro se te olvidó alguna. [[B]] abre los bailes, [[O]] prende el imán, [[G]] cambia el golpe, [[TAB]] esconde el objetivo y la [[RUEDA]] cambia de casillero.",
-            "Más: [[Q]] suelta, [[SHIFT]] + [[Q]] suelta toda la casilla, [[CTRL]] + [[Q]] suelta todo, [[F]] usa o abre la tienda y [[ESC]] pausa. Si cambias teclas en Ajustes, la guía de ahí te las recuerda.",
-            "Y si tienes el Mapa en un casillero, elígelo y haz click derecho: te muestra el mundo con los nombres de las zonas. Ahora sí, el resto es cosa tuya. Yo sigo flotando por aquí.",
+            "Repaso rápido, {nombre}: [[B]] bailes, [[G]] cambia el golpe, [[TAB]] esconde el objetivo, [[RUEDA]] cambia de casillero, [[Q]] suelta ([[SHIFT]] + [[Q]] toda la casilla), [[F]] usa o abre la tienda, [[ESC]] pausa.",
+            "Si cambias teclas en Ajustes, la guía de ahí te las recuerda.",
+            "Ahora sí, el resto es cosa tuya. Yo sigo flotando por aquí.",
         ],
         "hint": "Abre la pausa con [[ESC]] y mira la enciclopedia. Las criaturas se descubren peleando contra ellas.",
         "cheer": "¡Enciclopedia completa! Eres una leyenda, {nombre}. Escribo tu nombre en la pared. Con ceniza.",

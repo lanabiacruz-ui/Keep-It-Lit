@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from core.audio_manager import audio
+from core.modo_juego import todo_desbloqueado
 
 
 ACHIEVEMENTS_PATH = (
@@ -67,7 +68,7 @@ ACHIEVEMENTS = [
     {
         "id": "ojos_ciegos",
         "title": "¡Mis ojos!",
-        "desc": "Recibí la explosión de un Destello en la cara",
+        "desc": "Recibe la explosión de un Destello en la cara",
         "goal": 1,
     },
     {
@@ -209,6 +210,15 @@ class AchievementManager:
                         self.counters[key] = max(0, int(value))
                     except (TypeError, ValueError):
                         pass
+
+        # data/modo_juego.json en true: todos los logros ya conseguidos
+        # (sin avisos en pantalla)
+        if todo_desbloqueado():
+
+            now = datetime.now().isoformat(timespec="seconds")
+
+            for ach_id in _IDS:
+                self.unlocked.setdefault(ach_id, now)
 
         # archivos viejos guardaban las derrotas aparte
         if "defeats" not in self.counters:

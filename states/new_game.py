@@ -137,7 +137,12 @@ NO_LIGHT_COUNTDOWN = 10.0
 # version 2: se agregaron pasos de practica al principio del tutorial
 # version 3: se agregaron pasos de tienda (info, recoger, inventario) y de
 # construccion
-OBJECTIVE_VERSION = 3
+# version 4: se saco el paso de la antorcha (se consigue recien en la
+# oleada 7, no es un objetivo para ese momento del tutorial)
+OBJECTIVE_VERSION = 4
+
+# numero que tenia el paso de la antorcha hasta la version 3
+V3_ANTORCHA = 21
 
 OLD_OBJECTIVE_MAP = {
     0: 0, 1: 3, 2: 5, 3: 7, 4: 8, 5: 9, 6: 10, 7: 11, 8: 12,
@@ -159,6 +164,16 @@ def v2_to_v3(index):
         return index
 
     return V2_TO_V3.get(index, index)
+
+
+def v3_to_v4(index):
+
+    index = int(index)
+
+    if index >= 10 ** 6:
+        return index
+
+    return index - 1 if index > V3_ANTORCHA else index
 
 
 FLICKER_THRESHOLD = 0.25
@@ -556,6 +571,12 @@ class NewGame:
             if self._objective_saved is not None:
                 self._objective_saved = v2_to_v3(self._objective_saved)
 
+        # version 3 -> 4: ya no existe el paso de la antorcha
+        if saved_version < 4:
+
+            if self._objective_saved is not None:
+                self._objective_saved = v3_to_v4(self._objective_saved)
+
         if not self.save_data:
             start = 0
         elif self._objective_saved is not None:
@@ -591,6 +612,12 @@ class NewGame:
 
             if saved_version < 3:
                 self.tuto_seen = {v2_to_v3(i) for i in self.tuto_seen}
+
+            if saved_version < 4:
+                self.tuto_seen = {
+                    v3_to_v4(i) for i in self.tuto_seen
+                    if i != V3_ANTORCHA
+                }
         elif self.save_data:
             self.tuto_seen = set(range(min(start or 0, 200) + 1))
         else:
@@ -1047,6 +1074,16 @@ class NewGame:
         )["consumo"]
 
         self.has_match = True
+
+        # consejo en el momento justo: recien consiguio la antorcha
+        if (
+            self.light_type == "antorcha"
+            and self.stats.get("fireballs", 0) == 0
+        ):
+            self.show_message(
+                f"Antorcha: presiona {controls.label('attack_mode')} para "
+                "cambiar entre golpe y bola de fuego"
+            )
 
         self.hud.equip(
             self.light_type
@@ -1518,6 +1555,8 @@ class NewGame:
         def use_checks(g):
 
             return [
+                ("Mantén click izq. sobre un casillero (ver qué hace)",
+                 "inspected" in g.tuto_flags),
                 ("Usar un objeto (F o click derecho)",
                  "used" in g.tuto_flags),
                 ("Soltar un objeto (Q)", "dropped" in g.tuto_flags),
@@ -1573,11 +1612,11 @@ class NewGame:
             },
             {
                 "text": (
-                    "Agarra un objeto del piso con E (madera, resina, "
+                    "Agarra un objeto del piso con E (madera o "
                     "aceite): sirven para que tu luz no se apague."
                 ),
                 "tuto": [
-                    "AGARRAR: acércate a un objeto del piso (madera, resina, aceite) y presiona E. Sirven para recuperar luz. Sigue la flecha.",
+                    "AGARRAR: acércate a un objeto del piso (madera o aceite) y presiona E. Sirven para recuperar luz. Sigue la flecha.",
                 ],
                 "target": lambda g: nearest(g, item_points(g, False)),
                 "done": lambda g: g.items_picked > 0,
@@ -1595,12 +1634,12 @@ class NewGame:
             },
             {
                 "text": (
-                    "Usa un objeto (F o click derecho) y suelta otro con Q. "
-                    "Si te quedas sin objetos, agarra más del piso."
+                    "Mantén click izquierdo sobre un casillero para ver qué "
+                    "hace el objeto, úsalo (F o click derecho) y suelta otro con Q."
                 ),
                 "tuto": [
-                    "USAR: elige una casilla con un objeto y presiona F o click derecho. SOLTAR: con Q tiras el objeto elegido (junto a una bolsa o un cofre va adentro). Prueba las dos. Puedes volver a agarrar con E, pero lo que queda en el piso se esfuma a los 5 minutos.",
-                    "OBJETOS: la madera suma 25% de luz, la resina recupera 90% poco a poco y el aceite la deja en 75% y te da velocidad. La GELEA (la sueltan los slimes) cura al azar. Úsalos ANTES de quedarte sin luz.",
+                    "VER: mantén apretado el click izquierdo sobre una casilla y aparece un cartel con lo que hace ese objeto. USAR: elígelo y presiona F o click derecho. SOLTAR: Q tira el objeto elegido. Prueba las tres.",
+                    "Consejo: usa tus objetos ANTES de quedarte sin luz.",
                 ],
                 "target": lambda g: (
                     nearest(g, item_points(g, False))
@@ -1706,7 +1745,7 @@ class NewGame:
                     "con E."
                 ),
                 "tuto": [
-                    "LO COMPRADO: el vendedor lo escupe al piso, cerca de él. Acércate y presiona E para agarrarlo. Con el imán (tecla O) los objetos sueltos se juntan solos.",
+                    "LO COMPRADO: el vendedor lo escupe al piso, cerca de él. Acércate y presiona E para agarrarlo.",
                 ],
                 "target": lambda g: (
                     nearest(
@@ -1768,7 +1807,7 @@ class NewGame:
                     "central para romperla."
                 ),
                 "tuto": [
-                    "PUERTAS: las puertas grises de la sala central llevan a las zonas de combate. Se rompen solo con vela o antorcha. Sigue la flecha.",
+                    "PUERTA: la puerta gris de la sala central (a la derecha) lleva a Orkun, la primera zona de combate. Se rompe solo con vela o antorcha. Sigue la flecha.",
                 ],
                 "target": lambda g: door_point("sala_der"),
                 "done": lambda g: "sala_der" in g.doors.broken_ids,
@@ -1799,27 +1838,12 @@ class NewGame:
                 ),
                 "tuto": [
                     "COMBATE: golpea a los enemigos con tu luz hasta eliminarlos a todos. Cuando termine la oleada aparece el premio: junta las monedas. Cada golpe gasta un poco de luz, así que no golpees al aire.",
-                    "CUIDADO: los mosquitos se te pegan y chupan tu luz; mátalos rápido. Usa tus objetos (madera, cera, aceite) a tiempo para que tu luz dure más. Entre oleadas puedes irte o seguir.",
+                    "CUIDADO: cada oleada es más difícil que la anterior. Usa tus objetos (madera, cera, aceite) a tiempo para que tu luz dure más. Entre oleadas puedes irte o seguir.",
                     "PREMIOS: al terminar cada oleada ganas monedas. Al completar todas las oleadas de una zona ganas una gema, que sirve para abrir la puerta final del mapa.",
                 ],
                 "done": lambda g: any(
                     a.wave >= 2 or a.completed for a in g.arenas
                 ),
-            },
-            {
-                "text": (
-                    "Consigue la antorcha: con G cambias de golpe y "
-                    "lanzas una bola de fuego. ¡Pruébala!"
-                ),
-                "tuto": [
-                    f"ANTORCHA: se desbloquea en la tienda al terminar la oleada {SHOP_UNLOCK_WAVES['antorcha']} (en la Zona 1). Con G cambias de golpe y lanzas una bola de fuego. ¡Pruébala!",
-                ],
-                "target": lambda g: (
-                    None
-                    if g.has_match and g.light_type == "antorcha"
-                    else g.shopkeeper.TALK_RECT.center
-                ),
-                "done": lambda g: g.stats["fireballs"] >= 1,
             },
             {
                 "text": (
@@ -2059,9 +2083,19 @@ class NewGame:
 
                 audio.play("pickup")
 
-                self.show_message(
-                    f"Agarraste {self._item_name(item_id)}"
-                )
+                if (
+                    "inspected" not in self.tuto_flags
+                    and self.items_picked <= 2
+                ):
+                    # consejo en el momento justo: recien agarro algo
+                    self.show_message(
+                        f"Agarraste {self._item_name(item_id)}. "
+                        "Mantén click izq. sobre su casilla para ver qué hace"
+                    )
+                else:
+                    self.show_message(
+                        f"Agarraste {self._item_name(item_id)}"
+                    )
 
         for attr in ("key", "uid", "spawn_id", "id"):
 
@@ -6987,6 +7021,11 @@ class NewGame:
             self.zone_banner.draw(self.screen)
 
         drag_item = self._dragged_item()
+
+        if pygame.mouse.get_pressed()[0] and drag_item is None:
+            _slot = self.hud.slot_at(pygame.mouse.get_pos())
+            if _slot is not None and self.hud.items[_slot] in self.item_defs:
+                self.tuto_flags.add("inspected")
 
         self.hud.draw_overlay(
             self.screen,

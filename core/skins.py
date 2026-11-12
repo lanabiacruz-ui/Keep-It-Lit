@@ -15,6 +15,8 @@ provisorio.
 import json
 from pathlib import Path
 
+from core.modo_juego import todo_desbloqueado
+
 ROOT = Path(__file__).resolve().parent.parent
 
 SETTINGS_PATH = ROOT / "data" / "settings.json"
@@ -159,6 +161,10 @@ def is_unlocked(skin_id):
         return False
 
     if skin["gratis"] or skin_id == DEFAULT_SKIN:
+        return True
+
+    # data/modo_juego.json en true: todas las skins
+    if todo_desbloqueado():
         return True
 
     if skin["logro"]:
