@@ -118,6 +118,16 @@ class TorchCursor:
         self._glow = _make_glow(40)
         self._last_ticks = pygame.time.get_ticks()
 
+        # pixeles que habia debajo de la antorcha antes de dibujarla, para
+        # poder sacar capturas de pantalla SIN la antorcha (transiciones)
+        self._under = None
+        self._under_pos = (0, 0)
+        self._pad = GLOW_RADIUS * 2 + 24
+        if self.image is not None:
+            self._pad += max(self.image.get_size())
+        else:
+            self._pad += FLAME_LEN + HANDLE_LEN
+
         # reaccion al clic
         self.heat = 0.0
         self._was_pressed = False
@@ -204,11 +214,47 @@ class TorchCursor:
             self._update_embers(dt, (mx, my), 0)
 
     # ------------------------------------------------------------------
+    def _backup_under(self, surface, mx, my):
+        """Guarda los pixeles de la zona donde se va a dibujar la antorcha
+        (cursor, resplandor y chispas)."""
+        pad = self._pad
+        area = pygame.Rect(mx - pad, my - pad, pad * 2, pad * 2)
+
+        # las chispas pueden haberse quedado atras si movieron el mouse rapido
+        for e in self.embers:
+            area.union_ip(pygame.Rect(int(e[0]) - 8, int(e[1]) - 8, 16, 16))
+
+        area = area.clip(surface.get_rect())
+
+        if area.w <= 0 or area.h <= 0:
+            self._under = None
+            return
+
+        self._under = surface.subsurface(area).copy()
+        self._under_pos = area.topleft
+
+    def clean_copy(self, surface):
+        """Copia de la pantalla SIN la antorcha dibujada encima.
+
+        Usar esto (en vez de screen.copy()) para las capturas que se
+        congelan en una transicion; si no, la antorcha queda pegada en la
+        captura y se ve duplicada junto a la real.
+        """
+        frame = surface.copy()
+
+        if self._under is not None:
+            frame.blit(self._under, self._under_pos)
+
+        return frame
+
+    # ------------------------------------------------------------------
     def draw(self, surface):
         if not pygame.mouse.get_focused():
+            self._under = None
             return
 
         mx, my = pygame.mouse.get_pos()
+        self._backup_under(surface, mx, my)
         dt = self._dt()
         self.time += dt
 

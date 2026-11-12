@@ -438,7 +438,7 @@ while running:
 
                 # el comic termina en negro: la luz nace sobre el
                 # personaje y revela el mapa
-                transition = MapReveal(game, screen.copy())
+                transition = MapReveal(game, torch_cursor.clean_copy(screen))
 
                 current_state = "gameplay"
 
@@ -499,7 +499,7 @@ while running:
                     save_data=pending_save_data
                 )
 
-                transition = ZoomTransition(screen.copy())
+                transition = ZoomTransition(torch_cursor.clean_copy(screen))
 
                 current_state = "gameplay"
 
@@ -507,7 +507,7 @@ while running:
 
                 comic = Comic(screen)
 
-                transition = ZoomTransition(screen.copy())
+                transition = ZoomTransition(torch_cursor.clean_copy(screen))
 
                 current_state = "comic"
     elif current_state == "ending":
@@ -584,7 +584,7 @@ while running:
                 )
 
                 if SLIDE_ON_RESPAWN:
-                    transition = SlideTransition(screen.copy())
+                    transition = SlideTransition(torch_cursor.clean_copy(screen))
 
 
     music.play(desired_music())
