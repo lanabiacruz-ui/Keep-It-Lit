@@ -1386,11 +1386,15 @@ class PlaceableManager:
             obj.rect.centery - game.player.rect.centery,
         )
 
-    def _under_mouse(self, game):
+    def _under_mouse(self, game, prefer=None):
 
+        # prefer: funcion(obj) -> bool. Si hay varios objetos bajo el
+        # mouse (ej. un candil encima de un cofre), gana el que cumple
+        # prefer; a igualdad, el de mas adelante (centery mayor).
         wx, wy = self._mouse_world(game)
 
         best = None
+        best_key = None
 
         for obj in self.objects:
 
@@ -1399,8 +1403,13 @@ class PlaceableManager:
 
             if obj.hit(wx, wy) and self._dist(game, obj) <= REACH:
 
-                if best is None or obj.rect.centery > best.rect.centery:
-                    best = obj
+                key = (
+                    1 if (prefer is not None and prefer(obj)) else 0,
+                    obj.rect.centery,
+                )
+
+                if best is None or key > best_key:
+                    best, best_key = obj, key
 
         return best
 
@@ -2003,7 +2012,9 @@ class PlaceableManager:
             if self._over_hud(game, event.pos):
                 return False
 
-            obj = self._under_mouse(game)
+            # click izquierdo: si hay algo que se pueda arrastrar (candil,
+            # bolsa) debajo del mouse, gana sobre lo fijo (ej. un cofre)
+            obj = self._under_mouse(game, prefer=lambda o: o.draggable)
 
             if obj is not None and obj.draggable:
 
@@ -2054,7 +2065,15 @@ class PlaceableManager:
 
         if event.button == 3:
 
-            obj = self._under_mouse(game)
+            # click derecho: gana lo que se abre/usa (cofre, yunque...)
+            # sobre un candil que este encima
+            obj = self._under_mouse(
+                game,
+                prefer=lambda o: (
+                    o.container is not None
+                    or o.kind in ("yunque", "maquina", "ruleta")
+                ),
+            )
 
             if obj is None:
                 return False
@@ -2130,7 +2149,9 @@ class PlaceableManager:
 
         if pygame.mouse.get_pressed()[0]:
 
-            held = self.dragging or self._under_mouse(game)
+            held = self.dragging or self._under_mouse(
+                game, prefer=lambda o: o.uses_fuel
+            )
 
             if held is not None and not held.uses_fuel:
                 held = None

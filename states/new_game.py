@@ -2083,19 +2083,9 @@ class NewGame:
 
                 audio.play("pickup")
 
-                if (
-                    "inspected" not in self.tuto_flags
-                    and self.items_picked <= 2
-                ):
-                    # consejo en el momento justo: recien agarro algo
-                    self.show_message(
-                        f"Agarraste {self._item_name(item_id)}. "
-                        "Mantén click izq. sobre su casilla para ver qué hace"
-                    )
-                else:
-                    self.show_message(
-                        f"Agarraste {self._item_name(item_id)}"
-                    )
+                self.show_message(
+                    f"Agarraste {self._item_name(item_id)}"
+                )
 
         for attr in ("key", "uid", "spawn_id", "id"):
 
@@ -3070,13 +3060,27 @@ class NewGame:
 
     def _polvora_hit(self, damage):
 
+        center = self.player.rect.center
+        radius = self._light_radius_px / max(1, self.camera.zoom)
+
         for arena in self.arenas:
 
-            arena.hurt_in_radius(
-                self.player.rect.center,
-                self._light_radius_px / max(1, self.camera.zoom),
-                damage
+            arena.hurt_in_radius(center, radius, damage)
+
+        # los slimes no viven en las arenas: los maneja SlimeManager
+        cx, cy = center
+
+        for slime in self.slimes.targets():
+
+            size = max(slime.rect.width, slime.rect.height) / 2
+
+            dist = math.hypot(
+                slime.rect.centerx - cx,
+                slime.rect.centery - cy
             )
+
+            if dist <= radius + size:
+                slime.take_damage(damage)
 
 
     def _mouse_world(self):
