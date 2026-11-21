@@ -144,6 +144,23 @@ SOUNDS = {
     "ui_move": (0.15, 0.04),
     "step_c": (0.21, 0.0),
     "step_d": (0.19, 0.0),
+
+    # --- arañas y veneno: generados por tools/make_sounds_spider.py ---
+    "spider_skitter": (0.30, 0.07),
+    "aura_skitter": (0.40, 0.08),
+    "spider_web_throw": (0.55, 0.05),
+    "aura_web_throw": (0.65, 0.05),
+    "web_stick": (0.70, 0.10),
+    "spider_bite": (0.75, 0.10),
+    "aura_bite": (0.85, 0.10),
+    "spider_hurt": (0.55, 0.08),
+    "aura_hurt": (0.70, 0.08),
+    "spider_die": (0.70, 0.05),
+    "aura_die": (0.90, 0.05),
+    "aura_hiss": (0.65, 0.20),
+    "aura_screech": (0.85, 1.00),
+    "poison_tick": (0.45, 0.30),
+    "poison_start": (0.70, 0.30),
 }
 
 

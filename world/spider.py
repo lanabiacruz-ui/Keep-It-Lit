@@ -39,6 +39,18 @@
 - Otras animaciones (por transformaciones): respirar, preparar el
   lanzamiento, atacar, golpe y muerte.
 - Si falta la hoja usa la imagen fija assets/maps/combate/arana.png.
+
+AURANTULA (araña dorada, mas grande y mortal) - clase Aurantula, mas abajo:
+- Nace en la sala grande del medio-izquierda del mapa 2 (AURA_TRIGGER).
+- Mucha mas vida, mas grande y mas rapida.
+- Tira RAFAGAS DE 4 TELARAÑAS, cada una apuntada de nuevo con anticipacion
+  (puntería mucho mejor: tiro rapido, anticipa tu velocidad y no apunta a
+  una pared).
+- Su mordida da VENENO (game.apply_poison): drena la luz con el tiempo y SI
+  mata (a diferencia del de Minecraft). Los golpes seguidos suman tiempo.
+- En equipo (cantidad PAR: 2 o 4) piensan: la mitad (las mas lejanas) son
+  TIRADORAS y la otra mitad (las mas cercanas) son MORDEDORAS. Si queda una
+  cantidad impar, cada una hace de todo como la araña comun.
 """
 
 import math
@@ -127,6 +139,52 @@ CHASE_MAX = 12.0
 LOSE_DIST = 480
 
 DEATH_TIME = 0.35
+
+# ======================================================================
+# AURANTULA (araña dorada)
+# ======================================================================
+AURA_NAME = "Aurantula"
+AURA_CODEX_KEY = "aurantula"
+AURA_WALK_PATH = COMBAT_DIR / "arana_amarilla_caminar.png"   # 4 x 8, celdas de 240
+
+AURA_COUNT = 4               # cuantas nacen (con 4 se ve el trabajo en equipo)
+AURA_ROOM = pygame.Rect(100, 690, 610, 370)        # sala grande (mundo = pixeles del mapa)
+AURA_SPAWN_AREA = AURA_ROOM.inflate(-30, -30)
+AURA_TRIGGER = pygame.Rect(150, 730, 520, 290)     # al pisar esto se despiertan
+AURA_RING = (230, 190, 270, 150, 310, 120)         # radios probados al nacer
+
+AURA_HP = 30                 # la araña comun tiene 12
+AURA_HITBOX = (36, 24)
+AURA_DRAW_CELL = 80          # la comun se dibuja a 48
+AURA_WALK_RATE = 60.0
+AURA_COINS = 60
+
+AURA_SIGHT = 640
+AURA_FLEE_SPEED = 100
+AURA_STRAFE_SPEED = 70
+AURA_CHASE_SPEED = 195
+AURA_KEEP_AWAY = 260         # solitaria: se aleja si te acercas mas que esto
+AURA_SHOOT_MIN = 250         # tiradora: se mantiene entre estas distancias
+AURA_SHOOT_MAX = 400
+
+# rafaga de telarañas
+AURA_FIRST_THROW = 0.6
+AURA_THROW_COOLDOWN = 2.4
+AURA_THROW_COOLDOWN_WEBBED = 3.6   # si ya estas atrapado, tira menos seguido
+AURA_WIND_UP = 0.45
+AURA_VOLLEY = 4              # telarañas por rafaga
+AURA_BURST_GAP = 0.12        # entre una y otra (cada una vuelve a apuntar)
+AURA_SPREAD = (0.0, -6.0, 6.0, 0.0)   # grados de abanico de cada telaraña
+AURA_SHOT_SPEED = 400        # (la comun: 260)
+AURA_SHOT_SIZE = 30          # (la comun: 22)
+AURA_SHOT_RANGE = 620
+
+# mordida + veneno
+AURA_BITE_DAMAGE = 0.05      # el golpe en si (el grueso lo hace el veneno)
+AURA_HIT_INTERVAL = 0.45
+AURA_POISON_TIME = 8.0       # segundos de veneno por mordida (se suman)
+
+_aura_uid = [0]
 
 
 def _load_art():
@@ -272,8 +330,10 @@ def _lead_direction(src, target, vel, speed):
 class WebShot:
     """Bloque de telaraña volando hacia el jugador."""
 
-    def __init__(self, x, y, direction, variant):
+    def __init__(self, x, y, direction, variant,
+                 speed=SHOT_SPEED, size=SHOT_SIZE):
 
+        self.speed = speed
         self.pos = pygame.Vector2(x, y)
         self.origin = pygame.Vector2(x, y)
         self.dir = pygame.Vector2(direction)
@@ -282,7 +342,7 @@ class WebShot:
         self.owner = None
         self.age = 0.0
 
-        self.rect = pygame.Rect(0, 0, SHOT_SIZE, SHOT_SIZE)
+        self.rect = pygame.Rect(0, 0, size, size)
         self.rect.center = (round(x), round(y))
 
         self.done = False
@@ -345,7 +405,24 @@ class WebPatch:
 
 class Spider:
 
+    # lo que cambia en las subclases (ver Aurantula)
+    CODEX_KEY = CODEX_KEY
+    WALK_PATH = WALK_PATH
+    DRAW_CELL = DRAW_CELL
+    WIND_UP = WIND_UP
+    COINS = COINS
+
+    # sonidos (ver tools/make_sounds_spider.py)
+    SND_SKITTER = "spider_skitter"
+    SND_THROW = "spider_web_throw"
+    SND_BITE = "spider_bite"
+    SND_HURT = "spider_hurt"
+    SND_DIE = "spider_die"
+    STEP_GAP = 0.20              # segundos entre un "tic tic tic" de patas y otro
+
     def __init__(self, x, y):
+
+        self.step_t = random.uniform(0.0, self.STEP_GAP)
 
         self.pos = pygame.Vector2(x, y)
         self.vel = pygame.Vector2(0, 0)
@@ -384,8 +461,32 @@ class Spider:
 
     def take_damage(self, amount):
 
+        # solo suena en el primer golpe de una racha (la luz pega seguido)
+        if self.flash <= 0.0 and self.hp > 0:
+            audio.play(self.SND_HURT, jitter=0.12)
+
         self.hp -= amount
         self.flash = 0.12
+
+    def footsteps(self, dt, game):
+        """Patitas: un tic-tic-tic mientras camina (suena segun la distancia)."""
+
+        if not self.moving:
+
+            self.step_t = self.STEP_GAP * 0.5
+
+            return
+
+        self.step_t += dt
+
+        if self.step_t >= self.STEP_GAP:
+
+            self.step_t = 0.0
+
+            audio.play_at(
+                self.SND_SKITTER, self.rect.center,
+                game.player.rect.center, radius=420.0
+            )
 
     def start_chase(self):
 
@@ -513,7 +614,7 @@ class Spider:
             ) % 360.0
 
         if dist <= DISCOVER_DISTANCE:
-            game.discover_enemy(CODEX_KEY)
+            game.discover_enemy(self.CODEX_KEY)
 
         if not sees or dist > SIGHT * 1.5:
 
@@ -617,7 +718,357 @@ class Spider:
 
             game.take_damage(HIT_DAMAGE, common=True, source=self)
 
+            audio.play(self.SND_BITE, jitter=0.08)
+
             self._start_retreat()
+
+
+class Aurantula(Spider):
+    """Araña dorada: grande, aguanta mucho, tira rafagas de 4 telarañas con
+    muy buena punteria y su mordida envenena (el veneno SI mata).
+
+    Roles (los reparte SpiderManager._assign_roles):
+        solo      cantidad impar: hace de todo, como la araña comun.
+        shooter   en equipo par: se queda lejos tirando telarañas.
+        biter     en equipo par: va directo a morderte (no espera la telaraña).
+    """
+
+    CODEX_KEY = AURA_CODEX_KEY
+    WALK_PATH = AURA_WALK_PATH
+    DRAW_CELL = AURA_DRAW_CELL
+    WIND_UP = AURA_WIND_UP
+    COINS = AURA_COINS
+
+    SND_SKITTER = "aura_skitter"
+    SND_THROW = "aura_web_throw"
+    SND_BITE = "aura_bite"
+    SND_HURT = "aura_hurt"
+    SND_DIE = "aura_die"
+    STEP_GAP = 0.28
+
+    def __init__(self, x, y):
+
+        super().__init__(x, y)
+
+        _aura_uid[0] += 1
+        self.uid = _aura_uid[0]
+
+        self.rect = pygame.Rect(0, 0, *AURA_HITBOX)
+        self.rect.center = (round(x), round(y))
+
+        self.hp = AURA_HP
+        self.cool = AURA_FIRST_THROW
+
+        self.role = "solo"
+
+        self.burst_left = 0
+        self.burst_idx = 0
+        self.burst_t = 0.0
+
+        self.strafe = random.choice((-1, 1))
+        self.strafe_t = random.uniform(1.0, 2.2)
+
+    # ---- roles ------------------------------------------------------------
+    def set_role(self, role):
+
+        if role == self.role:
+            return
+
+        self.role = role
+
+        self.wind = 0.0
+        self.burst_left = 0
+        self.phase = "approach"
+        self.retreat_t = 0.0
+        self.stuck_t = 0.0
+
+        if role == "biter":
+
+            self.mode = "chase"
+            self.chase_t = 0.0
+            self.out_t = 0.0
+            self.hit_cool = 0.3 + random.uniform(0.0, FIRST_HIT_SPREAD)
+
+        else:
+
+            self.mode = "aim"
+            self.cool = random.uniform(*REWEB_DELAY)
+
+    def start_chase(self):
+        """Las tiradoras nunca van a morder (aunque la telaraña las avise)."""
+
+        if self.role == "shooter":
+            return
+
+        super().start_chase()
+
+    # ---- movimiento ---------------------------------------------------------
+    def _keep_distance(self, d, dist, dt, cmap, lo, hi=None, strafe=False):
+        """Se aleja si estas muy cerca; si tiene `hi`, se acerca si estas muy
+        lejos; y si `strafe`, camina de costado para ser dificil de pegar."""
+
+        self.strafe_t -= dt
+
+        if self.strafe_t <= 0:
+
+            self.strafe = -self.strafe
+            self.strafe_t = random.uniform(1.2, 2.4)
+
+        # preparando la rafaga: quieta, apuntando
+        if self.wind > 0 or dist < 0.5:
+            return
+
+        if dist < lo:
+
+            move, speed, back = -d, AURA_FLEE_SPEED, True
+
+        elif hi is not None and dist > hi:
+
+            move, speed, back = d, AURA_FLEE_SPEED * 0.9, False
+
+        elif strafe:
+
+            move = pygame.Vector2(-d.y, d.x) * self.strafe
+            speed, back = AURA_STRAFE_SPEED, False
+
+        else:
+
+            return
+
+        self.moving = self._move_dir(move, speed, dt, cmap)
+        self.back = back
+
+        if self.moving:
+            self.walk_phase += (
+                dt * speed / AURA_WALK_RATE * (-1.0 if back else 1.0)
+            )
+
+    # ---- rafaga de telarañas --------------------------------------------------
+    def _try_throw(self, dt, game, mgr, dist, cmap, me, target):
+
+        if self.wind > 0:
+
+            self.wind -= dt
+
+            if self.wind <= 0:
+
+                self.wind = 0.0
+                self.burst_left = AURA_VOLLEY
+                self.burst_idx = 0
+                self.burst_t = 0.0
+
+                self.cool = (
+                    AURA_THROW_COOLDOWN_WEBBED if mgr.player_in_web
+                    else AURA_THROW_COOLDOWN
+                )
+
+            return
+
+        self.cool -= dt
+
+        if (
+            self.cool <= 0
+            and dist <= AURA_SHOT_RANGE - 60
+            and mgr._clear_line(cmap, me, target)
+        ):
+            self.wind = AURA_WIND_UP
+
+            audio.play_at(
+                "aura_hiss", self.rect.center, game.player.rect.center,
+                radius=700.0
+            )
+
+    # ---- cuerpo a cuerpo --------------------------------------------------------
+    def _melee(self, dt, game, mgr, d, dist, cmap, needs_web):
+
+        # golpe y retirada
+        if self.phase == "retreat":
+
+            self.retreat_t -= dt
+
+            self.moving = self._move_dir(-d, RETREAT_SPEED, dt, cmap)
+            self.back = True
+
+            if self.moving:
+                self.walk_phase -= dt * RETREAT_SPEED / AURA_WALK_RATE
+                self.stuck_t = 0.0
+            else:
+                self.stuck_t += dt
+
+            if self.retreat_t <= 0 or self.stuck_t >= RETREAT_STUCK:
+
+                self.phase = "approach"
+                self.hit_cool = RETURN_HIT_DELAY
+
+            return
+
+        touching = self.rect.inflate(14, 14).colliderect(game.player.rect)
+
+        if not touching and dist > 1:
+
+            speed = AURA_CHASE_SPEED * (1.15 if mgr.player_in_web else 1.0)
+
+            self.moving = self._move_dir(d, speed, dt, cmap)
+
+            if self.moving:
+                self.walk_phase += dt * speed / AURA_WALK_RATE
+
+        self.hit_cool -= dt
+
+        if touching and self.hit_cool <= 0 and (
+            mgr.player_in_web or not needs_web
+        ):
+
+            self.shoot_t = 0.22
+
+            self._bite(game)
+
+            self._start_retreat()
+
+            self.hit_cool = AURA_HIT_INTERVAL
+
+    def _bite(self, game):
+        """Mordida: un golpe chico + veneno."""
+
+        game.take_damage(AURA_BITE_DAMAGE, common=True, source=self)
+
+        audio.play(self.SND_BITE, jitter=0.08)
+
+        poison = getattr(game, "apply_poison", None)
+
+        if poison is not None:
+            poison(AURA_POISON_TIME, source=self)
+
+    # ---- cerebro ----------------------------------------------------------------
+    def update(self, dt, game, mgr):
+
+        cmap = game.collision_map
+
+        self.anim_t += dt
+
+        if self.flash > 0:
+            self.flash = max(0.0, self.flash - dt)
+
+        if self.shoot_t > 0:
+            self.shoot_t = max(0.0, self.shoot_t - dt)
+
+        # empuje al recibir un golpe
+        if self.vel.length_squared() > 1.0:
+
+            self._step(self.vel * dt, cmap)
+
+            self.vel *= max(0.0, 1.0 - 9.0 * dt)
+
+        else:
+            self.vel.update(0, 0)
+
+        me = pygame.Vector2(self.rect.center)
+        target = pygame.Vector2(game.player.rect.center)
+
+        d = target - me
+        dist = d.length()
+
+        if abs(d.x) > 2:
+            self.face = 1 if d.x > 0 else -1
+
+        sees = not getattr(game, "invisible", False)
+
+        self.moving = False
+        self.back = False
+
+        # gira (de a poco) para mirar al jugador
+        if dist > 0.5:
+
+            want = math.degrees(math.atan2(d.y, d.x))
+
+            diff = (want - self.heading + 180.0) % 360.0 - 180.0
+
+            turn = TURN_SPEED * dt
+
+            self.heading = (
+                self.heading + max(-turn, min(turn, diff))
+            ) % 360.0
+
+        if dist <= DISCOVER_DISTANCE:
+            game.discover_enemy(self.CODEX_KEY)
+
+        if not sees or dist > AURA_SIGHT * 1.5:
+
+            self.mode = "idle" if self.role != "biter" else "chase"
+            self.wind = 0.0
+            self.burst_left = 0
+
+            return
+
+        # una rafaga en curso: cada telaraña vuelve a apuntar
+        if self.burst_left > 0:
+
+            self.burst_t -= dt
+
+            if self.burst_t <= 0:
+
+                mgr.throw(self, game, self.burst_idx)
+
+                self.burst_idx += 1
+                self.burst_left -= 1
+                self.burst_t = AURA_BURST_GAP
+                self.shoot_t = 0.2
+
+            return
+
+        # ---- tiradora: lejos, de costado, tirando rafagas ----
+        if self.role == "shooter":
+
+            self._keep_distance(
+                d, dist, dt, cmap, AURA_SHOOT_MIN, AURA_SHOOT_MAX, strafe=True
+            )
+
+            self._try_throw(dt, game, mgr, dist, cmap, me, target)
+
+            return
+
+        # ---- mordedora: va directo, no espera la telaraña ----
+        if self.role == "biter":
+
+            self.mode = "chase"
+
+            self._melee(dt, game, mgr, d, dist, cmap, needs_web=False)
+
+            return
+
+        # ---- solitaria: como la araña comun, pero con rafagas ----
+        if self.mode == "idle":
+
+            self.mode = "aim"
+            self.cool = AURA_FIRST_THROW
+
+        if self.mode == "aim":
+
+            self._keep_distance(d, dist, dt, cmap, AURA_KEEP_AWAY)
+
+            if not mgr.player_in_web:
+                self._try_throw(dt, game, mgr, dist, cmap, me, target)
+
+            return
+
+        self.chase_t += dt
+
+        if mgr.player_in_web:
+            self.out_t = 0.0
+        else:
+            self.out_t += dt
+
+        if (
+            self.out_t > ESCAPE_GRACE
+            or dist > LOSE_DIST
+            or self.chase_t > CHASE_MAX
+        ):
+
+            self.stop_chase()
+
+            return
+
+        self._melee(dt, game, mgr, d, dist, cmap, needs_web=True)
 
 
 class SpiderManager:
@@ -643,8 +1094,11 @@ class SpiderManager:
         self._web_cache = {}
         self._anims = {}
         self._frame_cache = {}
-        self._walk = None          # [fila][columna] -> superficie (None = sin cargar)
-        self._walk_tried = False
+        self._walks = {}           # ruta de la hoja -> [fila][columna] -> superficie
+
+        self._big_active = False   # ya desperto la sala de las Aurantulas
+        self._role_sig = None      # (para repartir los roles solo cuando cambia el grupo)
+        self._player_vel_fast = pygame.Vector2(0, 0)
 
     # ---- datos para el resto del juego ------------------------------------
     def targets(self):
@@ -659,6 +1113,9 @@ class SpiderManager:
         self.webs = []
 
         self.player_in_web = False
+
+        self._big_active = False
+        self._role_sig = None
 
         self._prev_player = None
 
@@ -777,7 +1234,7 @@ class SpiderManager:
 
         cx, cy = spider.rect.center
 
-        for n, value in enumerate(split_coins(COINS)):
+        for n, value in enumerate(split_coins(spider.COINS)):
 
             coin = WorldItem(coin_id_for(value), cx, cy)
 
@@ -793,22 +1250,186 @@ class SpiderManager:
 
             game.world_items.append(coin)
 
-        audio.play("enemy_die")
+        audio.play(spider.SND_DIE, jitter=0.08)
+
+    # ---- Aurantulas: nacimiento y trabajo en equipo ----------------------------
+    def _place_aura(self, game, x, y, min_gap, idx):
+
+        if not AURA_SPAWN_AREA.collidepoint(x, y):
+            return False
+
+        spider = Aurantula(x, y)
+
+        if not game.collision_map.can_move(spider.rect):
+            return False
+
+        if any(
+            math.hypot(x - s.pos.x, y - s.pos.y) < min_gap
+            for s in self.spiders
+        ):
+            return False
+
+        px, py = game.player.rect.center
+
+        spider.heading = math.degrees(math.atan2(py - y, px - x)) % 360.0
+        spider.cool = AURA_FIRST_THROW + idx * 0.4
+
+        self.spiders.append(spider)
+
+        return True
+
+    def _spawn_aurantulas(self, game):
+        """Nacen en ronda alrededor tuyo, ya apuntandote."""
+
+        px, py = game.player.rect.center
+
+        base = random.uniform(0, math.tau)
+
+        made = 0
+
+        for i in range(AURA_COUNT):
+
+            target = base + math.tau * i / AURA_COUNT
+
+            placed = False
+
+            for jitter in (0.0, 0.3, -0.3, 0.6, -0.6):
+
+                for radius in AURA_RING:
+
+                    ang = target + jitter
+
+                    if self._place_aura(
+                        game,
+                        px + math.cos(ang) * radius,
+                        py + math.sin(ang) * radius,
+                        min_gap=70, idx=made
+                    ):
+                        placed = True
+                        break
+
+                if placed:
+                    break
+
+            if placed:
+                made += 1
+
+        # las que falten: en cualquier lugar libre de la sala
+        tries = 0
+
+        while made < AURA_COUNT and tries < 800:
+
+            tries += 1
+
+            if self._place_aura(
+                game,
+                random.uniform(AURA_SPAWN_AREA.left, AURA_SPAWN_AREA.right),
+                random.uniform(AURA_SPAWN_AREA.top, AURA_SPAWN_AREA.bottom),
+                min_gap=50, idx=made
+            ):
+                made += 1
+
+        self._role_sig = None
+
+        if made:
+            audio.play("aura_screech")
+
+    def _assign_roles(self, game):
+        """Si hay una cantidad PAR (2, 4...) piensan en equipo: las mas
+        cercanas a vos muerden y las mas lejanas tiran telarañas. Si es
+        impar, cada una hace de todo. Se reparte solo cuando cambia el grupo
+        (al morir una) para que no cambien de rol a cada rato."""
+
+        auras = [
+            s for s in self.spiders
+            if isinstance(s, Aurantula) and not s.dead
+        ]
+
+        sig = tuple(sorted(s.uid for s in auras))
+
+        if sig == self._role_sig:
+            return
+
+        self._role_sig = sig
+
+        n = len(auras)
+
+        if n < 2 or n % 2 == 1:
+
+            for s in auras:
+                s.set_role("solo")
+
+            return
+
+        px, py = game.player.rect.center
+
+        auras.sort(key=lambda s: math.hypot(s.pos.x - px, s.pos.y - py))
+
+        half = n // 2
+
+        for i, s in enumerate(auras):
+            s.set_role("biter" if i < half else "shooter")
 
     # ---- tirar el bloque ------------------------------------------------------------
-    def throw(self, spider, game):
+    def throw(self, spider, game, k=0):
 
         src = pygame.Vector2(spider.rect.center)
         target = pygame.Vector2(game.player.rect.center)
 
-        direction = _lead_direction(
-            src, target, self._player_vel, SHOT_SPEED
+        if isinstance(spider, Aurantula):
+
+            speed = AURA_SHOT_SPEED
+            size = AURA_SHOT_SIZE
+
+            direction = self._aura_aim(game, src, target, speed)
+
+            # abanico: las telarañas del medio cubren si cambias de rumbo
+            direction = direction.rotate(AURA_SPREAD[k % len(AURA_SPREAD)])
+
+        else:
+
+            speed = SHOT_SPEED
+            size = SHOT_SIZE
+
+            direction = _lead_direction(
+                src, target, self._player_vel, SHOT_SPEED
+            )
+
+        audio.play_at(
+            spider.SND_THROW, src, target, radius=700.0
         )
 
-        shot = WebShot(src.x, src.y, direction, random.randrange(3))
+        shot = WebShot(
+            src.x, src.y, direction, random.randrange(3),
+            speed=speed, size=size
+        )
         shot.owner = spider
 
         self.shots.append(shot)
+
+    def _aura_aim(self, game, src, target, speed):
+        """Puntería de la Aurantula: anticipa tu velocidad (medida rapido) y,
+        si el punto donde ibas a estar es una pared, tira a donde estas."""
+
+        vel = self._player_vel_fast
+
+        direction = _lead_direction(src, target, vel, speed)
+
+        rel = (target - src).length()
+        t = min(1.2, rel / max(1.0, speed))
+
+        predicted = target + vel * t
+
+        if not game.collision_map.point_is_walkable(predicted.x, predicted.y):
+
+            direction = target - src
+
+            if direction.length_squared() < 1e-6:
+                return pygame.Vector2(1, 0)
+
+            return direction.normalize()
+
+        return direction
 
     # ---- telarañas como bloques (nunca se superponen) --------------------------------
     @staticmethod
@@ -922,7 +1543,19 @@ class SpiderManager:
 
         px, py = game.player.rect.center
 
-        self._add_web(game, px, py, shot.variant, pinned=True)
+        audio.play("web_stick", jitter=0.1)
+
+        if self.player_in_web:
+
+            # ya estabas atrapado (rafaga): la telaraña de abajo se renueva
+            for w in self.webs:
+
+                if w.rect.colliderect(game.player.rect):
+                    w.age = min(w.age, 1.0)
+
+        else:
+
+            self._add_web(game, px, py, shot.variant, pinned=True)
 
         if not self._warned:
 
@@ -953,10 +1586,14 @@ class SpiderManager:
 
         if not in_map2:
 
-            if self._active or self.spiders or self.webs or self.shots:
+            if (
+                self._active or self._big_active
+                or self.spiders or self.webs or self.shots
+            ):
                 self.clear()
 
             self._active = False
+            self._big_active = False
 
             self._set_slow(game, 1.0)
 
@@ -972,21 +1609,32 @@ class SpiderManager:
             inst = (now - self._prev_player) / dt
 
             self._player_vel = self._player_vel * 0.6 + inst * 0.4
+            self._player_vel_fast = self._player_vel_fast * 0.25 + inst * 0.75
 
         self._prev_player = now
 
+        if not self._big_active and AURA_TRIGGER.collidepoint(player.center):
+
+            self._big_active = True
+
+            self._spawn_aurantulas(game)
+
         if not self._active:
 
-            if not TRIGGER_AREA.collidepoint(player.center):
+            if TRIGGER_AREA.collidepoint(player.center):
 
-                # todavia no entraste a la sala: no hay arañas ni telarañas
+                self._active = True
+
+                self._spawn_all(game)
+
+            elif not self._big_active:
+
+                # todavia no entraste a ninguna sala: no hay arañas ni telarañas
                 self._set_slow(game, 1.0)
 
                 return
 
-            self._active = True
-
-            self._spawn_all(game)
+        self._assign_roles(game)
 
         for spider in self.spiders:
 
@@ -1004,6 +1652,8 @@ class SpiderManager:
 
             spider.update(dt, game, self)
 
+            spider.footsteps(dt, game)
+
         self.spiders = [s for s in self.spiders if not s.dead]
 
         for item in self.dying:
@@ -1017,7 +1667,7 @@ class SpiderManager:
 
         for shot in self.shots:
 
-            step = SHOT_SPEED * dt
+            step = shot.speed * dt
 
             shot.age += dt
             shot.pos += shot.dir * step
@@ -1105,34 +1755,41 @@ class SpiderManager:
 
         return img
 
-    def _walk_frames(self):
+    def _walk_frames(self, path=None):
         """Hoja de caminata: [direccion][cuadro]. [] si no existe."""
 
-        if not self._walk_tried:
+        path = path or WALK_PATH
 
-            self._walk_tried = True
+        frames = self._walks.get(path)
 
-            try:
-                sheet = pygame.image.load(str(WALK_PATH)).convert_alpha()
-            except (pygame.error, FileNotFoundError, OSError):
-                sheet = None
+        if frames is not None:
+            return frames
 
-            if sheet is not None:
+        frames = []
 
-                cw = sheet.get_width() // WALK_COLS
-                ch = sheet.get_height() // WALK_ROWS
+        try:
+            sheet = pygame.image.load(str(path)).convert_alpha()
+        except (pygame.error, FileNotFoundError, OSError):
+            sheet = None
 
-                if cw > 0 and ch > 0:
+        if sheet is not None:
 
-                    self._walk = [
-                        [
-                            sheet.subsurface((c * cw, r * ch, cw, ch)).copy()
-                            for c in range(WALK_COLS)
-                        ]
-                        for r in range(WALK_ROWS)
+            cw = sheet.get_width() // WALK_COLS
+            ch = sheet.get_height() // WALK_ROWS
+
+            if cw > 0 and ch > 0:
+
+                frames = [
+                    [
+                        sheet.subsurface((c * cw, r * ch, cw, ch)).copy()
+                        for c in range(WALK_COLS)
                     ]
+                    for r in range(WALK_ROWS)
+                ]
 
-        return self._walk or []
+        self._walks[path] = frames
+
+        return frames
 
     def _pose(self, spider, walk_sheet=False):
         """(escala_x, escala_y, angulo, desplazamiento_y) segun la animacion."""
@@ -1146,7 +1803,7 @@ class SpiderManager:
         if spider.wind > 0:
 
             # preparar: se echa hacia atras y se agacha
-            k = 1.0 - spider.wind / WIND_UP
+            k = 1.0 - spider.wind / spider.WIND_UP
 
             sx = 1.0 + 0.10 * k
             sy = 1.0 - 0.18 * k
@@ -1194,7 +1851,7 @@ class SpiderManager:
 
         zoom = camera.zoom
 
-        walk = self._walk_frames()
+        walk = self._walk_frames(spider.WALK_PATH)
 
         if walk:
             return self._draw_walker(
@@ -1266,7 +1923,7 @@ class SpiderManager:
 
         cell = walk[row][col]
 
-        size = DRAW_CELL * zoom
+        size = spider.DRAW_CELL * zoom
 
         w = max(2, int(size * sx * scale))
         h = max(2, int(size * sy * scale))
@@ -1397,7 +2054,7 @@ class SpiderManager:
 
     def draw(self, screen, camera):
 
-        if not self._active:
+        if not (self._active or self._big_active):
             return
 
         for web in self.webs:

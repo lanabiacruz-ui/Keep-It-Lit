@@ -126,6 +126,13 @@ class StartBox(LightItem):
 
 MATCH_DURATION = 30.0
 
+# veneno (Aurantula): como el de Minecraft, pero este SI mata. Cada pulso te
+# gasta vida (luz); cada mordida suma segundos (hasta POISON_MAX).
+POISON_TICK = 0.8
+POISON_DAMAGE = 0.028
+POISON_MAX = 18.0
+POISON_CURED_BY_HEAL = True       # items que curan vida (y la tienda) sacan el veneno
+
 # El primer fosforo (el de la mesa de la cabaña) dura bastante mas que los
 # demas, asi el jugador no pierde en los primeros segundos y puede aprender
 # el tutorial tranquilo. 0.30 => ~100 s quieto en vez de 30 s. Tambien le
@@ -328,6 +335,7 @@ def is_skin_item(item_id):
 # quien te mato: clase (o clave) -> nombre que se muestra en la esquina
 KILLER_NAMES = {
     "Spider": "Araña",
+    "Aurantula": "Aurantula",
     "PinaBoss": "Piña Colosal",
     "GolemBoss": "Golem Colosal",
     "PinaBrava": "Piña Brava",
@@ -872,6 +880,12 @@ class NewGame:
         self.regen_left = 0.0
         self.regen_rate = 0.0
 
+        # veneno de la Aurantula
+        self.poison_timer = 0.0
+        self.poison_total = 1.0
+        self.poison_tick = 0.0
+        self.poison_source = None
+
         self.repel_timer = 0.0
         self.repel_total = 1.0
 
@@ -1275,6 +1289,77 @@ class NewGame:
 
         self.player.set_torch(False)
 
+    # ---- veneno ----------------------------------------------------------
+    def apply_poison(self, duration, source=None):
+        """Envenena: cada POISON_TICK segundos te saca POISON_DAMAGE de vida.
+        Las mordidas suman tiempo. El escudo amarillo lo bloquea."""
+
+        if not self.has_match or self.yshield_timer > 0:
+            return
+
+        first = self.poison_timer <= 0
+
+        self.poison_timer = min(POISON_MAX, self.poison_timer + duration)
+        self.poison_total = max(
+            self.poison_total if not first else 0.0, self.poison_timer
+        )
+
+        self.poison_source = source if source is not None else "Aurantula"
+
+        if first:
+
+            self.poison_tick = 0.0
+
+            audio.play("poison_start")
+
+            self.show_message(
+                "¡Veneno! Te drena la luz: curate con un item de vida"
+            )
+
+    def cure_poison(self):
+
+        self.poison_timer = 0.0
+        self.poison_total = 1.0
+        self.poison_tick = 0.0
+
+    def _update_poison(self, dt):
+
+        if self.poison_timer <= 0:
+            return
+
+        if not self.has_match:
+
+            self.cure_poison()
+
+            return
+
+        if self.cinematic_lock():
+            return
+
+        self.poison_timer = max(0.0, self.poison_timer - dt)
+
+        self.poison_tick += dt
+
+        while self.poison_tick >= POISON_TICK:
+
+            self.poison_tick -= POISON_TICK
+
+            self.vida -= POISON_DAMAGE
+
+            self.fx.potion_burst(*self.player.rect.center, (90, 190, 70))
+
+            audio.play("poison_tick", jitter=0.1)
+
+            # el veneno SI mata: el pulso que apaga la luz es el que te mata
+            if self.vida <= 0:
+
+                self._killer = killer_name(self.poison_source)
+
+                break
+
+        if self.poison_timer <= 0:
+            self.cure_poison()
+
     def _burn_out(self):
 
         # Poción de ascua: la luz se reenciende sola y la poción se gasta
@@ -1283,6 +1368,8 @@ class NewGame:
             self.ascua_timer = 0.0
             self.vida = max(0.01, float(self.ascua_life))
             self._killer = None
+
+            self.cure_poison()
 
             self.regen_left = 0.0
 
@@ -1293,6 +1380,8 @@ class NewGame:
             return
 
         audio.play("light_out")
+
+        self.cure_poison()
 
         self.first_match = False
 
@@ -2762,6 +2851,11 @@ class NewGame:
 
         tipo = e.get("tipo")
 
+        if POISON_CURED_BY_HEAL and tipo in (
+            "vida_sumar", "vida_azar", "vida_gradual"
+        ):
+            self.cure_poison()
+
         if tipo == "vida_sumar":
 
             self.vida = min(
@@ -3119,6 +3213,9 @@ class NewGame:
 
         if self.ira_timer > 0:
             active["pocion_ira"] = self.ira_timer / self.ira_total
+
+        if self.poison_timer > 0:
+            active["veneno"] = min(1.0, self.poison_timer / self.poison_total)
 
         if self.has_match and any(
             getattr(a, "mosquito_alert", False) for a in self.arenas
@@ -5052,6 +5149,8 @@ class NewGame:
         self.vida = 1.0
         self.escudo = 0.0
 
+        self.cure_poison()
+
         if not NORMAL_KEEP_COINS:
             self.coins = 0
             self.gel_coins = 0
@@ -5968,6 +6067,9 @@ class NewGame:
 
             if in_shop:
 
+                if POISON_CURED_BY_HEAL:
+                    self.cure_poison()
+
                 self.vida = min(
                     1.0,
                     self.vida + dt / SHOP_RECHARGE_TIME
@@ -5999,6 +6101,8 @@ class NewGame:
         )
 
         self._update_potions(dt)
+
+        self._update_poison(dt)
 
 
         if self.speed_timer > 0:

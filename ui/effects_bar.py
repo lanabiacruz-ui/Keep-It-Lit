@@ -30,6 +30,7 @@ EFFECTS = {
     "pocion_velocidad": {"label": "Velocidad", "color": (72, 196, 240)},
     "pocion_ira": {"label": "Ira", "color": (255, 140, 40)},
     "pocion_radar": {"label": "Radar", "color": (110, 235, 200)},
+    "veneno": {"label": "Veneno", "color": (96, 190, 64)},
     "mosquito": {"label": "Mosquito cerca!", "color": (255, 120, 110),
                  "alert": True},
 }

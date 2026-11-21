@@ -181,13 +181,27 @@ DEFAULT_DATA = {
 
     "arana": {
         "nombre": "Araña",
-        "imagen": "arana.png",
+        "imagen": "arana_icono.png",
         "descripcion": (
             "Vive en el mapa 2 y nunca se te acerca: se aleja y te apunta "
             "con bloques de telaraña (calcula a donde vas). La telaraña te "
             "ralentiza mucho mientras estes dentro y desaparece con el "
             "tiempo. Si te atrapa, esa araña va hacia vos y te muerde, "
             "asi que no te dejes pegar."
+        ),
+    },
+
+    "aurantula": {
+        "nombre": "Aurantula",
+        "imagen": "aurantula.png",
+        "descripcion": (
+            "Araña dorada, mucho mas grande y con mucha mas vida que la "
+            "comun. Tira rafagas de 4 telarañas con una punteria terrible: "
+            "anticipa a donde vas. Su mordida envenena: el veneno te gasta "
+            "la luz poco a poco y SI te mata (los mordiscos suman tiempo; "
+            "un item de vida lo saca). Cuando son 2 o 4 piensan en equipo: "
+            "la mitad te atrapa con telarañas desde lejos y la otra mitad "
+            "viene a morderte."
         ),
     },
 
@@ -242,6 +256,7 @@ class EnemyEncyclopedia:
         "golem",             # zona 2, oleada 8
         "jefe_golem",        # zona 2, oleada 11 (jefe final)
         "arana",             # mapa 2 (despues del final)
+        "aurantula",         # mapa 2, sala grande (en equipo de 4)
     )
 
     VISIBLE_ROWS = 8
@@ -286,6 +301,7 @@ class EnemyEncyclopedia:
         "jefe_pina": 1500,
         "jefe_golem": 2500,
         "arana": 400,
+        "aurantula": 700,
     }
     DEFAULT_REWARD = 10
 
