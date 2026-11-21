@@ -2,9 +2,9 @@
     "player_name": "Comic",
     "mode": "normal",
     "created_at": "2026-11-21T05:00:00",
-    "last_played": "2026-11-21T14:48:40",
-    "x": 1673,
-    "y": 48,
+    "last_played": "2026-11-21T16:56:27",
+    "x": 984,
+    "y": 944,
     "coins": 99739,
     "gel_coins": 10000,
     "ganzua_uses": 0,
@@ -23,7 +23,7 @@
     "light": "fosforo",
     "vida": 1.0,
     "escudo": 0.0,
-    "finished": false,
+    "finished": true,
     "inventory": [
         null,
         null,
@@ -100,6 +100,7 @@
     },
     "enemies_seen": [
         "arana",
+        "aurantula",
         "slime",
         "slime2",
         "slime3"
@@ -329,5 +330,6 @@
     "objectives_minimized": false,
     "hero_name": "Tester",
     "door_damage": {},
-    "first_match": false
+    "first_match": false,
+    "death_drops": []
 }

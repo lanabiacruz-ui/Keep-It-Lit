@@ -1,25 +1,28 @@
-"""Escena de entrada al mapa 2 (despues del comic final).
+"""Configuracion de la escena de entrada al mapa 2 (despues del comic final).
 
-Orden:
+La logica esta en ui/map2_scene.py; aca solo van las coordenadas y los
+textos. Orden de la escena:
   1. termina el comic final
   2. transicion MapReveal (la misma del comienzo del juego)
   3. al terminar, las arañas ya estan ahi, QUIETAS, y el monstruo del ojo
-     (el del comic) se ve a lo lejos, poco visible en la oscuridad
-  4. dialogos: Cenizo (2) -> Monstruo -> Cenizo -> Monstruo
+     (el del comic) se ve a lo lejos, poco visible en la oscuridad. Cenizo
+     esta al lado del jugador
+  4. dialogos: Cenizo (2) -> Monstruo -> Cenizo -> Monstruo (por el panel,
+     con su cara en cada frase)
   5. el monstruo tira un rayo de su ojo y lastima a Cenizo
   6. Cenizo herido: "Estoy bien..." y empieza el combate con las arañas
      (el monstruo NO participa: se queda mirando)
 
-Para mover cosas, editar SOLO este archivo (coordenadas = pixeles de
-assets/maps/region_01/mapa2.png, 2000 x 1600).
+Coordenadas = pixeles de assets/maps/region_01/mapa2.png, 2000 x 1600.
 
-Dibujos del monstruo (PNG con fondo transparente) en assets/maps/combate/:
+Dibujos del monstruo (PNG con fondo transparente, las 3 del mismo tamaño y
+con el mismo contorno) en assets/maps/combate/:
     monstruo_ojo.png        base: se ve en el mapa y es la cara por defecto
     monstruo_ojo_burla.png  cara de "Asi que traes a un ayudante..."
     monstruo_ojo_ira.png    cara de "Pues no lo necesitaras mas."
 Si falta una cara se usa la base; si falta la base se dibuja uno
-provisorio (rocas con un ojo amarillo). Mas caras: agregar nombres a
-MONSTER_1_FACES / MONSTER_2_FACES (uno por pagina).
+provisorio. Mas caras: agregar nombres a MONSTER_1_FACES / MONSTER_2_FACES
+(uno por pagina) y el archivo monstruo_ojo_<nombre>.png.
 """
 
 # VERDE: donde aparece el personaje
@@ -40,9 +43,9 @@ AURA_POS = [
 # AZUL: monstruo del ojo (centro del dibujo en el mundo)
 MONSTER_POS = (131, 1209)
 MONSTER_HEIGHT = 84          # alto en pixeles del mundo
-MONSTER_ALPHA = 200          # 0-255: "no se ve tanto"
+MONSTER_ALPHA = 255          # 0-255 (el dibujo ya viene con el cuerpo tenue)
 # donde esta el ojo dentro del dibujo (0 a 1, desde arriba-izquierda)
-EYE_FRAC = (0.5, 0.40)
+EYE_FRAC = (0.452, 0.465)
 
 # ------------------------------------------------------------ dialogos
 # Cenizo ya vio el comic: el gato era un señuelo del monstruo del ojo.

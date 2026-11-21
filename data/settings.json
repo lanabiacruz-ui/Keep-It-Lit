@@ -1,3 +1,5 @@
 {
-    "fullscreen": true
+    "fullscreen": true,
+    "music_volume": 0.295,
+    "sfx_volume": 0.493
 }

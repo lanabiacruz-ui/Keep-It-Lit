@@ -74,6 +74,7 @@ from ui.shop_plan import (
 )
 from ui.tutorial import Tutorial
 from ui.map2_scene import Map2Scene, EyeMonster
+from ui.cenizo_follower import CenizoFollower
 from ui.tutorial_texts import apply_texts
 from core import player_name as hero_name
 from ui.shop_dialog import (
@@ -534,6 +535,9 @@ class NewGame:
         # escena del monstruo del ojo (mapa 2, despues del comic final)
         self.map2_scene = None
         self._eye_monster = None
+
+        # Cenizo flotando al lado del jugador (tutorial y escena del mapa 2)
+        self.cenizo = CenizoFollower()
         self.intro_t = None
 
         # transicion comic -> mapa: la interfaz aparece con fundido
@@ -3349,6 +3353,16 @@ class NewGame:
 
     def _cinematic_focus(self):
 
+        # escena del mapa 2: la camara mira entre el jugador y el monstruo
+        scene = getattr(self, "map2_scene", None)
+
+        if scene is not None:
+
+            focus = scene.camera_focus()
+
+            if focus is not None:
+                return focus
+
         # vista epica: mientras entra el jefe la camara lo mira a el
         for arena in self.arenas:
 
@@ -4682,6 +4696,34 @@ class NewGame:
         self.map2_scene.start()
 
         self._save()
+
+    def _update_cenizo(self, dt):
+        """Cenizo te sigue mientras dure el tutorial; cuando termina se
+        queda un rato y se desvanece (ver ui/cenizo_follower.py). En la
+        escena del mapa 2 lo maneja ui/map2_scene.py."""
+
+        c = self.cenizo
+
+        if self.map2_scene is None:
+
+            obj = self.objectives
+
+            in_tutorial = (
+                getattr(self, "current_map", "mapa1") == "mapa1"
+                and obj is not None
+                and not obj.finished
+                and not getattr(self, "finished", False)
+            )
+
+            if in_tutorial and not c.visible:
+                c.appear(
+                    pygame.Vector2(self.player.image_rect.center)
+                    + (62, -14)
+                )
+
+            c.set_hold(in_tutorial)
+
+        c.update(dt, self.player)
 
     def eye_monster(self):
         """El monstruo del ojo del comic: vive en el mapa 2 (solo se ve)."""
@@ -6299,6 +6341,8 @@ class NewGame:
             focus=self._cinematic_focus()
         )
 
+        self._update_cenizo(dt)
+
 
         pivot = self._attack_pivot()
 
@@ -7133,6 +7177,9 @@ class NewGame:
 
         if self._eye_visible():
             self.eye_monster().draw_glow(self.screen, self.camera)
+
+        if self.cenizo.visible:
+            self.cenizo.draw(self.screen, self.camera)
 
         if self.cine_player_boost > 0.01:
             self._draw_player_boost()
