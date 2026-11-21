@@ -1,12 +1,18 @@
 """Araña (enemigo del mapa 2).
 
-- NO aparece en ninguna oleada: solo existe en el mapa 2. Nace apenas entras
-  (SPIDER_COUNT arañas cerca, ya apuntandote) y desaparece al salir.
+- NO aparece en ninguna oleada: solo existe en el mapa 2, y SOLO en la salita
+  de abajo a la izquierda (ROOM). Cuando entras a esa sala nacen SPIDER_COUNT
+  arañas en ronda alrededor tuyo, ya apuntandote; desaparecen al salir del mapa.
 - Se ALEJA de vos: nunca se acerca por su cuenta.
+- SOLO te pegan cuando estas DENTRO de una telaraña.
 - Ataque: te tira un BLOQUE DE TELARAÑA con muy buena punteria (calcula a
   donde vas a estar).
     * Si el bloque te da: queda pegado a vos (te ralentiza mucho mientras
-      estes dentro) y SOLO la araña que te atrapo va hacia vos a pegarte.
+      estes dentro) y la araña que te atrapo corre RAPIDO hacia vos y te
+      pega rapido mientras sigas atrapado.
+    * Cuando te salis de la telaraña, ve que escapaste: deja de perseguirte,
+      se vuelve a alejar y trata de tirarte otra telaraña enseguida para
+      acercarse de nuevo (las demas tambien).
     * Si falla: el bloque cae en el piso y sigue ralentizando a quien lo
       pise. La telaraña desaparece con el tiempo (WEB_LIFE).
 - La telaraña tiene 3 imagenes distintas (assets/maps/combate/telarana_1/2/3.png);
@@ -18,8 +24,10 @@
       telarana_<n>_deshacer.png  se desarma al final de su vida
   Si falta alguna tira se usa la imagen fija telarana_<n>.png.
 - Mira SIEMPRE hacia vos (8 direcciones) y camina moviendo las patas
-  (hoja assets/maps/combate/arana_caminar.png: 6 cuadros x 8 direcciones,
-  ver tools/make_spider_frames.py). Cuando se aleja camina "de espaldas":
+  (hoja assets/maps/combate/arana_caminar.png: 4 cuadros x 8 direcciones,
+  celdas cuadradas de 240x240 con fondo transparente; las filas van en
+  sentido horario desde la derecha: der, abajo-der, abajo, abajo-izq, izq,
+  arriba-izq, arriba, arriba-der). Cuando se aleja camina "de espaldas":
   mirandote pero con las patas yendo para atras.
 - Otras animaciones (por transformaciones): respirar, preparar el
   lanzamiento, atacar, golpe y muerte.
@@ -40,7 +48,7 @@ COMBAT_DIR = (
 )
 ART_PATH = COMBAT_DIR / "arana.png"
 WALK_PATH = COMBAT_DIR / "arana_caminar.png"
-WALK_COLS = 6                # cuadros de la caminata
+WALK_COLS = 4                # cuadros de la caminata
 WALK_ROWS = 8                # direcciones (8, en sentido horario desde la derecha)
 WEB_PATHS = [COMBAT_DIR / f"telarana_{n}.png" for n in (1, 2, 3)]
 
@@ -49,7 +57,14 @@ CODEX_KEY = "arana"
 DISCOVER_DISTANCE = 520
 
 # ---- cantidad / vida / tamaño (del tamaño del jugador) ---------------------------
-SPIDER_COUNT = 4
+SPIDER_COUNT = 6
+
+# La salita del mapa 2 donde aparecen (coordenadas del mundo = pixeles de
+# assets/maps/region_01/mapa2.png: pared izquierda x~14, tabique x~308,
+# techo y~1176, piso y~1370; la entrada sube por el pasillo de abajo).
+ROOM = pygame.Rect(18, 1180, 285, 188)
+SPAWN_AREA = ROOM.inflate(-30, -30)      # donde pueden nacer (lejos de las paredes)
+TRIGGER_AREA = ROOM.inflate(-40, -40)    # al pisar esto se despiertan
 HP = 12
 DRAW_WIDTH = 36              # ancho dibujado de la imagen fija (158x110)
 DRAW_CELL = 48               # tamaño dibujado de un cuadro de la hoja de caminata
@@ -60,11 +75,12 @@ COINS = 25
 
 # ---- movimiento ---------------------------------------------------------------------
 FLEE_SPEED = 92              # se aleja de vos
-CHASE_SPEED = 80             # solo despues de atraparte
+CHASE_SPEED = 170            # solo despues de atraparte: corre rapido hacia vos
 SIGHT = 560                  # a esta distancia te apunta
 KEEP_AWAY = 230              # si te acercas mas que esto, se aleja
-SPAWN_MIN_DIST = 170         # al nacer: cerca, pero no encima
-SPAWN_MAX_DIST = 360
+SPAWN_MIN_DIST = 30          # (si no entran en ronda) al nacer: cerca, pero no encima
+SPAWN_MAX_DIST = 150
+SPAWN_RING = (80, 65, 95, 50, 110, 40)   # radios probados para la ronda (salita)
 
 # ---- bloque de telaraña ----------------------------------------------------------------
 FIRST_THROW = 0.55
@@ -78,16 +94,23 @@ HIT_PAD = (14, 22)           # el bloque cuenta como "te dio" un poco antes
 WEB_SIZE = 48                # lado del bloque de telaraña en el piso
 WEB_LIFE = 9.0               # segundos hasta que se va solo
 WEB_FADE = 2.0               # los ultimos segundos se va apagando
-WEB_SLOW = 0.35              # multiplicador de velocidad dentro (bastante)
+WEB_SLOW = 0.175             # multiplicador de velocidad dentro (el doble de lento que antes: 0.35)
 
 APPEAR_TIME = 0.30           # duracion de la animacion "aparecer"
 FLY_FPS = 14                 # cuadros por segundo del vuelo
+SHOT_DRAW_START = 14         # tamaño (px del mundo) de la telaraña al salir: chiquita
+SHOT_DRAW_END = WEB_SIZE     # ... y va creciendo hasta el tamaño que tiene en el piso
+SHOT_GROW_DIST = 200         # distancia recorrida (px) para llegar al tamaño final
 IDLE_FPS = 6                 # cuadros por segundo de la telaraña en el piso
 
 # ---- cuerpo a cuerpo (solo despues de atraparte) -------------------------------------
 HIT_DAMAGE = 0.12            # la vida del jugador va de 0 a 1
-HIT_INTERVAL = 1.1
-CHASE_MAX = 10.0
+HIT_INTERVAL = 0.5           # pega rapido cuando esta cerca (y estas en la telaraña)
+CHASE_FIRST_HIT = 0.2        # espera antes del primer golpe al llegar
+ESCAPE_GRACE = 0.15          # tiempo fuera de la telaraña para darse cuenta de que saliste
+REWEB_DELAY = (0.2, 0.6)     # al salirte: tarda esto en tirarte otra telaraña
+ALL_CHASE = False            # True: TODAS las arañas corren hacia vos al atraparte
+CHASE_MAX = 12.0
 LOSE_DIST = 480
 
 DEATH_TIME = 0.35
@@ -292,6 +315,7 @@ class Spider:
         self.wind = 0.0              # >0: preparando el lanzamiento
         self.shoot_t = 0.0           # animacion despues de tirar
         self.chase_t = 0.0
+        self.out_t = 0.0             # tiempo que lleva el jugador fuera de la telaraña
         self.hit_cool = 0.5
         self.face = 1
 
@@ -318,8 +342,17 @@ class Spider:
 
         self.mode = "chase"
         self.chase_t = 0.0
-        self.hit_cool = 0.5
+        self.out_t = 0.0
+        self.hit_cool = CHASE_FIRST_HIT
         self.wind = 0.0
+
+    def stop_chase(self):
+        """Ve que te saliste de la telaraña: vuelve a alejarse y a tirar otra."""
+
+        self.mode = "aim"
+        self.wind = 0.0
+        self.out_t = 0.0
+        self.cool = random.uniform(*REWEB_DELAY)
 
     # ---- movimiento -------------------------------------------------------
     def _step(self, delta, cmap):
@@ -459,9 +492,11 @@ class Spider:
 
             else:
 
-                self.cool -= dt
+                # si ya estas atrapado no gasta telarañas: espera a que salgas
+                if not mgr.player_in_web:
+                    self.cool -= dt
 
-                if self.cool <= 0:
+                if self.cool <= 0 and not mgr.player_in_web:
                     self.wind = WIND_UP
 
             return
@@ -469,10 +504,18 @@ class Spider:
         # chase: te atrapo en su telaraña, viene a pegarte
         self.chase_t += dt
 
-        if dist > LOSE_DIST or self.chase_t > CHASE_MAX:
+        if mgr.player_in_web:
+            self.out_t = 0.0
+        else:
+            self.out_t += dt
 
-            self.mode = "aim"
-            self.cool = 1.2
+        if (
+            self.out_t > ESCAPE_GRACE
+            or dist > LOSE_DIST
+            or self.chase_t > CHASE_MAX
+        ):
+
+            self.stop_chase()
 
             return
 
@@ -487,7 +530,7 @@ class Spider:
 
         self.hit_cool -= dt
 
-        if touching and self.hit_cool <= 0:
+        if touching and self.hit_cool <= 0 and mgr.player_in_web:
 
             self.hit_cool = HIT_INTERVAL
             self.shoot_t = 0.2
@@ -507,6 +550,7 @@ class SpiderManager:
         self._active = False
         self._slow = 1.0
         self._warned = False
+        self.player_in_web = False     # el jugador esta dentro de una telaraña
 
         self._prev_player = None
         self._player_vel = pygame.Vector2(0, 0)
@@ -532,15 +576,93 @@ class SpiderManager:
         self.shots = []
         self.webs = []
 
+        self.player_in_web = False
+
         self._prev_player = None
 
     # ---- nacimiento (apenas entras al mapa 2) -----------------------------------
-    def _spawn_all(self, game):
+    @staticmethod
+    def _clear_line(cmap, a, b, step=10.0):
+        """True si entre a y b no hay paredes (que nazcan en la misma sala)."""
+
+        d = pygame.Vector2(b) - pygame.Vector2(a)
+        n = max(1, int(d.length() / step))
+
+        for i in range(1, n + 1):
+
+            p = pygame.Vector2(a) + d * (i / n)
+
+            if not cmap.point_is_walkable(p.x, p.y):
+                return False
+
+        return True
+
+    def _place(self, game, x, y, min_gap):
+        """Crea una araña en (x, y) si el lugar sirve; devuelve True si la puso."""
 
         cmap = game.collision_map
 
         px, py = game.player.rect.center
 
+        if not SPAWN_AREA.collidepoint(x, y):
+            return False
+
+        spider = Spider(x, y)
+
+        if not cmap.can_move(spider.rect):
+            return False
+
+        if not self._clear_line(cmap, (px, py), (x, y)):
+            return False
+
+        if any(
+            math.hypot(x - s.pos.x, y - s.pos.y) < min_gap
+            for s in self.spiders
+        ):
+            return False
+
+        # ya nacen mirandote
+        spider.heading = math.degrees(math.atan2(py - y, px - x)) % 360.0
+
+        # que no tiren todas a la vez: cada una un poco despues
+        spider.cool = FIRST_THROW + len(self.spiders) * 0.35
+
+        self.spiders.append(spider)
+
+        return True
+
+    def _spawn_all(self, game):
+        """Nacen en ronda alrededor tuyo, en la salita de entrada."""
+
+        px, py = game.player.rect.center
+
+        base = random.uniform(0, math.tau)
+
+        for i in range(SPIDER_COUNT):
+
+            target = base + math.tau * i / SPIDER_COUNT
+
+            placed = False
+
+            for jitter in (0.0, 0.25, -0.25, 0.5, -0.5):
+
+                ang = target + jitter
+
+                for radius in SPAWN_RING:
+
+                    if self._place(
+                        game,
+                        px + math.cos(ang) * radius,
+                        py + math.sin(ang) * radius,
+                        min_gap=34,
+                    ):
+                        placed = True
+                        break
+
+                if placed:
+                    break
+
+        # si la sala es muy chica y faltan: las que falten, en cualquier lugar libre
         tries = 0
 
         while len(self.spiders) < SPIDER_COUNT and tries < 800:
@@ -550,24 +672,24 @@ class SpiderManager:
             ang = random.uniform(0, math.tau)
             dist = random.uniform(SPAWN_MIN_DIST, SPAWN_MAX_DIST)
 
-            x = px + math.cos(ang) * dist
-            y = py + math.sin(ang) * dist
+            self._place(
+                game, px + math.cos(ang) * dist, py + math.sin(ang) * dist,
+                min_gap=28,
+            )
 
-            spider = Spider(x, y)
+        # ultimo recurso: cualquier lugar libre de la sala
+        tries = 0
 
-            if not cmap.can_move(spider.rect):
-                continue
+        while len(self.spiders) < SPIDER_COUNT and tries < 800:
 
-            if any(
-                math.hypot(x - s.pos.x, y - s.pos.y) < 90
-                for s in self.spiders
-            ):
-                continue
+            tries += 1
 
-            # que no nazcan todas pegadas: cada una tira un poco despues
-            spider.cool = FIRST_THROW + len(self.spiders) * 0.45
-
-            self.spiders.append(spider)
+            self._place(
+                game,
+                random.uniform(SPAWN_AREA.left, SPAWN_AREA.right),
+                random.uniform(SPAWN_AREA.top, SPAWN_AREA.bottom),
+                min_gap=22,
+            )
 
     def _drop(self, game, spider):
 
@@ -619,8 +741,15 @@ class SpiderManager:
 
             game.show_message("¡Telaraña! Te ralentiza: sal de ella")
 
-        # SOLO la araña que te atrapo va hacia vos
-        if shot.owner is not None and not shot.owner.dead:
+        # la araña que te atrapo corre hacia vos (o todas, si ALL_CHASE)
+        if ALL_CHASE:
+
+            for spider in self.spiders:
+
+                if not spider.dead:
+                    spider.start_chase()
+
+        elif shot.owner is not None and not shot.owner.dead:
             shot.owner.start_chase()
 
     def _set_slow(self, game, value):
@@ -664,6 +793,13 @@ class SpiderManager:
         self._prev_player = now
 
         if not self._active:
+
+            if not TRIGGER_AREA.collidepoint(player.center):
+
+                # todavia no entraste a la sala: no hay arañas ni telarañas
+                self._set_slow(game, 1.0)
+
+                return
 
             self._active = True
 
@@ -729,6 +865,16 @@ class SpiderManager:
         self.webs = [w for w in self.webs if w.age < WEB_LIFE]
 
         inside = any(w.rect.colliderect(player) for w in self.webs)
+
+        # saliste de la telaraña: todas intentan tirarte otra enseguida
+        if self.player_in_web and not inside:
+
+            for spider in self.spiders:
+
+                if spider.mode == "aim" and spider.wind <= 0:
+                    spider.cool = min(spider.cool, random.uniform(*REWEB_DELAY))
+
+        self.player_in_web = inside
 
         self._set_slow(game, WEB_SLOW if inside else 1.0)
 
@@ -1068,7 +1214,17 @@ class SpiderManager:
 
         for shot in self.shots:
 
-            dest = camera.apply(shot.rect)
+            center = camera.apply(shot.rect).center
+
+            # sale chiquita y va creciendo mientras vuela (arranca rapido y
+            # se va frenando hasta llegar al tamaño final)
+            k = min(1.0, shot.travelled / SHOT_GROW_DIST)
+            k = 1.0 - (1.0 - k) * (1.0 - k)
+
+            world_side = SHOT_DRAW_START + (SHOT_DRAW_END - SHOT_DRAW_START) * k
+
+            # tamaños pares para no llenar la memoria de imagenes casi iguales
+            side = max(4, int(round(world_side * camera.zoom / 2.0)) * 2)
 
             fly = self._anim(shot.variant, "vuelo")
 
@@ -1076,9 +1232,9 @@ class SpiderManager:
 
                 idx = int(shot.age * FLY_FPS) % len(fly)
 
-                img = self._frame_img(shot.variant, "vuelo", idx, dest.width)
+                img = self._frame_img(shot.variant, "vuelo", idx, side)
 
             else:
-                img = self._web_img(shot.variant, dest.width, 1.0)
+                img = self._web_img(shot.variant, side, 1.0)
 
-            screen.blit(img, dest)
+            screen.blit(img, img.get_rect(center=center))

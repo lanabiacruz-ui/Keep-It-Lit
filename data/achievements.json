@@ -4,6 +4,8 @@
         "dragon_monedas": "2026-11-21T11:55:25"
     },
     "counters": {
-        "defeats": 0
+        "defeats": 4,
+        "fireballs": 3,
+        "doors": 1
     }
 }
