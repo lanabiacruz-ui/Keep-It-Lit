@@ -103,7 +103,8 @@ SPAWN_RING = (80, 65, 95, 50, 110, 40)   # radios probados para la ronda (salita
 
 # ---- bloque de telaraña ----------------------------------------------------------------
 FIRST_THROW = 0.55
-THROW_COOLDOWN = 1.9
+THROW_COOLDOWN = 2.6         # (antes 1.9) cada una tira mas espaciado
+THROW_GAP = 1.0              # entre telarañas de DISTINTAS arañas pasa al menos esto (no te llueven)
 WIND_UP = 0.30               # tiempo de la animacion de "preparar" antes de tirar
 SHOT_SPEED = 260
 SHOT_RANGE = 520
@@ -123,13 +124,14 @@ SHOT_GROW_DIST = 200         # distancia recorrida (px) para llegar al tamaño f
 IDLE_FPS = 6                 # cuadros por segundo de la telaraña en el piso
 
 # ---- cuerpo a cuerpo (solo despues de atraparte) -------------------------------------
-HIT_DAMAGE = 0.12            # la vida del jugador va de 0 a 1
+HIT_DAMAGE = 0.06            # la vida del jugador va de 0 a 1 (antes 0.12)
+MAX_ATTACKERS = 3            # a lo sumo estas arañas comunes te muerden a la vez (las demas esperan)
 HIT_INTERVAL = 0.5           # pega rapido cuando esta cerca (y estas en la telaraña)
 CHASE_FIRST_HIT = 0.2        # espera antes del primer golpe al llegar
 ESCAPE_GRACE = 0.15          # tiempo fuera de la telaraña para darse cuenta de que saliste
-REWEB_DELAY = (0.2, 0.6)     # al salirte: tarda esto en tirarte otra telaraña
+REWEB_DELAY = (0.8, 1.5)     # al salirte: tarda esto en tirarte otra telaraña (tenes un respiro)
 ALL_CHASE = True             # True: TODAS las arañas que te ven en una telaraña van a pegarte
-RETREAT_TIME = (0.55, 0.9)   # despues de pegar se alejan este tiempo (segundos)
+RETREAT_TIME = (0.9, 1.4)    # despues de pegar se alejan este tiempo (segundos)
 RETREAT_SPEED = 150          # velocidad con la que se alejan (de espaldas)
 RETREAT_STUCK = 0.25         # si no pueden alejarse (pared) vuelven a entrar a los 0.25 s
 RETURN_HIT_DELAY = 0.10      # al volver, tardan esto en pegar: el golpe sigue siendo rapido
@@ -169,20 +171,20 @@ AURA_SHOOT_MAX = 400
 
 # rafaga de telarañas
 AURA_FIRST_THROW = 0.6
-AURA_THROW_COOLDOWN = 2.4
-AURA_THROW_COOLDOWN_WEBBED = 3.6   # si ya estas atrapado, tira menos seguido
+AURA_THROW_COOLDOWN = 3.2
+AURA_THROW_COOLDOWN_WEBBED = 4.8   # si ya estas atrapado, tira menos seguido
 AURA_WIND_UP = 0.45
-AURA_VOLLEY = 4              # telarañas por rafaga
+AURA_VOLLEY = 3              # telarañas por rafaga (antes 4)
 AURA_BURST_GAP = 0.12        # entre una y otra (cada una vuelve a apuntar)
-AURA_SPREAD = (0.0, -6.0, 6.0, 0.0)   # grados de abanico de cada telaraña
+AURA_SPREAD = (0.0, -8.0, 8.0)       # grados de abanico de cada telaraña
 AURA_SHOT_SPEED = 400        # (la comun: 260)
 AURA_SHOT_SIZE = 30          # (la comun: 22)
 AURA_SHOT_RANGE = 620
 
 # mordida + veneno
-AURA_BITE_DAMAGE = 0.05      # el golpe en si (el grueso lo hace el veneno)
+AURA_BITE_DAMAGE = 0.04      # el golpe en si (el grueso lo hace el veneno)
 AURA_HIT_INTERVAL = 0.45
-AURA_POISON_TIME = 8.0       # segundos de veneno por mordida (se suman)
+AURA_POISON_TIME = 5.0       # segundos de veneno por mordida (se suman; antes 8)
 
 _aura_uid = [0]
 
@@ -209,58 +211,20 @@ def _load_art():
     return surf
 
 
-def _web_fallback(variant):
-    """Dibujo simple por si faltan las imagenes (3 estilos distintos)."""
-
-    s = 64
-    surf = pygame.Surface((s, s), pygame.SRCALPHA)
-
-    pygame.draw.rect(surf, (235, 238, 245, 70), surf.get_rect(),
-                     border_radius=12)
-
-    line = (245, 247, 252, 215)
-    c = s // 2
-
-    if variant == 0:
-
-        for k in range(8):
-
-            a = k * math.pi / 4
-
-            pygame.draw.line(
-                surf, line, (c, c),
-                (c + math.cos(a) * (c - 2), c + math.sin(a) * (c - 2))
-            )
-
-    elif variant == 1:
-
-        rng = random.Random(7)
-
-        for _ in range(14):
-
-            pygame.draw.line(
-                surf, line,
-                (rng.randint(2, s - 3), rng.randint(2, s - 3)),
-                (rng.randint(2, s - 3), rng.randint(2, s - 3))
-            )
-
-    else:
-
-        for r in (8, 16, 24, 30):
-            pygame.draw.circle(surf, line, (c, c), r, 1)
-
-    pygame.draw.rect(surf, (250, 250, 255, 230), surf.get_rect(), 2,
-                     border_radius=12)
-
-    return surf
-
-
 def _load_web(variant):
+    """Imagen fija de la telaraña: solo se usan TUS dibujos. Si falta, None
+    (no se dibuja nada: el codigo no inventa ninguna telaraña)."""
 
-    try:
-        return pygame.image.load(str(WEB_PATHS[variant])).convert_alpha()
-    except (pygame.error, FileNotFoundError, OSError):
-        return _web_fallback(variant)
+    for stem in ("telarana", "telaraña"):
+
+        path = COMBAT_DIR / f"{stem}_{variant + 1}.png"
+
+        try:
+            return pygame.image.load(str(path)).convert_alpha()
+        except (pygame.error, FileNotFoundError, OSError):
+            continue
+
+    return None
 
 
 def _load_strip(path):
@@ -657,8 +621,14 @@ class Spider:
                 if not mgr.player_in_web:
                     self.cool -= dt
 
-                if self.cool <= 0 and not mgr.player_in_web:
+                if (
+                    self.cool <= 0
+                    and not mgr.player_in_web
+                    and mgr.throw_lock <= 0
+                ):
                     self.wind = WIND_UP
+
+                    mgr.throw_lock = THROW_GAP
 
             return
 
@@ -1084,6 +1054,7 @@ class SpiderManager:
         self._slow = 1.0
         self._warned = False
         self.player_in_web = False     # el jugador esta dentro de una telaraña
+        self.throw_lock = 0.0          # >0: ninguna araña comun empieza otro lanzamiento
 
         self._prev_player = None
         self._player_vel = pygame.Vector2(0, 0)
@@ -1747,20 +1718,40 @@ class SpiderManager:
                 if spider.mode == "aim" and spider.wind <= 0:
                     spider.cool = min(spider.cool, random.uniform(*REWEB_DELAY))
 
-        # todas las que ven que estas dentro de una telaraña vienen a pegarte
+        self.throw_lock = max(0.0, self.throw_lock - dt)
+
+        # las que ven que estas dentro de una telaraña vienen a pegarte: las
+        # mas cercanas primero y, de las comunes, a lo sumo MAX_ATTACKERS
         if inside and ALL_CHASE:
 
-            for spider in self.spiders:
+            def _dist(s):
+                return math.hypot(
+                    s.rect.centerx - player.centerx,
+                    s.rect.centery - player.centery,
+                )
+
+            chasing = sum(
+                1 for s in self.spiders
+                if not s.dead and s.mode == "chase"
+                and not isinstance(s, Aurantula)
+            )
+
+            for spider in sorted(self.spiders, key=_dist):
 
                 if spider.dead or spider.mode != "aim":
                     continue
 
-                if math.hypot(
-                    spider.rect.centerx - player.centerx,
-                    spider.rect.centery - player.centery,
-                ) <= LOSE_DIST:
+                if _dist(spider) > LOSE_DIST:
+                    continue
 
-                    spider.start_chase()
+                if not isinstance(spider, Aurantula):
+
+                    if chasing >= MAX_ATTACKERS:
+                        continue
+
+                    chasing += 1
+
+                spider.start_chase()
 
         self.player_in_web = inside
 
@@ -2009,9 +2000,17 @@ class SpiderManager:
 
                 self._web_src[variant] = src
 
-            img = pygame.transform.smoothscale(src, (max(4, side), max(4, side)))
+            if src is None:
 
-            img.set_alpha(int(255 * alpha))
+                img = pygame.Surface((4, 4), pygame.SRCALPHA)
+
+            else:
+
+                img = pygame.transform.smoothscale(
+                    src, (max(4, side), max(4, side))
+                )
+
+                img.set_alpha(int(255 * alpha))
 
             self._web_cache[key] = img
 

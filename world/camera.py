@@ -37,6 +37,34 @@ class Camera:
         self._fx = 0.0
         self._fy = 0.0
 
+    def set_zoom(self, zoom):
+        """Cambia el zoom en vivo manteniendo el centro de la vista."""
+
+        zoom = float(zoom)
+
+        if zoom.is_integer():
+            zoom = int(zoom)
+
+        if zoom == self.zoom:
+            return
+
+        cx = (self._fx + self.screen_width / 2) / self.zoom
+        cy = (self._fy + self.screen_height / 2) / self.zoom
+
+        self.zoom = zoom
+
+        self.scaled_width = int(self.world_width * zoom)
+        self.scaled_height = int(self.world_height * zoom)
+
+        max_x = max(0, self.scaled_width - self.screen_width)
+        max_y = max(0, self.scaled_height - self.screen_height)
+
+        self._fx = max(0, min(cx * zoom - self.screen_width / 2, max_x))
+        self._fy = max(0, min(cy * zoom - self.screen_height / 2, max_y))
+
+        self.x = int(round(self._fx))
+        self.y = int(round(self._fy))
+
     def update(self, player, dt=None, focus=None):
         """focus = (mundo_x, mundo_y, k, ancla_y) desvia la camara hacia
         ese punto: k=0 sigue al jugador, k=1 mira al punto (que queda a

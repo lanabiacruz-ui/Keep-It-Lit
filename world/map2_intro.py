@@ -25,6 +25,22 @@ provisorio. Mas caras: agregar nombres a MONSTER_1_FACES / MONSTER_2_FACES
 (uno por pagina) y el archivo monstruo_ojo_<nombre>.png.
 """
 
+# ------------------------------------------------------------ camara
+# Mientras habla el monstruo la camara se desplaza hacia el (CAMERA_MIX_MONSTER
+# = 1.0: lo centra); con Cenizo mira sobre todo al jugador; en el rayo se
+# ven los dos. Valores de 0 (el jugador) a 1 (el monstruo).
+CAMERA_MIX_CENIZO = 0.30
+CAMERA_MIX_MONSTER = 1.0
+CAMERA_MIX_RAY = 0.55
+CAMERA_SMOOTH = 3.0          # velocidad del movimiento de camara en la escena (mas bajo = mas lento)
+
+# Al terminar la intro la camara se abre para mostrar mas del lugar (zoom
+# normal del juego: 4). Mas bajo = se ve mas mapa (3 = un tercio mas; 2.5 no
+# es entero: usar 3 o 2).
+MAP2_ZOOM = 3
+ZOOM_FADE_OUT = 0.25         # oscurece antes del cambio (segundos)
+ZOOM_FADE_IN = 0.45          # y vuelve a mostrarse ya con la vista amplia
+
 # VERDE: donde aparece el personaje
 PLAYER_POS = (120, 1356)
 

@@ -53,6 +53,7 @@ AFTER_TIME = 0.9        # silencio antes de que Cenizo hable
 # Cenizo en esta escena es mas chico que de costumbre
 CENIZO_DIALOG_HEIGHT = 118    # alto del retrato en el dialogo (normal: 170)
 CENIZO_WORLD_SCALE = 0.70     # escala de Cenizo flotando en el mundo
+CENIZO_HURT_DIALOG_HEIGHT = 200   # Cenizo lastimado: mas grande (se veia muy chico)
 
 
 # ------------------------------------------------------------- imagenes
@@ -560,18 +561,44 @@ class Map2Scene:
         return (self.game.width, self.game.height)
 
     def camera_focus(self):
-        """La camara mira entre el jugador y el ojo para que se vean los
-        dos (lo usa new_game._cinematic_focus)."""
+        """Hacia donde mira la camara en cada momento (lo usa
+        new_game._cinematic_focus):
+
+            Cenizo habla      -> sobre todo el jugador
+            el monstruo habla -> la camara se desplaza hacia el monstruo
+            el rayo           -> los dos (se ve el rayo)
+        """
 
         if self.stage in ("idle", "end"):
             return None
 
         p = pygame.Vector2(self.game.player.image_rect.center)
-        e = self.eye.eye_world()
 
-        f = p.lerp(e, 0.55)
+        if self.stage in ("m1", "m2"):
+
+            m = pygame.Vector2(self.eye.pos)
+            f = p.lerp(m, cfg.CAMERA_MIX_MONSTER)
+
+        elif self.stage == "ray":
+
+            f = p.lerp(self.eye.eye_world(), cfg.CAMERA_MIX_RAY)
+
+        else:
+
+            f = p.lerp(self.eye.eye_world(), cfg.CAMERA_MIX_CENIZO)
 
         return (f.x, f.y, 1.0, 0.5)
+
+    def tick(self, dt):
+        """Mueve la camara de a poco (los dialogos frenan el juego, por eso
+        se llama desde new_game tambien mientras hay un dialogo abierto)."""
+
+        if self.stage in ("idle", "end"):
+            return
+
+        g = self.game
+
+        g.camera.update(g.player, dt=dt, focus=self.camera_focus())
 
     def _snap_camera(self):
         """Los dialogos frenan el juego: hay que acomodar la camara a mano."""
@@ -584,15 +611,20 @@ class Map2Scene:
 
         self.stage = stage
 
-        self._snap_camera()
+        # al empezar la camara se acomoda de golpe; despues se desplaza sola
+        if stage == "c1":
+            self._snap_camera()
 
         # Cenizo mas chico que de costumbre; despues del rayo, lastimado
+        # (y ahi se lo ve mas grande)
         cls = CenizoHurtDialog if hurt else Tutorial
 
         self._current = cls(
             self._size(),
             pages=self.mark_keys(pages),
-            char_height=CENIZO_DIALOG_HEIGHT,
+            char_height=(
+                CENIZO_HURT_DIALOG_HEIGHT if hurt else CENIZO_DIALOG_HEIGHT
+            ),
         )
 
         self.game.tutorial = self._current
@@ -603,7 +635,7 @@ class Map2Scene:
 
         self.eye.face = faces[0] if faces else "base"
 
-        self._snap_camera()
+        # la camara se desplaza hacia el monstruo (ver tick)
 
         self._current = EyeDialog(
             self._size(), pages=pages, faces=faces,
@@ -622,6 +654,10 @@ class Map2Scene:
         spot = pygame.Vector2(g.player.image_rect.center) + (
             62, -14
         )
+
+        # la camara se mueve mas lento durante la escena (se restaura al final)
+        self._old_smooth = g.camera.smoothing
+        g.camera.smoothing = cfg.CAMERA_SMOOTH
 
         g.cenizo.appear(spot, instant=True)
         g.cenizo.size_mul = CENIZO_WORLD_SCALE
@@ -683,6 +719,11 @@ class Map2Scene:
 
         self.game.cenizo.set_hold(False)
 
+        old = getattr(self, "_old_smooth", None)
+
+        if old is not None:
+            self.game.camera.smoothing = old
+
         self.done = True
 
     # ---- el rayo
@@ -699,6 +740,8 @@ class Map2Scene:
         g = self.game
 
         self.t += dt
+
+        self.tick(dt)
 
         g.cenizo.update(dt, g.player)
 

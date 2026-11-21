@@ -520,6 +520,12 @@ class NewGame:
         self.current_map = "mapa1"
         self.map_switch = MapSwitcher()
 
+        # zoom normal del juego; en el mapa 2, al terminar la intro, se abre
+        # la vista (ver _update_map_zoom y world/map2_intro.py)
+        self.base_zoom = self.camera.zoom
+        self._zoom_fx = None
+        self._zoom_fade_surf = None
+
         self.camera.update(self.player)
 
         self.light = PlayerLight(
@@ -3351,6 +3357,102 @@ class NewGame:
                 dt
             )
 
+    def _update_map_zoom(self, dt):
+        """Mapa 2: al terminar la intro la camara se abre (mas zoom afuera)
+        para ver mas del lugar y las arañas. Se hace con un fundido corto
+        (oscurece, cambia el zoom y se aclara). En otro mapa vuelve al zoom
+        normal enseguida."""
+
+        from world import map2_intro
+
+        cam = self.camera
+
+        in_map2 = getattr(self, "current_map", "mapa1") == "mapa2"
+
+        want = self.base_zoom
+
+        if in_map2 and self.map2_scene is None:
+            want = map2_intro.MAP2_ZOOM
+
+        fx = self._zoom_fx
+
+        if fx is None:
+
+            if cam.zoom == want:
+                return
+
+            if not in_map2 or self.state != "playing":
+
+                cam.set_zoom(want)
+                cam.update(self.player)
+
+                return
+
+            self._zoom_fx = {"phase": "out", "t": 0.0}
+
+            return
+
+        # se salio del mapa 2 en medio del fundido
+        if not in_map2:
+
+            cam.set_zoom(want)
+            cam.update(self.player)
+
+            self._zoom_fx = None
+
+            return
+
+        fx["t"] += dt
+
+        if fx["phase"] == "out":
+
+            if fx["t"] >= map2_intro.ZOOM_FADE_OUT:
+
+                cam.set_zoom(want)
+                cam.update(self.player, focus=self._cinematic_focus())
+
+                fx["phase"] = "in"
+                fx["t"] = 0.0
+
+        elif fx["t"] >= map2_intro.ZOOM_FADE_IN:
+
+            self._zoom_fx = None
+
+    def _draw_zoom_fade(self):
+        """El fundido negro del cambio de zoom."""
+
+        fx = self._zoom_fx
+
+        if fx is None:
+            return
+
+        from world import map2_intro
+
+        if fx["phase"] == "out":
+            k = fx["t"] / max(0.01, map2_intro.ZOOM_FADE_OUT)
+        else:
+            k = 1.0 - fx["t"] / max(0.01, map2_intro.ZOOM_FADE_IN)
+
+        k = max(0.0, min(1.0, k))
+
+        if k <= 0.0:
+            return
+
+        size = self.screen.get_size()
+
+        surf = self._zoom_fade_surf
+
+        if surf is None or surf.get_size() != size:
+
+            surf = pygame.Surface(size)
+            surf.fill((0, 0, 0))
+
+            self._zoom_fade_surf = surf
+
+        surf.set_alpha(int(255 * k))
+
+        self.screen.blit(surf, (0, 0))
+
     def _cinematic_focus(self):
 
         # escena del mapa 2: la camara mira entre el jugador y el monstruo
@@ -5925,6 +6027,8 @@ class NewGame:
 
     def update(self, dt):
 
+        self._update_map_zoom(dt)
+
         if (
             self.fx.hitstop > 0
             and self.state == "playing"
@@ -5977,6 +6081,10 @@ class NewGame:
 
 
         if self.tutorial is not None:
+
+            # escena del mapa 2: la camara se desplaza mientras hay dialogo
+            if self.map2_scene is not None:
+                self.map2_scene.tick(dt)
 
             self.tutorial.update(
                 dt
@@ -7462,6 +7570,8 @@ class NewGame:
 
         if self.map2_scene is not None:
             self.map2_scene.draw_overlay(self.screen)
+
+        self._draw_zoom_fade()
 
         self._cine_ui_end()
 
