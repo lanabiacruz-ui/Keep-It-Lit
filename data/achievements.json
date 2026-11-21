@@ -1,4 +1,9 @@
 {
-    "unlocked": {},
-    "counters": {}
+    "unlocked": {
+        "region_1": "2026-11-21T11:54:06",
+        "dragon_monedas": "2026-11-21T11:55:25"
+    },
+    "counters": {
+        "defeats": 0
+    }
 }

@@ -179,6 +179,18 @@ DEFAULT_DATA = {
         ),
     },
 
+    "arana": {
+        "nombre": "Araña",
+        "imagen": "arana.png",
+        "descripcion": (
+            "Vive en el mapa 2 y nunca se te acerca: se aleja y te apunta "
+            "con bloques de telaraña (calcula a donde vas). La telaraña te "
+            "ralentiza mucho mientras estes dentro y desaparece con el "
+            "tiempo. Si te atrapa, esa araña va hacia vos y te muerde, "
+            "asi que no te dejes pegar."
+        ),
+    },
+
     "jefe_pina": {
         "nombre": "Piña Colosal",
         "imagen": "jefe_pina.png",
@@ -229,6 +241,7 @@ class EnemyEncyclopedia:
         "pino_brava",        # zona 2, oleada 6
         "golem",             # zona 2, oleada 8
         "jefe_golem",        # zona 2, oleada 11 (jefe final)
+        "arana",             # mapa 2 (despues del final)
     )
 
     VISIBLE_ROWS = 8
@@ -272,6 +285,7 @@ class EnemyEncyclopedia:
         "slime3": 100,
         "jefe_pina": 1500,
         "jefe_golem": 2500,
+        "arana": 400,
     }
     DEFAULT_REWARD = 10
 
