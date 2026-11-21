@@ -7184,7 +7184,10 @@ class NewGame:
         self.spiders.draw(self.screen, self.camera)
 
         if self._eye_visible():
-            self.eye_monster().draw(self.screen, self.camera)
+            self.eye_monster().draw(
+                self.screen, self.camera,
+                look_at=self.player.image_rect.center,
+            )
 
         self.crushers.draw(self.screen, self.camera)
 
@@ -7295,7 +7298,10 @@ class NewGame:
         self._draw_warm_glows(sources)
 
         if self._eye_visible():
-            self.eye_monster().draw_glow(self.screen, self.camera)
+            self.eye_monster().draw_glow(
+                self.screen, self.camera,
+                look_at=self.player.image_rect.center,
+            )
 
         if self.cenizo.visible:
             self.cenizo.draw(self.screen, self.camera)

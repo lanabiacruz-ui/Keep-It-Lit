@@ -18,11 +18,12 @@ import pygame
 
 from core.audio_manager import audio
 from ui.boss_dialog import BossDialog, COMBAT_DIR
+from ui.eye_pupil import find_slit
 from ui.tutorial import DEFAULT_THEME, Tutorial
 from world import map2_intro as cfg
 
 
-MONSTER_NAME = "Monstruo del ojo"
+MONSTER_NAME = cfg.MONSTER_NAME      # se cambia en world/map2_intro.py
 
 EYE_THEME = dict(
     DEFAULT_THEME,
@@ -47,11 +48,11 @@ EYE_THEME = dict(
 
 # tiempos del rayo (segundos)
 CHARGE_TIME = 1.1       # el ojo se carga (dura igual que ojo_carga.wav)
-BEAM_TIME = 0.7         # el rayo sale
-AFTER_TIME = 0.9        # silencio antes de que Cenizo hable
+BEAM_TIME = 1.1         # el rayo sale (llega a Cenizo en RAY_TRAVEL_TIME y se queda un rato)
+AFTER_TIME = 1.3        # Cenizo sale despedido y se lo ve antes de que hable
 
-# Cenizo en esta escena es mas chico que de costumbre
-CENIZO_DIALOG_HEIGHT = 118    # alto del retrato en el dialogo (normal: 170)
+# Cenizo en el dialogo se ve del tamaño de siempre (170, como en el tutorial)
+CENIZO_DIALOG_HEIGHT = 170    # alto del retrato en el dialogo
 CENIZO_WORLD_SCALE = 0.70     # escala de Cenizo flotando en el mundo
 CENIZO_HURT_DIALOG_HEIGHT = 200   # Cenizo lastimado: mas grande (se veia muy chico)
 
@@ -137,8 +138,59 @@ class CenizoHurtDialog(Tutorial):
 
 # ------------------------------------------------------ el monstruo (mundo)
 
+def _patch_pupil(img):
+    """Borra la pupila del dibujo (la rellena con el color del iris).
+
+    Devuelve (imagen_sin_pupila, (cx, cy, ancho, alto, color)) con la
+    pupila en pixeles del dibujo original, o None si no la encuentra. La
+    pupila nueva se dibuja aparte y se mueve hacia el jugador.
+    """
+
+    w, h = img.get_size()
+
+    def get(x, y):
+
+        if 0 <= x < w and 0 <= y < h:
+            c = img.get_at((x, y))
+            return (c[0], c[1], c[2], c[3])
+
+        return (0, 0, 0, 0)
+
+    seed = (int(cfg.EYE_FRAC[0] * w), int(cfg.EYE_FRAC[1] * h))
+
+    found = find_slit(get, w, h, seed)
+
+    if found is None:
+        return None
+
+    fill, bbox, color, iris = found
+
+    out = img.copy()
+
+    iris_c = (iris[0], iris[1], iris[2], 255)
+
+    for x, y in fill:
+        out.set_at((x, y), iris_c)
+
+    x0, y0, x1, y1 = bbox
+
+    slit = (
+        (x0 + x1 + 1) / 2.0, (y0 + y1 + 1) / 2.0,
+        x1 - x0 + 1, y1 - y0 + 1, color,
+    )
+
+    return out, slit
+
+
 class EyeMonster:
-    """El monstruo del ojo en el mapa 2: solo se ve (no pelea)."""
+    """El monstruo del ojo en el mapa 2: no pelea, pero esta VIVO.
+
+    - Flota: sube y baja, se balancea, y las dos manos de roca se mueven
+      por su cuenta (ver FLOAT_* y HAND_RECTS en world/map2_intro.py).
+    - Su ojo te mira: la pupila sigue al jugador (o a Cenizo mientras
+      tira el rayo). Solo en las caras de EYE_LOOK_FACES.
+    - Se agita (mas rapido y tembloroso) cuando esta furioso o cargando.
+    """
 
     def __init__(self):
 
@@ -147,17 +199,29 @@ class EyeMonster:
         self.face = "base"
         self.charge = 0.0          # 0-1: el ojo se esta cargando
 
+        # punto del mundo que mira en vez del jugador (el rayo mira a Cenizo)
+        self.look_override = None
+
+        self.look = pygame.Vector2()          # -1..1: hacia donde mira
+        self.body_off = pygame.Vector2()      # flote del cuerpo (mundo)
+        self.hand_off = [pygame.Vector2(), pygame.Vector2()]
+
+        self._t = 0.0
+        self._last = None
+
+        self._raw_imgs = {}
         self._src = {}
         self._scaled = {}
-        self._masked = {}
+        self._pupils = {}
         self._glow = {}
 
     # ---- posiciones
 
     def eye_world(self):
-        """Donde esta el ojo en el mundo (de donde sale el rayo)."""
+        """Donde esta el ojo en el mundo AHORA (de donde sale el rayo):
+        sigue al cuerpo mientras flota."""
 
-        src = self._source("base")
+        src = self._raw("base")
         ratio = src.get_width() / src.get_height()
 
         w = self.height * ratio
@@ -165,64 +229,203 @@ class EyeMonster:
         fx, fy = cfg.EYE_FRAC
 
         return pygame.Vector2(
-            self.pos.x + (fx - 0.5) * w,
-            self.pos.y + (fy - 0.5) * self.height,
+            self.pos.x + self.body_off.x + (fx - 0.5) * w,
+            self.pos.y + self.body_off.y + (fy - 0.5) * self.height,
         )
+
+    # ---- vida: flote y mirada
+
+    def _advance(self, look_at):
+        """Calcula el flote y la mirada de este cuadro (con el reloj real:
+        no hace falta llamarlo desde el update del juego)."""
+
+        now = pygame.time.get_ticks() / 1000.0
+
+        dt = 0.0 if self._last is None else max(0.0, min(0.1, now - self._last))
+
+        self._last = now
+        self._t = now
+
+        h = self.height
+
+        angry = self.face == "ira" or self.charge > 0.0
+
+        ts = now * cfg.FLOAT_SPEED * (1.5 if angry else 1.0)
+
+        bob = cfg.FLOAT_BOB * h
+        sway = cfg.FLOAT_SWAY * h
+
+        bx = math.sin(ts * 0.7 + 0.5) * sway + math.sin(ts * 1.9) * sway * 0.25
+        by = math.sin(ts * 1.25) * bob + math.sin(ts * 2.9 + 1.3) * bob * 0.22
+
+        # cargando el rayo tiembla
+        bx += math.sin(now * 63.0) * 0.006 * h * self.charge
+        by += math.sin(now * 51.0 + 1.0) * 0.004 * h * self.charge
+
+        # se inclina un poco hacia donde mira
+        bx += self.look.x * cfg.FLOAT_LEAN * h
+
+        self.body_off = pygame.Vector2(bx, by)
+
+        # las manos flotan por su cuenta (y siguen un poco al cuerpo)
+        self.hand_off[0] = pygame.Vector2(
+            math.sin(ts * 0.9 + 2.0) * 0.025 * h + bx * 0.5,
+            math.sin(ts * 1.6 + 1.0) * 0.050 * h + by * 0.5,
+        )
+        self.hand_off[1] = pygame.Vector2(
+            math.sin(ts * 1.1 + 4.0) * 0.025 * h + bx * 0.5,
+            math.sin(ts * 1.45 + 3.1) * 0.055 * h + by * 0.5,
+        )
+
+        # la mirada
+        target = self.look_override if self.look_override is not None else look_at
+
+        want = pygame.Vector2()
+
+        if target is not None:
+
+            d = pygame.Vector2(target) - self.eye_world()
+            dist = d.length()
+
+            if dist > 1.0:
+                want = d / dist * min(1.0, dist / 60.0)
+
+        k = 1.0 - math.exp(-cfg.EYE_LOOK_SMOOTH * dt)
+
+        self.look = self.look + (want - self.look) * k
 
     # ---- imagenes
 
-    def _source(self, face):
+    def _raw(self, face):
+        """Dibujo original de una cara (o provisorio)."""
 
-        img = self._src.get(face)
+        img = self._raw_imgs.get(face)
 
         if img is None:
 
             img = _load_face(face) or _provisional()
 
-            self._src[face] = img
+            self._raw_imgs[face] = img
 
         return img
 
-    def _scaled_face(self, face, zoom):
+    def _prepare(self, face):
+        """Piezas de una cara en tamaño original: cuerpo (sin las manos y
+        sin pupila si el ojo la sigue), manos y pupila."""
+
+        info = self._src.get(face)
+
+        if info is not None:
+            return info
+
+        img = self._raw(face)
+        w, h = img.get_size()
+
+        slit = None
+
+        if face in cfg.EYE_LOOK_FACES:
+
+            try:
+                res = _patch_pupil(img)
+            except Exception as error:
+                print(f"[map2] pupila del monstruo: {error}")
+                res = None
+
+            if res is not None:
+                img, slit = res
+
+        body = img.copy()
+        hands = []
+
+        for fx0, fy0, fx1, fy1 in cfg.HAND_RECTS:
+
+            r = pygame.Rect(
+                int(fx0 * w), int(fy0 * h),
+                int((fx1 - fx0) * w), int((fy1 - fy0) * h),
+            ).clip(img.get_rect())
+
+            if r.width < 2 or r.height < 2:
+                continue
+
+            hands.append((r, img.subsurface(r).copy()))
+
+            body.fill((0, 0, 0, 0), r)
+
+        info = {"size": (w, h), "body": body, "hands": hands, "slit": slit}
+
+        self._src[face] = info
+
+        return info
+
+    def _parts(self, face, zoom):
+        """Las piezas ya escaladas al zoom actual."""
 
         h = max(8, int(self.height * zoom))
 
         key = (face, h)
 
-        img = self._scaled.get(key)
+        parts = self._scaled.get(key)
 
-        if img is None:
+        if parts is not None:
+            return parts
 
-            src = self._source(face)
+        info = self._prepare(face)
 
-            w = max(1, int(src.get_width() * h / src.get_height()))
+        sw, sh = info["size"]
 
-            img = pygame.transform.smoothscale(src, (w, h))
+        w = max(1, int(sw * h / sh))
+
+        sx, sy = w / sw, h / sh
+
+        body = pygame.transform.smoothscale(info["body"], (w, h))
+
+        if cfg.MONSTER_ALPHA < 255:
+            body.set_alpha(cfg.MONSTER_ALPHA)
+
+        hands = []
+
+        for r, surf in info["hands"]:
+
+            hw = max(1, int(r.width * sx))
+            hh = max(1, int(r.height * sy))
+
+            piece = pygame.transform.smoothscale(surf, (hw, hh))
 
             if cfg.MONSTER_ALPHA < 255:
-                img.set_alpha(cfg.MONSTER_ALPHA)
+                piece.set_alpha(cfg.MONSTER_ALPHA)
 
-            if len(self._scaled) > 8:
-                self._scaled.clear()
-                self._masked.clear()
+            hands.append((int(r.x * sx), int(r.y * sy), piece))
 
-            self._scaled[key] = img
+        pupil = None
 
-        return img
+        if info["slit"] is not None:
 
-    def _eye_only(self, face, zoom):
-        """La imagen recortada con un circulo suave alrededor del ojo: se
+            cx, cy, pw, ph, color = info["slit"]
+
+            pupil = (cx * sx, cy * sy, pw * sx, ph * sy, color)
+
+        parts = {
+            "size": (w, h), "body": body, "hands": hands,
+            "pupil": pupil, "eye": None,
+        }
+
+        if len(self._scaled) > 8:
+            self._scaled.clear()
+
+        self._scaled[key] = parts
+
+        return parts
+
+    def _eye_layer(self, parts):
+        """El cuerpo recortado con un circulo suave alrededor del ojo: se
         dibuja despues de la oscuridad para que el ojo brille."""
 
-        img = self._scaled_face(face, zoom)
+        eye = parts["eye"]
 
-        key = (face, img.get_height())
+        if eye is None:
 
-        out = self._masked.get(key)
-
-        if out is None:
-
-            w, h = img.get_size()
+            body = parts["body"]
+            w, h = parts["size"]
 
             ex = int(cfg.EYE_FRAC[0] * w)
             ey = int(cfg.EYE_FRAC[1] * h)
@@ -241,12 +444,37 @@ class EyeMonster:
                     mask, (255, 255, 255, max(0, a)), (ex, ey), r
                 )
 
-            out = img.copy()
-            out.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            eye = body.copy()
+            eye.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-            self._masked[key] = out
+            parts["eye"] = eye
 
-        return out
+        return eye
+
+    def _pupil_sprite(self, w, h, color):
+        """Ovalo suave de la pupila (cacheado por tamaño)."""
+
+        w = max(2, int(w / 2.0 + 0.5) * 2)
+        h = max(4, int(h / 2.0 + 0.5) * 2)
+
+        key = (w, h, color)
+
+        spr = self._pupils.get(key)
+
+        if spr is None:
+
+            big = pygame.Surface((w * 3, h * 3), pygame.SRCALPHA)
+
+            pygame.draw.ellipse(big, (*color, 255), big.get_rect())
+
+            spr = pygame.transform.smoothscale(big, (w, h))
+
+            if len(self._pupils) > 60:
+                self._pupils.clear()
+
+            self._pupils[key] = spr
+
+        return spr
 
     def _glow_surf(self, radius, color):
 
@@ -280,30 +508,99 @@ class EyeMonster:
             int(self.pos.y * camera.zoom - camera.y),
         )
 
-    def draw(self, screen, camera):
-        """Cuerpo del monstruo (antes de la oscuridad: se ve poco)."""
+    def _body_origin(self, parts, camera):
+        """Esquina de arriba a la izquierda del cuerpo en pantalla (con el
+        flote ya sumado)."""
 
-        img = self._scaled_face(self.face, camera.zoom)
+        w, h = parts["size"]
 
-        rect = img.get_rect(center=self._screen_center(camera))
+        cx, cy = self._screen_center(camera)
 
-        if rect.colliderect(screen.get_rect()):
-            screen.blit(img, rect)
+        return (
+            cx - w // 2 + int(self.body_off.x * camera.zoom),
+            cy - h // 2 + int(self.body_off.y * camera.zoom),
+        )
 
-    def draw_glow(self, screen, camera):
+    def _draw_pupil(self, screen, parts, left, top):
+        """La pupila nueva, mirando hacia donde esta el jugador."""
+
+        pupil = parts["pupil"]
+
+        if pupil is None:
+            return
+
+        w, h = parts["size"]
+
+        cx, cy, pw, ph, color = pupil
+
+        dx = self.look.x * cfg.EYE_LOOK_X * w
+        dy = self.look.y * cfg.EYE_LOOK_Y * h
+
+        # late despacio, se ensancha al cargar el rayo y se afina al mirar de costado
+        kx = 1.0 + 0.10 * math.sin(self._t * 2.2) + 0.45 * self.charge
+        ky = 1.0 - 0.12 * abs(self.look.x)
+
+        spr = self._pupil_sprite(pw * kx, ph * ky, color)
+
+        screen.blit(
+            spr,
+            spr.get_rect(center=(int(left + cx + dx), int(top + cy + dy))),
+        )
+
+    def draw(self, screen, camera, look_at=None):
+        """Cuerpo del monstruo (antes de la oscuridad: se ve poco).
+        look_at = punto del mundo que mira (el jugador)."""
+
+        self._advance(look_at)
+
+        parts = self._parts(self.face, camera.zoom)
+
+        w, h = parts["size"]
+
+        left, top = self._body_origin(parts, camera)
+
+        margin = int(0.20 * h)
+
+        area = pygame.Rect(left - margin, top - margin, w + 2 * margin, h + 2 * margin)
+
+        if not area.colliderect(screen.get_rect()):
+            return
+
+        # las manos flotan por su cuenta (detras del cuerpo)
+        cx, cy = self._screen_center(camera)
+
+        for i, (hx, hy, piece) in enumerate(parts["hands"]):
+
+            off = self.hand_off[i] if i < len(self.hand_off) else self.body_off
+
+            screen.blit(
+                piece,
+                (
+                    cx - w // 2 + hx + int(off.x * camera.zoom),
+                    cy - h // 2 + hy + int(off.y * camera.zoom),
+                ),
+            )
+
+        screen.blit(parts["body"], (left, top))
+
+        self._draw_pupil(screen, parts, left, top)
+
+    def draw_glow(self, screen, camera, look_at=None):
         """Ojo y resplandor (despues de la oscuridad: el ojo se ve)."""
 
-        img = self._scaled_face(self.face, camera.zoom)
+        parts = self._parts(self.face, camera.zoom)
 
-        rect = img.get_rect(center=self._screen_center(camera))
+        w, h = parts["size"]
+
+        left, top = self._body_origin(parts, camera)
+
+        rect = pygame.Rect(left, top, w, h)
 
         if not rect.colliderect(screen.get_rect()):
             return
 
-        h = img.get_height()
-
-        ex = rect.left + int(cfg.EYE_FRAC[0] * img.get_width())
-        ey = rect.top + int(cfg.EYE_FRAC[1] * h)
+        ex = left + int(cfg.EYE_FRAC[0] * w)
+        ey = top + int(cfg.EYE_FRAC[1] * h)
 
         angry = self.face == "ira" or self.charge > 0.0
 
@@ -315,9 +612,9 @@ class EyeMonster:
 
         screen.blit(glow, glow.get_rect(center=(ex, ey)))
 
-        eye = self._eye_only(self.face, camera.zoom)
+        screen.blit(self._eye_layer(parts), rect)
 
-        screen.blit(eye, rect)
+        self._draw_pupil(screen, parts, left, top)
 
 
 # --------------------------------------------------- el monstruo (panel)
@@ -548,6 +845,7 @@ class Map2Scene:
         self._current = None
 
         self.t = 0.0
+        self._started = False
         self._fired = False
         self._ended = False
 
@@ -581,13 +879,42 @@ class Map2Scene:
 
         elif self.stage == "ray":
 
-            f = p.lerp(self.eye.eye_world(), cfg.CAMERA_MIX_RAY)
+            f = self._ray_focus()
+
+        elif self.stage == "hurt":
+
+            # Cenizo herido: se lo ve a el y se sigue viendo el monstruo
+            f = self._hit_focus()
 
         else:
 
             f = p.lerp(self.eye.eye_world(), cfg.CAMERA_MIX_CENIZO)
 
         return (f.x, f.y, 1.0, 0.5)
+
+    def _ray_focus(self):
+        """La camara acompaña al rayo: se queda en el ojo mientras se
+        carga, viaja con el rayo hacia Cenizo y termina entre Cenizo y el
+        monstruo (asi se ve el golpe sin perder al monstruo de vista)."""
+
+        eye = self.eye.eye_world()
+        target = self._target()
+
+        if self.t < CHARGE_TIME:
+            return pygame.Vector2(eye)
+
+        u = min(1.0, (self.t - CHARGE_TIME) / max(0.05, cfg.RAY_TRAVEL_TIME))
+        u = u * u * (3.0 - 2.0 * u)
+
+        return eye.lerp(self._hit_focus(), u)
+
+    def _hit_focus(self):
+        """Donde queda la camara cuando el rayo llega: Cenizo entero en
+        pantalla y el monstruo todavia a la vista (no se sale de cuadro)."""
+
+        return pygame.Vector2(self._target()).lerp(
+            pygame.Vector2(self.eye.pos), cfg.CAMERA_MIX_HIT
+        )
 
     def tick(self, dt):
         """Mueve la camara de a poco (los dialogos frenan el juego, por eso
@@ -615,8 +942,8 @@ class Map2Scene:
         if stage == "c1":
             self._snap_camera()
 
-        # Cenizo mas chico que de costumbre; despues del rayo, lastimado
-        # (y ahi se lo ve mas grande)
+        # Cenizo con el tamaño de siempre; despues del rayo, lastimado
+        # (y ahi se lo ve un poco mas grande)
         cls = CenizoHurtDialog if hurt else Tutorial
 
         self._current = cls(
@@ -698,10 +1025,16 @@ class Map2Scene:
             self.stage = "ray"
             self.ray_active = True
             self.t = 0.0
+            self._started = False
             self._fired = False
             self._ended = False
             self.eye.face = "ira"
-            self._snap_camera()
+
+            # la camara acompaña al rayo mas rapido que en los dialogos
+            self.game.camera.smoothing = cfg.CAMERA_SMOOTH_RAY
+
+            # el ojo se clava en Cenizo mientras se carga
+            self.eye.look_override = self._target()
 
             audio.play("ojo_carga")
 
@@ -715,6 +1048,7 @@ class Map2Scene:
 
         self.stage = "end"
         self.eye.charge = 0.0
+        self.eye.look_override = None
         self.eye.face = "base"
 
         self.game.cenizo.set_hold(False)
@@ -743,6 +1077,8 @@ class Map2Scene:
 
         self.tick(dt)
 
+        self.eye.look_override = self._target()
+
         g.cenizo.update(dt, g.player)
 
         # el ojo se carga
@@ -752,34 +1088,47 @@ class Map2Scene:
 
             g.fx.shake(1.5 + 4.5 * self.eye.charge, 0.1)
 
-        # sale el rayo
-        elif not self._fired:
-
-            self._fired = True
+        # sale el rayo: viaja del ojo a Cenizo (la camara lo acompaña)
+        else:
 
             self.eye.charge = 1.0
 
-            target = self._target()
+            if not self._started:
 
-            try:
-                g.fx.shake(11.0, 1.1)
-                g.fx.flash(0.55, (255, 170, 90), 0.9)
-                g.fx.hit(
-                    target.x, target.y, heavy=True, color=(255, 150, 70)
-                )
-                g.fx.hit(
-                    target.x, target.y, heavy=True, color=(255, 230, 160)
-                )
-            except Exception as error:
-                print(f"[map2] efecto del rayo: {error}")
+                self._started = True
 
-            try:
-                audio.play("ojo_rayo")
-                audio.play("hit_heavy")
-            except Exception:
-                pass
+                try:
+                    audio.play("ojo_rayo")
+                except Exception:
+                    pass
 
-            g.cenizo.hurt(away_from=self.eye.eye_world())
+            # el rayo llega: golpe, temblor y Cenizo sale despedido
+            if not self._fired and (
+                self.t >= CHARGE_TIME + cfg.RAY_TRAVEL_TIME
+            ):
+
+                self._fired = True
+
+                target = self._target()
+
+                try:
+                    g.fx.shake(11.0, 1.1)
+                    g.fx.flash(0.55, (255, 170, 90), 0.9)
+                    g.fx.hit(
+                        target.x, target.y, heavy=True, color=(255, 150, 70)
+                    )
+                    g.fx.hit(
+                        target.x, target.y, heavy=True, color=(255, 230, 160)
+                    )
+                except Exception as error:
+                    print(f"[map2] efecto del rayo: {error}")
+
+                try:
+                    audio.play("hit_heavy")
+                except Exception:
+                    pass
+
+                g.cenizo.hurt(away_from=self.eye.eye_world())
 
         # termina: Cenizo habla herido
         if self.t >= CHARGE_TIME + BEAM_TIME + AFTER_TIME and not self._ended:
@@ -787,6 +1136,11 @@ class Map2Scene:
             self._ended = True
             self.ray_active = False
             self.eye.charge = 0.0
+
+            self.game.camera.smoothing = cfg.CAMERA_SMOOTH
+
+            # despues del golpe el ojo vuelve a mirar al jugador
+            self.eye.look_override = None
 
             self._open_cenizo(cfg.CENIZO_HURT, "hurt", hurt=True)
 
@@ -815,6 +1169,12 @@ class Map2Scene:
         b = pygame.Vector2(
             tgt.x * cam.zoom - cam.x, tgt.y * cam.zoom - cam.y
         )
+
+        # la punta del rayo viaja del ojo hasta Cenizo
+        u = min(1.0, beam_t / max(0.05, cfg.RAY_TRAVEL_TIME))
+        u = 1.0 - (1.0 - u) ** 2
+
+        b = a.lerp(b, u)
 
         fade = 1.0 - max(0.0, (beam_t - BEAM_TIME * 0.6) / (BEAM_TIME * 0.4))
 

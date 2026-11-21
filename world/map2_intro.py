@@ -27,12 +27,23 @@ provisorio. Mas caras: agregar nombres a MONSTER_1_FACES / MONSTER_2_FACES
 
 # ------------------------------------------------------------ camara
 # Mientras habla el monstruo la camara se desplaza hacia el (CAMERA_MIX_MONSTER
-# = 1.0: lo centra); con Cenizo mira sobre todo al jugador; en el rayo se
-# ven los dos. Valores de 0 (el jugador) a 1 (el monstruo).
+# = 1.0: lo centra); con Cenizo mira sobre todo al jugador; en el rayo sigue
+# al rayo desde el ojo hasta Cenizo (ver mas abajo). Valores de 0 (el
+# jugador) a 1 (el monstruo).
 CAMERA_MIX_CENIZO = 0.30
 CAMERA_MIX_MONSTER = 1.0
-CAMERA_MIX_RAY = 0.55
+# Donde queda la camara cuando el rayo le pega a Cenizo y mientras habla herido:
+# entre Cenizo (0) y el monstruo (1). Con 0.35 se ve entero a Cenizo y se sigue
+# viendo la parte de abajo del monstruo (si sube mucho se pierde Cenizo; si baja
+# mucho se pierde el monstruo).
+CAMERA_MIX_HIT = 0.35
 CAMERA_SMOOTH = 3.0          # velocidad del movimiento de camara en la escena (mas bajo = mas lento)
+
+# El rayo: la camara arranca en el ojo mientras se carga, viaja junto con el
+# rayo hasta Cenizo y se queda en el cuando le pega (y mientras sale
+# despedido). Mas alto = la camara acompaña mas rapido.
+CAMERA_SMOOTH_RAY = 6.0
+RAY_TRAVEL_TIME = 0.35       # segundos que tarda el rayo en llegar del ojo a Cenizo
 
 # Al terminar la intro la camara se abre para mostrar mas del lugar (zoom
 # normal del juego: 4). Mas bajo = se ve mas mapa (3 = un tercio mas; 2.5 no
@@ -57,11 +68,39 @@ AURA_POS = [
 ]
 
 # AZUL: monstruo del ojo (centro del dibujo en el mundo)
-MONSTER_POS = (150, 1165)
-MONSTER_HEIGHT = 176         # alto en pixeles del mundo (era 84: ahora enorme)
+# (con MONSTER_HEIGHT = 260 el centro sube a y=1123: los pies quedan donde
+# estaban, en y=1253, y crece hacia arriba en vez de pisar a las arañas.
+# Si cambias el alto: y = 1253 - alto / 2)
+MONSTER_POS = (150, 1123)
+MONSTER_HEIGHT = 260         # alto en pixeles del mundo (era 176, antes 84: ahora imponente)
 MONSTER_ALPHA = 255          # 0-255 (el dibujo ya viene con el cuerpo tenue)
 # donde esta el ojo dentro del dibujo (0 a 1, desde arriba-izquierda)
 EYE_FRAC = (0.452, 0.465)
+
+# ------------------------------------------------------------ vida del monstruo
+# Nombre que se ve en el cartel cuando habla.
+MONSTER_NAME = "Oculumbra"
+
+# Flota como si respirara en el aire. Las cantidades son fracciones del alto
+# del monstruo (MONSTER_HEIGHT): 0.025 = sube y baja un 2,5% de su alto.
+FLOAT_SPEED = 1.0        # 1 = normal, mas alto = mas agitado (furioso ya va 1,5x)
+FLOAT_BOB = 0.025        # sube y baja
+FLOAT_SWAY = 0.012       # se balancea de costado
+FLOAT_LEAN = 0.010       # se inclina hacia donde mira
+
+# Las dos manos de roca flotan por su cuenta. Cada una es un rectangulo del
+# dibujo (x0, y0, x1, y1) en fracciones de 0 a 1: izquierda y derecha.
+HAND_RECTS = (
+    (0.00, 0.68, 0.27, 1.00),
+    (0.60, 0.70, 1.00, 1.00),
+)
+
+# El ojo te mira: la pupila se mueve hacia el jugador. Solo en estas caras
+# (en "burla" e "ira" la pupila va fija, como esta dibujada).
+EYE_LOOK_FACES = ("base",)
+EYE_LOOK_X = 0.066       # cuanto se corre la pupila de costado (fraccion del ancho)
+EYE_LOOK_Y = 0.012       # y hacia arriba/abajo (fraccion del alto)
+EYE_LOOK_SMOOTH = 5.0    # que tan rapido la pupila te sigue (mas alto = mas rapido)
 
 # ------------------------------------------------------------ dialogos
 # Cenizo NO vio el comic (el comic es la historia del juego, no de el).
