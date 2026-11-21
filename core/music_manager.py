@@ -17,6 +17,8 @@ TRACKS = {
     "jefe": {"fade_in": 0.6, "fade_out": 1.2, "gain": 1.0},
     # musica relax de la tienda (se genera con tools/make_shop_music.py)
     "tienda": {"fade_in": 2.0, "fade_out": 1.2, "gain": 1.0},
+    # cancion epica de la entrada al mapa 2 (tools/make_eye_sounds.py)
+    "ojo_epico": {"fade_in": 1.2, "fade_out": 2.2, "gain": 1.0},
 }
 
 

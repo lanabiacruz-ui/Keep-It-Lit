@@ -28,7 +28,10 @@ IN_TIME = 0.6           # segundos en aparecer
 LINGER = 12.0           # segundos que se queda despues del tutorial
 FADE_TIME = 2.5         # segundos en desvanecerse
 
+HURT_IMAGE = "botayuda_herido.png"   # Cenizo lastimado (tools/make_cenizo_herido.py)
+
 GLOW_COLOR = (110, 160, 255)
+HURT_GLOW_COLOR = (255, 120, 90)
 SPRITE_ALPHA = 235
 
 
@@ -51,7 +54,12 @@ class CenizoFollower:
         self.hurt_t = 0.0
         self.kick = pygame.Vector2()
 
-        self._source = None
+        # size_mul: escala extra (la escena del mapa 2 lo achica)
+        # injured: queda lastimado (dibujo herido) hasta el proximo appear()
+        self.size_mul = 1.0
+        self.injured = False
+
+        self._sources = {}
         self._cache = {}
         self._glow = {}
 
@@ -70,6 +78,9 @@ class CenizoFollower:
         self.fading = False
         self.linger_t = None
         self.kick = pygame.Vector2()
+
+        self.size_mul = 1.0
+        self.injured = False
 
         self.alpha = 1.0 if instant else 0.0
 
@@ -91,9 +102,11 @@ class CenizoFollower:
             self.linger_t = LINGER
 
     def hurt(self, away_from=None):
-        """Golpe del rayo: parpadea en rojo y sale empujado."""
+        """Golpe del rayo: parpadea en rojo, sale empujado y se queda
+        lastimado (con su dibujo herido)."""
 
         self.hurt_t = 1.0
+        self.injured = True
 
         if away_from is not None:
 
@@ -114,7 +127,7 @@ class CenizoFollower:
         h = getattr(getattr(player, "image_rect", None), "height", None)
 
         if h:
-            self.height_world = h * HEIGHT_FRAC
+            self.height_world = h * HEIGHT_FRAC * self.size_mul
 
         if self.fading:
 
@@ -160,20 +173,28 @@ class CenizoFollower:
 
     def _src(self):
 
-        if self._source is None:
+        name = HURT_IMAGE if self.injured else CHARACTER_IMAGE
 
-            img = Tutorial._load_cropped(CHARACTER_IMAGE, None)
+        img = self._sources.get(name)
+
+        if img is None:
+
+            img = Tutorial._load_cropped(name, None)
+
+            # sin el dibujo herido se usa el normal
+            if img is None and name != CHARACTER_IMAGE:
+                img = Tutorial._load_cropped(CHARACTER_IMAGE, None)
 
             if img is None:
                 img = Tutorial._fallback_character(300)
 
-            self._source = img
+            self._sources[name] = img
 
-        return self._source
+        return img
 
     def _sprite(self, height, flip):
 
-        key = (height, flip)
+        key = (height, flip, self.injured)
 
         spr = self._cache.get(key)
 
@@ -197,9 +218,13 @@ class CenizoFollower:
 
     def _glow_surf(self, radius):
 
-        glow = self._glow.get(radius)
+        key = (radius, self.injured)
+
+        glow = self._glow.get(key)
 
         if glow is None:
+
+            color = HURT_GLOW_COLOR if self.injured else GLOW_COLOR
 
             glow = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
 
@@ -207,14 +232,12 @@ class CenizoFollower:
 
                 a = int(70 * (1.0 - i / radius) ** 1.6)
 
-                pygame.draw.circle(
-                    glow, (*GLOW_COLOR, a), (radius, radius), i
-                )
+                pygame.draw.circle(glow, (*color, a), (radius, radius), i)
 
             if len(self._glow) > 6:
                 self._glow.clear()
 
-            self._glow[radius] = glow
+            self._glow[key] = glow
 
         return glow
 
@@ -231,6 +254,10 @@ class CenizoFollower:
         spr = self._sprite(height, self.facing < 0)
 
         bob = math.sin(self.t * 2.2) * 3.0
+
+        if self.injured:
+            # lastimado: flota mas bajo y tiembla
+            bob = bob * 0.5 + 3.0 + math.sin(self.t * 31.0) * 0.8
 
         c = self.center
 

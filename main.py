@@ -171,6 +171,11 @@ def desired_music():
         and game.state == "playing"
     ):
 
+        # escena del monstruo del ojo (entrada al mapa 2): cancion epica
+        if getattr(game, "map2_scene", None) is not None:
+
+            return "ojo_epico"
+
         # la musica tranquila suena al estar en la ZONA de la tienda
         # (no depende de tener abierto el menu de compra)
         zone = getattr(game, "zone_tracker", None)

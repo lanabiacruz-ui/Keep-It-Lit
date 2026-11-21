@@ -2,7 +2,8 @@
 
 Coordenadas, textos y caras: world/map2_intro.py (editar SOLO ese archivo).
 
-Este archivo tiene la logica:
+Este archivo tiene la logica (cambios: Cenizo mas chico y lastimado despues
+del rayo, monstruo enorme con voz de miedo, musica epica en main.py):
 
   Map2Scene   la secuencia: Cenizo (2) -> monstruo -> Cenizo -> monstruo ->
               rayo del ojo que le pega a Cenizo -> Cenizo herido -> combate.
@@ -45,9 +46,13 @@ EYE_THEME = dict(
 )
 
 # tiempos del rayo (segundos)
-CHARGE_TIME = 1.1       # el ojo se carga
-BEAM_TIME = 0.5         # el rayo sale
-AFTER_TIME = 0.6        # silencio antes de que Cenizo hable
+CHARGE_TIME = 1.1       # el ojo se carga (dura igual que ojo_carga.wav)
+BEAM_TIME = 0.7         # el rayo sale
+AFTER_TIME = 0.9        # silencio antes de que Cenizo hable
+
+# Cenizo en esta escena es mas chico que de costumbre
+CENIZO_DIALOG_HEIGHT = 118    # alto del retrato en el dialogo (normal: 170)
+CENIZO_WORLD_SCALE = 0.70     # escala de Cenizo flotando en el mundo
 
 
 # ------------------------------------------------------------- imagenes
@@ -84,6 +89,49 @@ def _provisional():
     pygame.draw.ellipse(surf, (30, 26, 10, 255), (90, 106, 20, 78))
 
     return surf
+
+
+# ------------------------------------------------------ Cenizo lastimado
+
+class CenizoHurtDialog(Tutorial):
+    """Cenizo hablando despues del rayo: dibujo herido y tembloroso
+    (assets/maps/ui/botayuda_herido.png, se crea con
+    tools/make_cenizo_herido.py)."""
+
+    HURT_IMAGE = "botayuda_herido.png"
+
+    # habla mas despacio, con pausas, como quien le duele
+    TYPE_SPEED = 40.0
+    PAUSE_END = 0.34
+    PAUSE_COMMA = 0.14
+    PAUSE_DOTS = 0.24
+
+    def _source_character(self):
+
+        img = Tutorial._load_cropped(self.HURT_IMAGE, None)
+
+        if img is None:
+            return super()._source_character()
+
+        return img
+
+    def draw(self, screen):
+
+        if not self.active or self.phase != "show":
+            return super().draw(screen)
+
+        # tiembla mientras habla (sufriendo un poco)
+        amp = 2.0 if not self._typing_done() else 0.8
+        shiver = int(round(math.sin(self.age * 47.0) * amp))
+
+        saved = self.char_rect
+
+        self.char_rect = saved.move(shiver, 0)
+
+        try:
+            super().draw(screen)
+        finally:
+            self.char_rect = saved
 
 
 # ------------------------------------------------------ el monstruo (mundo)
@@ -274,30 +322,39 @@ class EyeMonster:
 # --------------------------------------------------- el monstruo (panel)
 
 class EyeDialog(BossDialog):
-    """El monstruo hablando por el panel, con una cara por pagina."""
+    """El monstruo hablando por el panel, con una cara por pagina.
+
+    Da miedo: es enorme (casi toda la pantalla de alto), su voz es un
+    gruñido grave propio (ojo_a/b/c, se hacen con tools/make_eye_sounds.py),
+    cada frase arranca con un rugido y un temblor de pantalla, el borde de
+    la pantalla se tiñe de rojo oscuro y el ojo late mientras habla.
+    """
 
     THEME = EYE_THEME
 
     PORTRAITS = ("monstruo_ojo.png",)
 
-    CHAR_FRACTION = 0.50
+    CHAR_FRACTION = 0.84          # era 0.50: ahora ocupa casi toda la pantalla
     FRAME_WIDTH = 450
 
-    # voz grave y lenta, mas amenazante que graciosa
-    TYPE_SPEED = 30.0
+    # voz grave y lenta: cada letra es un gruñido
+    TYPE_SPEED = 24.0
     BLIP_EVERY = 2
-    PAUSE_END = 0.5
-    PAUSE_COMMA = 0.2
-    PAUSE_DOTS = 0.3
-    BLIPS = ("golem_a", "golem_b", "golem_c")
+    PAUSE_END = 0.70
+    PAUSE_COMMA = 0.30
+    PAUSE_DOTS = 0.45
+    BLIPS = ("ojo_a", "ojo_b", "ojo_c")
 
     HOP_TIME = 0.5
 
-    def __init__(self, screen_size, pages, faces=()):
+    def __init__(self, screen_size, pages, faces=(), fx=None):
 
         self.faces = list(faces)
+        self.fx = fx
         self._face_cache = {}
         self._crop = None
+        self._vignette = None
+        self._vignette_size = None
 
         super().__init__(screen_size, pages=pages)
 
@@ -354,6 +411,124 @@ class EyeDialog(BossDialog):
         if surf is not None:
             self.character = surf
 
+        # rugido + temblor de pantalla cada vez que habla
+        audio.play("ojo_rugido")
+
+        fx = getattr(self, "fx", None)
+
+        if fx is not None:
+
+            try:
+                fx.shake(5.0, 0.9)
+                fx.flash(0.30, (120, 0, 0), 0.35)
+            except Exception as error:
+                print(f"[map2] efecto de la voz: {error}")
+
+    # ---- el miedo se dibuja aca
+
+    def _make_vignette(self, size):
+        """Borde de pantalla rojo oscuro (centro transparente)."""
+
+        steps = 40
+
+        # se pinta de afuera hacia adentro y el alfa va bajando: el borde
+        # queda oscuro y el centro limpio
+        vignette = pygame.Surface((160, 90), pygame.SRCALPHA)
+
+        for i in range(steps, 0, -1):
+
+            k = i / steps                     # 1 = borde, ~0 = centro
+
+            alpha = int(205 * k ** 2.4)
+
+            rect = pygame.Rect(0, 0, int(160 * k * 1.45), int(90 * k * 1.45))
+            rect.center = (80, 45)
+
+            pygame.draw.ellipse(vignette, (46, 0, 0, alpha), rect)
+
+        return pygame.transform.smoothscale(vignette, size)
+
+    def draw(self, screen):
+
+        if not self.active:
+            return
+
+        size = screen.get_size()
+
+        if self._vignette is None or self._vignette_size != size:
+
+            self._vignette = self._make_vignette(size)
+            self._vignette_size = size
+
+        # entra y sale con el panel: el rojo no queda colgado en pantalla
+        if self.phase == "in":
+            k = min(1.0, self.phase_time / max(0.01, self.SLIDE_TIME))
+        elif self.phase == "out":
+            k = 1.0 - min(1.0, self.phase_time / max(0.01, self.SLIDE_TIME))
+        else:
+            k = 1.0
+
+        # el rojo late como un corazon y parpadea de vez en cuando
+        beat = 0.55 + 0.45 * math.sin(self.age * 5.2) ** 2
+        flicker = 0.85 if math.sin(self.age * 23.0) > 0.93 else 1.0
+
+        self._vignette.set_alpha(int(255 * k * beat * flicker))
+
+        screen.blit(self._vignette, (0, 0))
+
+        # el monstruo tiembla de furia mientras habla (como un gruñido)
+        talking = self.phase == "show" and not self._typing_done()
+
+        if talking:
+
+            shake_x = int(round(math.sin(self.age * 61.0) * 3.0))
+            shake_y = int(round(math.sin(self.age * 53.0 + 1.0) * 2.0))
+
+            saved = self.char_rect
+
+            self.char_rect = saved.move(shake_x, shake_y)
+
+            try:
+                super().draw(screen)
+            finally:
+                self.char_rect = saved
+
+        else:
+            super().draw(screen)
+
+        if self.phase != "show":
+            return
+
+        # el ojo late rojo-naranja (luz aditiva, sin alpha)
+        pulse = 0.5 + 0.5 * math.sin(self.age * (9.0 if talking else 3.0))
+
+        r = int(self.char_rect.width * (0.20 + 0.04 * pulse))
+
+        eye = pygame.Surface((r * 2, r * 2))
+
+        for j in range(r, 0, -3):
+
+            glow = (1.0 - j / r) ** 1.6 * (0.30 + 0.35 * pulse)
+
+            pygame.draw.circle(
+                eye,
+                (int(255 * glow), int(90 * glow), int(20 * glow)),
+                (r, r), j,
+            )
+
+        fx_, fy_ = cfg.EYE_FRAC
+
+        screen.blit(
+            eye,
+            eye.get_rect(
+                center=(
+                    self.char_rect.left + int(fx_ * self.char_rect.width),
+                    self.char_rect.top + int(fy_ * self.char_rect.height),
+                )
+            ),
+            special_flags=pygame.BLEND_RGB_ADD,
+        )
+
 
 # ------------------------------------------------------------- la escena
 
@@ -405,14 +580,19 @@ class Map2Scene:
 
         g.camera.update(g.player, focus=self.camera_focus())
 
-    def _open_cenizo(self, pages, stage):
+    def _open_cenizo(self, pages, stage, hurt=False):
 
         self.stage = stage
 
         self._snap_camera()
 
-        self._current = Tutorial(
-            self._size(), pages=self.mark_keys(pages)
+        # Cenizo mas chico que de costumbre; despues del rayo, lastimado
+        cls = CenizoHurtDialog if hurt else Tutorial
+
+        self._current = cls(
+            self._size(),
+            pages=self.mark_keys(pages),
+            char_height=CENIZO_DIALOG_HEIGHT,
         )
 
         self.game.tutorial = self._current
@@ -425,7 +605,10 @@ class Map2Scene:
 
         self._snap_camera()
 
-        self._current = EyeDialog(self._size(), pages=pages, faces=faces)
+        self._current = EyeDialog(
+            self._size(), pages=pages, faces=faces,
+            fx=getattr(self.game, "fx", None),
+        )
 
         self.game.tutorial = self._current
 
@@ -441,6 +624,7 @@ class Map2Scene:
         )
 
         g.cenizo.appear(spot, instant=True)
+        g.cenizo.size_mul = CENIZO_WORLD_SCALE
         g.cenizo.set_hold(True)
 
         self.eye.face = "base"
@@ -483,6 +667,8 @@ class Map2Scene:
             self.eye.face = "ira"
             self._snap_camera()
 
+            audio.play("ojo_carga")
+
         elif self.stage == "hurt":
 
             self._finish()
@@ -521,7 +707,7 @@ class Map2Scene:
 
             self.eye.charge = self.t / CHARGE_TIME
 
-            g.fx.shake(1.0 + 2.0 * self.eye.charge, 0.1)
+            g.fx.shake(1.5 + 4.5 * self.eye.charge, 0.1)
 
         # sale el rayo
         elif not self._fired:
@@ -533,15 +719,19 @@ class Map2Scene:
             target = self._target()
 
             try:
-                g.fx.shake(6.0, 0.5)
-                g.fx.flash(0.22, (255, 150, 70), 0.6)
+                g.fx.shake(11.0, 1.1)
+                g.fx.flash(0.55, (255, 170, 90), 0.9)
                 g.fx.hit(
                     target.x, target.y, heavy=True, color=(255, 150, 70)
+                )
+                g.fx.hit(
+                    target.x, target.y, heavy=True, color=(255, 230, 160)
                 )
             except Exception as error:
                 print(f"[map2] efecto del rayo: {error}")
 
             try:
+                audio.play("ojo_rayo")
                 audio.play("hit_heavy")
             except Exception:
                 pass
@@ -555,7 +745,7 @@ class Map2Scene:
             self.ray_active = False
             self.eye.charge = 0.0
 
-            self._open_cenizo(cfg.CENIZO_HURT, "hurt")
+            self._open_cenizo(cfg.CENIZO_HURT, "hurt", hurt=True)
 
     def draw_overlay(self, screen):
         """Carga del ojo y rayo (despues de todo lo demas)."""
@@ -592,7 +782,7 @@ class Map2Scene:
     @staticmethod
     def _draw_beam(screen, a, b, k):
 
-        pad = 90
+        pad = 120
 
         left = int(min(a.x, b.x)) - pad
         top = int(min(a.y, b.y)) - pad
@@ -605,10 +795,11 @@ class Map2Scene:
         pb = (b.x - left, b.y - top)
 
         layers = (
-            (48, (255, 90, 30, 70)),
-            (30, (255, 140, 50, 125)),
-            (16, (255, 214, 130, 205)),
-            (7, (255, 255, 238, 255)),
+            (84, (255, 70, 20, 60)),
+            (56, (255, 100, 30, 100)),
+            (34, (255, 150, 60, 150)),
+            (18, (255, 214, 130, 215)),
+            (8, (255, 255, 238, 255)),
         )
 
         for width, color in layers:

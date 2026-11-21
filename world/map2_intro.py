@@ -41,41 +41,59 @@ AURA_POS = [
 ]
 
 # AZUL: monstruo del ojo (centro del dibujo en el mundo)
-MONSTER_POS = (131, 1209)
-MONSTER_HEIGHT = 84          # alto en pixeles del mundo
+MONSTER_POS = (150, 1165)
+MONSTER_HEIGHT = 176         # alto en pixeles del mundo (era 84: ahora enorme)
 MONSTER_ALPHA = 255          # 0-255 (el dibujo ya viene con el cuerpo tenue)
 # donde esta el ojo dentro del dibujo (0 a 1, desde arriba-izquierda)
 EYE_FRAC = (0.452, 0.465)
 
 # ------------------------------------------------------------ dialogos
-# Cenizo ya vio el comic: el gato era un señuelo del monstruo del ojo.
+# Cenizo NO vio el comic (el comic es la historia del juego, no de el).
+# Ya conoce al jugador, habla por los codos y sabe un poco de las arañas,
+# pero no sabe como se llama el monstruo ni que son las doradas.
+# Cada linea es una pagina: mantenerlas cortas para que no se achique la letra.
 CENIZO_1 = [
-    "¡Buuu! Perdón por el susto, {nombre}... aunque creo que hoy te toca "
-    "uno peor. Lo viste en el cómic: nunca fue tu gato, era un cebo de ese "
-    "[[monstruo del ojo]]. Y caíste. ¡Estás en peligro!",
+    "¡Buuu! ¡{nombre}! ¿Te asusté? ¡Te asusté! Perdón, perdón, es que \
+llegué volando y no me pude aguantar.",
 
-    "Esas son [[arañas]]: te lanzan telarañas que te ralentizan y, si te "
-    "atrapan, vienen a morderte. Las doradas son [[Aurantulas]]: más "
-    "grandes, tiran ráfagas y su veneno MATA. ¡Atácalas con tu luz y no te "
-    "quedes quieto!",
+    "Oye, oye, ¿viste dónde estamos? Qué oscuro, qué húmedo, qué FEO. \
+Y encima está lleno de patitas. ¡Muchas patitas!",
+
+    "Esas son [[arañas]], eso sí lo sé. Lanzan telarañas que te ralentizan y, \
+si te atrapan, vienen a morderte. ¡Y muerden feo!",
+
+    "Y esas doradas... mmm, esas no sé qué son. Nunca vi unas así. Son más \
+grandes, brillan raro y no me dan ninguna confianza.",
+
+    "Tú atácalas con tu luz y no te quedes quieto, ¿sí? Yo te animo desde \
+aquí atrás... con mucho respeto a la distancia. Espera...",
+
+    "¿Sientes eso? Es como si algo nos estuviera mirando. Algo GRANDE. \
+Ay, no me gusta nada esto, {nombre}...",
 ]
 
 MONSTER_1 = [
-    "Así que traes a un ayudante... y algo más que imponga.",
+    "Así que traes a un ayudante... Se ve muy facil lo dependiente que eres..",
 ]
 # cara del monstruo en cada pagina de arriba (archivo
 # assets/maps/combate/monstruo_ojo_<cara>.png; si falta usa monstruo_ojo.png)
 MONSTER_1_FACES = ["burla"]
 
 CENIZO_2 = [
-    "Oh... parece que él puede verme. Emmh...",
+    "¿¡ESO HABLÓ!? ¿¡Dijo 'ayudante'!! Oh... parece que él puede verme. \
+Emmh...",
+
+    "Nunca he entrado por esta cueva porque hablaban de que era muy peligroso.. Creo que debemos de irnos.. ¿Podemos hablarlo? ¿Un té? ¿Algo?",
 ]
 
 MONSTER_2 = [
-    "Pues no lo necesitarás más.",
+    "No necesitaras mas a tu fantasma burlon..",
 ]
 MONSTER_2_FACES = ["ira"]
 
 CENIZO_HURT = [
-    "Estoy bien... Solo salgamos de esta...",
+    "¡AAAH! Eso... eso dolió un montón. ¡Estoy bien! ¡Estoy bien! Es solo \
+un rasguñito... Estoy... Bien..",
+
+    "Solo salgamos de esta... {nombre}.... Tu puedes... Yo resisto..",
 ]

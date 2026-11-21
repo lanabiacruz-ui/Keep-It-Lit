@@ -161,6 +161,14 @@ SOUNDS = {
     "aura_screech": (0.85, 1.00),
     "poison_tick": (0.45, 0.30),
     "poison_start": (0.70, 0.30),
+
+    # --- monstruo del ojo (mapa 2): tools/make_eye_sounds.py ---
+    "ojo_a":        (0.70, 0.0),
+    "ojo_b":        (0.70, 0.0),
+    "ojo_c":        (0.70, 0.0),
+    "ojo_rugido":   (0.95, 0.40),
+    "ojo_carga":    (0.85, 0.30),
+    "ojo_rayo":     (1.00, 0.30),
 }
 
 

@@ -5700,7 +5700,7 @@ class NewGame:
 
         if event.type == pygame.KEYDOWN:
 
-            # F5-F9 son trucos: solo andan si data/trucos.json dice true
+            # F5-F10 son trucos: solo andan si data/trucos.json dice true
             # (F3 y F4 no son trucos, andan siempre)
             trucos = (
                 pygame.K_F5 <= event.key <= pygame.K_F9
@@ -5750,6 +5750,17 @@ class NewGame:
 
                 # al reves de F8 (debug): resta monedas, sin bajar de 0
                 self.coins = max(0, self.coins - DEBUG_COINS)
+
+            elif (
+                event.key == pygame.K_F10
+                and trucos_activados()
+                and self.map2_scene is None
+            ):
+
+                # PRUEBA: salta directo a la escena del monstruo del ojo
+                # (mapa 2) sin jugar todo el juego ni ver el comic
+                enter_map(self, "mapa2")
+                self.begin_map2_intro()
 
             elif event.key == pygame.K_SPACE and self.state == "playing":
 
