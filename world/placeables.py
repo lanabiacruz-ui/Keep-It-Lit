@@ -183,6 +183,24 @@ SLOT_FILE = "slot_contenedor.png"
 SLOT_HOVER_FILE = "slot_contenedor_hover.png"
 
 SLOT_PX = 56
+
+# mantener apretado (click derecho en el cofre, tecla de soltar): pasa de a
+# 1 y cada 2 items va mas rapido
+HOLD_FIRST_DELAY = 0.40
+HOLD_BASE_DELAY = 0.30
+HOLD_MIN_DELAY = 0.05
+DRAG_MIN_PX = 6
+
+
+def hold_delay(moved):
+    """Segundos hasta el siguiente item cuando se mantiene apretado.
+    `moved` = cuantos items ya paso en este mantenido: cada 2 items el
+    intervalo baja un 20%."""
+
+    if moved <= 1:
+        return HOLD_FIRST_DELAY
+
+    return max(HOLD_MIN_DELAY, HOLD_BASE_DELAY * (0.8 ** (moved // 2)))
 SLOT_GAP = 8
 PANEL_COLS = 4
 PANEL_MARGIN_X = 24
@@ -1317,6 +1335,10 @@ class PlaceableManager:
 
         self.open_obj = None
 
+        # arrastre dentro del cofre/bolsa y click derecho mantenido
+        self._cdrag = None
+        self._hold = None
+
         self.anvil_panel = _yunque.AnvilPanel()
         self.machine_panel = _maquina.MachinePanel()
         self.roulette_panel = _ruleta.RoulettePanel()
@@ -1994,8 +2016,20 @@ class PlaceableManager:
             and event.key == pygame.K_ESCAPE
         ):
             self.open_obj = None
+            self._cdrag = None
+            self._hold = None
 
             return True
+
+        if event.type == pygame.MOUSEBUTTONUP:
+
+            if event.button == 3:
+                self._hold = None
+
+            elif event.button == 1 and self._cdrag is not None:
+                return self._panel_release(game, event)
+
+            return False
 
         if event.type != pygame.MOUSEBUTTONDOWN:
             return False
@@ -2402,7 +2436,18 @@ class PlaceableManager:
 
             if r.collidepoint(event.pos):
 
-                self._to_inventory(game, obj, i, one)
+                if one:
+
+                    # click derecho: de a 1 (mantenido sigue, cada vez mas rapido)
+                    if self._to_inventory(game, obj, i, True):
+                        self._hold = {
+                            "mode": "inv", "index": i, "n": 1, "t": 0.0
+                        }
+
+                elif obj.container.slots[i]:
+
+                    # click: pasa todo al soltar; arrastrar: mueve de lugar
+                    self._cdrag = {"from": i, "start": event.pos}
 
                 return True
 
@@ -2410,7 +2455,13 @@ class PlaceableManager:
 
         if hotbar is not None:
 
-            self._to_container(game, obj, hotbar, one)
+            if (
+                self._to_container(game, obj, hotbar, one)
+                and one
+            ):
+                self._hold = {
+                    "mode": "cont", "index": hotbar, "n": 1, "t": 0.0
+                }
 
             return True
 
@@ -2419,12 +2470,167 @@ class PlaceableManager:
 
         return False
 
+    def _cdrag_active(self):
+        """True si se esta arrastrando un item del cofre (ya se movio el
+        mouse). Si se solto el click por fuera, cancela."""
+
+        drag = self._cdrag
+
+        if drag is None:
+            return False
+
+        if not pygame.mouse.get_pressed()[0]:
+            self._cdrag = None
+            return False
+
+        mx, my = pygame.mouse.get_pos()
+
+        return math.hypot(
+            mx - drag["start"][0], my - drag["start"][1]
+        ) >= DRAG_MIN_PX
+
+    def _panel_release(self, game, event):
+
+        drag = self._cdrag
+        self._cdrag = None
+
+        obj = self.open_obj
+
+        if obj is None or obj.container is None:
+            return True
+
+        panel, slots = self._panel_layout(game)
+
+        src = drag["from"]
+
+        target = None
+
+        for i, r in enumerate(slots):
+
+            if r.collidepoint(event.pos):
+                target = i
+
+        moved_px = math.hypot(
+            event.pos[0] - drag["start"][0],
+            event.pos[1] - drag["start"][1],
+        )
+
+        if moved_px < DRAG_MIN_PX:
+
+            # fue un click: pasa todo al inventario
+            if target == src:
+                self._to_inventory(game, obj, src, False)
+
+            return True
+
+        if target is not None and target != src:
+
+            self._move_within(game, obj, src, target)
+
+        elif game.hud.slot_at(event.pos) is not None:
+
+            # soltado sobre la hotbar: lo pasa al inventario
+            self._to_inventory(game, obj, src, False)
+
+        return True
+
+    def _move_within(self, game, obj, src, dst):
+        """Mueve un item de un lugar a otro del mismo cofre: lugar vacio =
+        lo mueve, mismo item = los junta, otro item = los intercambia."""
+
+        slots = obj.container.slots
+
+        a, b = slots[src], slots[dst]
+
+        if not a:
+            return
+
+        if b is None:
+
+            slots[dst], slots[src] = a, None
+
+        elif b[0] == a[0]:
+
+            room = self._stack_limit(game, a[0]) - b[1]
+
+            n = min(room, a[1])
+
+            if n <= 0:
+                return
+
+            b[1] += n
+            a[1] -= n
+
+            if a[1] <= 0:
+                slots[src] = None
+
+        else:
+
+            slots[src], slots[dst] = b, a
+
+        audio.play("pickup")
+
+    def _tick_hold(self, game, dt):
+        """Click derecho mantenido sobre un lugar del cofre o de la hotbar:
+        sigue pasando de a 1, cada 2 items mas rapido."""
+
+        h = self._hold
+
+        obj = self.open_obj
+
+        if (
+            h is None
+            or obj is None
+            or obj.container is None
+            or not pygame.mouse.get_pressed()[2]
+        ):
+            self._hold = None
+            return
+
+        pos = pygame.mouse.get_pos()
+
+        if h["mode"] == "inv":
+
+            panel, slots = self._panel_layout(game)
+
+            if (
+                h["index"] >= len(slots)
+                or not slots[h["index"]].collidepoint(pos)
+                or not obj.container.slots[h["index"]]
+            ):
+                self._hold = None
+                return
+
+        elif (
+            game.hud.slot_at(pos) != h["index"]
+            or game.hud.items[h["index"]] is None
+        ):
+            self._hold = None
+            return
+
+        h["t"] += dt
+
+        if h["t"] < hold_delay(h["n"]):
+            return
+
+        h["t"] = 0.0
+
+        if h["mode"] == "inv":
+            moved = self._to_inventory(game, obj, h["index"], True)
+        else:
+            moved = self._to_container(game, obj, h["index"], True)
+
+        if moved:
+            h["n"] += 1
+        else:
+            self._hold = None
+
     def _to_inventory(self, game, obj, index, one):
 
         s = obj.container.slots[index]
 
         if not s:
-            return
+            return 0
 
         item_id = s[0]
 
@@ -2458,12 +2664,14 @@ class PlaceableManager:
         if moved:
             audio.play("pickup")
 
+        return moved
+
     def _to_container(self, game, obj, slot, one):
 
         item_id = game.hud.items[slot]
 
         if item_id is None:
-            return
+            return 0
 
         want = 1 if one else game.hud.counts[slot]
 
@@ -2488,6 +2696,8 @@ class PlaceableManager:
 
         if moved:
             audio.play("bag_put")
+
+        return moved
 
     def _draw_hint(self, screen, panel, text, color=(170, 176, 192)):
 
@@ -2594,6 +2804,8 @@ class PlaceableManager:
 
         hover_name = None
 
+        dragging = self._cdrag_active()
+
         for i, r in enumerate(slots):
 
             hover = r.collidepoint(mouse)
@@ -2623,10 +2835,17 @@ class PlaceableManager:
 
             icon = self._icon(s[0], 40)
 
+            lifted = dragging and i == self._cdrag["from"]
+
             if icon is not None:
+
+                if lifted:
+                    icon = icon.copy()
+                    icon.set_alpha(70)
+
                 screen.blit(icon, icon.get_rect(center=r.center))
 
-            if s[1] > 1:
+            if s[1] > 1 and not lifted:
 
                 n = self._font(22).render(str(s[1]), True, (255, 255, 255))
 
@@ -2639,8 +2858,37 @@ class PlaceableManager:
 
         self._draw_hint(
             screen, panel,
-            "Click: pasar todo  \u00b7  Click derecho: de a 1  \u00b7  Esc: cerrar"
+            "Click: pasar todo  \u00b7  Arrastrar: mover de lugar  \u00b7  "
+            "Click derecho: de a 1 (mantén para seguir)  \u00b7  Esc: cerrar"
         )
+
+        if dragging:
+
+            src = obj.container.slots[self._cdrag["from"]]
+
+            ghost = self._icon(src[0], 40) if src else None
+
+            if ghost is not None:
+
+                ghost = ghost.copy()
+                ghost.set_alpha(210)
+
+                screen.blit(ghost, ghost.get_rect(center=mouse))
+
+                if src[1] > 1:
+
+                    n = self._font(22).render(
+                        str(src[1]), True, (255, 255, 255)
+                    )
+
+                    screen.blit(
+                        n,
+                        n.get_rect(
+                            bottomright=(
+                                mouse[0] + 22, mouse[1] + 22
+                            )
+                        )
+                    )
 
         if hover_name:
 
@@ -2654,6 +2902,13 @@ class PlaceableManager:
     def update(self, game, dt):
 
         self.clock += dt
+
+        if self.open_obj is None:
+            self._cdrag = None
+            self._hold = None
+
+        elif self._hold is not None:
+            self._tick_hold(game, dt)
 
         game.collision_map.static_blockers = [
             obj.rect.copy() for obj in self.objects

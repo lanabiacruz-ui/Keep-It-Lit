@@ -1128,8 +1128,8 @@ class MapSwitcher:
         self.phase = None
         self.t = 0.0
 
-        # se pone en True cuando el jugador cruza al mapa 2: el juego
-        # termina ahi (comic final + "Continuara...")
+        # se pone en True la PRIMERA vez que el jugador cruza al mapa 2:
+        # se muestra el comic final y despues sigue jugando en el mapa 2
         self.ending = False
 
         self._blocked_shown = False
@@ -1153,22 +1153,9 @@ class MapSwitcher:
 
             in_zone = EXIT_ZONE_MAP1.collidepoint(pos)
 
-            if getattr(game, "finished", False):
-
-                # partida terminada: el final se ve una sola vez y ya
-                # no se puede pasar a la zona 2
-                if in_zone and not self._blocked_shown:
-
-                    self._blocked_shown = True
-
-                    if hasattr(game, "show_message"):
-                        game.show_message("El camino está cerrado")
-
-                elif not in_zone:
-
-                    self._blocked_shown = False
-
-            elif door_gone and in_zone:
+            # el comic final se ve una sola vez (en update); despues se
+            # puede ir y volver del mapa 2 cuando quiera
+            if door_gone and in_zone:
                 self._start("mapa2")
 
         elif EXIT_ZONE_MAP2.collidepoint(pos):
@@ -1194,6 +1181,7 @@ class MapSwitcher:
             self.phase == "out"
             and self.t >= FADE_OUT
             and self.target == "mapa2"
+            and not getattr(game, "finished", False)
         ):
 
             self.ending = True
@@ -1213,6 +1201,15 @@ class MapSwitcher:
 
             self.phase = None
             self.t = 0.0
+
+    def resume_in(self, target="mapa2"):
+        """Despues del comic final: el jugador ya esta en `target` (lo puso
+        game.finish_game) y la pantalla aparece desde negro."""
+
+        self.ending = False
+        self.target = target
+        self.phase = "in"
+        self.t = 0.0
 
     def draw(self, screen):
 

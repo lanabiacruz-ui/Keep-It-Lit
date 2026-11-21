@@ -51,11 +51,12 @@ from world.final_door import (
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
 from world.slime import SlimeManager
+from world.spider import SpiderManager
 from world.shop import (
     Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES,
     SHOP_UNLOCK_ZONES, SHOP_UNLOCK_REQS, CENTER_TAG
 )
-from world.placeables import PlaceableManager
+from world.placeables import PlaceableManager, hold_delay
 from world.dungeon_map import DungeonMapView
 from ui.hud import Hud
 from ui.effects_bar import EffectsBar
@@ -97,7 +98,10 @@ MATCH_POS = (897, 998)
 
 class StartBox(LightItem):
 
-    INTERACT_DISTANCE = 46
+    # Antes 46: era menor que la distancia a la que te frenaba la mesa por
+    # algunos lados, asi que no llegabas a agarrarlo. Generoso a proposito:
+    # es lo primero que hace el jugador y tiene la cuenta regresiva corriendo.
+    INTERACT_DISTANCE = 64
 
     def __init__(self, x, y):
 
@@ -121,6 +125,13 @@ class StartBox(LightItem):
         return 82 + 12 * pulse + 4 * flick
 
 MATCH_DURATION = 30.0
+
+# El primer fosforo (el de la mesa de la cabaña) dura bastante mas que los
+# demas, asi el jugador no pierde en los primeros segundos y puede aprender
+# el tutorial tranquilo. 0.30 => ~100 s quieto en vez de 30 s. Tambien le
+# cuesta menos pegar y romper la puerta. Se pierde la ventaja cuando ese
+# fosforo se apaga, se suelta o se cambia por otra luz.
+FIRST_MATCH_BURN_MULT = 0.30
 
 SHOP_RECHARGE_TIME = 4.0
 
@@ -316,6 +327,7 @@ def is_skin_item(item_id):
 
 # quien te mato: clase (o clave) -> nombre que se muestra en la esquina
 KILLER_NAMES = {
+    "Spider": "Araña",
     "PinaBoss": "Piña Colosal",
     "GolemBoss": "Golem Colosal",
     "PinaBrava": "Piña Brava",
@@ -393,6 +405,7 @@ class NewGame:
         self.doors = DoorManager(
             self.save_data.get("broken_doors", []),
             self.save_data.get("final_door_slots"),
+            damage=self.save_data.get("door_damage"),
         )
 
         if self.doors.final_door is not None:
@@ -673,6 +686,12 @@ class NewGame:
 
         self.has_match = bool(self.save_data.get("has_match", False))
 
+        # True mientras el jugador usa el primer fosforo (ver
+        # FIRST_MATCH_BURN_MULT). Solo cuenta si todavia es un fosforo.
+        self.first_match = bool(
+            self.save_data.get("first_match", False)
+        ) and self.has_match
+
         self.vida = max(
             0.0,
             min(1.0, float(self.save_data.get("vida", 1.0)))
@@ -905,6 +924,10 @@ class NewGame:
 
         self.slimes = SlimeManager()
 
+        # arañas: solo existen en el mapa 2 (no van en ninguna oleada)
+        self.spiders = SpiderManager()
+        self.web_slow = 1.0
+
         self.last_heal = 0.0
 
         self.debug_combat = False
@@ -919,6 +942,9 @@ class NewGame:
 
         # arrastre de items entre casilleros (click izquierdo mantenido)
         self._slot_drag = None
+
+        # tecla de soltar mantenida: suelta de a 1, cada 2 items mas rapido
+        self._drop_hold = None
 
         self.emote_wheel = EmoteWheel(self.screen)
         self.state = "playing"
@@ -1052,6 +1078,14 @@ class NewGame:
         if self.vida <= 0:
             self._killer = killer_name(source)
 
+
+    def _first_match_mult(self):
+        """Cuanto gasta el primer fosforo respecto de uno normal."""
+
+        if self.first_match and self.light_type == "fosforo":
+            return FIRST_MATCH_BURN_MULT
+
+        return 1.0
 
     def equip_match(self, kind=None, life=None):
 
@@ -1209,6 +1243,8 @@ class NewGame:
 
     def _drop_match(self):
 
+        self.first_match = False
+
         x, y = self.player.rect.center
 
         self.light_drops.append(
@@ -1230,6 +1266,8 @@ class NewGame:
 
     def _trash_light(self):
         """Tira la luz equipada al tacho: desaparece, no queda en el piso."""
+
+        self.first_match = False
 
         self.has_match = False
 
@@ -1255,6 +1293,8 @@ class NewGame:
             return
 
         audio.play("light_out")
+
+        self.first_match = False
 
         self.vida = 0.0
 
@@ -2463,6 +2503,41 @@ class NewGame:
 
         return True
 
+    def _update_drop_hold(self, dt):
+        """Tecla de soltar mantenida: despues de la primera pausa suelta de
+        a 1 item y cada 2 items soltados va mas rapido."""
+
+        h = self._drop_hold
+
+        if h is None:
+            return
+
+        mods = pygame.key.get_mods()
+
+        if (
+            self.state != "playing"
+            or self.pause_view is not None
+            or self.tutorial is not None
+            or self.placeables.open_obj is not None
+            or self.selected_slot == "equipped"
+            or mods & (pygame.KMOD_CTRL | pygame.KMOD_SHIFT)
+            or not controls.pressed("drop", pygame.key.get_pressed())
+            or self.hud.items[self.selected_slot] is None
+        ):
+            self._drop_hold = None
+            return
+
+        h["t"] += dt
+
+        if h["t"] < hold_delay(h["n"]):
+            return
+
+        h["t"] = 0.0
+
+        self.drop_item(self.selected_slot)
+
+        h["n"] += 1
+
     def _dragged_item(self):
         """(item, cantidad) si se esta arrastrando un item (ya se movio el
         mouse), o None. Si se solto el click, cancela el arrastre."""
@@ -2918,6 +2993,9 @@ class NewGame:
         if self.pspeed_timer > 0:
             mult = max(mult, self.pspeed_mult)
 
+        # telaraña de la araña: ralentiza mientras estes dentro
+        mult *= getattr(self, "web_slow", 1.0)
+
         self.player.movement.speed_mult = mult
 
     def _break_invis(self):
@@ -3082,6 +3160,18 @@ class NewGame:
             if dist <= radius + size:
                 slime.take_damage(damage)
 
+        for spider in self.spiders.targets():
+
+            size = max(spider.rect.width, spider.rect.height) / 2
+
+            dist = math.hypot(
+                spider.rect.centerx - cx,
+                spider.rect.centery - cy
+            )
+
+            if dist <= radius + size:
+                spider.take_damage(damage)
+
 
     def _mouse_world(self):
 
@@ -3202,7 +3292,7 @@ class NewGame:
 
             self.vida -= light_stats(
                 self.light_type
-            )["golpe_costo"]
+            )["golpe_costo"] * self._first_match_mult()
 
     CHEST_REACH = 14    # px alrededor del cofre en los que F funciona
 
@@ -3256,6 +3346,7 @@ class NewGame:
 
         targets += [d for d in self.dummies if not d.dead]
         targets += self.slimes.targets()
+        targets += self.spiders.targets()
 
         for target in self.melee.new_hits(targets, pivot):
 
@@ -3509,7 +3600,7 @@ class NewGame:
                 )
 
                 if not free:
-                    self.vida -= cost
+                    self.vida -= cost * self._first_match_mult()
 
         elif isinstance(target, Chest):
 
@@ -3739,6 +3830,7 @@ class NewGame:
         targets += list(self.doors.doors)
         targets += [d for d in self.dummies if not d.dead]
         targets += self.slimes.targets()
+        targets += self.spiders.targets()
 
         walkable = self.collision_map.point_is_walkable
 
@@ -4255,6 +4347,7 @@ class NewGame:
 
             else:
 
+                self.first_match = False
                 self.equip_match(light, 1.0)
 
         for item in (
@@ -4358,6 +4451,8 @@ class NewGame:
             "arena_left_completed": self.arena_left.completed,
 
             "broken_doors": sorted(self.doors.broken_ids),
+            "door_damage": self.doors.damage_for_save(),
+            "first_match": bool(self.first_match and self.has_match),
             "final_door_slots": (
                 self.doors.final_door.slots_for_save()
                 if self.doors.final_door is not None else {}
@@ -4426,26 +4521,19 @@ class NewGame:
         self._save()
 
     def finish_game(self):
-        """El jugador cruzo al mapa 2: la partida queda como terminada.
+        """El jugador cruzo al mapa 2 por primera vez: se muestra el comic
+        final y despues sigue jugando ADENTRO del mapa 2, como si ya
+        hubiera entrado a ese cuartito (puede explorarlo todo).
 
-        Se queda en el mapa 1 (un poco antes de la salida) para que se
-        pueda seguir jugando sin pasar al mapa 2.
+        El jugador ya queda puesto en el mapa 2 detras del comic: asi, si
+        cierra el juego en medio, la partida se carga alli.
         """
 
         self.finished = True
 
         achievements.unlock("region_1")
 
-        self.current_map = "mapa1"
-
-        self.player.rect.center = MAP1_RETURN
-
-        self.player.image_rect.midbottom = (
-            self.player.rect.centerx,
-            self.player.rect.bottom + 3,
-        )
-
-        self.camera.update(self.player)
+        enter_map(self, "mapa2")
 
         self._save()
 
@@ -4959,6 +5047,7 @@ class NewGame:
         self.collected = set()
 
         self.has_match = True
+        self.first_match = False
         self.light_type = "fosforo"
         self.vida = 1.0
         self.escudo = 0.0
@@ -5490,6 +5579,11 @@ class NewGame:
                         thing.life
                     )
 
+                    # el fosforo de la mesa es el "primer fosforo"
+                    self.first_match = bool(
+                        getattr(thing, "initial", False)
+                    )
+
                     return None
 
                 if (
@@ -5540,6 +5634,10 @@ class NewGame:
                     self.drop_item(
                         self.selected_slot
                     )
+
+                    # si la mantiene apretada sigue soltando (ver
+                    # _update_drop_hold)
+                    self._drop_hold = {"t": 0.0, "n": 1}
 
             elif controls.matches("magnet", event.key):
 
@@ -5882,6 +5980,7 @@ class NewGame:
                     * yunque.burn_mult(self)
                     * self.burn_factor
                     * (self.pspeed_burn if self.pspeed_timer > 0 else 1.0)
+                    * self._first_match_mult()
                 )
 
                 self.vida -= (
@@ -6041,6 +6140,8 @@ class NewGame:
 
         self.slimes.update(dt, self)
 
+        self.spiders.update(dt, self)
+
 
         # yunque "Manos agiles": cofres con menos espera
         self.chests.wait_reduction = yunque.chest_reduction(self)
@@ -6083,6 +6184,8 @@ class NewGame:
 
 
         self.shopkeeper.update(dt, self.player)
+
+        self._update_drop_hold(dt)
 
         self.placeables.update(self, dt)
 
@@ -6731,6 +6834,8 @@ class NewGame:
             dummy.draw(self.screen, self.camera)
 
         self.slimes.draw(self.screen, self.camera)
+
+        self.spiders.draw(self.screen, self.camera)
 
         self.crushers.draw(self.screen, self.camera)
 
