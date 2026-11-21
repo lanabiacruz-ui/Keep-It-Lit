@@ -398,7 +398,7 @@ class Guide:
 
             self._done_seen[text] = done
 
-    def draw_checklist(self, screen, entries):
+    def draw_checklist(self, screen, entries, top=14):
         """entries: lista de (texto, hecho)."""
 
         if not entries:
@@ -492,4 +492,4 @@ class Guide:
 
             y += row_h
 
-        screen.blit(panel, panel.get_rect(midtop=(screen.get_width() // 2, 14)))
+        screen.blit(panel, panel.get_rect(midtop=(screen.get_width() // 2, top)))

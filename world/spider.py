@@ -1119,6 +1119,38 @@ class SpiderManager:
 
         self._prev_player = None
 
+    # ---- escena de entrada al mapa 2 (ver world/map2_intro.py) -------------------
+    def spawn_intro(self, game, spider_pos, aura_pos):
+        """Pone las arañas y las aurantulas YA en su lugar, quietas (modo
+        idle). Mientras el dialogo esta abierto el juego no se actualiza,
+        asi que no se mueven; al cerrarlo despiertan solas."""
+
+        self.clear()
+
+        px, py = game.player.rect.center
+
+        for cls, spots in ((Spider, spider_pos), (Aurantula, aura_pos)):
+
+            for i, (x, y) in enumerate(spots):
+
+                spider = cls(x, y)
+
+                spider.mode = "idle"
+                spider.heading = (
+                    math.degrees(math.atan2(py - y, px - x)) % 360.0
+                )
+                spider.cool = (
+                    (AURA_FIRST_THROW if cls is Aurantula else FIRST_THROW)
+                    + i * 0.4
+                )
+
+                self.spiders.append(spider)
+
+        # ya estan en juego (se dibujan y se actualizan). La sala grande de
+        # las Aurantulas sigue igual: nacen mas cuando la pises.
+        self._active = True
+        self._role_sig = None
+
     # ---- nacimiento (apenas entras al mapa 2) -----------------------------------
     @staticmethod
     def _clear_line(cmap, a, b, step=10.0):

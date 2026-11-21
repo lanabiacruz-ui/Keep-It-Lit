@@ -73,6 +73,7 @@ from ui.shop_plan import (
     sanitize_draft,
 )
 from ui.tutorial import Tutorial
+from ui.map2_scene import Map2Scene, EyeMonster
 from ui.tutorial_texts import apply_texts
 from core import player_name as hero_name
 from ui.shop_dialog import (
@@ -157,7 +158,12 @@ NO_LIGHT_COUNTDOWN = 10.0
 # construccion
 # version 4: se saco el paso de la antorcha (se consigue recien en la
 # oleada 7, no es un objetivo para ese momento del tutorial)
-OBJECTIVE_VERSION = 4
+# version 5: se saco el paso de elegir casillas (teclas 1 a 7): ahora
+# Cenizo solo lo menciona en el paso de "ver, usar y soltar"
+OBJECTIVE_VERSION = 5
+
+# numero que tenia el paso de las casillas hasta la version 4
+V4_CASILLAS = 4
 
 # numero que tenia el paso de la antorcha hasta la version 3
 V3_ANTORCHA = 21
@@ -192,6 +198,16 @@ def v3_to_v4(index):
         return index
 
     return index - 1 if index > V3_ANTORCHA else index
+
+
+def v4_to_v5(index):
+
+    index = int(index)
+
+    if index >= 10 ** 6:
+        return index
+
+    return index - 1 if index > V4_CASILLAS else index
 
 
 FLICKER_THRESHOLD = 0.25
@@ -514,6 +530,10 @@ class NewGame:
         self.use_anims = UseAnimManager()
         self.held_item = HeldItemRenderer()
         self._intro_pending = False
+
+        # escena del monstruo del ojo (mapa 2, despues del comic final)
+        self.map2_scene = None
+        self._eye_monster = None
         self.intro_t = None
 
         # transicion comic -> mapa: la interfaz aparece con fundido
@@ -598,6 +618,12 @@ class NewGame:
             if self._objective_saved is not None:
                 self._objective_saved = v3_to_v4(self._objective_saved)
 
+        # version 4 -> 5: ya no existe el paso de las casillas
+        if saved_version < 5:
+
+            if self._objective_saved is not None:
+                self._objective_saved = v4_to_v5(self._objective_saved)
+
         if not self.save_data:
             start = 0
         elif self._objective_saved is not None:
@@ -638,6 +664,12 @@ class NewGame:
                 self.tuto_seen = {
                     v3_to_v4(i) for i in self.tuto_seen
                     if i != V3_ANTORCHA
+                }
+
+            if saved_version < 5:
+                self.tuto_seen = {
+                    v4_to_v5(i) for i in self.tuto_seen
+                    if i != V4_CASILLAS
                 }
         elif self.save_data:
             self.tuto_seen = set(range(min(start or 0, 200) + 1))
@@ -1566,7 +1598,11 @@ class NewGame:
         checks = step.get("checks")
 
         if checks is not None:
-            self.guide.draw_checklist(self.screen, checks(self))
+            # si se ve el contador de segundos y "Rendirse" (arriba al
+            # centro), la lista baja para no taparlos
+            top = 128 if self.no_light_timer is not None else 14
+
+            self.guide.draw_checklist(self.screen, checks(self), top=top)
 
         target_fn = step.get("target")
 
@@ -1672,15 +1708,6 @@ class NewGame:
                 ("Click izquierdo", "click_l" in g.tuto_flags),
             ]
 
-        def slot_checks(g):
-
-            return [
-                ("Teclas 1 a 4 (casillas)", "slotkey" in g.tuto_flags),
-                ("Teclas 5 y 6 (pociones)", "potkey" in g.tuto_flags),
-                ("Tecla 7 (tu luz)", "k5" in g.tuto_flags),
-                ("Rueda del mouse", "wheel" in g.tuto_flags),
-            ]
-
         def use_checks(g):
 
             return [
@@ -1749,17 +1776,6 @@ class NewGame:
                 ],
                 "target": lambda g: nearest(g, item_points(g, False)),
                 "done": lambda g: g.items_picked > 0,
-            },
-            {
-                "text": (
-                    "Prueba a elegir casillas: teclas 1 a 4, 5 y 6 "
-                    "(pociones), la tecla 7 (tu luz) y la rueda del mouse."
-                ),
-                "tuto": [
-                    "INVENTARIO: tienes 4 casillas (teclas 1 al 4), 2 marcos de pociones (teclas 5 y 6) y la tecla 7 elige tu luz equipada. También puedes recorrerlo todo con la RUEDA del mouse. Prueba las tres cosas.",
-                ],
-                "checks": slot_checks,
-                "done": checks_done(slot_checks),
             },
             {
                 "text": (
@@ -4226,6 +4242,13 @@ class NewGame:
         if isinstance(closed, ShopkeeperDialog):
             self._open_shop()
 
+        if self.map2_scene is not None:
+
+            self.map2_scene.after_dialog(closed)
+
+            if self.map2_scene.done:
+                self.map2_scene = None
+
     def _open_shop(self):
 
         if self.shop is not None:
@@ -4633,6 +4656,47 @@ class NewGame:
         enter_map(self, "mapa2")
 
         self._save()
+
+    def begin_map2_intro(self):
+        """Despues del comic final: el personaje aparece en el punto verde,
+        las arañas ya estan ahi quietas y Cenizo explica el peligro (2
+        dialogos). Se llama justo antes de la transicion MapReveal."""
+
+        from world import map2_intro
+
+        self.map_switch.ending = False
+
+        self.player.rect.center = map2_intro.PLAYER_POS
+        self.player.image_rect.midbottom = (
+            self.player.rect.centerx, self.player.rect.bottom + 3
+        )
+        self.camera.update(self.player)
+
+        self.spiders.spawn_intro(
+            self, map2_intro.SPIDER_POS, map2_intro.AURA_POS
+        )
+
+        # dialogos (Cenizo y el monstruo), rayo y Cenizo herido; al final
+        # empieza el combate con las arañas (ver ui/map2_scene.py)
+        self.map2_scene = Map2Scene(self, mark_keys)
+        self.map2_scene.start()
+
+        self._save()
+
+    def eye_monster(self):
+        """El monstruo del ojo del comic: vive en el mapa 2 (solo se ve)."""
+
+        if self._eye_monster is None:
+            self._eye_monster = EyeMonster()
+
+        return self._eye_monster
+
+    def _eye_visible(self):
+
+        return (
+            getattr(self, "current_map", "mapa1") == "mapa2"
+            and getattr(self, "finished", False)
+        )
 
     def materialize_drops(self, map_name):
 
@@ -5170,6 +5234,11 @@ class NewGame:
         if self.state in ("dying", "lost"):
 
             self._fire_hold = False
+
+            return None
+
+        # mientras el ojo tira el rayo no se puede hacer nada
+        if self.map2_scene is not None and self.map2_scene.ray_active:
 
             return None
 
@@ -5829,6 +5898,16 @@ class NewGame:
                 self.finish_game()
 
                 return "ending"
+
+            return None
+
+        if self.map2_scene is not None and self.map2_scene.ray_active:
+
+            self.map2_scene.update(dt)
+            self._update_fx(dt)
+
+            if self.map2_scene is not None and self.map2_scene.done:
+                self.map2_scene = None
 
             return None
 
@@ -6941,6 +7020,9 @@ class NewGame:
 
         self.spiders.draw(self.screen, self.camera)
 
+        if self._eye_visible():
+            self.eye_monster().draw(self.screen, self.camera)
+
         self.crushers.draw(self.screen, self.camera)
 
         for arena in self.arenas:
@@ -7048,6 +7130,9 @@ class NewGame:
         )
 
         self._draw_warm_glows(sources)
+
+        if self._eye_visible():
+            self.eye_monster().draw_glow(self.screen, self.camera)
 
         if self.cine_player_boost > 0.01:
             self._draw_player_boost()
@@ -7316,6 +7401,9 @@ class NewGame:
 
             if self.tutorial is not None:
                 self.tutorial.draw(self.screen)
+
+        if self.map2_scene is not None:
+            self.map2_scene.draw_overlay(self.screen)
 
         self._cine_ui_end()
 

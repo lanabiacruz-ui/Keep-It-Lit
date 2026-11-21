@@ -445,8 +445,11 @@ while running:
             if ending_comic.handle_event(event) == "done":
 
                 # sigue jugando adentro del mapa 2 (ya entro: lo puso
-                # game.finish_game); la pantalla aparece desde negro
-                game.map_switch.resume_in("mapa2")
+                # game.finish_game). Misma transicion que al comienzo;
+                # al terminar, las arañas ya estan ahi y habla Cenizo
+                game.begin_map2_intro()
+
+                transition = MapReveal(game, screen.copy())
 
                 current_state = "gameplay"
 

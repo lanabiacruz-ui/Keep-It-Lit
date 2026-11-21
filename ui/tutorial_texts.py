@@ -72,27 +72,14 @@ TEXTS = [
         "cheer": "¡Botín conseguido, {nombre}! Ahora eres oficialmente un acumulador.",
     },
 
-    # 4 - casilleros
-    {
-        "text": (
-            "Prueba elegir casilleros: teclas 1 a 4, 5 y 6 (pociones), "
-            "la tecla 7 (tu luz) y la rueda del mouse."
-        ),
-        "tuto": [
-            "Tus casilleros: [[1]] al [[4]] guardan objetos, [[5]] y [[6]] son marcos extra, y [[7]] elige tu luz.",
-            "También puedes pasar de uno a otro con la [[RUEDA]] del mouse. Prueba todo: la lista se tilda sola.",
-        ],
-        "hint": "Presiona las teclas del 1 al 7 y gira la rueda del mouse. Faltan las que están sin tildar.",
-        "cheer": "¡Ya manejas el inventario como un pro, {nombre}!",
-    },
-
-    # 5 - ver, usar y soltar
+    # 4 - ver, usar y soltar (Cenizo menciona aca los casilleros 1-7)
     {
         "text": (
             "Mantén click izquierdo sobre un casillero para ver qué hace "
             "el objeto, úsalo (F o click derecho) y suelta otro con Q."
         ),
         "tuto": [
+            "Por cierto, tus casilleros: [[1]] al [[4]] guardan objetos, [[5]] y [[6]] son marcos de pociones y [[7]] elige tu luz. También puedes pasar de uno a otro con la [[RUEDA]] del mouse. Esto es solo para que lo sepas: no hay nada que tildar.",
             "¿No sabes qué hace un objeto? ¡Pregúntale! Mantén apretado el [[CLICK IZQ.]] sobre su casillero y aparece un cartel con su nombre y su efecto. Suelta y se va.",
             "Ya sabiendo qué hace, úsalo: elígelo y presiona [[F]] o [[CLICK DER.]]. Y para tirar uno al piso, [[Q]].",
             "Lo que sueltas se esfuma a los 5 minutos, pero puedes volver a agarrarlo con [[E]].",
