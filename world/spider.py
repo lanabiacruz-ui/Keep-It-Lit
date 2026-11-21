@@ -8,13 +8,20 @@
 - Ataque: te tira un BLOQUE DE TELARAÑA con muy buena punteria (calcula a
   donde vas a estar).
     * Si el bloque te da: queda pegado a vos (te ralentiza mucho mientras
-      estes dentro) y la araña que te atrapo corre RAPIDO hacia vos y te
-      pega rapido mientras sigas atrapado.
-    * Cuando te salis de la telaraña, ve que escapaste: deja de perseguirte,
-      se vuelve a alejar y trata de tirarte otra telaraña enseguida para
-      acercarse de nuevo (las demas tambien).
+      estes dentro).
+    * TODAS las arañas que te ven dentro de una telaraña (te haya dado un
+      bloque o hayas pisado una del piso) corren RAPIDO hacia vos.
+    * Golpe y retirada: cada una llega, te pega rapido y se ALEJA un
+      momento (para que no puedas pegarle) antes de volver a entrar. Solo
+      te pegan mientras sigas dentro de la telaraña.
+    * Cuando te salis de la telaraña, ven que escapaste: dejan de perseguirte,
+      se vuelven a alejar y tratan de tirarte otra telaraña enseguida.
     * Si falla: el bloque cae en el piso y sigue ralentizando a quien lo
       pise. La telaraña desaparece con el tiempo (WEB_LIFE).
+    * Las telarañas NUNCA se superponen: si una cae sobre otra, se desliza
+      al lugar libre mas cercano hasta quedar pegada borde con borde,
+      como bloques. La que te atrapo no se mueve (para no soltarte): se
+      corren las demas.
 - La telaraña tiene 3 imagenes distintas (assets/maps/combate/telarana_1/2/3.png);
   solo cambia el dibujo, no el comportamiento. Cada una tiene sus animaciones
   (tiras de cuadros cuadrados, ver tools/make_web_frames.py):
@@ -109,7 +116,13 @@ HIT_INTERVAL = 0.5           # pega rapido cuando esta cerca (y estas en la tela
 CHASE_FIRST_HIT = 0.2        # espera antes del primer golpe al llegar
 ESCAPE_GRACE = 0.15          # tiempo fuera de la telaraña para darse cuenta de que saliste
 REWEB_DELAY = (0.2, 0.6)     # al salirte: tarda esto en tirarte otra telaraña
-ALL_CHASE = False            # True: TODAS las arañas corren hacia vos al atraparte
+ALL_CHASE = True             # True: TODAS las arañas que te ven en una telaraña van a pegarte
+RETREAT_TIME = (0.55, 0.9)   # despues de pegar se alejan este tiempo (segundos)
+RETREAT_SPEED = 150          # velocidad con la que se alejan (de espaldas)
+RETREAT_STUCK = 0.25         # si no pueden alejarse (pared) vuelven a entrar a los 0.25 s
+RETURN_HIT_DELAY = 0.10      # al volver, tardan esto en pegar: el golpe sigue siendo rapido
+FIRST_HIT_SPREAD = 0.25      # (0 a esto) de demora extra al azar para que no peguen todas juntas
+WEB_SLIDE_SPEED = 320.0      # velocidad (px/s) con la que las telarañas se apartan entre si
 CHASE_MAX = 12.0
 LOSE_DIST = 480
 
@@ -283,8 +296,41 @@ class WebPatch:
         self.rect = pygame.Rect(0, 0, WEB_SIZE, WEB_SIZE)
         self.rect.center = (round(x), round(y))
 
+        # lugar al que va (enteros: asi quedan pegadas justo borde con borde)
+        self.tx = self.rect.centerx
+        self.ty = self.rect.centery
+
+        # posicion real mientras se desliza hacia (tx, ty)
+        self.pos = pygame.Vector2(self.tx, self.ty)
+
         self.variant = variant
         self.age = 0.0
+
+    def target_rect(self):
+
+        r = pygame.Rect(0, 0, WEB_SIZE, WEB_SIZE)
+        r.center = (self.tx, self.ty)
+
+        return r
+
+    def slide(self, dt):
+        """Se desliza hacia el lugar que le toca (sin saltos)."""
+
+        goal = pygame.Vector2(self.tx, self.ty)
+        d = goal - self.pos
+        dist = d.length()
+
+        if dist <= 0.01:
+            return
+
+        step = WEB_SLIDE_SPEED * dt
+
+        if dist <= step:
+            self.pos.update(goal)
+        else:
+            self.pos += d * (step / dist)
+
+        self.rect.center = (round(self.pos.x), round(self.pos.y))
 
     @property
     def alpha(self):
@@ -317,6 +363,9 @@ class Spider:
         self.chase_t = 0.0
         self.out_t = 0.0             # tiempo que lleva el jugador fuera de la telaraña
         self.hit_cool = 0.5
+        self.phase = "approach"      # approach (va a pegar) / retreat (se aleja)
+        self.retreat_t = 0.0
+        self.stuck_t = 0.0
         self.face = 1
 
         self.moving = False
@@ -341,18 +390,29 @@ class Spider:
     def start_chase(self):
 
         self.mode = "chase"
+        self.phase = "approach"
+        self.retreat_t = 0.0
+        self.stuck_t = 0.0
         self.chase_t = 0.0
         self.out_t = 0.0
-        self.hit_cool = CHASE_FIRST_HIT
+        self.hit_cool = CHASE_FIRST_HIT + random.uniform(0.0, FIRST_HIT_SPREAD)
         self.wind = 0.0
 
     def stop_chase(self):
         """Ve que te saliste de la telaraña: vuelve a alejarse y a tirar otra."""
 
         self.mode = "aim"
+        self.phase = "approach"
         self.wind = 0.0
         self.out_t = 0.0
         self.cool = random.uniform(*REWEB_DELAY)
+
+    def _start_retreat(self):
+        """Despues de pegar: se aleja un momento para que no le pegues."""
+
+        self.phase = "retreat"
+        self.retreat_t = random.uniform(*RETREAT_TIME)
+        self.stuck_t = 0.0
 
     # ---- movimiento -------------------------------------------------------
     def _step(self, delta, cmap):
@@ -519,6 +579,27 @@ class Spider:
 
             return
 
+        # golpe y retirada: se aleja mirandote (camina de espaldas)
+        if self.phase == "retreat":
+
+            self.retreat_t -= dt
+
+            self.moving = self._move_dir(-d, RETREAT_SPEED, dt, cmap)
+            self.back = True
+
+            if self.moving:
+                self.walk_phase -= dt * RETREAT_SPEED / WALK_RATE
+                self.stuck_t = 0.0
+            else:
+                self.stuck_t += dt
+
+            if self.retreat_t <= 0 or self.stuck_t >= RETREAT_STUCK:
+
+                self.phase = "approach"
+                self.hit_cool = RETURN_HIT_DELAY
+
+            return
+
         touching = self.rect.inflate(10, 10).colliderect(game.player.rect)
 
         if not touching and dist > 1:
@@ -532,10 +613,11 @@ class Spider:
 
         if touching and self.hit_cool <= 0 and mgr.player_in_web:
 
-            self.hit_cool = HIT_INTERVAL
             self.shoot_t = 0.2
 
             game.take_damage(HIT_DAMAGE, common=True, source=self)
+
+            self._start_retreat()
 
 
 class SpiderManager:
@@ -728,12 +810,119 @@ class SpiderManager:
 
         self.shots.append(shot)
 
+    # ---- telarañas como bloques (nunca se superponen) --------------------------------
+    @staticmethod
+    def _spot_rect(cx, cy):
+
+        r = pygame.Rect(0, 0, WEB_SIZE, WEB_SIZE)
+        r.center = (cx, cy)
+
+        return r
+
+    def _free_spot(self, cmap, cx, cy, rects):
+        """Lugar libre mas cercano a (cx, cy) para una telaraña: el mismo punto
+        si esta libre o, si no, pegada borde con borde a otra (como bloques).
+        None si no hay lugar."""
+
+        half = WEB_SIZE // 2
+
+        cands = [(round(cx), round(cy))]
+
+        for e in rects:
+
+            for y in (round(cy), e.centery):
+                cands.append((e.right + half, y))
+                cands.append((e.left - half, y))
+
+            for x in (round(cx), e.centerx):
+                cands.append((x, e.bottom + half))
+                cands.append((x, e.top - half))
+
+        best = None
+        best_d = None
+
+        for x, y in cands:
+
+            if not cmap.point_is_walkable(x, y):
+                continue
+
+            r = self._spot_rect(x, y)
+
+            if any(r.colliderect(e) for e in rects):
+                continue
+
+            d = (x - cx) ** 2 + (y - cy) ** 2
+
+            if best_d is None or d < best_d:
+                best, best_d = (x, y), d
+
+        return best
+
+    def _add_web(self, game, x, y, variant, pinned=False):
+        """Pone una telaraña sin que se superponga con otra.
+
+        - Normal (bloque que fallo): si cae sobre otra, se aparta hasta el
+          lugar libre mas cercano, pegada borde con borde.
+        - pinned (la que te atrapo): se queda justo donde estas, para no
+          soltarte; las que la pisan son las que se apartan.
+        """
+
+        cmap = game.collision_map
+
+        web = WebPatch(x, y, variant)
+
+        if not pinned:
+
+            spot = self._free_spot(
+                cmap, web.tx, web.ty,
+                [w.target_rect() for w in self.webs],
+            )
+
+            if spot is None:
+                return None
+
+            web.tx, web.ty = spot
+
+            self.webs.append(web)
+
+            return web
+
+        mine = web.target_rect()
+
+        hit = [w for w in self.webs if w.target_rect().colliderect(mine)]
+
+        # las que mas la pisan se acomodan primero
+        hit.sort(key=lambda w: -(
+            w.target_rect().clip(mine).width * w.target_rect().clip(mine).height
+        ))
+
+        self.webs = [w for w in self.webs if w not in hit]
+
+        keep = [w.target_rect() for w in self.webs] + [mine]
+
+        for old in hit:
+
+            spot = self._free_spot(cmap, old.tx, old.ty, keep)
+
+            if spot is None:
+                continue                    # sin lugar: se deshace
+
+            old.tx, old.ty = spot
+
+            keep.append(old.target_rect())
+
+            self.webs.append(old)
+
+        self.webs.append(web)
+
+        return web
+
     # ---- el bloque te dio ------------------------------------------------------------
     def _hit_player(self, game, shot):
 
         px, py = game.player.rect.center
 
-        self.webs.append(WebPatch(px, py, shot.variant))
+        self._add_web(game, px, py, shot.variant, pinned=True)
 
         if not self._warned:
 
@@ -741,15 +930,9 @@ class SpiderManager:
 
             game.show_message("¡Telaraña! Te ralentiza: sal de ella")
 
-        # la araña que te atrapo corre hacia vos (o todas, si ALL_CHASE)
-        if ALL_CHASE:
-
-            for spider in self.spiders:
-
-                if not spider.dead:
-                    spider.start_chase()
-
-        elif shot.owner is not None and not shot.owner.dead:
+        # la que te atrapo corre hacia vos; las demas, apenas ven que estas
+        # dentro de la telaraña (ver update)
+        if shot.owner is not None and not shot.owner.dead:
             shot.owner.start_chase()
 
     def _set_slow(self, game, value):
@@ -853,14 +1036,22 @@ class SpiderManager:
             ):
 
                 # fallo: el bloque cae en el piso y se queda un rato
-                self.webs.append(WebPatch(shot.pos.x, shot.pos.y, shot.variant))
+                land = shot.pos
+
+                if not cmap.point_is_walkable(land.x, land.y):
+                    # se choco con una pared: cae un paso antes (en el piso)
+                    land = shot.pos - shot.dir * step
+
+                self._add_web(game, land.x, land.y, shot.variant)
 
                 shot.done = True
 
         self.shots = [s for s in self.shots if not s.done]
 
         for web in self.webs:
+
             web.age += dt
+            web.slide(dt)
 
         self.webs = [w for w in self.webs if w.age < WEB_LIFE]
 
@@ -873,6 +1064,21 @@ class SpiderManager:
 
                 if spider.mode == "aim" and spider.wind <= 0:
                     spider.cool = min(spider.cool, random.uniform(*REWEB_DELAY))
+
+        # todas las que ven que estas dentro de una telaraña vienen a pegarte
+        if inside and ALL_CHASE:
+
+            for spider in self.spiders:
+
+                if spider.dead or spider.mode != "aim":
+                    continue
+
+                if math.hypot(
+                    spider.rect.centerx - player.centerx,
+                    spider.rect.centery - player.centery,
+                ) <= LOSE_DIST:
+
+                    spider.start_chase()
 
         self.player_in_web = inside
 
