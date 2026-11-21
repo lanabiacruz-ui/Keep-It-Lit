@@ -69,7 +69,13 @@ class CollisionMap:
 
             pygame.Rect(1022, 892, 41, 155),
 
-            pygame.Rect(877, 942, 69, 73),
+            # Mesa de la cabaña (donde esta el fosforo inicial). Antes era un
+            # solo rect de 877,942 a 946,1015 con 14 px de aire por arriba y
+            # al lado: el jugador se frenaba lejos de la mesa y no llegaba a
+            # agarrar el fosforo. Ahora cada rect sigue lo que se ve dibujado.
+            pygame.Rect(879, 956, 37, 57),   # mesa
+            pygame.Rect(901, 943, 12, 13),   # bolita azul sobre la mesa
+            pygame.Rect(919, 974, 24, 29),   # piedras / macetas de la derecha
 
             pygame.Rect(816, 988, 61, 59),
 

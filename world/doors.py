@@ -412,7 +412,7 @@ class Door:
 
 class DoorManager:
 
-    def __init__(self, broken_ids=None, final_slots=None):
+    def __init__(self, broken_ids=None, final_slots=None, damage=None):
 
         broken_ids = set(broken_ids or [])
 
@@ -421,6 +421,10 @@ class DoorManager:
             for entry in DOOR_LAYOUT
             if entry[0] not in broken_ids
         ]
+
+        # Daño que ya tenian las puertas (golpes que les quedan). Sin esto,
+        # al perder y reaparecer todas volvian a estar nuevas.
+        self._restore_damage(damage)
 
         self.broken_ids = broken_ids
 
@@ -432,6 +436,44 @@ class DoorManager:
 
             self.final_door = FinalDoor(slots=final_slots)
             self.doors.append(self.final_door)
+
+    def _restore_damage(self, damage):
+
+        if not isinstance(damage, dict):
+            return
+
+        for door in self.doors:
+
+            if not door.breakable or door.id not in damage:
+                continue
+
+            try:
+                left = int(damage[door.id])
+            except (TypeError, ValueError):
+                continue
+
+            # nunca mas que los golpes que tiene de fabrica, y al menos 1
+            # (si llegara a 0 la puerta ya estaria rota y figuraria en
+            # broken_doors)
+            door.hits_left = max(1, min(door.max_hits, left))
+
+    def damage_for_save(self):
+        """{id de puerta: golpes que le quedan} de las puertas dañadas que
+        todavia siguen en pie."""
+
+        out = {}
+
+        for door in self.doors:
+
+            if (
+                getattr(door, "breakable", False)
+                and not door.broken
+                and door.hits_left is not None
+                and door.hits_left < door.max_hits
+            ):
+                out[door.id] = int(door.hits_left)
+
+        return out
 
     @property
     def blocking_rects(self):
