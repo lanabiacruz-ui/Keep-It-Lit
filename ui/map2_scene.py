@@ -1357,9 +1357,10 @@ class Map2Finale:
 
         1. la camara se desplaza hacia el monstruo y habla con una cara
            nueva (por el panel, como siempre)
-        2. al cerrar el dialogo salen las Aurantulas de la oscuridad y van
-           a morder al jugador, y el monstruo se va caminando mientras se
-           desvanece (el juego sigue corriendo)
+        2. al cerrar el dialogo empiezan a salir Aurantulas de la oscuridad
+           (de a poco, sin hacer daño) y se acercan al jugador, y el
+           monstruo se va caminando mientras se desvanece (el juego sigue
+           corriendo). Despues sigue el rescate (ui/map2_rescue.py)
     """
 
     def __init__(self, game):
@@ -1457,7 +1458,9 @@ class Map2Finale:
         if old is not None:
             g.camera.smoothing = old
 
-        g.spiders.spawn_finale(g, cfg.FINALE_AURA_COUNT)
+        # de la oscuridad empiezan a salir Aurantulas (de a poco, sin hacer
+        # daño) y se acercan: ver world/spider.py (start_horde)
+        g.spiders.start_horde(g, cfg.HORDE_COUNT)
 
         # se aleja del jugador (y hacia arriba: se mete en la oscuridad)
         away = pygame.Vector2(self.eye.pos) - pygame.Vector2(

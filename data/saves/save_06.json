@@ -2,47 +2,45 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-22T19:30:33",
+    "last_played": "2026-11-22T20:02:34",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 972,
-    "y": 160,
-    "coins": 186775,
+    "x": 931,
+    "y": 161,
+    "coins": 187135,
     "gems": 5,
     "gems_green": 1,
-    "has_match": true,
+    "has_match": false,
     "light": "antorcha",
-    "vida": 1.0,
-    "escudo": 0.8359999999999999,
+    "vida": 0.0,
+    "escudo": 0.2905999999999997,
     "inventory": [
         [
             "aceite",
-            13
-        ],
-        [
-            "aceite",
-            1
-        ],
-        [
-            "hongo_azul",
-            3
-        ],
-        [
-            "hongo_azul",
-            6
+            9
         ],
         null,
         [
-            "pocion_velocidad",
+            "hongo_azul",
+            14
+        ],
+        [
+            "hongo_azul",
+            13
+        ],
+        [
+            "pocion_invisibilidad",
             1
-        ]
+        ],
+        null
     ],
     "collected": [
+        "moneda_pasillo_cabana#0",
         "moneda_pasillo_cabana#1",
+        "madera_10#0",
         "moneda_pasillo_tienda#0",
         "moneda_pasillo_tienda#1",
-        "moneda_pasillo_cabana#0",
-        "madera_10#0",
+        "aceite_01#0",
         "moneda_sala_central#0"
     ],
     "item_seed": 757481128,
@@ -261,7 +259,7 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1713,
+        "items_used": 1724,
         "chests_opened": 95,
         "purchases": 116,
         "fireballs": 3083,
@@ -312,562 +310,10 @@
         {
             "k": "item",
             "id": "hongo_azul",
-            "x": 898,
-            "y": 157,
-            "map": "mapa1",
-            "ttl": 19.6
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 959,
-            "y": 170,
-            "map": "mapa1",
-            "ttl": 19.7
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 916,
-            "y": 157,
-            "map": "mapa1",
-            "ttl": 19.8
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 984,
-            "y": 171,
-            "map": "mapa1",
-            "ttl": 19.9
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 974,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 20.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 929,
-            "y": 165,
-            "map": "mapa1",
-            "ttl": 20.1
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 913,
-            "y": 166,
-            "map": "mapa1",
-            "ttl": 20.2
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 977,
-            "y": 148,
-            "map": "mapa1",
-            "ttl": 20.3
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 948,
-            "y": 156,
-            "map": "mapa1",
-            "ttl": 20.4
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 945,
-            "y": 167,
-            "map": "mapa1",
-            "ttl": 20.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1010,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 20.6
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1004,
-            "y": 151,
-            "map": "mapa1",
-            "ttl": 20.7
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 957,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 20.9
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 964,
-            "y": 166,
-            "map": "mapa1",
-            "ttl": 21.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 993,
-            "y": 162,
-            "map": "mapa1",
-            "ttl": 21.1
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1000,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 21.2
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 896,
-            "y": 160,
-            "map": "mapa1",
-            "ttl": 21.3
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 944,
-            "y": 148,
-            "map": "mapa1",
-            "ttl": 21.4
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1009,
-            "y": 161,
-            "map": "mapa1",
-            "ttl": 21.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 894,
-            "y": 176,
-            "map": "mapa1",
-            "ttl": 21.6
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 896,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 21.7
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 939,
-            "y": 154,
-            "map": "mapa1",
-            "ttl": 21.8
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 889,
-            "y": 163,
-            "map": "mapa1",
-            "ttl": 21.9
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 993,
-            "y": 149,
-            "map": "mapa1",
-            "ttl": 22.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 950,
-            "y": 173,
-            "map": "mapa1",
-            "ttl": 22.2
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1000,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 22.3
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 977,
-            "y": 171,
-            "map": "mapa1",
-            "ttl": 22.4
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 949,
-            "y": 169,
-            "map": "mapa1",
-            "ttl": 22.5
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 963,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 22.6
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 940,
-            "y": 157,
-            "map": "mapa1",
-            "ttl": 22.7
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1004,
-            "y": 172,
-            "map": "mapa1",
-            "ttl": 22.8
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 943,
-            "y": 165,
-            "map": "mapa1",
-            "ttl": 22.9
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 907,
-            "y": 160,
-            "map": "mapa1",
-            "ttl": 23.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 993,
-            "y": 161,
-            "map": "mapa1",
-            "ttl": 23.1
-        },
-        {
-            "k": "item",
-            "id": "pocion_invisibilidad",
-            "x": 968,
-            "y": 157,
-            "map": "mapa1",
-            "ttl": 23.2
-        },
-        {
-            "k": "item",
-            "id": "pocion_velocidad",
-            "x": 958,
-            "y": 168,
-            "map": "mapa1",
-            "ttl": 23.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1121,
-            "y": 131,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1142,
-            "y": 135,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1250,
-            "y": 109,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1137,
-            "y": 152,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1210,
-            "y": 141,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1241,
-            "y": 163,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1212,
-            "y": 132,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1127,
-            "y": 121,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1158,
-            "y": 136,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1222,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1247,
-            "y": 120,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1160,
-            "y": 148,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1167,
-            "y": 146,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "polvora",
-            "x": 1221,
-            "y": 121,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1251,
-            "y": 125,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1158,
-            "y": 129,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1219,
-            "y": 130,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1155,
-            "y": 128,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1153,
-            "y": 127,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1134,
-            "y": 135,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1135,
-            "y": 151,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1225,
-            "y": 142,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1244,
-            "y": 128,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1250,
-            "y": 147,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1209,
-            "y": 127,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1245,
-            "y": 124,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1159,
-            "y": 150,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1210,
-            "y": 129,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1242,
-            "y": 114,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1225,
-            "y": 129,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1157,
-            "y": 131,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "pocion_invisibilidad",
-            "x": 1163,
-            "y": 122,
-            "map": "mapa1",
-            "ttl": 39.3
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 1008,
-            "y": 168,
-            "map": "mapa1",
-            "ttl": 207.1
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
             "x": 995,
             "y": 167,
             "map": "mapa1",
-            "ttl": 207.2
+            "ttl": 112.7
         },
         {
             "k": "item",
@@ -875,15 +321,7 @@
             "x": 979,
             "y": 167,
             "map": "mapa1",
-            "ttl": 207.3
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 935,
-            "y": 148,
-            "map": "mapa1",
-            "ttl": 207.4
+            "ttl": 112.8
         },
         {
             "k": "item",
@@ -891,7 +329,7 @@
             "x": 1117,
             "y": 137,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -899,7 +337,7 @@
             "x": 1249,
             "y": 151,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -907,7 +345,7 @@
             "x": 1165,
             "y": 130,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -915,7 +353,7 @@
             "x": 1215,
             "y": 123,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -923,7 +361,7 @@
             "x": 1161,
             "y": 141,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -931,7 +369,7 @@
             "x": 1128,
             "y": 135,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -939,7 +377,7 @@
             "x": 1219,
             "y": 132,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -947,7 +385,7 @@
             "x": 1224,
             "y": 130,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -955,7 +393,7 @@
             "x": 1221,
             "y": 131,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -963,7 +401,7 @@
             "x": 1144,
             "y": 135,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -971,7 +409,7 @@
             "x": 1225,
             "y": 144,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -979,7 +417,7 @@
             "x": 1190,
             "y": 123,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -987,15 +425,7 @@
             "x": 1231,
             "y": 126,
             "map": "mapa1",
-            "ttl": 278.3
-        },
-        {
-            "k": "item",
-            "id": "aceite",
-            "x": 1110,
-            "y": 145,
-            "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1003,7 +433,7 @@
             "x": 1245,
             "y": 159,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1011,7 +441,7 @@
             "x": 1152,
             "y": 150,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1019,7 +449,7 @@
             "x": 1244,
             "y": 138,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1027,7 +457,7 @@
             "x": 1174,
             "y": 124,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1035,7 +465,7 @@
             "x": 1154,
             "y": 126,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1043,7 +473,7 @@
             "x": 1179,
             "y": 120,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1051,7 +481,7 @@
             "x": 1149,
             "y": 128,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1059,7 +489,7 @@
             "x": 1138,
             "y": 133,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1067,7 +497,7 @@
             "x": 1248,
             "y": 160,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1075,7 +505,7 @@
             "x": 1219,
             "y": 144,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1083,7 +513,7 @@
             "x": 1200,
             "y": 144,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1091,7 +521,7 @@
             "x": 1208,
             "y": 139,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1099,7 +529,7 @@
             "x": 1171,
             "y": 126,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1107,7 +537,7 @@
             "x": 1201,
             "y": 149,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1115,7 +545,7 @@
             "x": 1198,
             "y": 149,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1123,7 +553,7 @@
             "x": 1200,
             "y": 130,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1131,7 +561,7 @@
             "x": 1127,
             "y": 129,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1139,7 +569,7 @@
             "x": 1209,
             "y": 151,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1147,7 +577,7 @@
             "x": 1229,
             "y": 146,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1155,7 +585,7 @@
             "x": 1214,
             "y": 122,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1163,7 +593,7 @@
             "x": 1230,
             "y": 131,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1171,7 +601,7 @@
             "x": 1111,
             "y": 151,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1179,7 +609,7 @@
             "x": 1147,
             "y": 145,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1187,7 +617,7 @@
             "x": 1234,
             "y": 135,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1195,7 +625,7 @@
             "x": 1159,
             "y": 125,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1203,7 +633,7 @@
             "x": 1218,
             "y": 145,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1211,7 +641,7 @@
             "x": 1118,
             "y": 141,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1219,7 +649,7 @@
             "x": 1143,
             "y": 126,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1227,7 +657,7 @@
             "x": 1170,
             "y": 123,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1235,7 +665,7 @@
             "x": 1164,
             "y": 132,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1243,7 +673,7 @@
             "x": 1185,
             "y": 122,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1251,7 +681,7 @@
             "x": 1145,
             "y": 121,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1259,7 +689,7 @@
             "x": 1240,
             "y": 140,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1267,7 +697,7 @@
             "x": 1117,
             "y": 150,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1275,7 +705,7 @@
             "x": 1184,
             "y": 125,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1283,7 +713,7 @@
             "x": 1200,
             "y": 142,
             "map": "mapa1",
-            "ttl": 278.3
+            "ttl": 183.8
         },
         {
             "k": "item",
@@ -1291,15 +721,7 @@
             "x": 878,
             "y": 170,
             "map": "mapa1",
-            "ttl": 291.7
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 963,
-            "y": 155,
-            "map": "mapa1",
-            "ttl": 291.8
+            "ttl": 197.2
         },
         {
             "k": "item",
@@ -1307,33 +729,7 @@
             "x": 994,
             "y": 149,
             "map": "mapa1",
-            "ttl": 292.0
-        },
-        {
-            "k": "item",
-            "id": "hongo_azul",
-            "x": 980,
-            "y": 157,
-            "map": "mapa1",
-            "ttl": 292.1
-        },
-        {
-            "k": "light",
-            "id": "antorcha",
-            "life": 1.0,
-            "x": 881,
-            "y": 167,
-            "map": "mapa1",
-            "ttl": 23.4
-        },
-        {
-            "k": "light",
-            "id": "fosforo",
-            "life": 0.5448666666666364,
-            "x": 942,
-            "y": 173,
-            "map": "mapa1",
-            "ttl": 54.4
+            "ttl": 197.5
         },
         {
             "k": "light",
@@ -1342,7 +738,7 @@
             "x": 953,
             "y": 257,
             "map": "mapa1",
-            "ttl": 287.6
+            "ttl": 193.1
         },
         {
             "k": "item",
@@ -1350,15 +746,7 @@
             "x": 27,
             "y": 1266,
             "map": "mapa2",
-            "ttl": 87.1
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 51,
-            "y": 1234,
-            "map": "mapa2",
-            "ttl": 87.1
+            "ttl": 40.8
         },
         {
             "k": "item",
@@ -1366,7 +754,7 @@
             "x": 284,
             "y": 1177,
             "map": "mapa2",
-            "ttl": 105.8
+            "ttl": 59.5
         },
         {
             "k": "item",
@@ -1374,23 +762,7 @@
             "x": 298,
             "y": 1189,
             "map": "mapa2",
-            "ttl": 105.8
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 60,
-            "y": 1216,
-            "map": "mapa2",
-            "ttl": 151.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 47,
-            "y": 1237,
-            "map": "mapa2",
-            "ttl": 151.5
+            "ttl": 59.5
         },
         {
             "k": "item",
@@ -1398,31 +770,7 @@
             "x": 14,
             "y": 1240,
             "map": "mapa2",
-            "ttl": 151.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 24,
-            "y": 1227,
-            "map": "mapa2",
-            "ttl": 151.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 26,
-            "y": 1248,
-            "map": "mapa2",
-            "ttl": 151.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 37,
-            "y": 1254,
-            "map": "mapa2",
-            "ttl": 152.3
+            "ttl": 105.3
         },
         {
             "k": "item",
@@ -1430,15 +778,7 @@
             "x": 11,
             "y": 1230,
             "map": "mapa2",
-            "ttl": 152.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 63,
-            "y": 1228,
-            "map": "mapa2",
-            "ttl": 152.5
+            "ttl": 106.1
         },
         {
             "k": "item",
@@ -1446,7 +786,7 @@
             "x": 289,
             "y": 1259,
             "map": "mapa2",
-            "ttl": 159.9
+            "ttl": 113.6
         },
         {
             "k": "item",
@@ -1454,31 +794,7 @@
             "x": 126,
             "y": 1218,
             "map": "mapa2",
-            "ttl": 209.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 133,
-            "y": 1182,
-            "map": "mapa2",
-            "ttl": 209.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 100,
-            "y": 1227,
-            "map": "mapa2",
-            "ttl": 209.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 137,
-            "y": 1190,
-            "map": "mapa2",
-            "ttl": 209.7
+            "ttl": 163.2
         },
         {
             "k": "item",
@@ -1486,15 +802,7 @@
             "x": 122,
             "y": 1223,
             "map": "mapa2",
-            "ttl": 209.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 95,
-            "y": 1190,
-            "map": "mapa2",
-            "ttl": 209.7
+            "ttl": 163.4
         },
         {
             "k": "item",
@@ -1502,15 +810,7 @@
             "x": 123,
             "y": 1209,
             "map": "mapa2",
-            "ttl": 209.8
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 109,
-            "y": 1227,
-            "map": "mapa2",
-            "ttl": 210.0
+            "ttl": 163.5
         },
         {
             "k": "item",
@@ -1518,7 +818,7 @@
             "x": 311,
             "y": 1197,
             "map": "mapa2",
-            "ttl": 213.6
+            "ttl": 167.3
         },
         {
             "k": "item",
@@ -1526,23 +826,7 @@
             "x": 265,
             "y": 1188,
             "map": "mapa2",
-            "ttl": 213.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 66,
-            "y": 1210,
-            "map": "mapa2",
-            "ttl": 217.3
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 79,
-            "y": 1219,
-            "map": "mapa2",
-            "ttl": 217.6
+            "ttl": 167.4
         },
         {
             "k": "item",
@@ -1550,31 +834,7 @@
             "x": 124,
             "y": 1228,
             "map": "mapa2",
-            "ttl": 217.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 43,
-            "y": 1210,
-            "map": "mapa2",
-            "ttl": 217.8
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 34,
-            "y": 1205,
-            "map": "mapa2",
-            "ttl": 217.9
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 27,
-            "y": 1249,
-            "map": "mapa2",
-            "ttl": 248.4
+            "ttl": 171.4
         },
         {
             "k": "item",
@@ -1582,7 +842,7 @@
             "x": 8,
             "y": 1265,
             "map": "mapa2",
-            "ttl": 248.4
+            "ttl": 202.1
         },
         {
             "k": "item",
@@ -1590,7 +850,7 @@
             "x": 207,
             "y": 1372,
             "map": "mapa2",
-            "ttl": 267.4
+            "ttl": 221.1
         },
         {
             "k": "item",
@@ -1598,15 +858,7 @@
             "x": 200,
             "y": 1373,
             "map": "mapa2",
-            "ttl": 267.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 141,
-            "y": 1314,
-            "map": "mapa2",
-            "ttl": 269.6
+            "ttl": 221.1
         },
         {
             "k": "item",
@@ -1614,7 +866,7 @@
             "x": 176,
             "y": 1377,
             "map": "mapa2",
-            "ttl": 269.6
+            "ttl": 223.3
         },
         {
             "k": "item",
@@ -1622,7 +874,7 @@
             "x": 54,
             "y": 1351,
             "map": "mapa2",
-            "ttl": 270.8
+            "ttl": 224.5
         },
         {
             "k": "item",
@@ -1630,23 +882,7 @@
             "x": 21,
             "y": 1269,
             "map": "mapa2",
-            "ttl": 272.3
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 40,
-            "y": 1265,
-            "map": "mapa2",
-            "ttl": 272.3
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 34,
-            "y": 1256,
-            "map": "mapa2",
-            "ttl": 272.4
+            "ttl": 226.0
         },
         {
             "k": "item",
@@ -1654,31 +890,7 @@
             "x": 13,
             "y": 1266,
             "map": "mapa2",
-            "ttl": 272.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 126,
-            "y": 1175,
-            "map": "mapa2",
-            "ttl": 279.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 101,
-            "y": 1232,
-            "map": "mapa2",
-            "ttl": 279.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 118,
-            "y": 1174,
-            "map": "mapa2",
-            "ttl": 279.5
+            "ttl": 226.1
         },
         {
             "k": "item",
@@ -1686,7 +898,7 @@
             "x": 133,
             "y": 1214,
             "map": "mapa2",
-            "ttl": 279.5
+            "ttl": 233.2
         },
         {
             "k": "item",
@@ -1694,7 +906,111 @@
             "x": 117,
             "y": 1210,
             "map": "mapa2",
-            "ttl": 279.6
+            "ttl": 233.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 34,
+            "y": 1318,
+            "map": "mapa2",
+            "ttl": 258.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 63,
+            "y": 1319,
+            "map": "mapa2",
+            "ttl": 258.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 77,
+            "y": 1332,
+            "map": "mapa2",
+            "ttl": 258.4
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 117,
+            "y": 1216,
+            "map": "mapa2",
+            "ttl": 260.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 127,
+            "y": 1232,
+            "map": "mapa2",
+            "ttl": 261.0
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 91,
+            "y": 1186,
+            "map": "mapa2",
+            "ttl": 265.6
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 94,
+            "y": 1214,
+            "map": "mapa2",
+            "ttl": 265.7
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 91,
+            "y": 1167,
+            "map": "mapa2",
+            "ttl": 265.7
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 57,
+            "y": 1330,
+            "map": "mapa2",
+            "ttl": 274.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 87,
+            "y": 1313,
+            "map": "mapa2",
+            "ttl": 274.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 71,
+            "y": 1311,
+            "map": "mapa2",
+            "ttl": 274.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 70,
+            "y": 1306,
+            "map": "mapa2",
+            "ttl": 274.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 109,
+            "y": 1318,
+            "map": "mapa2",
+            "ttl": 274.4
         }
     ],
     "ganzua_uses": 2,

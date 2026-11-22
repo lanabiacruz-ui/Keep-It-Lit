@@ -3414,8 +3414,9 @@ class NewGame:
             self.map2_finale.start()
 
     def _update_map2_rescue(self, dt):
-        """Cuando las Aurantulas del final llevan un rato atacando aparece el
-        rescatador (Map2Rescue). Una sola vez por partida."""
+        """Cuando sale la horda de Aurantulas del final empieza el rescate
+        (Map2Rescue): Cenizo se asusta, llega el Farolero y las espanta con
+        una onda de luz. Una sola vez por partida."""
 
         rescue = self.map2_rescue
 
@@ -3454,17 +3455,12 @@ class NewGame:
         ):
             return
 
-        spiders = self.spiders
-
-        if spiders.rush_t is None or not spiders.spiders:
+        # hay horda en camino: arranca el rescate (Cenizo, el Farolero...)
+        if self.spiders.horde_t is None or not self.spiders.horde:
             return
 
-        from world import map2_intro
-
-        if spiders.rush_t >= map2_intro.RESCUE_DELAY:
-
-            self.map2_rescue = Map2Rescue(self)
-            self.map2_rescue.start()
+        self.map2_rescue = Map2Rescue(self)
+        self.map2_rescue.start()
 
     def _update_map_zoom(self, dt):
         """Mapa 2: al terminar la intro la camara se abre (mas zoom afuera)
@@ -6605,6 +6601,10 @@ class NewGame:
             s.rect for s in self.slimes.slimes
             if not s.dead and not s.gone
         ]
+
+        # las arañas y Aurantulas (y la horda del final) tambien son solidas
+        if getattr(self, "current_map", "mapa1") == "mapa2":
+            self.collision_map.dynamic_blockers.extend(self.spiders.solid_rects())
 
         # el monstruo del ojo (mapa 2) tambien es solido
         if self._eye_visible():

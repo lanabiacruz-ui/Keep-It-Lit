@@ -1,17 +1,22 @@
-"""Cinematica del rescate (mapa 2): cuando vienen muchas Aurantulas aparece
-un tipo, llena de luz toda la sala y las espanta a todas. Despues hay paz.
+"""Cinematica del rescate (mapa 2): cuando se va el monstruo aparece una horda
+de Aurantulas que se va acercando al jugador (world/spider.py, start_horde).
+Cenizo se asusta, llega el Farolero desde el cuarto de la derecha, se frena en
+el punto verde y suelta una onda de luz que ilumina todo el cuarto y espanta a
+todas las Aurantulas. Despues hay paz.
 
-Textos, nombre y tiempos: world/map2_intro.py (seccion EL RESCATE).
-Imagen opcional del tipo: assets/maps/combate/salvador.png (si no existe se
-usa un dibujo provisorio).
+Textos, nombre, tiempos y coordenadas: world/map2_intro.py (secciones LA HORDA
+y EL RESCATE). Imagen opcional del tipo: assets/maps/combate/salvador.png (si
+no existe se usa un dibujo provisorio).
 
-  1. arrive   aparece una lucecita flotando y el tipo se hace visible; las
-              Aurantulas se quedan quietas, asustadas
-  2. talk1    habla (panel)
-  3. burst    la luz explota: se ilumina toda la sala, flash y temblor, y las
-              Aurantulas salen corriendo y se desvanecen
-  4. talk2    habla (panel): paz. Le saca el veneno al jugador
-  5. leave    la luz se apaga de a poco y el tipo se desvanece
+  1. wait    la horda viene saliendo de la oscuridad y acercandose
+  2. cenizo  Cenizo habla (panel): "este es nuestro fin"
+  3. gap     una pausa corta, las Aurantulas siguen avanzando
+  4. walk    el Farolero entra caminando desde el cuarto de la derecha
+  5. hold    se queda quieto en el punto verde cargando luz (suspenso)
+  6. burst   la onda de luz explota: se ilumina todo el cuarto, flash y
+             temblor, y las Aurantulas salen corriendo y se desvanecen
+  7. talk2   habla (panel): paz. Le saca el veneno al jugador
+  8. leave   la luz se apaga de a poco y el tipo se desvanece
 
 Lo que hay que enganchar en states/new_game.py (ya esta hecho):
   - update(dt) y tick(dt) cada cuadro, after_dialog(closed) al cerrar un dialogo
@@ -26,9 +31,9 @@ import pygame
 
 from core.audio_manager import audio
 from ui.boss_dialog import BossDialog, COMBAT_DIR
+from ui.map2_scene import CenizoHurtDialog, CENIZO_HURT_DIALOG_HEIGHT
 from ui.tutorial import DEFAULT_THEME
 from world import map2_intro as cfg
-from world import spider as spider_mod
 
 
 RESCUER_THEME = dict(
@@ -54,8 +59,8 @@ RESCUER_THEME = dict(
 
 PORTRAIT = "salvador.png"
 
-# la sala que se ilumina (la sala grande de las Aurantulas)
-ROOM = spider_mod.AURA_ROOM
+# el cuarto que se ilumina (el contorno AZUL del dibujo)
+ROOM = pygame.Rect(*cfg.RESCUE_ROOM)
 
 STEP_RADIUS = 24        # la luz crece de a saltos (evita miles de imagenes en cache)
 STEP_STRENGTH = 0.05
@@ -211,11 +216,13 @@ class Map2Rescue:
         self.done = False
 
         self.t = 0.0
-        self.pos = pygame.Vector2()
+        self.pos = pygame.Vector2(cfg.RESCUER_ENTRY)
 
+        self.walked = 0.0            # cuanto camino desde que entro (px del mundo)
         self.fade = 0.0              # 0 invisible -> 1 se ve entero
         self.aura = 0.0              # radio (mundo) de la luz que sale de el
-        self.room = 0.0              # 0-1: cuanta luz hay en la sala
+        self.room = 0.0              # 0-1: cuanta luz hay en el cuarto
+        self.wave = 0.0              # 0-1: avance de la onda de luz (anillo)
 
         self._current = None
         self._old_smooth = None
@@ -233,9 +240,10 @@ class Map2Rescue:
     # ---- camara
 
     def camera_focus(self):
-        """Mientras aparece y habla, la camara se desplaza hacia el."""
+        """Mientras llega, carga y suelta la luz, la camara se desplaza hacia
+        el (a medias entre el jugador y el Farolero)."""
 
-        if self.stage not in ("arrive", "talk1", "burst", "talk2"):
+        if self.stage not in ("walk", "hold", "talk1", "burst", "talk2"):
             return None
 
         p = pygame.Vector2(self.game.player.image_rect.center)
@@ -256,64 +264,46 @@ class Map2Rescue:
 
     # ---- secuencia
 
-    def _find_spot(self):
-        """Donde aparece: cerca del jugador, en el piso y con camino libre."""
-
-        g = self.game
-
-        cmap = g.collision_map
-
-        px, py = g.player.rect.center
-
-        me = pygame.Vector2(px, py)
-
-        best = None
-
-        for dist in (150, 120, 190, 90):
-
-            for ang in (-90, -45, -135, 0, 180, 45, 135, 90):
-
-                p = me + pygame.Vector2(dist, 0).rotate(ang)
-
-                if not cmap.point_is_walkable(p.x, p.y):
-                    continue
-
-                if not g.spiders._clear_line(cmap, (px, py), (p.x, p.y)):
-                    continue
-
-                best = p
-
-                break
-
-            if best is not None:
-                break
-
-        return best if best is not None else me + (0, -110)
-
     def start(self):
+        """La horda ya esta saliendo: se espera un poco y habla Cenizo."""
+
+        self.stage = "wait"
+        self.t = 0.0
+
+    def _open(self, pages, stage, dialog=None, **kw):
+
+        self.stage = stage
+
+        cls = dialog or RescuerDialog
+
+        self._current = cls(self._size(), pages=pages, **kw)
+
+        self.game.tutorial = self._current
+
+    def _cenizo(self):
+        """Cenizo ve la horda y se asusta."""
+
+        self._open(
+            cfg.CENIZO_FIN, "cenizo", dialog=CenizoHurtDialog,
+            char_height=CENIZO_HURT_DIALOG_HEIGHT,
+        )
+
+    def _begin_walk(self):
+        """El Farolero viene caminando desde el cuarto de la derecha."""
 
         g = self.game
 
         self._old_smooth = g.camera.smoothing
         g.camera.smoothing = cfg.CAMERA_SMOOTH
 
-        self.pos = self._find_spot()
+        self.pos = pygame.Vector2(cfg.RESCUER_ENTRY)
+        self.walked = 0.0
+        self.fade = 0.0
 
-        self.stage = "arrive"
+        self.stage = "walk"
         self.t = 0.0
 
-        # las Aurantulas se quedan quietas, como si sintieran algo
-        g.spiders.pause()
-
         audio.play("light_on")
-
-    def _open(self, pages, stage):
-
-        self.stage = stage
-
-        self._current = RescuerDialog(self._size(), pages=pages)
-
-        self.game.tutorial = self._current
 
     def after_dialog(self, closed):
         """new_game la llama cuando se cierra cualquier dialogo."""
@@ -323,19 +313,37 @@ class Map2Rescue:
 
         self._current = None
 
-        if self.stage == "talk1":
+        if self.stage == "cenizo":
+
+            self.stage = "gap"
+            self.t = 0.0
+
+        elif self.stage == "talk1":
             self._burst()
 
         elif self.stage == "talk2":
             self._leave()
 
+    def _before_burst(self):
+        """Ya esta en el punto verde y las Aurantulas casi atacan."""
+
+        if cfg.RESCUER_1:
+
+            # (opcional) dice algo antes de tirar la luz
+            self._open(cfg.RESCUER_1, "talk1")
+
+            return
+
+        self._burst()
+
     def _burst(self):
-        """La luz explota: se ilumina la sala y las Aurantulas huyen."""
+        """Onda de luz: se ilumina el cuarto y las Aurantulas huyen."""
 
         g = self.game
 
         self.stage = "burst"
         self.t = 0.0
+        self.wave = 0.0
 
         fx = getattr(g, "fx", None)
 
@@ -364,7 +372,7 @@ class Map2Rescue:
         if old is not None:
             g.camera.smoothing = old
 
-        if cfg.RESCUE_CURE_POISON:
+        if getattr(cfg, "RESCUE_CURE_POISON", False):
 
             cure = getattr(g, "cure_poison", None)
 
@@ -376,17 +384,69 @@ class Map2Rescue:
     def update(self, dt):
         """Lo llama new_game en cada cuadro (el juego corriendo)."""
 
-        if self.stage == "arrive":
+        g = self.game
+
+        if self.stage == "wait":
 
             self.t += dt
 
-            k = min(1.0, self.t / cfg.RESCUE_ARRIVE_TIME)
+            # Cenizo habla cuando ya se ven varias (no antes)
+            if (
+                self.t >= cfg.HORDE_CENIZO_DELAY
+                and g.spiders.horde_spawned() >= 3
+            ) or self.t >= cfg.HORDE_CENIZO_DELAY + 6.0:
+                self._cenizo()
 
-            self.fade = min(1.0, k * 1.6)
-            self.aura = 150.0 * k
+        elif self.stage == "gap":
 
-            if self.t >= cfg.RESCUE_ARRIVE_TIME:
-                self._open(cfg.RESCUER_1, "talk1")
+            self.t += dt
+
+            if self.t >= cfg.RESCUE_GAP:
+                self._begin_walk()
+
+        elif self.stage == "walk":
+
+            self.t += dt
+
+            target = pygame.Vector2(cfg.RESCUER_STOP)
+
+            to = target - self.pos
+
+            step = cfg.RESCUER_WALK_SPEED * dt
+
+            if to.length() <= step:
+
+                self.pos = target
+
+                self.stage = "hold"
+                self.t = 0.0
+
+            else:
+
+                self.pos += to.normalize() * step
+                self.walked += step
+
+            # sale de la oscuridad de a poco y trae su luz
+            self.fade = min(1.0, self.walked / 120.0)
+            self.aura = 110.0 * self.fade
+
+        elif self.stage == "hold":
+
+            self.t += dt
+
+            # carga luz alrededor de el (el circulo amarillo del dibujo)
+            k = min(1.0, self.t / cfg.RESCUE_HOLD_MIN)
+
+            self.fade = 1.0
+            self.aura = 110.0 + (cfg.RESCUE_CHARGE_RADIUS * 1.6 - 110.0) * k
+
+            near = g.spiders.horde_nearest(g)
+
+            if self.t >= cfg.RESCUE_HOLD_MIN and (
+                (near is not None and near <= cfg.RESCUE_TRIGGER_DIST)
+                or self.t >= cfg.RESCUE_HOLD_MAX
+            ):
+                self._before_burst()
 
         elif self.stage == "burst":
 
@@ -395,7 +455,10 @@ class Map2Rescue:
             k = min(1.0, self.t / cfg.RESCUE_BURST_TIME)
             e = 1.0 - (1.0 - k) ** 3
 
-            self.aura = 150.0 + (cfg.RESCUE_AURA_RADIUS - 150.0) * e
+            start = cfg.RESCUE_CHARGE_RADIUS * 1.6
+
+            self.wave = e
+            self.aura = start + (cfg.RESCUE_AURA_RADIUS - start) * e
             self.room = min(1.0, e * 1.15)
 
             if self.t >= cfg.RESCUE_BURST_TIME:
@@ -434,7 +497,7 @@ class Map2Rescue:
         return [(self.pos.x, self.pos.y, int(radius * zoom))]
 
     def lit_rects(self):
-        """[(rect_mundo, fuerza, borde)]: la sala entera iluminada."""
+        """[(rect_mundo, fuerza, borde)]: el cuarto entero iluminado."""
 
         if not self.active or self.room < 0.03:
             return []
@@ -444,10 +507,7 @@ class Map2Rescue:
         if strength <= 0:
             return []
 
-        return [(
-            ROOM.inflate(cfg.RESCUE_ROOM_PAD, cfg.RESCUE_ROOM_PAD),
-            min(1.0, strength), 90,
-        )]
+        return [(ROOM, min(1.0, strength), 60)]
 
     # ---- dibujo
 
@@ -486,6 +546,42 @@ class Map2Rescue:
 
         return img
 
+    def _draw_wave(self, screen, camera, sx, sy):
+        """El anillo de la onda de luz que sale de el (se suma a la escena)."""
+
+        if self.stage != "burst" or not (0.0 < self.wave < 1.0):
+            return
+
+        zoom = camera.zoom
+
+        radius = int(cfg.RESCUE_AURA_RADIUS * 1.1 * self.wave * zoom)
+
+        if radius < 6:
+            return
+
+        width = max(3, int(radius * 0.10))
+
+        k = (1.0 - self.wave) ** 1.2
+
+        col = (int(255 * k), int(236 * k), int(170 * k))
+
+        # solo la parte del anillo que cae en pantalla
+        view = screen.get_rect()
+        box = pygame.Rect(0, 0, radius * 2 + 4, radius * 2 + 4)
+        box.center = (sx, sy)
+        box = box.clip(view)
+
+        if box.width < 2 or box.height < 2:
+            return
+
+        ring = pygame.Surface(box.size)
+
+        pygame.draw.circle(
+            ring, col, (sx - box.x, sy - box.y), radius, width
+        )
+
+        screen.blit(ring, box.topleft, special_flags=pygame.BLEND_RGB_ADD)
+
     def draw(self, screen, camera):
         """El tipo (y su resplandor) en el mundo."""
 
@@ -508,11 +604,21 @@ class Map2Rescue:
 
         bob = math.sin(t * 2.2) * 2.5 * zoom
 
+        # caminando: sube y baja con cada paso
+        if self.stage == "walk":
+
+            phase = (self.t / max(0.05, cfg.RESCUER_WALK_STEP)) * math.pi
+
+            bob = -abs(math.sin(phase)) * cfg.RESCUER_WALK_HOP * img.get_height()
+
         sx = int(self.pos.x * zoom - camera.x)
         sy = int(self.pos.y * zoom - camera.y + bob)
 
         # resplandor detras (luz sumada)
         gr = int(img.get_height() * (0.95 + 0.08 * math.sin(t * 5.0)))
+
+        if self.stage == "hold":
+            gr = int(gr * (1.0 + 0.5 * min(1.0, self.t / cfg.RESCUE_HOLD_MIN)))
 
         halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS)
 
@@ -552,3 +658,5 @@ class Map2Rescue:
             body.set_alpha(int(255 * self.fade))
 
         screen.blit(body, body.get_rect(midbottom=(sx, sy)))
+
+        self._draw_wave(screen, camera, sx, sy - img.get_height() // 2)

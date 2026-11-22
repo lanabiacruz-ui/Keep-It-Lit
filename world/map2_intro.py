@@ -201,23 +201,68 @@ FINALE_WALK_TIME = 5.0       # segundos hasta desaparecer del todo
 FINALE_WALK_STEP = 0.55      # segundos por "paso" (el cuerpo sube y baja al caminar)
 FINALE_WALK_HOP = 0.018      # que tanto salta en cada paso (fraccion de su alto)
 
+# ------------------------------------------------------------ LA HORDA
+# Cuando el monstruo se va, de la oscuridad del cuarto empiezan a aparecer
+# Aurantulas (las ROJAS del dibujo: salen por la izquierda y por arriba) y se
+# van acercando al jugador de a poco. NO hacen daño: son la amenaza. Al
+# principio no hay nada y despues aparecen cada vez mas.
+# La logica esta en world/spider.py (start_horde).
+HORDE_COUNT = 18               # cuantas aparecen en total
+HORDE_FIRST_DELAY = 1.8        # segundos sin nada antes de la primera
+HORDE_SPAWN_TIME = 8.0         # en cuanto tiempo aparecen todas (cada vez mas juntas)
+HORDE_APPEAR_FADE = 1.4        # cada una sale de la oscuridad (se hace visible) en este tiempo
+HORDE_SPEED = (14.0, 22.0)     # velocidad de avance (px del mundo por segundo): lento, inquietante
+HORDE_RING = (40.0, 80.0)      # a que distancia del jugador se frenan (rodean sin pisarlo)
+
+# Donde aparecen (x, y, ancho, alto) en pixeles del mundo: pegadas a la
+# pared de la izquierda y a la de arriba del cuarto (lo ROJO del dibujo).
+HORDE_SPAWN_AREAS = [
+    (26, 1186, 64, 176),       # pared izquierda
+    (60, 1178, 190, 36),       # pared de arriba
+]
+HORDE_SPAWN_MIN_DIST = 110     # no nacen encima del jugador
+
+# Cenizo, al ver la horda (por el panel de dialogo, herido como despues del rayo)
+CENIZO_FIN = [
+    "¡¡AAAAH!! ¡Mira cuántas! ¡Vienen TODAS hacia acá! ¡Y siguen saliendo!",
+
+    "Oh no... ¡Este es nuestro fin! ¡Y yo que ni te conté lo de mi tío, el candil!",
+]
+HORDE_CENIZO_DELAY = 3.2       # segundos de horda antes de que Cenizo hable
+
+
 # ------------------------------------------------------------ EL RESCATE
-# Cinematica: cuando vienen muchas Aurantulas (las del final del combate)
-# aparece un tipo, llena de luz toda la sala y las espanta a todas. La logica
-# esta en ui/map2_rescue.py (Map2Rescue); aca solo se cambian textos y tiempos.
+# Cinematica: el Farolero (el VERDE del dibujo) viene caminando desde el
+# cuarto de la derecha, entra, se queda quieto en el punto verde y, un
+# momento antes de que las Aurantulas ataquen, suelta una onda de luz que
+# ilumina todo el cuarto (el contorno AZUL) y las espanta a todas.
+# La logica esta en ui/map2_rescue.py (Map2Rescue); aca solo se cambian
+# textos, tiempos y coordenadas.
 #
 # Imagen opcional: assets/maps/combate/salvador.png (dibujo del tipo). Si no
 # existe se usa un dibujo provisorio (encapuchado con un farol).
 RESCUER_NAME = "El Farolero"       # nombre que se ve en el panel
 
-RESCUE_DELAY = 7.0       # segundos desde que salen las Aurantulas hasta que aparece
+RESCUER_ENTRY = (560, 1276)        # de donde sale (cuarto de la derecha, en la oscuridad)
+RESCUER_STOP = (195, 1277)         # PUNTO VERDE: donde se frena a tirar la luz
+RESCUER_WALK_SPEED = 80.0          # velocidad caminando (px del mundo por segundo)
+RESCUER_WALK_STEP = 0.5            # segundos por "paso" (el cuerpo sube y baja)
+RESCUER_WALK_HOP = 0.02            # que tanto salta en cada paso (fraccion de su alto)
 
-RESCUER_1 = [
-    "Quietas. Todas.",
+# CIRCULO AMARILLO: la luz que carga alrededor de el antes de explotar
+RESCUE_CHARGE_RADIUS = 80
+# el cuarto que se ilumina del todo (x, y, ancho, alto): el contorno AZUL
+RESCUE_ROOM = (14, 1166, 304, 214)
 
-    "Ya les dieron suficiente miedo a este muchacho. Me toca a mí.",
-]
+RESCUE_GAP = 1.8         # pausa despues de Cenizo antes de que se lo vea llegar
+RESCUE_HOLD_MIN = 1.4    # se queda quieto cargando la luz, como minimo (suspenso)
+RESCUE_HOLD_MAX = 5.0    # y como maximo (aunque las Aurantulas no lleguen)
+RESCUE_TRIGGER_DIST = 95 # explota cuando la primera Aurantula esta a esta distancia del jugador
 
+# Lo que dice ANTES de la luz (vacio = no dice nada, tira la onda directo)
+RESCUER_1 = []
+
+# Lo que dice DESPUES, cuando ya no hay peligro
 RESCUER_2 = [
     "Ya pasó. No volverán por un buen rato... la luz les duele más a ellas que a ti.",
 
@@ -226,10 +271,8 @@ RESCUER_2 = [
     "Ve con calma. Lo que viene es peor que unas arañas... pero ya no vas solo.",
 ]
 
-RESCUE_ARRIVE_TIME = 2.2     # aparece, flotando una luz chiquita, antes de hablar
-RESCUE_BURST_TIME = 2.6      # la luz explota y se llena la sala (las arañas huyen)
+RESCUE_BURST_TIME = 2.2      # la onda de luz se expande y llena el cuarto (las arañas huyen)
 RESCUE_LEAVE_TIME = 3.0      # se va apagando de a poco y el tipo se desvanece
 RESCUE_HEIGHT = 1.25         # alto del tipo (multiplo del alto del jugador)
-RESCUE_ROOM_PAD = 50         # cuanto se agranda la zona iluminada sobre la sala
-RESCUE_AURA_RADIUS = 330     # radio (mundo) de la luz que sale de el al explotar
-RESCUE_CURE_POISON = True    # al terminar le saca el veneno al jugador
+RESCUE_AURA_RADIUS = 330     # radio (mundo) maximo de la onda de luz
+RESCUE_CURE_POISON = True    # al final le saca el veneno al jugador (si tiene)

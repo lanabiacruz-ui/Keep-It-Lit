@@ -111,7 +111,7 @@ SHOT_SIZE = 22
 HIT_PAD = (14, 22)           # el bloque cuenta como "te dio" un poco antes
 
 WEB_SIZE = 48                # lado del bloque de telaraña en el piso
-WEB_GAP = 14                 # separacion minima (px) entre telarañas: NUNCA se tocan
+WEB_GAP = 0                  # telarañas = bloques de grilla: se PEGAN borde con borde (nunca se pisan)
 WEB_LIFE = 9.0               # segundos hasta que se va solo
 WEB_FADE = 2.0               # los ultimos segundos se va apagando
 WEB_SLOW = 0.175             # multiplicador de velocidad dentro (el doble de lento que antes: 0.35)
@@ -344,6 +344,7 @@ class WebShot:
         self.travelled = 0.0
         self.variant = variant
         self.owner = None
+        self.burst = None          # id de la rafaga (las 4 telarañas se pegan entre si)
         self.age = 0.0
 
         self.rect = pygame.Rect(0, 0, size, size)
@@ -368,6 +369,7 @@ class WebPatch:
         self.pos = pygame.Vector2(self.tx, self.ty)
 
         self.variant = variant
+        self.burst = None
         self.age = 0.0
 
     def target_rect(self):
@@ -1090,6 +1092,13 @@ class SpiderManager:
         self.peace = False       # despues del rescate: no nacen mas Aurantulas
         self.rush_t = None       # segundos desde que salieron las del final
 
+        # la horda del final: Aurantulas que salen de la oscuridad y se
+        # acercan sin hacer daño (ver start_horde)
+        self.horde = []
+        self.horde_t = None      # segundos desde que empezo (None = no hay horda)
+
+        self._burst_seq = 0      # contador de rafagas (ver throw)
+
         self._active = False
         self._slow = 1.0
         self._warned = False
@@ -1125,6 +1134,8 @@ class SpiderManager:
         self.fleeing = []
         self.paused = False
         self.rush_t = None
+        self.horde = []
+        self.horde_t = None
 
         self.player_in_web = False
 
@@ -1547,6 +1558,17 @@ class SpiderManager:
         )
         shot.owner = spider
 
+        # las telarañas de una misma rafaga comparten id: despues se pegan
+        # entre si (bloques de grilla juntos)
+        if isinstance(spider, Aurantula):
+
+            if k == 0 or getattr(spider, "burst_id", None) is None:
+
+                self._burst_seq += 1
+                spider.burst_id = self._burst_seq
+
+            shot.burst = spider.burst_id
+
         self.shots.append(shot)
 
     def _aura_aim(self, game, src, target, speed):
@@ -1573,136 +1595,363 @@ class SpiderManager:
 
         return direction
 
-    # ---- telarañas como bloques (nunca se superponen) --------------------------------
+    # ---- telarañas como bloques de Minecraft: grilla, pegadas, nunca pisadas ---------
     @staticmethod
-    def _spot_rect(cx, cy):
+    def _cell_of(x, y):
+        """Celda de la grilla (i, j) donde cae el punto (x, y) del mundo."""
 
-        r = pygame.Rect(0, 0, WEB_SIZE, WEB_SIZE)
-        r.center = (cx, cy)
+        return (int(math.floor(x / WEB_SIZE)), int(math.floor(y / WEB_SIZE)))
 
-        return r
+    @staticmethod
+    def _cell_center(cell):
 
-    def _spot_ok(self, cmap, x, y, rects):
-        """True si una telaraña centrada en (x, y) entra en el piso y queda
-        a WEB_GAP o mas de todas las demas (no se toca con ninguna)."""
+        return (
+            cell[0] * WEB_SIZE + WEB_SIZE // 2,
+            cell[1] * WEB_SIZE + WEB_SIZE // 2,
+        )
 
-        if not cmap.point_is_walkable(x, y):
+    def _cell_ok(self, cmap, cell, taken):
+        """La celda esta libre (sin otra telaraña) y es piso."""
+
+        if cell in taken:
             return False
 
-        r = self._spot_rect(x, y).inflate(WEB_GAP * 2, WEB_GAP * 2)
+        cx, cy = self._cell_center(cell)
 
-        return not any(r.colliderect(e) for e in rects)
+        if not cmap.point_is_walkable(cx, cy):
+            return False
 
-    def _free_spot(self, cmap, cx, cy, rects):
-        """Lugar libre mas cercano a (cx, cy) para una telaraña: el mismo punto
-        si esta libre o, si no, al costado de la otra con WEB_GAP de aire
-        (nunca pegadas: si se tocan parecen una sola telaraña).
+        # que no quede medio metida en una pared
+        q = WEB_SIZE // 2 - 6
+
+        for dx, dy in ((-q, -q), (q, -q), (-q, q), (q, q)):
+
+            if not cmap.point_is_walkable(cx + dx, cy + dy):
+                return False
+
+        return True
+
+    def _free_cell(self, cmap, x, y, taken, near=None):
+        """Celda libre para una telaraña que cae en (x, y).
+
+        - La celda donde cae, si esta libre.
+        - Si no, la libre mas cercana, y si `near` (celdas de las otras
+          telarañas de la MISMA rafaga) tiene algo, solo se aceptan celdas
+          que TOCAN a una de ellas por un lado: asi las 4 quedan pegadas
+          formando un bloque y no una encima de la otra.
         None si no hay lugar."""
 
-        half = WEB_SIZE // 2
-        step = WEB_SIZE + WEB_GAP
+        want = self._cell_of(x, y)
 
-        cands = [(round(cx), round(cy))]
+        near = list(near or [])
 
-        for e in rects:
+        def touches(c):
 
-            for y in (round(cy), e.centery):
-                cands.append((e.right + half + WEB_GAP, y))
-                cands.append((e.left - half - WEB_GAP, y))
-
-            for x in (round(cx), e.centerx):
-                cands.append((x, e.bottom + half + WEB_GAP))
-                cands.append((x, e.top - half - WEB_GAP))
-
-        # anillos alrededor del punto (por si los costados de las otras estan
-        # ocupados o son pared)
-        for ring in range(1, 5):
-
-            for k in range(12):
-
-                ang = math.tau * k / 12
-
-                cands.append((
-                    round(cx + math.cos(ang) * step * ring),
-                    round(cy + math.sin(ang) * step * ring),
-                ))
+            return any(
+                abs(c[0] - n[0]) + abs(c[1] - n[1]) == 1 for n in near
+            )
 
         best = None
         best_d = None
 
-        for x, y in cands:
+        for ring in range(0, 7):
 
-            d = (x - cx) ** 2 + (y - cy) ** 2
+            for di in range(-ring, ring + 1):
 
-            if best_d is not None and d >= best_d:
-                continue
+                for dj in range(-ring, ring + 1):
 
-            if not self._spot_ok(cmap, x, y, rects):
-                continue
+                    if max(abs(di), abs(dj)) != ring:
+                        continue
 
-            best, best_d = (x, y), d
+                    c = (want[0] + di, want[1] + dj)
 
-        return best
+                    if near and not touches(c):
+                        continue
 
-    def _add_web(self, game, x, y, variant, pinned=False):
-        """Pone una telaraña sin que se toque con otra (siempre queda WEB_GAP
-        de aire entre las dos).
+                    if not self._cell_ok(cmap, c, taken):
+                        continue
 
-        - Normal (bloque que fallo): si cae sobre otra o muy cerca, se aparta
-          hasta el lugar libre mas cercano.
-        - pinned (la que te atrapo): se queda justo donde estas, para no
-          soltarte; las que la tocan son las que se apartan.
+                    cx, cy = self._cell_center(c)
+
+                    d = (cx - x) ** 2 + (cy - y) ** 2
+
+                    if best_d is None or d < best_d:
+                        best, best_d = c, d
+
+            if best is not None:
+                return best
+
+        if near:
+
+            # ninguna de al lado esta libre (pared): cualquier celda libre
+            return self._free_cell(cmap, x, y, taken, None)
+
+        return None
+
+    def _taken_cells(self, skip=None):
+        """Celdas ocupadas por las telarañas que hay (a donde van)."""
+
+        return {
+            self._cell_of(w.tx, w.ty) for w in self.webs if w is not skip
+        }
+
+    def _add_web(self, game, x, y, variant, pinned=False, burst=None):
+        """Pone una telaraña como un bloque de grilla: siempre pegada borde
+        con borde a las demas y NUNCA superpuesta.
+
+        - Las de una misma rafaga (burst) se pegan entre si: si cae sobre
+          otra se corre a la celda libre que la toca, asi 4 telarañas
+          forman 4 bloques juntos y no uno solo.
+        - pinned (la que te atrapo): se queda en la celda donde estas, para
+          no soltarte; la que estaba ahi se corre a una celda libre.
         """
 
         cmap = game.collision_map
 
         web = WebPatch(x, y, variant)
+        web.burst = burst
+
+        taken = self._taken_cells()
+
+        near = [
+            self._cell_of(w.tx, w.ty) for w in self.webs
+            if burst is not None and w.burst == burst
+        ]
 
         if not pinned:
 
-            spot = self._free_spot(
-                cmap, web.tx, web.ty,
-                [w.target_rect() for w in self.webs],
-            )
+            cell = self._free_cell(cmap, web.tx, web.ty, taken, near)
 
-            if spot is None:
+            if cell is None:
                 return None
 
-            web.tx, web.ty = spot
+            web.tx, web.ty = self._cell_center(cell)
 
             self.webs.append(web)
 
             return web
 
-        mine = web.target_rect()
-        zone = mine.inflate(WEB_GAP * 2, WEB_GAP * 2)
+        # la que te atrapo: celda del jugador (aunque sea medio pared)
+        mine = self._cell_of(x, y)
 
-        hit = [w for w in self.webs if w.target_rect().colliderect(zone)]
+        web.tx, web.ty = self._cell_center(mine)
 
-        # las que mas la pisan se acomodan primero
-        hit.sort(key=lambda w: (w.tx - mine.centerx) ** 2
-                 + (w.ty - mine.centery) ** 2)
+        for old in [w for w in self.webs if self._cell_of(w.tx, w.ty) == mine]:
 
-        self.webs = [w for w in self.webs if w not in hit]
+            self.webs.remove(old)
 
-        keep = [w.target_rect() for w in self.webs] + [mine]
+            taken = self._taken_cells() | {mine}
 
-        for old in hit:
+            near_old = [
+                self._cell_of(w.tx, w.ty) for w in self.webs
+                if old.burst is not None and w.burst == old.burst
+            ] + [mine]
 
-            spot = self._free_spot(cmap, old.tx, old.ty, keep)
+            cell = self._free_cell(cmap, old.tx, old.ty, taken, near_old)
 
-            if spot is None:
+            if cell is None:
                 continue                    # sin lugar: se deshace
 
-            old.tx, old.ty = spot
-
-            keep.append(old.target_rect())
+            old.tx, old.ty = self._cell_center(cell)
 
             self.webs.append(old)
 
         self.webs.append(web)
 
         return web
+
+    # ---- la horda: aparecen de a poco y se acercan sin hacer daño ---------------------
+    def start_horde(self, game, count):
+        """Final del combate: de la oscuridad (pared izquierda y de arriba)
+        empiezan a aparecer `count` Aurantulas, cada vez mas juntas, y se van
+        acercando al jugador. No lo lastiman (no son arañas de combate: no
+        estan en self.spiders); solo lo rodean hasta que llega el rescate."""
+
+        from world import map2_intro as cfg
+
+        self.horde = []
+        self.horde_t = 0.0
+        self.peace = False
+
+        for i in range(count):
+
+            # al principio casi no hay nada y despues aparecen muchas
+            k = (i + random.random() * 0.6) / max(1, count)
+
+            self.horde.append({
+                "s": None,
+                "delay": cfg.HORDE_FIRST_DELAY + cfg.HORDE_SPAWN_TIME * (k ** 1.35),
+                "fade": 0.0,
+                "ring": random.uniform(*cfg.HORDE_RING),
+                "speed": random.uniform(*cfg.HORDE_SPEED),
+                "tries": 0,
+            })
+
+        self.horde.sort(key=lambda h: h["delay"])
+
+    def horde_nearest(self, game):
+        """Distancia al jugador de la Aurantula de la horda mas cercana
+        (None si todavia no salio ninguna)."""
+
+        p = pygame.Vector2(game.player.rect.center)
+
+        best = None
+
+        for h in self.horde:
+
+            s = h["s"]
+
+            if s is None:
+                continue
+
+            d = (pygame.Vector2(s.pos) - p).length()
+
+            if best is None or d < best:
+                best = d
+
+        return best
+
+    def solid_rects(self):
+        """Cajas de las Aurantulas y arañas vivas (y las de la horda) para
+        que el jugador no las pueda atravesar (ver new_game: dynamic_blockers)."""
+
+        out = [s.rect for s in self.spiders if not s.dead]
+
+        out.extend(h["s"].rect for h in self.horde if h["s"] is not None)
+
+        return out
+
+    def horde_spawned(self):
+
+        return sum(1 for h in self.horde if h["s"] is not None)
+
+    def _spawn_horde_member(self, game, h):
+
+        from world import map2_intro as cfg
+
+        cmap = game.collision_map
+
+        px, py = game.player.rect.center
+
+        areas = cfg.HORDE_SPAWN_AREAS
+
+        for _ in range(40):
+
+            x, y, w, hh = random.choice(areas)
+
+            sx = random.uniform(x, x + w)
+            sy = random.uniform(y, y + hh)
+
+            if math.hypot(sx - px, sy - py) < cfg.HORDE_SPAWN_MIN_DIST:
+                continue
+
+            spider = Aurantula(sx, sy)
+
+            if not cmap.can_move(spider.rect):
+                continue
+
+            if any(
+                o["s"] is not None
+                and math.hypot(sx - o["s"].pos.x, sy - o["s"].pos.y) < 34
+                for o in self.horde
+            ):
+                continue
+
+            spider.heading = math.degrees(math.atan2(py - sy, px - sx)) % 360.0
+            spider.face = 1 if px >= sx else -1
+
+            return spider
+
+        return None
+
+    def _update_horde(self, dt, game):
+
+        if self.horde_t is None:
+            return
+
+        self.horde_t += dt
+
+        if not self.horde:
+            return
+
+        from world import map2_intro as cfg
+
+        cmap = game.collision_map
+
+        player = pygame.Vector2(game.player.rect.center)
+
+        first_screech = self.horde_spawned() == 0
+
+        for h in self.horde:
+
+            if h["s"] is None:
+
+                if self.horde_t < h["delay"]:
+                    continue
+
+                h["s"] = self._spawn_horde_member(game, h)
+
+                if h["s"] is None:
+
+                    # no hubo lugar: reintenta un ratito despues
+                    h["delay"] = self.horde_t + 0.35
+                    h["tries"] += 1
+
+                    continue
+
+                if first_screech:
+
+                    first_screech = False
+
+                    audio.play("aura_screech")
+
+            s = h["s"]
+
+            h["fade"] = min(1.0, h["fade"] + dt / max(0.05, cfg.HORDE_APPEAR_FADE))
+
+            s.anim_t += dt
+
+            me = pygame.Vector2(s.pos)
+            d = player - me
+            dist = d.length()
+
+            if abs(d.x) > 2:
+                s.face = 1 if d.x > 0 else -1
+
+            if dist > 1e-3:
+                s.heading = math.degrees(math.atan2(d.y, d.x)) % 360.0
+
+            # no se amontonan: se empujan un poquito entre ellas
+            push = pygame.Vector2()
+
+            for o in self.horde:
+
+                os_ = o["s"]
+
+                if os_ is None or os_ is s:
+                    continue
+
+                delta = me - pygame.Vector2(os_.pos)
+                length = delta.length()
+
+                if 0.01 < length < 30.0:
+                    push += delta / length * ((30.0 - length) / 30.0)
+
+            s.moving = False
+
+            if dist > h["ring"]:
+
+                vec = d / dist + push * 1.3
+
+                s.moving = s._move_dir(vec, h["speed"], dt, cmap)
+
+            elif push.length_squared() > 1e-4:
+
+                # ya llego: se acomoda sin salir del anillo
+                s.moving = s._move_dir(push, h["speed"] * 0.5, dt, cmap)
+
+            if s.moving:
+                s.walk_phase += dt * h["speed"] / AURA_WALK_RATE
 
     # ---- rescate: la luz espanta a las Aurantulas (ui/map2_rescue.py) -----------------
     def pause(self):
@@ -1718,7 +1967,13 @@ class SpiderManager:
 
         origin = pygame.Vector2(origin)
 
-        for spider in self.spiders:
+        # la horda (que todavia no es de combate) tambien se va corriendo
+        crowd = [h["s"] for h in self.horde if h["s"] is not None]
+
+        self.horde = []
+        self.horde_t = None
+
+        for spider in list(self.spiders) + crowd:
 
             if spider.dead:
                 continue
@@ -1813,7 +2068,9 @@ class SpiderManager:
 
         else:
 
-            self._add_web(game, px, py, shot.variant, pinned=True)
+            self._add_web(
+                game, px, py, shot.variant, pinned=True, burst=shot.burst
+            )
 
         if not self._warned:
 
@@ -1858,6 +2115,8 @@ class SpiderManager:
             return
 
         self._update_fleeing(dt, game)
+
+        self._update_horde(dt, game)
 
         if self.rush_t is not None:
             self.rush_t += dt
@@ -1966,7 +2225,9 @@ class SpiderManager:
                     # se choco con una pared: cae un paso antes (en el piso)
                     land = shot.pos - shot.dir * step
 
-                self._add_web(game, land.x, land.y, shot.variant)
+                self._add_web(
+                    game, land.x, land.y, shot.variant, burst=shot.burst
+                )
 
                 shot.done = True
 
@@ -2328,7 +2589,7 @@ class SpiderManager:
 
     def draw(self, screen, camera):
 
-        if not (self._active or self._big_active):
+        if not (self._active or self._big_active or self.horde or self.fleeing):
             return
 
         for web in self.webs:
@@ -2355,6 +2616,15 @@ class SpiderManager:
             )
 
             self._draw_spider(screen, camera, f["s"], alpha=alpha)
+
+        # la horda sale de la oscuridad: aparece de a poco (se hace visible)
+        for h in sorted(
+            (h for h in self.horde if h["s"] is not None),
+            key=lambda h: h["s"].pos.y,
+        ):
+            self._draw_spider(
+                screen, camera, h["s"], alpha=int(255 * h["fade"])
+            )
 
         for spider in self.spiders:
             self._draw_spider(screen, camera, spider)
