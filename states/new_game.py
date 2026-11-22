@@ -73,7 +73,7 @@ from ui.shop_plan import (
     sanitize_draft,
 )
 from ui.tutorial import Tutorial
-from ui.map2_scene import Map2Scene, EyeMonster
+from ui.map2_scene import Map2Scene, Map2Finale, EyeMonster
 from ui.cenizo_follower import CenizoFollower
 from ui.tutorial_texts import apply_texts
 from core import player_name as hero_name
@@ -541,6 +541,12 @@ class NewGame:
         # escena del monstruo del ojo (mapa 2, despues del comic final)
         self.map2_scene = None
         self._eye_monster = None
+
+        # final del combate de entrada: el monstruo habla, salen las
+        # Aurantulas y se va (ver Map2Finale). Se hace una sola vez.
+        self.map2_finale = None
+        self.map2_finale_done = bool(self.save_data.get("map2_finale", False))
+        self._finale_wait = 0.0
 
         # Cenizo flotando al lado del jugador (tutorial y escena del mapa 2)
         self.cenizo = CenizoFollower()
@@ -3357,6 +3363,49 @@ class NewGame:
                 dt
             )
 
+    def _update_map2_finale(self, dt):
+        """Cuando ya no queda ninguna de las arañas del cuarto de entrada
+        empieza el final (Map2Finale). Una sola vez por partida."""
+
+        finale = self.map2_finale
+
+        if finale is not None:
+
+            finale.update(dt)
+
+            if finale.done:
+
+                self.map2_finale = None
+                self.map2_finale_done = True
+
+                self._save()
+
+            return
+
+        if (
+            self.map2_finale_done
+            or self.map2_scene is not None
+            or self.tutorial is not None
+            or self.state != "playing"
+            or getattr(self, "current_map", "mapa1") != "mapa2"
+            or not self.spiders.group_cleared()
+        ):
+
+            self._finale_wait = 0.0
+
+            return
+
+        from world import map2_intro
+
+        self._finale_wait += dt
+
+        if self._finale_wait >= map2_intro.FINALE_DELAY:
+
+            self._finale_wait = 0.0
+
+            self.map2_finale = Map2Finale(self)
+            self.map2_finale.start()
+
     def _update_map_zoom(self, dt):
         """Mapa 2: al terminar la intro la camara se abre (mas zoom afuera)
         para ver mas del lugar y las arañas. Se hace con un fundido corto
@@ -3461,6 +3510,16 @@ class NewGame:
         if scene is not None:
 
             focus = scene.camera_focus()
+
+            if focus is not None:
+                return focus
+
+        # final del combate: la camara se desplaza hacia el monstruo
+        finale = getattr(self, "map2_finale", None)
+
+        if finale is not None:
+
+            focus = finale.camera_focus()
 
             if focus is not None:
                 return focus
@@ -4365,6 +4424,10 @@ class NewGame:
             if self.map2_scene.done:
                 self.map2_scene = None
 
+        if self.map2_finale is not None:
+
+            self.map2_finale.after_dialog(closed)
+
     def _open_shop(self):
 
         if self.shop is not None:
@@ -4668,6 +4731,8 @@ class NewGame:
 
             "finished": self.finished,
 
+            "map2_finale": self.map2_finale_done,
+
             "inventory": inventory,
 
             "shop_inventory": [
@@ -4840,6 +4905,7 @@ class NewGame:
         return (
             getattr(self, "current_map", "mapa1") == "mapa2"
             and getattr(self, "finished", False)
+            and not getattr(self, "map2_finale_done", False)
         )
 
     def materialize_drops(self, map_name):
@@ -6086,6 +6152,9 @@ class NewGame:
             if self.map2_scene is not None:
                 self.map2_scene.tick(dt)
 
+            if self.map2_finale is not None:
+                self.map2_finale.tick(dt)
+
             self.tutorial.update(
                 dt
             )
@@ -6493,6 +6562,8 @@ class NewGame:
         self.slimes.update(dt, self)
 
         self.spiders.update(dt, self)
+
+        self._update_map2_finale(dt)
 
 
         # yunque "Manos agiles": cofres con menos espera

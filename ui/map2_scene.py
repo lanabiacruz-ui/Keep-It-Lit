@@ -203,6 +203,12 @@ class EyeMonster:
         # punto del mundo que mira en vez del jugador (el rayo mira a Cenizo)
         self.look_override = None
 
+        # final del combate: se va caminando mientras se desvanece
+        self.fade = 1.0            # 1 = se ve entero, 0 = invisible
+        self.gone = False          # ya se fue: no se dibuja ni es solido
+        self.walk_bob = 0.0        # salto de cada paso (mundo)
+        self._walk = None
+
         self.look = pygame.Vector2()          # -1..1: hacia donde mira
         self.body_off = pygame.Vector2()      # flote del cuerpo (mundo)
         self.hand_off = [pygame.Vector2(), pygame.Vector2()]
@@ -234,9 +240,54 @@ class EyeMonster:
             self.pos.y + self.body_off.y + (fy - 0.5) * self.height,
         )
 
+    def start_walk(self, direction, speed, duration, step_time, hop):
+        """Se va caminando hacia `direction` (speed = pixeles del mundo por
+        segundo) y se desvanece en `duration` segundos."""
+
+        d = pygame.Vector2(direction)
+
+        if d.length() < 0.01:
+            d = pygame.Vector2(0, -1)
+
+        self._walk = {
+            "dir": d.normalize(), "speed": speed, "dur": max(0.1, duration),
+            "step": max(0.1, step_time), "hop": hop, "t": 0.0,
+        }
+
+    def walk_update(self, dt):
+        """Un paso de la caminata (lo llama Map2Finale en cada cuadro)."""
+
+        w = self._walk
+
+        if w is None:
+            return
+
+        w["t"] += dt
+
+        self.pos += w["dir"] * w["speed"] * dt
+
+        k = min(1.0, w["t"] / w["dur"])
+
+        self.fade = max(0.0, 1.0 - k)
+
+        # cada paso lo levanta un poco (como si caminara)
+        self.walk_bob = (
+            -abs(math.sin(w["t"] * math.pi / w["step"])) * w["hop"] * self.height
+        )
+
+        if k >= 1.0:
+
+            self._walk = None
+            self.walk_bob = 0.0
+            self.fade = 0.0
+            self.gone = True
+
     def hitbox(self):
         """Caja de colision del monstruo (mundo): en sus pies, quieta (no
         sigue el flote). El jugador no puede atravesarla."""
+
+        if self.gone:
+            return pygame.Rect(0, 0, 0, 0)
 
         src = self._raw("base")
         ratio = src.get_width() / src.get_height()
@@ -278,6 +329,9 @@ class EyeMonster:
         # cargando el rayo tiembla
         bx += math.sin(now * 63.0) * 0.006 * h * self.charge
         by += math.sin(now * 51.0 + 1.0) * 0.004 * h * self.charge
+
+        # caminando (final del combate): cada paso lo levanta un poco
+        by += self.walk_bob
 
         # se inclina un poco hacia donde mira
         bx += self.look.x * cfg.FLOAT_LEAN * h
@@ -559,6 +613,8 @@ class EyeMonster:
 
         spr = self._pupil_sprite(pw * kx, ph * ky, color)
 
+        spr.set_alpha(int(255 * self.fade))
+
         screen.blit(
             spr,
             spr.get_rect(center=(int(left + cx + dx), int(top + cy + dy))),
@@ -567,6 +623,9 @@ class EyeMonster:
     def draw(self, screen, camera, look_at=None):
         """Cuerpo del monstruo (antes de la oscuridad: se ve poco).
         look_at = punto del mundo que mira (el jugador)."""
+
+        if self.gone:
+            return
 
         self._advance(look_at)
 
@@ -590,6 +649,8 @@ class EyeMonster:
 
             off = self.hand_off[i] if i < len(self.hand_off) else self.body_off
 
+            piece.set_alpha(int(cfg.MONSTER_ALPHA * self.fade))
+
             screen.blit(
                 piece,
                 (
@@ -598,12 +659,17 @@ class EyeMonster:
                 ),
             )
 
+        parts["body"].set_alpha(int(cfg.MONSTER_ALPHA * self.fade))
+
         screen.blit(parts["body"], (left, top))
 
         self._draw_pupil(screen, parts, left, top)
 
     def draw_glow(self, screen, camera, look_at=None):
         """Ojo y resplandor (despues de la oscuridad: el ojo se ve)."""
+
+        if self.gone:
+            return
 
         parts = self._parts(self.face, camera.zoom)
 
@@ -627,9 +693,15 @@ class EyeMonster:
 
         glow = self._glow_surf(max(8, int(h * 0.30 * k)), color)
 
+        glow.set_alpha(int(255 * self.fade))
+
         screen.blit(glow, glow.get_rect(center=(ex, ey)))
 
-        screen.blit(self._eye_layer(parts), rect)
+        eye = self._eye_layer(parts)
+
+        eye.set_alpha(int(255 * self.fade))
+
+        screen.blit(eye, rect)
 
         self._draw_pupil(screen, parts, left, top)
 
@@ -1244,3 +1316,139 @@ class Map2Scene:
             pygame.draw.circle(surf, col, (int(pa[0]), int(pa[1])), wd // 2)
 
         screen.blit(surf, (left, top))
+
+
+# ------------------------------------------------------------- el final
+
+class Map2Finale:
+    """Despues de derrotar a las arañas del cuarto de entrada (ver
+    world/map2_intro.py, seccion FINAL DEL COMBATE):
+
+        1. la camara se desplaza hacia el monstruo y habla con una cara
+           nueva (por el panel, como siempre)
+        2. al cerrar el dialogo salen las Aurantulas de la oscuridad y van
+           a morder al jugador, y el monstruo se va caminando mientras se
+           desvanece (el juego sigue corriendo)
+    """
+
+    def __init__(self, game):
+
+        self.game = game
+
+        self.stage = "idle"
+        self.done = False
+
+        self._current = None
+        self._old_smooth = None
+
+    @property
+    def eye(self):
+        return self.game.eye_monster()
+
+    def _size(self):
+        return (self.game.width, self.game.height)
+
+    # ---- camara
+
+    def camera_focus(self):
+        """Mientras habla, la camara se desplaza hacia el monstruo."""
+
+        if self.stage != "talk":
+            return None
+
+        p = pygame.Vector2(self.game.player.image_rect.center)
+        m = pygame.Vector2(self.eye.pos)
+
+        f = p.lerp(m, cfg.CAMERA_MIX_MONSTER)
+
+        return (f.x, f.y, 1.0, 0.5)
+
+    def tick(self, dt):
+        """Mueve la camara de a poco mientras el dialogo esta abierto."""
+
+        if self.stage != "talk":
+            return
+
+        g = self.game
+
+        g.camera.update(g.player, dt=dt, focus=self.camera_focus())
+
+    # ---- secuencia
+
+    def start(self):
+
+        g = self.game
+
+        self._old_smooth = g.camera.smoothing
+        g.camera.smoothing = cfg.CAMERA_SMOOTH
+
+        self.stage = "talk"
+
+        self.eye.charge = 0.0
+        self.eye.look_override = None
+        self.eye.face = cfg.MONSTER_3_FACES[0] if cfg.MONSTER_3_FACES else "base"
+
+        self._current = EyeDialog(
+            self._size(),
+            pages=cfg.MONSTER_3,
+            faces=cfg.MONSTER_3_FACES,
+            fx=getattr(g, "fx", None),
+        )
+
+        g.tutorial = self._current
+
+    def after_dialog(self, closed):
+        """new_game la llama cuando se cierra cualquier dialogo."""
+
+        if closed is not self._current:
+            return
+
+        self._current = None
+
+        if self.stage == "talk":
+            self._leave()
+
+    def _leave(self):
+        """Salen las Aurantulas y el monstruo se va caminando."""
+
+        g = self.game
+
+        self.stage = "leave"
+
+        old = self._old_smooth
+
+        if old is not None:
+            g.camera.smoothing = old
+
+        g.spiders.spawn_finale(g, cfg.FINALE_AURA_COUNT)
+
+        # se aleja del jugador (y hacia arriba: se mete en la oscuridad)
+        away = pygame.Vector2(self.eye.pos) - pygame.Vector2(
+            g.player.image_rect.center
+        )
+
+        if away.length() > 0.5:
+            away = away.normalize()
+
+        direction = away + pygame.Vector2(0, -0.9)
+
+        self.eye.start_walk(
+            direction,
+            cfg.FINALE_WALK_SPEED,
+            cfg.FINALE_WALK_TIME,
+            cfg.FINALE_WALK_STEP,
+            cfg.FINALE_WALK_HOP,
+        )
+
+    def update(self, dt):
+        """Lo llama new_game en cada cuadro (el juego corriendo)."""
+
+        if self.stage != "leave":
+            return
+
+        self.eye.walk_update(dt)
+
+        if self.eye.gone:
+
+            self.stage = "end"
+            self.done = True

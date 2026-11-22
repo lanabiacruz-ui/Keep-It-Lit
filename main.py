@@ -172,7 +172,10 @@ def desired_music():
     ):
 
         # escena del monstruo del ojo (entrada al mapa 2): cancion epica
-        if getattr(game, "map2_scene", None) is not None:
+        if (
+            getattr(game, "map2_scene", None) is not None
+            or getattr(game, "map2_finale", None) is not None
+        ):
 
             return "ojo_epico"
 

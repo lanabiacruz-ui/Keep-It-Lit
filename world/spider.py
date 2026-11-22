@@ -760,6 +760,7 @@ class Aurantula(Spider):
         self.cool = AURA_FIRST_THROW
 
         self.role = "solo"
+        self.fixed_role = None       # si tiene valor, _assign_roles no se lo cambia
 
         self.burst_left = 0
         self.burst_idx = 0
@@ -1098,6 +1099,7 @@ class SpiderManager:
 
         self._big_active = False   # ya desperto la sala de las Aurantulas
         self._role_sig = None      # (para repartir los roles solo cuando cambia el grupo)
+        self._first_group = []     # las arañas del primer combate (cuarto de entrada)
         self._player_vel_fast = pygame.Vector2(0, 0)
 
     # ---- datos para el resto del juego ------------------------------------
@@ -1116,8 +1118,17 @@ class SpiderManager:
 
         self._big_active = False
         self._role_sig = None
+        self._first_group = []
 
         self._prev_player = None
+
+    def group_cleared(self):
+        """True cuando ya no queda viva ninguna de las arañas del primer
+        combate (las del cuarto de entrada)."""
+
+        return bool(self._first_group) and all(
+            s.dead for s in self._first_group
+        )
 
     # ---- escena de entrada al mapa 2 (ver world/map2_intro.py) -------------------
     def spawn_intro(self, game, spider_pos, aura_pos):
@@ -1150,6 +1161,8 @@ class SpiderManager:
         # las Aurantulas sigue igual: nacen mas cuando la pises.
         self._active = True
         self._role_sig = None
+
+        self._first_group = list(self.spiders)
 
     # ---- nacimiento (apenas entras al mapa 2) -----------------------------------
     @staticmethod
@@ -1262,6 +1275,9 @@ class SpiderManager:
                 min_gap=22,
             )
 
+        if not self._first_group:
+            self._first_group = list(self.spiders)
+
     def _drop(self, game, spider):
 
         cx, cy = spider.rect.center
@@ -1366,6 +1382,86 @@ class SpiderManager:
         if made:
             audio.play("aura_screech")
 
+    def spawn_finale(self, game, count):
+        """Final del combate: `count` Aurantulas salen de la oscuridad
+        alrededor del jugador y van DIRECTO a morderlo (mordedoras fijas)."""
+
+        from world import map2_intro
+
+        px, py = game.player.rect.center
+
+        rmin, rmax = map2_intro.FINALE_AURA_RADIUS
+
+        # primero lejos (se las ve venir); si no entran, cada vez mas cerca
+        bands = (
+            (rmin, rmax),
+            (rmin * 0.7, rmax * 0.8),
+            (rmin * 0.45, rmax * 0.6),
+            (90.0, rmax * 0.4),
+        )
+
+        made = 0
+
+        for lo, hi in bands:
+
+            tries = 0
+
+            while made < count and tries < 220:
+
+                tries += 1
+
+                ang = random.uniform(0, math.tau)
+                dist = random.uniform(lo, hi)
+
+                if self._place_rusher(
+                    game,
+                    px + math.cos(ang) * dist,
+                    py + math.sin(ang) * dist,
+                    made,
+                ):
+                    made += 1
+
+            if made >= count:
+                break
+
+        self._role_sig = None
+
+        if made:
+            audio.play("aura_screech")
+
+        return made
+
+    def _place_rusher(self, game, x, y, idx):
+
+        cmap = game.collision_map
+
+        spider = Aurantula(x, y)
+
+        if not cmap.can_move(spider.rect):
+            return False
+
+        px, py = game.player.rect.center
+
+        # que tengan el camino libre hacia el jugador (no hay pathfinding)
+        if not self._clear_line(cmap, (px, py), (x, y)):
+            return False
+
+        if any(
+            math.hypot(x - s.pos.x, y - s.pos.y) < 60
+            for s in self.spiders
+        ):
+            return False
+
+        spider.heading = math.degrees(math.atan2(py - y, px - x)) % 360.0
+
+        spider.fixed_role = "biter"
+        spider.set_role("biter")
+        spider.hit_cool = 0.6 + idx * 0.25     # no muerden todas juntas
+
+        self.spiders.append(spider)
+
+        return True
+
     def _assign_roles(self, game):
         """Si hay una cantidad PAR (2, 4...) piensan en equipo: las mas
         cercanas a vos muerden y las mas lejanas tiran telarañas. Si es
@@ -1375,6 +1471,7 @@ class SpiderManager:
         auras = [
             s for s in self.spiders
             if isinstance(s, Aurantula) and not s.dead
+            and s.fixed_role is None
         ]
 
         sig = tuple(sorted(s.uid for s in auras))

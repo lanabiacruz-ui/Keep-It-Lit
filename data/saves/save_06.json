@@ -2,62 +2,65 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-21T19:02:46",
+    "last_played": "2026-11-22T18:39:51",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 160,
-    "y": 1280,
-    "coins": 189480,
+    "x": 1518,
+    "y": 143,
+    "coins": 188840,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
     "light": "antorcha",
-    "vida": 0.3943683599999969,
-    "escudo": 0.7001999999999994,
+    "vida": 0.7161211466666666,
+    "escudo": 0.0,
     "inventory": [
         [
             "aceite",
-            8
+            6
         ],
         [
             "polvora",
-            15
-        ],
-        [
-            "polvora",
-            1
+            14
         ],
         [
             "hongo_azul",
-            2
+            1
         ],
-        null,
+        [
+            "ganzua",
+            15
+        ],
+        [
+            "pocion_invisibilidad",
+            1
+        ],
         [
             "pocion_velocidad",
             1
         ]
     ],
     "collected": [
-        "moneda_pasillo_der#0",
-        "madera_02#0",
-        "moneda_pasillo_tienda#1",
-        "madera_04#0",
-        "moneda_sala_central#0",
-        "moneda5_pasillo_cofres#0",
-        "moneda_sala_central#1",
-        "moneda_pasillo_cabana#0",
-        "aceite_01#0",
-        "moneda_sala_cofres#1",
-        "madera_03#0",
-        "madera_01#0",
         "cera_01#0",
-        "moneda_pasillo_cofres#0",
         "madera_05#0",
-        "moneda_pasillo_tienda#0",
+        "moneda_pasillo_cofres#0",
+        "moneda5_sala_cofres#0",
+        "moneda_pasillo_tienda#1",
+        "moneda_pasillo_cabana#0",
+        "moneda5_pasillo_cofres#0",
+        "madera_03#0",
+        "madera_02#0",
         "moneda_sala_cofres#0",
+        "moneda_sala_central#1",
+        "moneda_pasillo_der#0",
+        "aceite_01#0",
+        "madera_01#0",
+        "moneda_sala_central#0",
+        "madera_04#0",
+        "moneda_pasillo_tienda#0",
         "moneda_pasillo_izq#0",
         "moneda_pasillo_cabana#1",
-        "moneda5_sala_cofres#0"
+        "moneda_sala_cofres#1"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -78,7 +81,7 @@
         "sup_izq_sala"
     ],
     "final_door_slots": {},
-    "current_map": "mapa2",
+    "current_map": "mapa1",
     "chests": {
         "cofre_03": {
             "usos": 3
@@ -245,7 +248,7 @@
                 ],
                 [
                     "polvora",
-                    1
+                    15
                 ]
             ]
         },
@@ -275,9 +278,9 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1609,
+        "items_used": 1637,
         "chests_opened": 95,
-        "purchases": 112,
+        "purchases": 113,
         "fireballs": 3083,
         "kills": 369
     },
@@ -325,179 +328,11 @@
     "death_drops": [
         {
             "k": "item",
-            "id": "moneda_10",
-            "x": 28,
-            "y": 1289,
-            "map": "mapa2",
-            "ttl": 250.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 27,
-            "y": 1266,
-            "map": "mapa2",
-            "ttl": 250.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 51,
-            "y": 1234,
-            "map": "mapa2",
-            "ttl": 250.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 209,
-            "y": 1363,
-            "map": "mapa2",
-            "ttl": 260.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 217,
-            "y": 1317,
-            "map": "mapa2",
-            "ttl": 260.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 181,
-            "y": 1345,
-            "map": "mapa2",
-            "ttl": 260.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 204,
-            "y": 1317,
-            "map": "mapa2",
-            "ttl": 260.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 220,
-            "y": 1280,
-            "map": "mapa2",
-            "ttl": 266.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 232,
-            "y": 1223,
-            "map": "mapa2",
-            "ttl": 266.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 255,
-            "y": 1208,
-            "map": "mapa2",
-            "ttl": 266.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 298,
-            "y": 1204,
-            "map": "mapa2",
-            "ttl": 269.3
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 284,
-            "y": 1177,
-            "map": "mapa2",
-            "ttl": 269.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 282,
-            "y": 1191,
-            "map": "mapa2",
-            "ttl": 269.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 298,
-            "y": 1189,
-            "map": "mapa2",
-            "ttl": 269.4
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 277,
-            "y": 1191,
-            "map": "mapa2",
-            "ttl": 269.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 279,
-            "y": 1211,
-            "map": "mapa2",
-            "ttl": 269.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_5",
-            "x": 260,
-            "y": 1209,
-            "map": "mapa2",
-            "ttl": 270.5
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 207,
-            "y": 1285,
-            "map": "mapa2",
-            "ttl": 271.6
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 219,
-            "y": 1286,
-            "map": "mapa2",
-            "ttl": 271.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 188,
-            "y": 1236,
-            "map": "mapa2",
-            "ttl": 271.7
-        },
-        {
-            "k": "item",
-            "id": "moneda_10",
-            "x": 239,
-            "y": 1292,
-            "map": "mapa2",
-            "ttl": 271.8
-        },
-        {
-            "k": "item",
             "id": "aceite",
             "x": 918,
             "y": 157,
             "map": "mapa1",
-            "ttl": 297.9
+            "ttl": 276.1
         },
         {
             "k": "item",
@@ -505,7 +340,7 @@
             "x": 941,
             "y": 164,
             "map": "mapa1",
-            "ttl": 298.0
+            "ttl": 276.2
         },
         {
             "k": "item",
@@ -513,7 +348,7 @@
             "x": 966,
             "y": 175,
             "map": "mapa1",
-            "ttl": 298.1
+            "ttl": 276.3
         },
         {
             "k": "item",
@@ -521,7 +356,7 @@
             "x": 940,
             "y": 156,
             "map": "mapa1",
-            "ttl": 298.3
+            "ttl": 276.5
         },
         {
             "k": "item",
@@ -529,7 +364,7 @@
             "x": 890,
             "y": 148,
             "map": "mapa1",
-            "ttl": 298.4
+            "ttl": 276.6
         },
         {
             "k": "item",
@@ -537,7 +372,7 @@
             "x": 972,
             "y": 162,
             "map": "mapa1",
-            "ttl": 298.6
+            "ttl": 276.8
         },
         {
             "k": "item",
@@ -545,7 +380,7 @@
             "x": 932,
             "y": 171,
             "map": "mapa1",
-            "ttl": 298.7
+            "ttl": 276.9
         },
         {
             "k": "item",
@@ -553,7 +388,7 @@
             "x": 959,
             "y": 176,
             "map": "mapa1",
-            "ttl": 298.8
+            "ttl": 277.0
         },
         {
             "k": "item",
@@ -561,7 +396,7 @@
             "x": 954,
             "y": 174,
             "map": "mapa1",
-            "ttl": 299.0
+            "ttl": 277.2
         },
         {
             "k": "item",
@@ -569,7 +404,7 @@
             "x": 892,
             "y": 166,
             "map": "mapa1",
-            "ttl": 299.1
+            "ttl": 277.3
         },
         {
             "k": "item",
@@ -577,7 +412,7 @@
             "x": 991,
             "y": 163,
             "map": "mapa1",
-            "ttl": 299.2
+            "ttl": 277.4
         },
         {
             "k": "item",
@@ -585,7 +420,7 @@
             "x": 950,
             "y": 149,
             "map": "mapa1",
-            "ttl": 299.4
+            "ttl": 277.6
         },
         {
             "k": "item",
@@ -593,7 +428,7 @@
             "x": 1018,
             "y": 152,
             "map": "mapa1",
-            "ttl": 299.5
+            "ttl": 277.7
         },
         {
             "k": "item",
@@ -601,7 +436,7 @@
             "x": 980,
             "y": 159,
             "map": "mapa1",
-            "ttl": 299.7
+            "ttl": 277.9
         },
         {
             "k": "item",
@@ -609,7 +444,7 @@
             "x": 1010,
             "y": 169,
             "map": "mapa1",
-            "ttl": 299.8
+            "ttl": 278.0
         },
         {
             "k": "item",
@@ -617,7 +452,7 @@
             "x": 900,
             "y": 149,
             "map": "mapa1",
-            "ttl": 299.9
+            "ttl": 278.1
         },
         {
             "k": "item",
@@ -625,7 +460,7 @@
             "x": 931,
             "y": 168,
             "map": "mapa1",
-            "ttl": 300.0
+            "ttl": 278.2
         },
         {
             "k": "item",
@@ -633,7 +468,7 @@
             "x": 944,
             "y": 153,
             "map": "mapa1",
-            "ttl": 300.0
+            "ttl": 278.2
         },
         {
             "k": "item",
@@ -641,7 +476,7 @@
             "x": 921,
             "y": 174,
             "map": "mapa1",
-            "ttl": 300.0
+            "ttl": 278.2
         },
         {
             "k": "item",
@@ -649,7 +484,7 @@
             "x": 882,
             "y": 146,
             "map": "mapa1",
-            "ttl": 300.0
+            "ttl": 278.2
         },
         {
             "k": "item",
@@ -657,7 +492,127 @@
             "x": 1004,
             "y": 154,
             "map": "mapa1",
-            "ttl": 300.0
+            "ttl": 278.2
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1291,
+            "y": 150,
+            "map": "mapa1",
+            "ttl": 282.1
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1293,
+            "y": 157,
+            "map": "mapa1",
+            "ttl": 282.1
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1307,
+            "y": 129,
+            "map": "mapa1",
+            "ttl": 282.1
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 1308,
+            "y": 116,
+            "map": "mapa1",
+            "ttl": 282.1
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1013,
+            "y": 119,
+            "map": "mapa1",
+            "ttl": 286.4
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 1015,
+            "y": 158,
+            "map": "mapa1",
+            "ttl": 286.4
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 1030,
+            "y": 146,
+            "map": "mapa1",
+            "ttl": 286.4
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 1026,
+            "y": 118,
+            "map": "mapa1",
+            "ttl": 286.4
+        },
+        {
+            "k": "item",
+            "id": "pocion_velocidad",
+            "x": 1033,
+            "y": 143,
+            "map": "mapa1",
+            "ttl": 286.4
+        },
+        {
+            "k": "item",
+            "id": "aceite",
+            "x": 966,
+            "y": 148,
+            "map": "mapa1",
+            "ttl": 290.7
+        },
+        {
+            "k": "item",
+            "id": "polvora",
+            "x": 987,
+            "y": 169,
+            "map": "mapa1",
+            "ttl": 290.8
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 998,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 290.9
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 894,
+            "y": 162,
+            "map": "mapa1",
+            "ttl": 291.1
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 901,
+            "y": 148,
+            "map": "mapa1",
+            "ttl": 291.2
+        },
+        {
+            "k": "item",
+            "id": "hongo_azul",
+            "x": 903,
+            "y": 168,
+            "map": "mapa1",
+            "ttl": 291.4
         },
         {
             "k": "light",
@@ -666,7 +621,312 @@
             "x": 916,
             "y": 150,
             "map": "mapa1",
-            "ttl": 300.0
+            "ttl": 278.2
+        },
+        {
+            "k": "light",
+            "id": "antorcha",
+            "life": 1.0,
+            "x": 932,
+            "y": 156,
+            "map": "mapa1",
+            "ttl": 291.5
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 27,
+            "y": 1266,
+            "map": "mapa2",
+            "ttl": 193.8
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 51,
+            "y": 1234,
+            "map": "mapa2",
+            "ttl": 193.8
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 232,
+            "y": 1223,
+            "map": "mapa2",
+            "ttl": 209.6
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 255,
+            "y": 1208,
+            "map": "mapa2",
+            "ttl": 209.7
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 298,
+            "y": 1204,
+            "map": "mapa2",
+            "ttl": 212.4
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 284,
+            "y": 1177,
+            "map": "mapa2",
+            "ttl": 212.5
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 282,
+            "y": 1191,
+            "map": "mapa2",
+            "ttl": 212.5
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 298,
+            "y": 1189,
+            "map": "mapa2",
+            "ttl": 212.5
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 277,
+            "y": 1191,
+            "map": "mapa2",
+            "ttl": 212.6
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 279,
+            "y": 1211,
+            "map": "mapa2",
+            "ttl": 212.6
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 260,
+            "y": 1209,
+            "map": "mapa2",
+            "ttl": 213.6
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 60,
+            "y": 1216,
+            "map": "mapa2",
+            "ttl": 258.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 61,
+            "y": 1256,
+            "map": "mapa2",
+            "ttl": 258.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 47,
+            "y": 1237,
+            "map": "mapa2",
+            "ttl": 258.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 60,
+            "y": 1247,
+            "map": "mapa2",
+            "ttl": 258.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 14,
+            "y": 1240,
+            "map": "mapa2",
+            "ttl": 258.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 24,
+            "y": 1227,
+            "map": "mapa2",
+            "ttl": 258.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 26,
+            "y": 1248,
+            "map": "mapa2",
+            "ttl": 258.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 58,
+            "y": 1243,
+            "map": "mapa2",
+            "ttl": 258.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 37,
+            "y": 1254,
+            "map": "mapa2",
+            "ttl": 259.0
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 57,
+            "y": 1257,
+            "map": "mapa2",
+            "ttl": 259.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 50,
+            "y": 1249,
+            "map": "mapa2",
+            "ttl": 259.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 11,
+            "y": 1230,
+            "map": "mapa2",
+            "ttl": 259.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 63,
+            "y": 1228,
+            "map": "mapa2",
+            "ttl": 259.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 289,
+            "y": 1259,
+            "map": "mapa2",
+            "ttl": 266.6
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 234,
+            "y": 1327,
+            "map": "mapa2",
+            "ttl": 273.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 150,
+            "y": 1261,
+            "map": "mapa2",
+            "ttl": 290.9
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 158,
+            "y": 1292,
+            "map": "mapa2",
+            "ttl": 291.0
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 128,
+            "y": 1265,
+            "map": "mapa2",
+            "ttl": 291.0
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 127,
+            "y": 1230,
+            "map": "mapa2",
+            "ttl": 291.1
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 220,
+            "y": 1317,
+            "map": "mapa2",
+            "ttl": 291.5
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 247,
+            "y": 1316,
+            "map": "mapa2",
+            "ttl": 294.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 245,
+            "y": 1306,
+            "map": "mapa2",
+            "ttl": 294.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 299,
+            "y": 1310,
+            "map": "mapa2",
+            "ttl": 294.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 258,
+            "y": 1298,
+            "map": "mapa2",
+            "ttl": 294.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 252,
+            "y": 1296,
+            "map": "mapa2",
+            "ttl": 294.3
+        },
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 295,
+            "y": 1299,
+            "map": "mapa2",
+            "ttl": 294.3
         }
     ],
     "ganzua_uses": 2,
@@ -747,8 +1007,9 @@
         "rico",
         "visitas"
     ],
-    "shop_visits": 21,
+    "shop_visits": 22,
     "hero_name": "",
     "door_damage": {},
-    "first_match": false
+    "first_match": false,
+    "map2_finale": true
 }

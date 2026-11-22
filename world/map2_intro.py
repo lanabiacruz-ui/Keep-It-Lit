@@ -158,3 +158,36 @@ un rasguñito... Estoy... Bien..",
 
     "Solo salgamos de esta... {nombre}.... Tu puedes... Yo resisto..",
 ]
+
+
+# ------------------------------------------------------------ FINAL DEL COMBATE
+# Cuando derrotas a TODAS las arañas del cuarto de entrada, el monstruo te
+# habla (con una cara nueva), te deja con las Aurantulas y se va caminando
+# mientras se desvanece. La logica esta en Map2Finale (ui/map2_scene.py).
+FINALE_DELAY = 1.5           # segundos entre la ultima araña y el monstruo
+
+# Lo que dice (una pagina por linea) y su cara en cada una. La cara
+# "desprecio" es nueva: assets/maps/combate/monstruo_ojo_desprecio.png (si
+# falta usa la base). Se pueden dibujar mas y agregarlas aca.
+MONSTER_3 = [
+    "Veo que te costó tanto...",
+
+    "No perderé mi tiempo con alguien tan débil.",
+
+    "Si esto ya te costó tanto... imagínate lo que se aproxima.",
+
+    "Te dejo con tu verdadera muerte.",
+]
+MONSTER_3_FACES = ["desprecio", "desprecio", "desprecio", "burla"]
+
+# Las Aurantulas que se acercan: salen de la oscuridad alrededor del jugador
+# y van DIRECTO a morderlo (todas mordedoras, sin tiradoras).
+FINALE_AURA_COUNT = 4          # (subilo para mas dificultad)
+FINALE_AURA_RADIUS = (260, 380)      # a que distancia aparecen (si no entran, mas cerca)
+
+# El monstruo se va caminando (se aleja del jugador, hacia arriba) mientras
+# se desvanece. Velocidad en pixeles del mundo por segundo.
+FINALE_WALK_SPEED = 38.0
+FINALE_WALK_TIME = 5.0       # segundos hasta desaparecer del todo
+FINALE_WALK_STEP = 0.55      # segundos por "paso" (el cuerpo sube y baja al caminar)
+FINALE_WALK_HOP = 0.018      # que tanto salta en cada paso (fraccion de su alto)
