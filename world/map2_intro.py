@@ -78,6 +78,15 @@ MONSTER_ALPHA = 255          # 0-255 (el dibujo ya viene con el cuerpo tenue)
 # donde esta el ojo dentro del dibujo (0 a 1, desde arriba-izquierda)
 EYE_FRAC = (0.452, 0.465)
 
+# Donde esta el ojo en cada cara y que tan grande es su brillo en el panel
+# (cara -> (x, y, radio)), todo como fraccion del dibujo. Las caras que no
+# estan aca usan EYE_FRAC y el brillo grande de siempre. "desprecio" tiene
+# el ojo finito y mas abajo: con el brillo grande se lo tapaba y no se veia.
+EYE_PANEL_GLOW = {
+    "desprecio": (0.466, 0.500, 0.075),
+}
+EYE_PANEL_GLOW_DEFAULT_R = 0.20
+
 # COLISION: el monstruo es solido, no se lo puede atravesar. La caja esta en
 # sus pies (la base del dibujo), quieta aunque el flote suba y baje.
 MONSTER_HITBOX_W = 0.50      # ancho de la caja (fraccion del ancho del dibujo)
@@ -191,3 +200,36 @@ FINALE_WALK_SPEED = 38.0
 FINALE_WALK_TIME = 5.0       # segundos hasta desaparecer del todo
 FINALE_WALK_STEP = 0.55      # segundos por "paso" (el cuerpo sube y baja al caminar)
 FINALE_WALK_HOP = 0.018      # que tanto salta en cada paso (fraccion de su alto)
+
+# ------------------------------------------------------------ EL RESCATE
+# Cinematica: cuando vienen muchas Aurantulas (las del final del combate)
+# aparece un tipo, llena de luz toda la sala y las espanta a todas. La logica
+# esta en ui/map2_rescue.py (Map2Rescue); aca solo se cambian textos y tiempos.
+#
+# Imagen opcional: assets/maps/combate/salvador.png (dibujo del tipo). Si no
+# existe se usa un dibujo provisorio (encapuchado con un farol).
+RESCUER_NAME = "El Farolero"       # nombre que se ve en el panel
+
+RESCUE_DELAY = 7.0       # segundos desde que salen las Aurantulas hasta que aparece
+
+RESCUER_1 = [
+    "Quietas. Todas.",
+
+    "Ya les dieron suficiente miedo a este muchacho. Me toca a mí.",
+]
+
+RESCUER_2 = [
+    "Ya pasó. No volverán por un buen rato... la luz les duele más a ellas que a ti.",
+
+    "Respira. Tu luz sigue encendida, y eso no es poca cosa aquí abajo.",
+
+    "Ve con calma. Lo que viene es peor que unas arañas... pero ya no vas solo.",
+]
+
+RESCUE_ARRIVE_TIME = 2.2     # aparece, flotando una luz chiquita, antes de hablar
+RESCUE_BURST_TIME = 2.6      # la luz explota y se llena la sala (las arañas huyen)
+RESCUE_LEAVE_TIME = 3.0      # se va apagando de a poco y el tipo se desvanece
+RESCUE_HEIGHT = 1.25         # alto del tipo (multiplo del alto del jugador)
+RESCUE_ROOM_PAD = 50         # cuanto se agranda la zona iluminada sobre la sala
+RESCUE_AURA_RADIUS = 330     # radio (mundo) de la luz que sale de el al explotar
+RESCUE_CURE_POISON = True    # al terminar le saca el veneno al jugador

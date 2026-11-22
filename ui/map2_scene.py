@@ -734,10 +734,12 @@ class EyeDialog(BossDialog):
 
     HOP_TIME = 0.5
 
-    def __init__(self, screen_size, pages, faces=(), fx=None):
+    def __init__(self, screen_size, pages, faces=(), fx=None, on_face=None):
 
         self.faces = list(faces)
         self.fx = fx
+        self.on_face = on_face      # on_face(cara): avisa al monstruo del mundo
+        self._face_now = None
         self._face_cache = {}
         self._crop = None
         self._vignette = None
@@ -766,6 +768,9 @@ class EyeDialog(BossDialog):
         if img is None:
             return None
 
+        if face not in (None, "base") and not _face_path(face).exists():
+            print(f"[map2] falta {_face_path(face).name}: se usa la cara base")
+
         if self._crop is None:
 
             base = _load_face("base") or img
@@ -793,10 +798,22 @@ class EyeDialog(BossDialog):
         if not hasattr(self, "_face_cache"):
             return
 
-        surf = self._face_surface(self._face_for(self.index))
+        face = self._face_for(self.index)
+
+        surf = self._face_surface(face)
 
         if surf is not None:
             self.character = surf
+
+        # el monstruo del mundo cambia de cara junto con el panel
+        self._face_now = face
+
+        if self.on_face is not None:
+
+            try:
+                self.on_face(face)
+            except Exception as error:
+                print(f"[map2] cara del monstruo: {error}")
 
         # rugido + temblor de pantalla cada vez que habla
         audio.play("ojo_rugido")
@@ -889,7 +906,17 @@ class EyeDialog(BossDialog):
         # el ojo late rojo-naranja (luz aditiva, sin alpha)
         pulse = 0.5 + 0.5 * math.sin(self.age * (9.0 if talking else 3.0))
 
-        r = int(self.char_rect.width * (0.20 + 0.04 * pulse))
+        face = getattr(self, "_face_now", None)
+
+        fx_, fy_ = cfg.EYE_FRAC
+        base_r = getattr(cfg, "EYE_PANEL_GLOW_DEFAULT_R", 0.20)
+
+        custom = getattr(cfg, "EYE_PANEL_GLOW", {}).get(face)
+
+        if custom is not None:
+            fx_, fy_, base_r = custom
+
+        r = max(4, int(self.char_rect.width * (base_r + 0.2 * base_r * pulse)))
 
         eye = pygame.Surface((r * 2, r * 2))
 
@@ -902,8 +929,6 @@ class EyeDialog(BossDialog):
                 (int(255 * glow), int(90 * glow), int(20 * glow)),
                 (r, r), j,
             )
-
-        fx_, fy_ = cfg.EYE_FRAC
 
         screen.blit(
             eye,
@@ -1048,6 +1073,11 @@ class Map2Scene:
 
         self.game.tutorial = self._current
 
+    def _set_eye_face(self, face):
+        """Cada pagina del dialogo pone su cara tambien en el monstruo del mundo."""
+
+        self.eye.face = face or "base"
+
     def _open_monster(self, pages, faces, stage):
 
         self.stage = stage
@@ -1059,6 +1089,7 @@ class Map2Scene:
         self._current = EyeDialog(
             self._size(), pages=pages, faces=faces,
             fx=getattr(self.game, "fx", None),
+            on_face=self._set_eye_face,
         )
 
         self.game.tutorial = self._current
@@ -1373,6 +1404,11 @@ class Map2Finale:
 
         g.camera.update(g.player, dt=dt, focus=self.camera_focus())
 
+    def _set_eye_face(self, face):
+        """Cada pagina del dialogo pone su cara tambien en el monstruo del mundo."""
+
+        self.eye.face = face or "base"
+
     # ---- secuencia
 
     def start(self):
@@ -1393,6 +1429,7 @@ class Map2Finale:
             pages=cfg.MONSTER_3,
             faces=cfg.MONSTER_3_FACES,
             fx=getattr(g, "fx", None),
+            on_face=self._set_eye_face,
         )
 
         g.tutorial = self._current

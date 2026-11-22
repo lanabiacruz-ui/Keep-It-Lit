@@ -111,6 +111,7 @@ SHOT_SIZE = 22
 HIT_PAD = (14, 22)           # el bloque cuenta como "te dio" un poco antes
 
 WEB_SIZE = 48                # lado del bloque de telaraña en el piso
+WEB_GAP = 14                 # separacion minima (px) entre telarañas: NUNCA se tocan
 WEB_LIFE = 9.0               # segundos hasta que se va solo
 WEB_FADE = 2.0               # los ultimos segundos se va apagando
 WEB_SLOW = 0.175             # multiplicador de velocidad dentro (el doble de lento que antes: 0.35)
@@ -134,6 +135,9 @@ RETREAT_SPEED = 150          # velocidad con la que se alejan (de espaldas)
 RETREAT_STUCK = 0.25         # si no pueden alejarse (pared) vuelven a entrar a los 0.25 s
 RETURN_HIT_DELAY = 0.10      # al volver, tardan esto en pegar: el golpe sigue siendo rapido
 FIRST_HIT_SPREAD = 0.25      # (0 a esto) de demora extra al azar para que no peguen todas juntas
+FLEE_AWAY_SPEED = 330.0      # huida de las Aurantulas cuando las espanta la luz (rescate)
+FLEE_AWAY_TIME = 2.2         # segundos corriendo antes de desaparecer del todo
+FLEE_AWAY_FADE = 0.9         # los ultimos segundos se van desvaneciendo
 WEB_SLIDE_SPEED = 320.0      # velocidad (px/s) con la que las telarañas se apartan entre si
 CHASE_MAX = 12.0
 LOSE_DIST = 480
@@ -173,7 +177,7 @@ AURA_THROW_COOLDOWN = 2.4
 AURA_THROW_COOLDOWN_WEBBED = 3.6   # si ya estas atrapado, tira menos seguido
 AURA_WIND_UP = 0.45
 AURA_VOLLEY = 4              # telarañas por rafaga
-AURA_BURST_GAP = 0.12        # entre una y otra (cada una vuelve a apuntar)
+AURA_BURST_GAP = 0.20        # entre una y otra (cada una vuelve a apuntar; asi no vuelan pegadas)
 AURA_SPREAD = (0.0, -6.0, 6.0, 0.0)   # grados de abanico de cada telaraña
 AURA_SHOT_SPEED = 400        # (la comun: 260)
 AURA_SHOT_SIZE = 30          # (la comun: 22)
@@ -1081,6 +1085,11 @@ class SpiderManager:
         self.shots = []
         self.webs = []
 
+        self.fleeing = []        # espantadas por la luz del rescate (ver scare_all)
+        self.paused = False      # quietas (no atacan) mientras pasa la cinematica
+        self.peace = False       # despues del rescate: no nacen mas Aurantulas
+        self.rush_t = None       # segundos desde que salieron las del final
+
         self._active = False
         self._slow = 1.0
         self._warned = False
@@ -1113,6 +1122,9 @@ class SpiderManager:
         self.dying = []
         self.shots = []
         self.webs = []
+        self.fleeing = []
+        self.paused = False
+        self.rush_t = None
 
         self.player_in_web = False
 
@@ -1428,6 +1440,7 @@ class SpiderManager:
 
         if made:
             audio.play("aura_screech")
+            self.rush_t = 0.0
 
         return made
 
@@ -1569,52 +1582,76 @@ class SpiderManager:
 
         return r
 
+    def _spot_ok(self, cmap, x, y, rects):
+        """True si una telaraña centrada en (x, y) entra en el piso y queda
+        a WEB_GAP o mas de todas las demas (no se toca con ninguna)."""
+
+        if not cmap.point_is_walkable(x, y):
+            return False
+
+        r = self._spot_rect(x, y).inflate(WEB_GAP * 2, WEB_GAP * 2)
+
+        return not any(r.colliderect(e) for e in rects)
+
     def _free_spot(self, cmap, cx, cy, rects):
         """Lugar libre mas cercano a (cx, cy) para una telaraña: el mismo punto
-        si esta libre o, si no, pegada borde con borde a otra (como bloques).
+        si esta libre o, si no, al costado de la otra con WEB_GAP de aire
+        (nunca pegadas: si se tocan parecen una sola telaraña).
         None si no hay lugar."""
 
         half = WEB_SIZE // 2
+        step = WEB_SIZE + WEB_GAP
 
         cands = [(round(cx), round(cy))]
 
         for e in rects:
 
             for y in (round(cy), e.centery):
-                cands.append((e.right + half, y))
-                cands.append((e.left - half, y))
+                cands.append((e.right + half + WEB_GAP, y))
+                cands.append((e.left - half - WEB_GAP, y))
 
             for x in (round(cx), e.centerx):
-                cands.append((x, e.bottom + half))
-                cands.append((x, e.top - half))
+                cands.append((x, e.bottom + half + WEB_GAP))
+                cands.append((x, e.top - half - WEB_GAP))
+
+        # anillos alrededor del punto (por si los costados de las otras estan
+        # ocupados o son pared)
+        for ring in range(1, 5):
+
+            for k in range(12):
+
+                ang = math.tau * k / 12
+
+                cands.append((
+                    round(cx + math.cos(ang) * step * ring),
+                    round(cy + math.sin(ang) * step * ring),
+                ))
 
         best = None
         best_d = None
 
         for x, y in cands:
 
-            if not cmap.point_is_walkable(x, y):
-                continue
-
-            r = self._spot_rect(x, y)
-
-            if any(r.colliderect(e) for e in rects):
-                continue
-
             d = (x - cx) ** 2 + (y - cy) ** 2
 
-            if best_d is None or d < best_d:
-                best, best_d = (x, y), d
+            if best_d is not None and d >= best_d:
+                continue
+
+            if not self._spot_ok(cmap, x, y, rects):
+                continue
+
+            best, best_d = (x, y), d
 
         return best
 
     def _add_web(self, game, x, y, variant, pinned=False):
-        """Pone una telaraña sin que se superponga con otra.
+        """Pone una telaraña sin que se toque con otra (siempre queda WEB_GAP
+        de aire entre las dos).
 
-        - Normal (bloque que fallo): si cae sobre otra, se aparta hasta el
-          lugar libre mas cercano, pegada borde con borde.
+        - Normal (bloque que fallo): si cae sobre otra o muy cerca, se aparta
+          hasta el lugar libre mas cercano.
         - pinned (la que te atrapo): se queda justo donde estas, para no
-          soltarte; las que la pisan son las que se apartan.
+          soltarte; las que la tocan son las que se apartan.
         """
 
         cmap = game.collision_map
@@ -1638,13 +1675,13 @@ class SpiderManager:
             return web
 
         mine = web.target_rect()
+        zone = mine.inflate(WEB_GAP * 2, WEB_GAP * 2)
 
-        hit = [w for w in self.webs if w.target_rect().colliderect(mine)]
+        hit = [w for w in self.webs if w.target_rect().colliderect(zone)]
 
         # las que mas la pisan se acomodan primero
-        hit.sort(key=lambda w: -(
-            w.target_rect().clip(mine).width * w.target_rect().clip(mine).height
-        ))
+        hit.sort(key=lambda w: (w.tx - mine.centerx) ** 2
+                 + (w.ty - mine.centery) ** 2)
 
         self.webs = [w for w in self.webs if w not in hit]
 
@@ -1667,6 +1704,94 @@ class SpiderManager:
 
         return web
 
+    # ---- rescate: la luz espanta a las Aurantulas (ui/map2_rescue.py) -----------------
+    def pause(self):
+        """Las arañas se quedan quietas (no se mueven ni atacan) y se borran
+        los bloques en vuelo."""
+
+        self.paused = True
+        self.shots = []
+
+    def scare_all(self, game, origin):
+        """Todas las arañas vivas huyen de `origin` (mundo) y se van
+        desvaneciendo. Las telarañas se deshacen y ya no nacen mas arañas."""
+
+        origin = pygame.Vector2(origin)
+
+        for spider in self.spiders:
+
+            if spider.dead:
+                continue
+
+            d = pygame.Vector2(spider.pos) - origin
+
+            if d.length_squared() < 1.0:
+                d = pygame.Vector2(random.uniform(-1, 1), random.uniform(-1, 1))
+
+                if d.length_squared() < 1e-6:
+                    d = pygame.Vector2(1, 0)
+
+            spider.mode = "idle"
+            spider.wind = 0.0
+            if hasattr(spider, "burst_left"):
+                spider.burst_left = 0
+
+            self.fleeing.append({
+                "s": spider,
+                "dir": d.normalize(),
+                "t": 0.0,
+                "delay": random.uniform(0.0, 0.35),
+            })
+
+        self.spiders = []
+        self.shots = []
+
+        # las telarañas se deshacen enseguida (usan su animacion de "deshacer")
+        for web in self.webs:
+            web.age = max(web.age, WEB_LIFE - WEB_FADE)
+
+        self.paused = False
+        self.peace = True
+        self._role_sig = None
+
+        audio.play("aura_screech")
+
+    def _update_fleeing(self, dt, game):
+
+        if not self.fleeing:
+            return
+
+        cmap = game.collision_map
+
+        for f in self.fleeing:
+
+            spider = f["s"]
+
+            f["t"] += dt
+            spider.anim_t += dt
+
+            if f["delay"] > 0:
+
+                f["delay"] -= dt
+                spider.moving = False
+
+                continue
+
+            d = f["dir"]
+
+            spider.heading = math.degrees(math.atan2(d.y, d.x)) % 360.0
+            spider.face = 1 if d.x >= 0 else -1
+
+            spider.moving = spider._move_dir(d, FLEE_AWAY_SPEED, dt, cmap)
+
+            if spider.moving:
+                spider.walk_phase += dt * FLEE_AWAY_SPEED / AURA_WALK_RATE
+            else:
+                # contra una pared: prueba correr de costado
+                f["dir"] = d.rotate(random.choice((70, -70)))
+
+        self.fleeing = [f for f in self.fleeing if f["t"] < FLEE_AWAY_TIME]
+
     # ---- el bloque te dio ------------------------------------------------------------
     def _hit_player(self, game, shot):
 
@@ -1674,13 +1799,17 @@ class SpiderManager:
 
         audio.play("web_stick", jitter=0.1)
 
-        if self.player_in_web:
+        under = [
+            w for w in self.webs if w.rect.colliderect(game.player.rect)
+        ]
+
+        # (self.player_in_web se actualiza una vez por cuadro: si varias de la
+        # rafaga te pegan juntas hay que mirar las telarañas de verdad)
+        if self.player_in_web or under:
 
             # ya estabas atrapado (rafaga): la telaraña de abajo se renueva
-            for w in self.webs:
-
-                if w.rect.colliderect(game.player.rect):
-                    w.age = min(w.age, 1.0)
+            for w in under:
+                w.age = min(w.age, 1.0)
 
         else:
 
@@ -1728,6 +1857,11 @@ class SpiderManager:
 
             return
 
+        self._update_fleeing(dt, game)
+
+        if self.rush_t is not None:
+            self.rush_t += dt
+
         player = game.player.rect
 
         # velocidad del jugador (para apuntarle con anticipacion)
@@ -1742,7 +1876,10 @@ class SpiderManager:
 
         self._prev_player = now
 
-        if not self._big_active and AURA_TRIGGER.collidepoint(player.center):
+        if (
+            not self._big_active and not self.peace
+            and AURA_TRIGGER.collidepoint(player.center)
+        ):
 
             self._big_active = True
 
@@ -1776,6 +1913,14 @@ class SpiderManager:
                     self._drop(game, spider)
 
                     self.dying.append([spider, 0.0])
+
+                continue
+
+            if self.paused:
+
+                # quietas, asustadas: solo respiran
+                spider.anim_t += dt
+                spider.moving = False
 
                 continue
 
@@ -2200,6 +2345,16 @@ class SpiderManager:
                 screen, camera, spider, scale=1.0 - 0.5 * k,
                 alpha=int(255 * (1.0 - k))
             )
+
+        for f in self.fleeing:
+
+            left = FLEE_AWAY_TIME - f["t"]
+
+            alpha = 255 if left >= FLEE_AWAY_FADE else int(
+                255 * max(0.0, left / FLEE_AWAY_FADE)
+            )
+
+            self._draw_spider(screen, camera, f["s"], alpha=alpha)
 
         for spider in self.spiders:
             self._draw_spider(screen, camera, spider)

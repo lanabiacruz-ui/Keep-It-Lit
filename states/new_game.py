@@ -74,6 +74,7 @@ from ui.shop_plan import (
 )
 from ui.tutorial import Tutorial
 from ui.map2_scene import Map2Scene, Map2Finale, EyeMonster
+from ui.map2_rescue import Map2Rescue
 from ui.cenizo_follower import CenizoFollower
 from ui.tutorial_texts import apply_texts
 from core import player_name as hero_name
@@ -548,6 +549,11 @@ class NewGame:
         self.map2_finale_done = bool(self.save_data.get("map2_finale", False))
         self._finale_wait = 0.0
 
+        # rescate: cuando vienen muchas Aurantulas aparece un tipo, ilumina la
+        # sala y las espanta (ver ui/map2_rescue.py). Una sola vez por partida.
+        self.map2_rescue = None
+        self.map2_rescue_done = bool(self.save_data.get("map2_rescue", False))
+
         # Cenizo flotando al lado del jugador (tutorial y escena del mapa 2)
         self.cenizo = CenizoFollower()
         self.intro_t = None
@@ -988,6 +994,7 @@ class NewGame:
 
         # arañas: solo existen en el mapa 2 (no van en ninguna oleada)
         self.spiders = SpiderManager()
+        self.spiders.peace = bool(getattr(self, "map2_rescue_done", False))
         self.web_slow = 1.0
 
         self.last_heal = 0.0
@@ -3406,6 +3413,59 @@ class NewGame:
             self.map2_finale = Map2Finale(self)
             self.map2_finale.start()
 
+    def _update_map2_rescue(self, dt):
+        """Cuando las Aurantulas del final llevan un rato atacando aparece el
+        rescatador (Map2Rescue). Una sola vez por partida."""
+
+        rescue = self.map2_rescue
+
+        # saliste del mapa 2 en medio de la escena: se cancela
+        if rescue is not None and getattr(self, "current_map", "mapa1") != "mapa2":
+
+            old = getattr(rescue, "_old_smooth", None)
+
+            if old is not None:
+                self.camera.smoothing = old
+
+            self.map2_rescue = None
+
+            return
+
+        if rescue is not None:
+
+            rescue.update(dt)
+
+            if rescue.done:
+
+                self.map2_rescue = None
+                self.map2_rescue_done = True
+
+                self._save()
+
+            return
+
+        if (
+            self.map2_rescue_done
+            or self.map2_finale is not None
+            or self.map2_scene is not None
+            or self.tutorial is not None
+            or self.state != "playing"
+            or getattr(self, "current_map", "mapa1") != "mapa2"
+        ):
+            return
+
+        spiders = self.spiders
+
+        if spiders.rush_t is None or not spiders.spiders:
+            return
+
+        from world import map2_intro
+
+        if spiders.rush_t >= map2_intro.RESCUE_DELAY:
+
+            self.map2_rescue = Map2Rescue(self)
+            self.map2_rescue.start()
+
     def _update_map_zoom(self, dt):
         """Mapa 2: al terminar la intro la camara se abre (mas zoom afuera)
         para ver mas del lugar y las arañas. Se hace con un fundido corto
@@ -3520,6 +3580,16 @@ class NewGame:
         if finale is not None:
 
             focus = finale.camera_focus()
+
+            if focus is not None:
+                return focus
+
+        # rescate: la camara se desplaza hacia el tipo que aparece
+        rescue = getattr(self, "map2_rescue", None)
+
+        if rescue is not None:
+
+            focus = rescue.camera_focus()
 
             if focus is not None:
                 return focus
@@ -4428,6 +4498,10 @@ class NewGame:
 
             self.map2_finale.after_dialog(closed)
 
+        if self.map2_rescue is not None:
+
+            self.map2_rescue.after_dialog(closed)
+
     def _open_shop(self):
 
         if self.shop is not None:
@@ -4732,6 +4806,7 @@ class NewGame:
             "finished": self.finished,
 
             "map2_finale": self.map2_finale_done,
+            "map2_rescue": self.map2_rescue_done,
 
             "inventory": inventory,
 
@@ -5928,6 +6003,18 @@ class NewGame:
                 # PRUEBA: salta directo a la escena del monstruo del ojo
                 # (mapa 2) sin jugar todo el juego ni ver el comic
                 enter_map(self, "mapa2")
+
+                # volver a empezar la escena: sin esto, si ya habias pasado el
+                # final (o no habias terminado el juego) el monstruo no se ve
+                self.finished = True
+                self.map2_finale = None
+                self.map2_finale_done = False
+                self.map2_rescue = None
+                self.map2_rescue_done = False
+                self._finale_wait = 0.0
+
+                self.spiders.peace = False
+
                 self.begin_map2_intro()
 
             elif event.key == pygame.K_SPACE and self.state == "playing":
@@ -6154,6 +6241,9 @@ class NewGame:
 
             if self.map2_finale is not None:
                 self.map2_finale.tick(dt)
+
+            if self.map2_rescue is not None:
+                self.map2_rescue.tick(dt)
 
             self.tutorial.update(
                 dt
@@ -6564,6 +6654,8 @@ class NewGame:
         self.spiders.update(dt, self)
 
         self._update_map2_finale(dt)
+
+        self._update_map2_rescue(dt)
 
 
         # yunque "Manos agiles": cofres con menos espera
@@ -7350,6 +7442,11 @@ class NewGame:
         for ball in self.fireballs:
             sources.append(ball.light_source())
 
+        rescue = self.map2_rescue
+
+        if rescue is not None:
+            sources.extend(rescue.light_sources(self.camera.zoom))
+
         if self.tutorial is None and DOOR_GLOW_RADIUS > 0:
 
             for door in self.doors.doors:
@@ -7365,11 +7462,16 @@ class NewGame:
 
                 break
 
+        lit_rects = list(self._lit_rects())
+
+        if rescue is not None:
+            lit_rects.extend(rescue.lit_rects())
+
         self.light.draw(
             self.screen,
             self.camera,
             sources,
-            self._lit_rects()
+            lit_rects
         )
 
         self._draw_warm_glows(sources)
@@ -7382,6 +7484,9 @@ class NewGame:
 
         if self.cenizo.visible:
             self.cenizo.draw(self.screen, self.camera)
+
+        if rescue is not None:
+            rescue.draw(self.screen, self.camera)
 
         if self.cine_player_boost > 0.01:
             self._draw_player_boost()
