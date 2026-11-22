@@ -6447,6 +6447,12 @@ class NewGame:
             if not s.dead and not s.gone
         ]
 
+        # el monstruo del ojo (mapa 2) tambien es solido
+        if self._eye_visible():
+            self.collision_map.dynamic_blockers.append(
+                self.eye_monster().hitbox()
+            )
+
         if not lock and self.state == "playing":
 
             self.player.update(

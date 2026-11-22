@@ -26,17 +26,18 @@ provisorio. Mas caras: agregar nombres a MONSTER_1_FACES / MONSTER_2_FACES
 """
 
 # ------------------------------------------------------------ camara
+# Mientras habla Cenizo (y despues del rayo) la camara encuadra al jugador y a
+# Cenizo JUNTOS, un poco mas arriba del centro de la pantalla: el cuadro de
+# dialogo ocupa la esquina de abajo a la derecha y si ellos quedaran ahi
+# abajo se taparian. Asi se ven los dos enteros y, arriba, se asoma el
+# monstruo. CAMERA_ANCHOR_TALK = a que altura de la pantalla queda el punto
+# medio entre los dos (0 = arriba de todo, 1 = abajo de todo).
+CAMERA_ANCHOR_TALK = 0.58
+
 # Mientras habla el monstruo la camara se desplaza hacia el (CAMERA_MIX_MONSTER
-# = 1.0: lo centra); con Cenizo mira sobre todo al jugador; en el rayo sigue
-# al rayo desde el ojo hasta Cenizo (ver mas abajo). Valores de 0 (el
-# jugador) a 1 (el monstruo).
-CAMERA_MIX_CENIZO = 0.30
+# = 1.0: lo centra). En el rayo sigue al rayo desde el ojo hasta Cenizo (ver
+# mas abajo). Valores de 0 (el jugador) a 1 (el monstruo).
 CAMERA_MIX_MONSTER = 1.0
-# Donde queda la camara cuando el rayo le pega a Cenizo y mientras habla herido:
-# entre Cenizo (0) y el monstruo (1). Con 0.35 se ve entero a Cenizo y se sigue
-# viendo la parte de abajo del monstruo (si sube mucho se pierde Cenizo; si baja
-# mucho se pierde el monstruo).
-CAMERA_MIX_HIT = 0.35
 CAMERA_SMOOTH = 3.0          # velocidad del movimiento de camara en la escena (mas bajo = mas lento)
 
 # El rayo: la camara arranca en el ojo mientras se carga, viaja junto con el
@@ -76,6 +77,11 @@ MONSTER_HEIGHT = 260         # alto en pixeles del mundo (era 176, antes 84: aho
 MONSTER_ALPHA = 255          # 0-255 (el dibujo ya viene con el cuerpo tenue)
 # donde esta el ojo dentro del dibujo (0 a 1, desde arriba-izquierda)
 EYE_FRAC = (0.452, 0.465)
+
+# COLISION: el monstruo es solido, no se lo puede atravesar. La caja esta en
+# sus pies (la base del dibujo), quieta aunque el flote suba y baje.
+MONSTER_HITBOX_W = 0.50      # ancho de la caja (fraccion del ancho del dibujo)
+MONSTER_HITBOX_H = 40        # alto de la caja (pixeles del mundo)
 
 # ------------------------------------------------------------ vida del monstruo
 # Nombre que se ve en el cartel cuando habla.

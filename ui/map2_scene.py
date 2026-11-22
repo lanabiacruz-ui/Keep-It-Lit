@@ -17,6 +17,7 @@ import math
 import pygame
 
 from core.audio_manager import audio
+from ui.cenizo_follower import HEIGHT_FRAC
 from ui.boss_dialog import BossDialog, COMBAT_DIR
 from ui.eye_pupil import find_slit
 from ui.tutorial import DEFAULT_THEME, Tutorial
@@ -231,6 +232,22 @@ class EyeMonster:
         return pygame.Vector2(
             self.pos.x + self.body_off.x + (fx - 0.5) * w,
             self.pos.y + self.body_off.y + (fy - 0.5) * self.height,
+        )
+
+    def hitbox(self):
+        """Caja de colision del monstruo (mundo): en sus pies, quieta (no
+        sigue el flote). El jugador no puede atravesarla."""
+
+        src = self._raw("base")
+        ratio = src.get_width() / src.get_height()
+
+        w = max(4, int(self.height * ratio * cfg.MONSTER_HITBOX_W))
+        h = max(4, int(cfg.MONSTER_HITBOX_H))
+
+        feet = self.pos.y + self.height / 2
+
+        return pygame.Rect(
+            int(self.pos.x - w / 2), int(feet - h), w, h
         )
 
     # ---- vida: flote y mirada
@@ -860,61 +877,64 @@ class Map2Scene:
 
     def camera_focus(self):
         """Hacia donde mira la camara en cada momento (lo usa
-        new_game._cinematic_focus):
+        new_game._cinematic_focus). Devuelve (x, y, k, ancla) o None:
 
-            Cenizo habla      -> sobre todo el jugador
+            Cenizo habla      -> el jugador y Cenizo juntos, arriba del
+                                 cuadro de dialogo (se ven los dos)
             el monstruo habla -> la camara se desplaza hacia el monstruo
-            el rayo           -> los dos (se ve el rayo)
+            el rayo           -> sigue al rayo del ojo hasta Cenizo
+            Cenizo herido     -> igual que cuando habla
         """
 
         if self.stage in ("idle", "end"):
             return None
 
-        p = pygame.Vector2(self.game.player.image_rect.center)
-
         if self.stage in ("m1", "m2"):
 
+            p = pygame.Vector2(self.game.player.image_rect.center)
             m = pygame.Vector2(self.eye.pos)
+
             f = p.lerp(m, cfg.CAMERA_MIX_MONSTER)
 
-        elif self.stage == "ray":
+            return (f.x, f.y, 1.0, 0.5)
 
-            f = self._ray_focus()
+        if self.stage == "ray":
+            return self._ray_focus()
 
-        elif self.stage == "hurt":
+        return self._talk_focus()
 
-            # Cenizo herido: se lo ve a el y se sigue viendo el monstruo
-            f = self._hit_focus()
+    def talk_point(self):
+        """Punto medio entre el jugador y Cenizo (mundo)."""
 
-        else:
+        p = pygame.Vector2(self.game.player.image_rect.center)
 
-            f = p.lerp(self.eye.eye_world(), cfg.CAMERA_MIX_CENIZO)
+        return p.lerp(pygame.Vector2(self.game.cenizo.pos), 0.5)
 
-        return (f.x, f.y, 1.0, 0.5)
+    def _talk_focus(self):
+        """El jugador y Cenizo juntos, por encima del cuadro de dialogo."""
+
+        f = self.talk_point()
+
+        return (f.x, f.y, 1.0, cfg.CAMERA_ANCHOR_TALK)
 
     def _ray_focus(self):
         """La camara acompaña al rayo: se queda en el ojo mientras se
-        carga, viaja con el rayo hacia Cenizo y termina entre Cenizo y el
-        monstruo (asi se ve el golpe sin perder al monstruo de vista)."""
+        carga y despues viaja con el rayo hasta Cenizo, donde termina
+        encuadrando a Cenizo y al jugador (y se asoma el monstruo)."""
 
         eye = self.eye.eye_world()
-        target = self._target()
 
         if self.t < CHARGE_TIME:
-            return pygame.Vector2(eye)
+            return (eye.x, eye.y, 1.0, 0.5)
 
         u = min(1.0, (self.t - CHARGE_TIME) / max(0.05, cfg.RAY_TRAVEL_TIME))
         u = u * u * (3.0 - 2.0 * u)
 
-        return eye.lerp(self._hit_focus(), u)
+        f = eye.lerp(self.talk_point(), u)
 
-    def _hit_focus(self):
-        """Donde queda la camara cuando el rayo llega: Cenizo entero en
-        pantalla y el monstruo todavia a la vista (no se sale de cuadro)."""
+        anchor = 0.5 + (cfg.CAMERA_ANCHOR_TALK - 0.5) * u
 
-        return pygame.Vector2(self._target()).lerp(
-            pygame.Vector2(self.eye.pos), cfg.CAMERA_MIX_HIT
-        )
+        return (f.x, f.y, 1.0, anchor)
 
     def tick(self, dt):
         """Mueve la camara de a poco (los dialogos frenan el juego, por eso
@@ -989,6 +1009,13 @@ class Map2Scene:
         g.cenizo.appear(spot, instant=True)
         g.cenizo.size_mul = CENIZO_WORLD_SCALE
         g.cenizo.set_hold(True)
+
+        # la transicion de entrada no corre el update: Cenizo ya tiene que
+        # tener su tamaño final (si no, aparece grande y se achica de golpe)
+        h = getattr(getattr(g.player, "image_rect", None), "height", None)
+
+        if h:
+            g.cenizo.height_world = h * HEIGHT_FRAC * CENIZO_WORLD_SCALE
 
         self.eye.face = "base"
         self.eye.charge = 0.0

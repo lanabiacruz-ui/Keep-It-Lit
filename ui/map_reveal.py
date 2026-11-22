@@ -28,6 +28,9 @@ TOTAL_TIME = 4.25
 
 ZOOM_FROM = 1.65
 
+# mapa 2: cuanto se ve el personaje por encima de la oscuridad (0 a 1)
+BOOST_LEVEL = 0.85
+
 
 def _clamp(v, lo=0.0, hi=1.0):
 
@@ -92,6 +95,12 @@ class MapReveal:
         # a oscuras. Solo la interfaz queda oculta al principio.
         game.cine_ui_alpha = 0.0
 
+        # entrando al mapa 2 el personaje no esta solo: Cenizo esta al lado
+        self.with_cenizo = (
+            getattr(game, "map2_scene", None) is not None
+            and getattr(game.cenizo, "visible", False)
+        )
+
         self.px, self.py = self._player_point()
 
     @property
@@ -112,6 +121,15 @@ class MapReveal:
 
         x = rect.centerx * zoom - game.camera.x
         y = rect.centery * zoom - game.camera.y
+
+        # mapa 2: la camara arranca sobre el personaje Y Cenizo (el punto
+        # medio), asi los dos se ven desde el primer momento
+        if self.with_cenizo:
+
+            c = game.cenizo.pos
+
+            x = (x + (c.x * zoom - game.camera.x)) / 2
+            y = (y + (c.y * zoom - game.camera.y)) / 2
 
         return (
             _clamp(x, 0, self.w),
@@ -137,6 +155,7 @@ class MapReveal:
         if not self.active:
 
             self.game.cine_ui_alpha = 1.0
+            self.game.cine_player_boost = 0.0
 
             return "done"
 
@@ -148,6 +167,16 @@ class MapReveal:
         self.game.cine_ui_alpha = _ease_in_out(
             _span(t, UI_START, UI_START + UI_TIME)
         )
+
+        # mapa 2: el personaje se ve bien aunque el mapa este a oscuras
+        # (se lo dibuja por encima de la oscuridad mientras abren los ojos;
+        # se va apagando cuando aparece la interfaz)
+        if self.with_cenizo:
+
+            rise = _ease_in_out(_span(t, OPEN_START, OPEN_START + 1.2))
+            fall = _ease_in_out(_span(t, UI_START, UI_START + UI_TIME))
+
+            self.game.cine_player_boost = BOOST_LEVEL * rise * (1.0 - fall)
 
         return None
 
