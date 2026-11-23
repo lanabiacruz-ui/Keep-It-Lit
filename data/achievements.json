@@ -3,11 +3,12 @@
         "region_1": "2026-11-21T11:54:06",
         "dragon_monedas": "2026-11-21T11:55:25",
         "zona_1": "2026-11-21T18:59:38",
-        "coctel": "2026-11-21T19:01:55"
+        "coctel": "2026-11-21T19:01:55",
+        "pirotecnico": "2026-11-22T22:02:14"
     },
     "counters": {
-        "defeats": 10,
-        "fireballs": 88,
+        "defeats": 11,
+        "fireballs": 103,
         "doors": 7
     }
 }

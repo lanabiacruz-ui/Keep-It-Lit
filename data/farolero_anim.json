@@ -2,18 +2,24 @@
   "stand": {
     "file": "salvador.png",
     "size": [
-      112,
-      237
+      130,
+      234
     ]
   },
   "walk": {
     "file": "farolero_caminar.png",
     "frames": 4,
     "cell": [
-      132,
-      247
+      160,
+      245
     ],
-    "stand_h": 237
+    "stand_h": 237,
+    "dirs": {
+      "down": 0,
+      "left": 1,
+      "up": 2
+    },
+    "faces": "left"
   },
   "ritual": {
     "file": "farolero_ritual.png",
@@ -23,10 +29,32 @@
       384,
       256
     ],
-    "stand_h": 227,
+    "stand_h": 234,
     "foot": [
-      191,
-      245
+      202,
+      241
+    ]
+  },
+  "sit": {
+    "file": "farolero_sentarse.png",
+    "cols": 4,
+    "rows": 4,
+    "cell": [
+      384,
+      256
+    ],
+    "stand_h": 249,
+    "foot": [
+      192,
+      253
+    ],
+    "down": [
+      0,
+      15
+    ],
+    "idle": [
+      12,
+      15
     ]
   }
 }

@@ -215,6 +215,25 @@ def _ritual_glow(frame):
     return RITUAL_GLOW[a] + (RITUAL_GLOW[b] - RITUAL_GLOW[a]) * (frame - a)
 
 
+DEFAULT_ANIM_META = {
+    "stand": {"file": "salvador.png", "size": [130, 234]},
+    "walk": {
+        "file": "farolero_caminar.png", "frames": 4, "cell": [160, 245],
+        "stand_h": 237, "dirs": {"down": 0, "left": 1, "up": 2},
+        "faces": "left",
+    },
+    "ritual": {
+        "file": "farolero_ritual.png", "cols": 4, "rows": 4,
+        "cell": [384, 256], "stand_h": 234, "foot": [202, 241],
+    },
+    "sit": {
+        "file": "farolero_sentarse.png", "cols": 4, "rows": 4,
+        "cell": [384, 256], "stand_h": 249, "foot": [192, 253],
+        "down": [0, 15], "idle": [12, 15],
+    },
+}
+
+
 class FaroleroAnim:
     """Cuadros animados del Farolero (los genera tools/make_farolero_assets.py).
 
@@ -236,6 +255,10 @@ class FaroleroAnim:
 
         except (OSError, ValueError):
             self.meta = None
+
+        if self.meta is None:
+            # sin json: medidas de las hojas que vienen en assets/maps/combate
+            self.meta = json.loads(json.dumps(DEFAULT_ANIM_META))
 
     def _sheet(self, key, alpha):
 
@@ -266,6 +289,10 @@ class FaroleroAnim:
     def has_ritual(self):
         return self._sheet("ritual", True) is not None
 
+    @property
+    def has_sit(self):
+        return self._sheet("sit", True) is not None
+
     def _remember(self, key, img):
 
         if len(self._cache) > 120:
@@ -273,8 +300,12 @@ class FaroleroAnim:
 
         self._cache[key] = img
 
-    def walk(self, n, side_h):
-        """Cuadro `n` de la caminata, con el alto del dibujo = side_h."""
+    def walk(self, n, side_h, direction="left"):
+        """Cuadro `n` de la caminata, con el alto del dibujo = side_h.
+
+        `direction`: "down" (de frente), "up" (de espaldas), "left" o "right".
+        La hoja tiene una fila por direccion (json "dirs"); "right" es "left"
+        espejado. Con un json viejo (una sola tira) se usa esa tira."""
 
         sheet = self._sheet("walk", True)
 
@@ -286,7 +317,24 @@ class FaroleroAnim:
 
         n %= max(1, int(info["frames"]))
 
-        key = ("walk", n, side_h)
+        dirs = info.get("dirs")
+
+        flip = False
+        row = 0
+
+        if dirs:
+
+            if direction == "right" and "right" not in dirs:
+                direction, flip = "left", True
+
+            row = int(dirs.get(direction, dirs.get("down", 0)))
+
+        else:
+
+            faces_right = info.get("faces", "right") == "right"
+            flip = (direction == "right") != faces_right
+
+        key = ("walk", n, side_h, row, flip)
 
         img = self._cache.get(key)
 
@@ -294,34 +342,37 @@ class FaroleroAnim:
 
             scale = side_h / float(info["stand_h"])
 
-            cell = sheet.subsurface(pygame.Rect(n * cw, 0, cw, ch))
+            cell = sheet.subsurface(pygame.Rect(n * cw, row * ch, cw, ch))
 
             img = pygame.transform.smoothscale(
                 cell, (max(2, int(cw * scale)), max(2, int(ch * scale)))
             )
 
+            if flip:
+                img = pygame.transform.flip(img, True, False)
+
             self._remember(key, img)
 
         return img
 
-    def ritual(self, n, side_h):
-        """(imagen, (ancla_x, ancla_y)) del cuadro `n` del ritual. La imagen
-        tiene transparencia (sin fondo); el ancla son los pies."""
+    def _grid(self, key, n, side_h):
+        """(imagen, (ancla_x, ancla_y)) del cuadro `n` de una hoja en grilla
+        (ritual o sentarse). Tiene transparencia; el ancla son los pies."""
 
-        sheet = self._sheet("ritual", True)
+        sheet = self._sheet(key, True)
 
         if sheet is None:
             return None
 
-        info = self.meta["ritual"]
+        info = self.meta[key]
         cw, ch = info["cell"]
         cols = int(info["cols"])
 
         n = max(0, min(cols * int(info["rows"]) - 1, int(n)))
 
-        key = ("ritual", n, side_h)
+        ck = (key, n, side_h)
 
-        got = self._cache.get(key)
+        got = self._cache.get(ck)
 
         if got is None:
 
@@ -341,9 +392,33 @@ class FaroleroAnim:
 
             got = (img, anchor)
 
-            self._remember(key, got)
+            self._remember(ck, got)
 
         return got
+
+    def ritual(self, n, side_h):
+        """Cuadro `n` del ritual (parado -> sentado -> llama -> parado)."""
+
+        return self._grid("ritual", n, side_h)
+
+    def sit(self, n, side_h):
+        """Cuadro `n` (0 a 15) de sentarse detras de la mesita. Los ultimos
+        quedan sentado y se repiten (ver sit_idle_frame)."""
+
+        return self._grid("sit", n, side_h)
+
+
+def _dir_name(vec, last="down"):
+    """Direccion de la caminata segun el vector de movimiento (ejes de pantalla:
+    y positivo = hacia abajo). Si casi no se mueve se queda con la anterior."""
+
+    if abs(vec.x) < 0.5 and abs(vec.y) < 0.5:
+        return last
+
+    if abs(vec.x) >= abs(vec.y):
+        return "right" if vec.x > 0 else "left"
+
+    return "down" if vec.y > 0 else "up"
 
 
 _anim_cache = []
@@ -358,10 +433,25 @@ def anim():
     return _anim_cache[0]
 
 
+def sit_idle_frame(t):
+    """Cuadro de la animacion de quedarse sentado (va y vuelve, para siempre)."""
+
+    info = (anim().meta or {}).get("sit") or {}
+
+    first, last = info.get("idle", [12, 15])
+
+    seq = list(range(first, last + 1)) + list(range(last - 1, first, -1))
+
+    return seq[int(t * getattr(cfg, "FAROLERO_SIT_IDLE_FPS", 2.5)) % len(seq)]
+
+
 def _draw_room_fire(screen, camera, strength, center, boost=1.0):
     """Tono de fuego del cuarto: tiñe de naranja lo que esta iluminado (se
     multiplica), suma un brillo naranja que titila y un resplandor fuerte
     alrededor del Farolero. Se dibuja despues de la oscuridad."""
+
+    if not getattr(cfg, "FAROLERO_WARM_TINT", False):
+        return
 
     s = max(0.0, min(1.0, strength))
 
@@ -481,6 +571,8 @@ class Map2Rescue:
         self.room = 0.0              # 0-1: cuanta luz hay en el cuarto
         self.wave = 0.0              # 0-1: avance de la onda de luz (anillo)
         self.ritual = None           # cuadro (0-15) de la hoja del ritual; None = no se ve
+        self.seat = None             # cuadro (0-15) de la hoja de sentarse; None = no se ve
+        self.walk_dir = "left"       # hacia donde camina: down / up / left / right
 
         self._current = None
         self._old_smooth = None
@@ -684,6 +776,8 @@ class Map2Rescue:
 
             step = cfg.RESCUER_WALK_SPEED * dt
 
+            self.walk_dir = _dir_name(to, self.walk_dir)
+
             if to.length() <= step:
 
                 self.pos = target
@@ -696,29 +790,18 @@ class Map2Rescue:
                 self.pos += to.normalize() * step
                 self.walked += step
 
+            # se lo ve tal cual desde que sale (no es una luz) y NO ilumina:
+            # la luz aparece recien cuando abre la cabeza (el ritual)
+            self.fade = 1.0
+            self.aura = 0.0
+
             door = getattr(g, "map2_door", None)
 
-            if door is not None and not door.broken:
-
-                # viene por detras de la puerta cerrada: no se lo ve, solo se
-                # ve su luz crecer del otro lado. Al llegar, la rompe.
-                total = max(1.0, cfg.RESCUER_ENTRY[0] - door.rect.right)
-
-                self.fade = 0.0
-                self.aura = 40.0 + 70.0 * min(1.0, self.walked / total)
-
-                if self.pos.x <= door.rect.right + cfg.DOOR_BREAK_DIST:
-
-                    door.smash(g)
-
-                    self.fade = 1.0
-                    self.aura = 110.0
-
-            else:
-
-                # sale de la oscuridad de a poco y trae su luz
-                self.fade = min(1.0, self.walked / 120.0)
-                self.aura = 110.0 * self.fade
+            if (
+                door is not None and not door.broken
+                and self.pos.x <= door.rect.right + cfg.DOOR_BREAK_DIST
+            ):
+                door.smash(g)
 
         elif self.stage == "hold":
 
@@ -740,14 +823,11 @@ class Map2Rescue:
 
                 self.ritual = f
 
-                dark = 110.0 - 50.0 * min(1.0, f / 4.0)
-
-                self.aura = dark + (
-                    cfg.RESCUE_CHARGE_RADIUS * 1.6 - dark
-                ) * _ritual_glow(f)
+                # sentado no ilumina; la luz crece con la llama de la cabeza
+                self.aura = cfg.RESCUE_CHARGE_RADIUS * 1.6 * _ritual_glow(f)
 
             else:
-                self.aura = 110.0 + (cfg.RESCUE_CHARGE_RADIUS * 1.6 - 110.0) * k
+                self.aura = cfg.RESCUE_CHARGE_RADIUS * 1.6 * k
 
             near = g.spiders.horde_nearest(g)
 
@@ -768,6 +848,10 @@ class Map2Rescue:
 
             self.wave = e
             self.aura = start + (cfg.RESCUE_AURA_RADIUS - start) * e
+
+            # su luz propia se apaga con la llama; el cuarto queda iluminado
+            if k > 0.7:
+                self.aura *= max(0.0, 1.0 - (k - 0.7) / 0.3)
             self.room = min(1.0, e * 1.15)
 
             if anim().has_ritual:
@@ -791,6 +875,8 @@ class Map2Rescue:
 
             step = cfg.RESCUER_WALK_SPEED * dt
 
+            self.walk_dir = _dir_name(to, self.walk_dir)
+
             if to.length() <= step:
 
                 self.pos = pygame.Vector2(target)
@@ -799,12 +885,31 @@ class Map2Rescue:
 
                 if not self._path:
 
-                    self.stage = "leave"
+                    # llega a la mesita: se sienta (y queda sentado para siempre)
+                    self.stage = "sit" if anim().has_sit else "leave"
                     self.t = 0.0
+                    self.seat = 0.0 if anim().has_sit else None
+                    self.aura = 0.0
 
             else:
 
                 self.pos += to.normalize() * step
+
+        elif self.stage == "sit":
+
+            self.t += dt
+
+            last = float((anim().meta["sit"].get("down") or [0, 15])[1])
+
+            self.fade = 1.0
+            self.room = 1.0
+            self.aura = 0.0
+            self.seat = min(last, self.t * cfg.FAROLERO_SIT_FPS)
+
+            if self.seat >= last:
+
+                self.stage = "leave"
+                self.t = 0.0
 
         elif self.stage == "leave":
 
@@ -817,8 +922,11 @@ class Map2Rescue:
             glow = cfg.FAROLERO_GLOW_RADIUS
 
             self.fade = 1.0
-            self.aura = cfg.RESCUE_AURA_RADIUS + (glow - cfg.RESCUE_AURA_RADIUS) * k
+            self.aura = float(glow) * k
             self.room = 1.0
+
+            if self.seat is not None:
+                self.seat = sit_idle_frame(self.t)
 
             if k >= 1.0:
 
@@ -948,7 +1056,7 @@ class Map2Rescue:
 
         t = pygame.time.get_ticks() / 1000.0
 
-        bob = math.sin(t * 2.2) * 2.5 * zoom
+        bob = 0.0     # sin flotar
 
         # ritual de luz: cuadro de la hoja (con transparencia)
         ritual = None
@@ -971,12 +1079,19 @@ class Map2Rescue:
             phase = (self.t / max(0.05, cfg.RESCUER_WALK_STEP)) * math.pi
 
             walk_img = anim().walk(
-                int(self.t * getattr(cfg, "FAROLERO_WALK_FPS", 6.0)), side_h
+                int(self.t * getattr(cfg, "FAROLERO_WALK_FPS", 6.0)), side_h,
+                self.walk_dir,
             )
 
-            hop = 0.5 if walk_img is not None else 1.0
+            hop = 0.0 if walk_img is not None else 1.0
 
             bob = -abs(math.sin(phase)) * cfg.RESCUER_WALK_HOP * img.get_height() * hop
+
+        # sentado detras de la mesita (despues de llegar)
+        seat = None
+
+        if self.seat is not None and self.stage in ("sit", "leave"):
+            seat = anim().sit(int(self.seat), side_h)
 
         sx = int(self.pos.x * zoom - camera.x)
         sy = int(self.pos.y * zoom - camera.y + bob)
@@ -987,26 +1102,28 @@ class Map2Rescue:
         if self.stage == "hold":
             gr = int(gr * (1.0 + 0.5 * min(1.0, self.t / cfg.RESCUE_HOLD_MIN)))
 
-        halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS)
+        if getattr(cfg, "FAROLERO_WARM_TINT", False):
 
-        k = self.fade * 0.85
+            halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS)
 
-        if ritual is not None:
-            k *= 0.2 + 0.5 * glow_k
+            k = self.fade * 0.85
 
-        if k < 0.999:
+            if ritual is not None:
+                k *= 0.2 + 0.5 * glow_k
 
-            halo = halo.copy()
-            halo.fill(
-                (int(255 * k), int(255 * k), int(255 * k)),
-                special_flags=pygame.BLEND_RGB_MULT
+            if k < 0.999:
+
+                halo = halo.copy()
+                halo.fill(
+                    (int(255 * k), int(255 * k), int(255 * k)),
+                    special_flags=pygame.BLEND_RGB_MULT
+                )
+
+            screen.blit(
+                halo,
+                halo.get_rect(center=(sx, sy - img.get_height() // 2)),
+                special_flags=pygame.BLEND_RGB_ADD,
             )
-
-        screen.blit(
-            halo,
-            halo.get_rect(center=(sx, sy - img.get_height() // 2)),
-            special_flags=pygame.BLEND_RGB_ADD,
-        )
 
         # sombra en el piso
         shadow = pygame.Surface(
@@ -1020,7 +1137,13 @@ class Map2Rescue:
 
         screen.blit(shadow, shadow.get_rect(center=(sx, sy)))
 
-        if ritual is not None:
+        if seat is not None:
+
+            simg, (ax, ay) = seat
+
+            screen.blit(simg, (sx - ax, sy - ay))
+
+        elif ritual is not None:
 
             rimg, (ax, ay) = ritual
 
@@ -1523,11 +1646,21 @@ class ShopDecor:
         if self.appear <= 0.01:
             return
 
-        self._blit(screen, camera, self.rug, "rug", _build_rug)
-        self._blit(screen, camera, self.shelf, "shelf", _build_shelf)
+        self._blit(
+            screen, camera, self.rug, "rug", _build_rug,
+            img=_combat_image(getattr(cfg, "RUG_IMAGE", None)),
+        )
+        self._blit(
+            screen, camera, self.shelf, "shelf", _build_shelf,
+            img=_combat_image(getattr(cfg, "SHELF_IMAGE", None)),
+        )
+
+        crate_img = _combat_image(getattr(cfg, "CRATE_IMAGE", None))
 
         for crate in self.crates:
-            self._blit(screen, camera, crate, "crate", _build_crate)
+            self._blit(
+                screen, camera, crate, "crate", _build_crate, img=crate_img
+            )
 
         self._blit(
             screen, camera, self.table, "table", _build_table,
@@ -1756,7 +1889,19 @@ class FaroleroNPC:
 
         t = pygame.time.get_ticks() / 1000.0
 
-        bob = math.sin(t * 2.2) * 2.5 * zoom
+        bob = 0.0     # sin flotar
+
+        # sentado detras de la mesita, con su animacion (para siempre)
+        seat = None
+
+        if anim().has_sit:
+            seat = anim().sit(sit_idle_frame(t), side_h)
+
+        # sin hoja de sentarse: cuadro parado de la hoja del ritual, respirando
+        idle = anim().ritual(0, side_h) if anim().has_ritual else None
+
+        if idle is not None:
+            bob = 0.0
 
         sx = int(self.pos.x * zoom - camera.x)
         sy = int(self.pos.y * zoom - camera.y + bob)
@@ -1768,16 +1913,18 @@ class FaroleroNPC:
         # resplandor de su farol (luz sumada)
         gr = int(img.get_height() * (0.95 + 0.08 * math.sin(t * 5.0)))
 
-        halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS, (255, 168, 80))
+        if getattr(cfg, "FAROLERO_WARM_TINT", False):
 
-        halo = halo.copy()
-        halo.fill((217, 217, 217), special_flags=pygame.BLEND_RGB_MULT)
+            halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS, (255, 168, 80))
 
-        screen.blit(
-            halo,
-            halo.get_rect(center=(sx, sy - img.get_height() // 2)),
-            special_flags=pygame.BLEND_RGB_ADD,
-        )
+            halo = halo.copy()
+            halo.fill((217, 217, 217), special_flags=pygame.BLEND_RGB_MULT)
+
+            screen.blit(
+                halo,
+                halo.get_rect(center=(sx, sy - img.get_height() // 2)),
+                special_flags=pygame.BLEND_RGB_ADD,
+            )
 
         # sombra en el piso
         shadow = pygame.Surface(
@@ -1789,7 +1936,46 @@ class FaroleroNPC:
 
         screen.blit(shadow, shadow.get_rect(center=(sx, sy)))
 
-        screen.blit(img, img.get_rect(midbottom=(sx, sy)))
+        if seat is not None:
+
+            simg, (ax, ay) = seat
+
+            screen.blit(simg, (sx - ax, sy - ay))
+
+        elif idle is not None:
+
+            rimg, (ax, ay) = idle
+
+            # respira: se estira y se achica de a poco (cada nivel se guarda)
+            level = int(round(math.sin(t * 2.0) * 3))
+            sway = int(round(math.sin(t * 1.1) * 2))
+
+            key = ("idle", side_h, level)
+
+            body = self._sprites.get(key)
+
+            if body is None:
+
+                k = 1.0 + 0.012 * level
+
+                body = pygame.transform.smoothscale(
+                    rimg,
+                    (
+                        max(2, int(rimg.get_width() * (2.0 - k))),
+                        max(2, int(rimg.get_height() * k)),
+                    ),
+                )
+
+                self._sprites[key] = body
+
+            fx = ax * body.get_width() / float(rimg.get_width())
+            fy = ay * body.get_height() / float(rimg.get_height())
+
+            screen.blit(body, (int(sx - fx + sway * 0.5), int(sy - fy)))
+
+        else:
+
+            screen.blit(img, img.get_rect(midbottom=(sx, sy)))
 
     def draw_room_tint(self, screen, camera):
         """Tono de fuego del cuarto (queda para siempre)."""

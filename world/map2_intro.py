@@ -296,7 +296,7 @@ RESCUE_CURE_POISON = True    # al final le saca el veneno al jugador (si tiene)
 # iluminado POR SIEMPRE y cura al jugador como la sala de la tienda. Ademas
 # vende cosas: es un segundo vendedor, y con TODO desbloqueado.
 FAROLERO_SPOT = (245, 1224)        # donde se queda: DETRAS de la mesita (camina hasta ahi pasando por FAROLERO_PATH)
-FAROLERO_GLOW_RADIUS = 80          # resplandor fijo de su farol (mundo)
+FAROLERO_GLOW_RADIUS = 0           # luz propia fija (mundo): 0 = no ilumina; solo alumbra cuando abre la cabeza (el ritual)
 FAROLERO_TALK_RECT = (-44, -4, 88, 62)    # (dx, dy, ancho, alto) respecto a el: la mesita y el frente (desde donde se le puede hablar)
 FAROLERO_HITBOX = (22, 12)         # (ancho, alto) de su caja en los pies: es solido
 FAROLERO_LAND_RECT = (-44, 32, 88, 26)    # (dx, dy, ancho, alto): donde caen las cosas que compras (sobre la alfombra, delante de la mesa)
@@ -321,6 +321,9 @@ DOOR_RUBBLE = 9                    # astillas que quedan en el piso para siempre
 #   assets/maps/combate/mesita_farolero.png   (se ajusta a TABLE_RECT)
 TABLE_RECT = (213, 1224, 64, 22)   # (x, y, ancho, alto): la mesita (es solida)
 TABLE_IMAGE = "mesita_farolero.png"
+RUG_IMAGE = "alfombra_farolero.png"     # se ajusta a SHOP_RUG
+SHELF_IMAGE = "estante_farolero.png"    # se ajusta a SHOP_SHELF
+CRATE_IMAGE = "caja_farolero.png"       # se ajusta a cada caja de SHOP_CRATES
 # Alfombra (suelo), estante en la pared de arriba y cajas. (x, y, ancho, alto)
 SHOP_RUG = (203, 1246, 84, 40)
 SHOP_SHELF = (219, 1181, 52, 14)
@@ -336,9 +339,15 @@ FAROLERO_PATH = [(195, 1224)]
 # assets/maps/combate/ (salvador.png, farolero_caminar.png, farolero_ritual.png
 # y farolero_anim.json con las medidas). Si faltan, el Farolero se ve quieto.
 FAROLERO_ANIM_JSON = "farolero_anim.json"
+FAROLERO_SIT_FPS = 7.0          # cuadros/seg al sentarse detras de la mesita (16 cuadros)
+FAROLERO_SIT_IDLE_FPS = 2.5     # cuadros/seg de la animacion de quedarse sentado
 FAROLERO_WALK_FPS = 6.0       # cuadros de caminata por segundo
 RITUAL_BUILD_FPS = 4.0        # cuadros/seg mientras se sienta y prende la llama (cuadros 0 a 7 de la hoja)
                               # el estallido (cuadros 8 a 15) dura RESCUE_BURST_TIME
+
+# False: el cuarto del Farolero se ilumina igual que el mapa 1 (solo se recorta la
+# oscuridad, sin tono naranja ni halos de color). True: vuelve el tono de fuego de abajo.
+FAROLERO_WARM_TINT = False
 
 # TONO DE FUEGO del cuarto (se ve durante el estallido y queda para siempre)
 ROOM_FIRE_MULT = (255, 176, 112)   # tiñe el piso y las paredes de naranja (se multiplica)
