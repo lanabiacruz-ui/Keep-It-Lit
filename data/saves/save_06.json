@@ -2,30 +2,30 @@
     "player_name": "123",
     "mode": "normal",
     "created_at": "2026-10-25T03:00:00-03:00",
-    "last_played": "2026-11-22T20:39:09",
+    "last_played": "2026-11-22T21:39:01",
     "password_salt": "8f4b9bd1ff56836ef450965a72ea1153",
     "password_hash": "ac0b0c356e6b27993a95da65fbbc71a712023539db99969f90146cc3aab7dc98",
-    "x": 239,
-    "y": 1248,
-    "coins": 186025,
+    "x": 139,
+    "y": 1264,
+    "coins": 186280,
     "gems": 5,
     "gems_green": 1,
     "has_match": true,
     "light": "antorcha",
     "vida": 1.0,
-    "escudo": 0.0,
+    "escudo": 0.4997999999999998,
     "inventory": [
         [
-            "aceite",
-            14
-        ],
-        [
             "hongo_azul",
-            10
+            3
         ],
         [
             "aceite",
-            12
+            2
+        ],
+        [
+            "aceite",
+            10
         ],
         [
             "hongo_azul",
@@ -41,13 +41,13 @@
         ]
     ],
     "collected": [
-        "madera_05#0",
-        "madera_08#0",
-        "moneda_pasillo_tienda#0",
-        "moneda_pasillo_cabana#0",
-        "moneda_pasillo_cabana#1",
         "moneda_pasillo_tienda#1",
-        "moneda_sala_central#0"
+        "moneda_pasillo_cabana#1",
+        "madera_08#0",
+        "moneda_sala_central#0",
+        "moneda_pasillo_cabana#0",
+        "moneda_pasillo_tienda#0",
+        "madera_05#0"
     ],
     "item_seed": 757481128,
     "arena_wave": 12,
@@ -265,10 +265,10 @@
         "tronco"
     ],
     "stats": {
-        "items_used": 1766,
+        "items_used": 1787,
         "chests_opened": 95,
         "purchases": 118,
-        "fireballs": 3090,
+        "fireballs": 3113,
         "kills": 369
     },
     "zones_seen": [
@@ -313,6 +313,22 @@
         0
     ],
     "death_drops": [
+        {
+            "k": "item",
+            "id": "moneda_10",
+            "x": 111,
+            "y": 1372,
+            "map": "mapa2",
+            "ttl": 258.2
+        },
+        {
+            "k": "item",
+            "id": "moneda_5",
+            "x": 95,
+            "y": 1384,
+            "map": "mapa2",
+            "ttl": 258.3
+        },
         {
             "k": "item",
             "id": "hongo_azul",

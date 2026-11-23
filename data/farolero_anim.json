@@ -1,0 +1,32 @@
+{
+  "stand": {
+    "file": "salvador.png",
+    "size": [
+      112,
+      237
+    ]
+  },
+  "walk": {
+    "file": "farolero_caminar.png",
+    "frames": 4,
+    "cell": [
+      132,
+      247
+    ],
+    "stand_h": 237
+  },
+  "ritual": {
+    "file": "farolero_ritual.png",
+    "cols": 4,
+    "rows": 4,
+    "cell": [
+      384,
+      256
+    ],
+    "stand_h": 227,
+    "foot": [
+      191,
+      245
+    ]
+  }
+}

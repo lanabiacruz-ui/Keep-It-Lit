@@ -22,13 +22,21 @@ no existe se usa un dibujo provisorio).
              ILUMINADO PARA SIEMPRE y el tipo NO se desvanece: pasa a ser
              FaroleroNPC (mas abajo), un vendedor fijo que ademas cura
 
+Animaciones del Farolero (FaroleroAnim, abajo): camina con los cuadros de
+assets/maps/combate/farolero_caminar.png y en el punto verde hace el ritual de
+farolero_ritual.png (se sienta, prende la llama y la suelta en la onda). El
+cuarto toma un tono de fuego naranja (_draw_room_fire, config ROOM_FIRE_*).
+Las imagenes se generan con tools/make_farolero_assets.py.
+
 Lo que hay que enganchar en states/new_game.py (ya esta hecho):
   - update(dt) y tick(dt) cada cuadro, after_dialog(closed) al cerrar un dialogo
   - camera_focus() para la camara
   - light_sources(zoom) y lit_rects() para la luz
   - draw(screen, camera) para dibujar al tipo
+  - draw_room_tint(screen, camera) despues de la oscuridad (tono naranja)
 """
 
+import json
 import math
 import random
 
@@ -186,6 +194,248 @@ def _glow(radius, color=(255, 214, 120)):
     return img
 
 
+# ------------------------------------------------------------- animaciones
+
+# cuanta luz tiene la llama en cada cuadro de la hoja del ritual (0 a 15):
+# parado, se sienta (0-4), prende (5-7), pico del estallido (8), se apaga (9-12)
+# y vuelve a pararse (13-15)
+RITUAL_GLOW = [
+    0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.5, 0.75,
+    1.0, 0.8, 0.5, 0.3, 0.15, 0.0, 0.0, 0.0,
+]
+
+
+def _ritual_glow(frame):
+
+    frame = max(0.0, min(len(RITUAL_GLOW) - 1.0, float(frame)))
+
+    a = int(frame)
+    b = min(len(RITUAL_GLOW) - 1, a + 1)
+
+    return RITUAL_GLOW[a] + (RITUAL_GLOW[b] - RITUAL_GLOW[a]) * (frame - a)
+
+
+class FaroleroAnim:
+    """Cuadros animados del Farolero (los genera tools/make_farolero_assets.py).
+
+    Si faltan los archivos todo sigue andando con el dibujo quieto."""
+
+    def __init__(self):
+
+        self.meta = None
+        self._sheets = {}
+        self._cache = {}
+
+        try:
+
+            with open(
+                COMBAT_DIR / getattr(cfg, "FAROLERO_ANIM_JSON", "farolero_anim.json"),
+                encoding="utf-8",
+            ) as f:
+                self.meta = json.load(f)
+
+        except (OSError, ValueError):
+            self.meta = None
+
+    def _sheet(self, key, alpha):
+
+        if key not in self._sheets:
+
+            img = None
+            info = (self.meta or {}).get(key)
+
+            if info:
+
+                try:
+
+                    img = pygame.image.load(str(COMBAT_DIR / info["file"]))
+                    img = img.convert_alpha() if alpha else img.convert()
+
+                except (pygame.error, FileNotFoundError, OSError, KeyError):
+                    img = None
+
+            self._sheets[key] = img
+
+        return self._sheets[key]
+
+    @property
+    def has_walk(self):
+        return self._sheet("walk", True) is not None
+
+    @property
+    def has_ritual(self):
+        return self._sheet("ritual", True) is not None
+
+    def _remember(self, key, img):
+
+        if len(self._cache) > 120:
+            self._cache.clear()
+
+        self._cache[key] = img
+
+    def walk(self, n, side_h):
+        """Cuadro `n` de la caminata, con el alto del dibujo = side_h."""
+
+        sheet = self._sheet("walk", True)
+
+        if sheet is None:
+            return None
+
+        info = self.meta["walk"]
+        cw, ch = info["cell"]
+
+        n %= max(1, int(info["frames"]))
+
+        key = ("walk", n, side_h)
+
+        img = self._cache.get(key)
+
+        if img is None:
+
+            scale = side_h / float(info["stand_h"])
+
+            cell = sheet.subsurface(pygame.Rect(n * cw, 0, cw, ch))
+
+            img = pygame.transform.smoothscale(
+                cell, (max(2, int(cw * scale)), max(2, int(ch * scale)))
+            )
+
+            self._remember(key, img)
+
+        return img
+
+    def ritual(self, n, side_h):
+        """(imagen, (ancla_x, ancla_y)) del cuadro `n` del ritual. La imagen
+        tiene transparencia (sin fondo); el ancla son los pies."""
+
+        sheet = self._sheet("ritual", True)
+
+        if sheet is None:
+            return None
+
+        info = self.meta["ritual"]
+        cw, ch = info["cell"]
+        cols = int(info["cols"])
+
+        n = max(0, min(cols * int(info["rows"]) - 1, int(n)))
+
+        key = ("ritual", n, side_h)
+
+        got = self._cache.get(key)
+
+        if got is None:
+
+            scale = side_h / float(info["stand_h"])
+
+            r, c = divmod(n, cols)
+
+            cell = sheet.subsurface(pygame.Rect(c * cw, r * ch, cw, ch))
+
+            img = pygame.transform.smoothscale(
+                cell, (max(2, int(cw * scale)), max(2, int(ch * scale)))
+            )
+
+            anchor = (
+                int(info["foot"][0] * scale), int(info["foot"][1] * scale)
+            )
+
+            got = (img, anchor)
+
+            self._remember(key, got)
+
+        return got
+
+
+_anim_cache = []
+
+
+def anim():
+    """El FaroleroAnim compartido (se carga una sola vez)."""
+
+    if not _anim_cache:
+        _anim_cache.append(FaroleroAnim())
+
+    return _anim_cache[0]
+
+
+def _draw_room_fire(screen, camera, strength, center, boost=1.0):
+    """Tono de fuego del cuarto: tiñe de naranja lo que esta iluminado (se
+    multiplica), suma un brillo naranja que titila y un resplandor fuerte
+    alrededor del Farolero. Se dibuja despues de la oscuridad."""
+
+    s = max(0.0, min(1.0, strength))
+
+    if s <= 0.02:
+        return
+
+    zoom = camera.zoom
+    view = screen.get_rect()
+
+    boxes = []
+
+    for band in ROOM_BANDS:
+
+        dest = camera.apply(band).clip(view)
+
+        if dest.width > 0 and dest.height > 0:
+            boxes.append(dest)
+
+    if not boxes:
+        return
+
+    t = pygame.time.get_ticks() / 1000.0
+
+    flick = (
+        1.0 + 0.10 * math.sin(t * 7.3) + 0.06 * math.sin(t * 12.9 + 1.7)
+        + 0.04 * math.sin(t * 3.1)
+    )
+
+    mult = tuple(
+        int(255 - (255 - c) * s) for c in getattr(cfg, "ROOM_FIRE_MULT", (255, 176, 112))
+    )
+
+    add = tuple(
+        max(0, min(255, int(c * s * flick * boost)))
+        for c in getattr(cfg, "ROOM_FIRE_ADD", (34, 12, 0))
+    )
+
+    # resplandor alrededor del fuego (a la altura del pecho)
+    radius = float(getattr(cfg, "ROOM_FIRE_RADIUS", 150)) * zoom * (0.5 + 0.5 * min(1.0, s))
+    radius = int(round(radius * flick / 32.0)) * 32
+
+    glow = None
+
+    if radius >= 32:
+
+        gc = getattr(cfg, "ROOM_FIRE_GLOW", (150, 62, 12))
+
+        # la intensidad va de a saltos (cada variante se guarda en cache)
+        level = max(1, int(round(min(1.0, s * boost) * 4)))
+
+        glow = _glow(radius, tuple(int(c * level / 4.0) for c in gc))
+
+    cx = int(center[0] * zoom - camera.x)
+    cy = int((center[1] - 18) * zoom - camera.y)
+
+    old_clip = screen.get_clip()
+
+    for dest in boxes:
+
+        screen.fill(mult, dest, special_flags=pygame.BLEND_RGB_MULT)
+        screen.fill(add, dest, special_flags=pygame.BLEND_RGB_ADD)
+
+        if glow is not None:
+
+            screen.set_clip(dest)
+
+            screen.blit(
+                glow, glow.get_rect(center=(cx, cy)),
+                special_flags=pygame.BLEND_RGB_ADD,
+            )
+
+    screen.set_clip(old_clip)
+
+
 # ------------------------------------------------------------- dialogo
 
 class RescuerDialog(BossDialog):
@@ -230,6 +480,7 @@ class Map2Rescue:
         self.aura = 0.0              # radio (mundo) de la luz que sale de el
         self.room = 0.0              # 0-1: cuanta luz hay en el cuarto
         self.wave = 0.0              # 0-1: avance de la onda de luz (anillo)
+        self.ritual = None           # cuadro (0-15) de la hoja del ritual; None = no se ve
 
         self._current = None
         self._old_smooth = None
@@ -477,7 +728,26 @@ class Map2Rescue:
             k = min(1.0, self.t / cfg.RESCUE_HOLD_MIN)
 
             self.fade = 1.0
-            self.aura = 110.0 + (cfg.RESCUE_CHARGE_RADIUS * 1.6 - 110.0) * k
+
+            if anim().has_ritual:
+
+                # ritual: se sienta (cuadros 0-4) y prende la llama (5-7);
+                # despues titila hasta que explota
+                f = min(7.0, self.t * cfg.RITUAL_BUILD_FPS)
+
+                if f >= 7.0:
+                    f = 7.0 if math.sin(self.t * 9.0) > 0 else 6.0
+
+                self.ritual = f
+
+                dark = 110.0 - 50.0 * min(1.0, f / 4.0)
+
+                self.aura = dark + (
+                    cfg.RESCUE_CHARGE_RADIUS * 1.6 - dark
+                ) * _ritual_glow(f)
+
+            else:
+                self.aura = 110.0 + (cfg.RESCUE_CHARGE_RADIUS * 1.6 - 110.0) * k
 
             near = g.spiders.horde_nearest(g)
 
@@ -500,7 +770,15 @@ class Map2Rescue:
             self.aura = start + (cfg.RESCUE_AURA_RADIUS - start) * e
             self.room = min(1.0, e * 1.15)
 
+            if anim().has_ritual:
+
+                # pico de la llama (cuadro 8) y se apaga hasta pararse (15)
+                self.ritual = 8.0 + 7.0 * k
+
             if self.t >= cfg.RESCUE_BURST_TIME:
+
+                self.ritual = None
+
                 self._open(cfg.RESCUER_2, "talk2")
 
         elif self.stage == "settle":
@@ -672,12 +950,33 @@ class Map2Rescue:
 
         bob = math.sin(t * 2.2) * 2.5 * zoom
 
-        # caminando: sube y baja con cada paso
+        # ritual de luz: cuadro de la hoja (con transparencia)
+        ritual = None
+        glow_k = 0.0
+
+        if self.ritual is not None and self.stage in ("hold", "talk1", "burst"):
+
+            ritual = anim().ritual(int(self.ritual), side_h)
+
+            if ritual is not None:
+
+                glow_k = _ritual_glow(self.ritual)
+                bob = 0.0
+
+        # caminando: cuadros de la caminata + un saltito en cada paso
+        walk_img = None
+
         if self.stage in ("walk", "settle"):
 
             phase = (self.t / max(0.05, cfg.RESCUER_WALK_STEP)) * math.pi
 
-            bob = -abs(math.sin(phase)) * cfg.RESCUER_WALK_HOP * img.get_height()
+            walk_img = anim().walk(
+                int(self.t * getattr(cfg, "FAROLERO_WALK_FPS", 6.0)), side_h
+            )
+
+            hop = 0.5 if walk_img is not None else 1.0
+
+            bob = -abs(math.sin(phase)) * cfg.RESCUER_WALK_HOP * img.get_height() * hop
 
         sx = int(self.pos.x * zoom - camera.x)
         sy = int(self.pos.y * zoom - camera.y + bob)
@@ -691,6 +990,9 @@ class Map2Rescue:
         halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS)
 
         k = self.fade * 0.85
+
+        if ritual is not None:
+            k *= 0.2 + 0.5 * glow_k
 
         if k < 0.999:
 
@@ -718,16 +1020,41 @@ class Map2Rescue:
 
         screen.blit(shadow, shadow.get_rect(center=(sx, sy)))
 
-        body = img
+        if ritual is not None:
 
-        if self.fade < 0.999:
+            rimg, (ax, ay) = ritual
 
-            body = img.copy()
-            body.set_alpha(int(255 * self.fade))
+            screen.blit(rimg, (sx - ax, sy - ay))
 
-        screen.blit(body, body.get_rect(midbottom=(sx, sy)))
+        else:
+
+            body = walk_img if walk_img is not None else img
+
+            if self.fade < 0.999:
+
+                body = body.copy()
+                body.set_alpha(int(255 * self.fade))
+
+            screen.blit(body, body.get_rect(midbottom=(sx, sy)))
 
         self._draw_wave(screen, camera, sx, sy - img.get_height() // 2)
+
+    def draw_room_tint(self, screen, camera):
+        """Tono de fuego del cuarto mientras se ilumina (despues de la
+        oscuridad). Al terminar sigue FaroleroNPC.draw_room_tint."""
+
+        if not self.active or self.room < 0.03:
+            return
+
+        boost = 1.0
+
+        if self.stage == "burst":
+
+            flash = float(getattr(cfg, "ROOM_FIRE_FLASH", 0.0))
+
+            boost += flash * max(0.0, 1.0 - self.t / 1.2)
+
+        _draw_room_fire(screen, camera, self.room, self.pos, boost)
 
 
 # ------------------------------------------------------------- imagenes opcionales
@@ -1441,7 +1768,7 @@ class FaroleroNPC:
         # resplandor de su farol (luz sumada)
         gr = int(img.get_height() * (0.95 + 0.08 * math.sin(t * 5.0)))
 
-        halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS)
+        halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS, (255, 168, 80))
 
         halo = halo.copy()
         halo.fill((217, 217, 217), special_flags=pygame.BLEND_RGB_MULT)
@@ -1463,6 +1790,14 @@ class FaroleroNPC:
         screen.blit(shadow, shadow.get_rect(center=(sx, sy)))
 
         screen.blit(img, img.get_rect(midbottom=(sx, sy)))
+
+    def draw_room_tint(self, screen, camera):
+        """Tono de fuego del cuarto (queda para siempre)."""
+
+        if not self.visible:
+            return
+
+        _draw_room_fire(screen, camera, 1.0, self.pos)
 
     def draw_prompt(self, screen, camera):
         """El icono de la tecla de uso arriba de su cabeza."""

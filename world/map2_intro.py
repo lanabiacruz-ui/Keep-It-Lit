@@ -265,7 +265,7 @@ RESCUE_ROOM_BANDS = [
 RESCUE_ROOM_FEATHER = 3
 
 RESCUE_GAP = 1.8         # pausa despues de Cenizo antes de que se lo vea llegar
-RESCUE_HOLD_MIN = 1.4    # se queda quieto cargando la luz, como minimo (suspenso)
+RESCUE_HOLD_MIN = 2.6    # se queda quieto cargando la luz, como minimo (deja que se vea el ritual: parado -> sentado -> llama)
 RESCUE_HOLD_MAX = 5.0    # y como maximo (aunque las Aurantulas no lleguen)
 RESCUE_TRIGGER_DIST = 95 # explota cuando la primera Aurantula esta a esta distancia del jugador
 
@@ -329,3 +329,20 @@ SHOP_CRATES = [(281, 1226, 16, 16), (284, 1214, 13, 12)]   # solidas
 SHOP_LAMPS = [(224, 1226, 38), (266, 1226, 38)]
 # camino del Farolero hasta su lugar (puntos intermedios; despues FAROLERO_SPOT)
 FAROLERO_PATH = [(195, 1224)]
+
+
+# ------------------------------------------------------------ ANIMACIONES DEL FAROLERO
+# Las imagenes las genera tools/make_farolero_assets.py y quedan en
+# assets/maps/combate/ (salvador.png, farolero_caminar.png, farolero_ritual.png
+# y farolero_anim.json con las medidas). Si faltan, el Farolero se ve quieto.
+FAROLERO_ANIM_JSON = "farolero_anim.json"
+FAROLERO_WALK_FPS = 6.0       # cuadros de caminata por segundo
+RITUAL_BUILD_FPS = 4.0        # cuadros/seg mientras se sienta y prende la llama (cuadros 0 a 7 de la hoja)
+                              # el estallido (cuadros 8 a 15) dura RESCUE_BURST_TIME
+
+# TONO DE FUEGO del cuarto (se ve durante el estallido y queda para siempre)
+ROOM_FIRE_MULT = (255, 176, 112)   # tiñe el piso y las paredes de naranja (se multiplica)
+ROOM_FIRE_ADD = (34, 12, 0)        # brillo naranja parejo que se suma
+ROOM_FIRE_GLOW = (150, 62, 12)     # resplandor mas fuerte alrededor del Farolero
+ROOM_FIRE_RADIUS = 150             # radio (mundo) de ese resplandor
+ROOM_FIRE_FLASH = 1.2              # cuanto se pasa de brillo en el estallido (0 = nada)

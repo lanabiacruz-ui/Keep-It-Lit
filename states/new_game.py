@@ -7589,6 +7589,13 @@ class NewGame:
 
         self._draw_warm_glows(sources)
 
+        # tono de fuego (naranja) del cuarto del Farolero
+        if rescue is not None:
+            rescue.draw_room_tint(self.screen, self.camera)
+
+        if self.farolero is not None:
+            self.farolero.draw_room_tint(self.screen, self.camera)
+
         if self._eye_visible():
             self.eye_monster().draw_glow(
                 self.screen, self.camera,
