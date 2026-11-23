@@ -600,6 +600,7 @@ class Map2Rescue:
         self.ritual = None           # cuadro (0-15) de la hoja del ritual; None = no se ve
         self.seat = None             # cuadro (0-15) de la hoja de sentarse; None = no se ve
         self.walk_dir = "left"       # hacia donde camina: down / up / left / right
+        self.walk_t = 0.0            # reloj de la animacion de caminata (corre mas rapido si corre)
 
         self._current = None
         self._old_smooth = None
@@ -614,6 +615,23 @@ class Map2Rescue:
     @property
     def active(self):
         return self.stage not in ("idle", "end")
+
+    def hitbox(self):
+        """Caja solida en los pies del Farolero durante la escena (desde que
+        entra hasta que termina): el jugador no lo puede atravesar. None si
+        todavia no se lo ve."""
+
+        if self.stage not in (
+            "walk", "hold", "talk1", "burst", "talk2", "settle", "sit", "leave"
+        ):
+            return None
+
+        w, h = cfg.FAROLERO_HITBOX
+
+        r = pygame.Rect(0, 0, int(w), int(h))
+        r.midbottom = (int(self.pos.x), int(self.pos.y))
+
+        return r
 
     # ---- camara
 
@@ -680,6 +698,7 @@ class Map2Rescue:
 
         self.stage = "walk"
         self.t = 0.0
+        self.walk_t = 0.0
 
         audio.play("light_on")
 
@@ -801,7 +820,21 @@ class Map2Rescue:
 
             to = target - self.pos
 
-            step = cfg.RESCUER_WALK_SPEED * dt
+            # ANTES de romper la puerta entra corriendo; despues de romperla
+            # sigue caminando normal hasta su punto
+            door = getattr(g, "map2_door", None)
+
+            running = door is not None and not door.broken
+
+            speed = (
+                getattr(cfg, "RESCUER_RUN_SPEED", cfg.RESCUER_WALK_SPEED)
+                if running else cfg.RESCUER_WALK_SPEED
+            )
+
+            step = speed * dt
+
+            # las patas se mueven mas rapido cuando corre
+            self.walk_t += dt * (speed / max(1.0, cfg.RESCUER_WALK_SPEED))
 
             self.walk_dir = _dir_name(to, self.walk_dir)
 
@@ -901,6 +934,8 @@ class Map2Rescue:
             to = target - self.pos
 
             step = cfg.RESCUER_WALK_SPEED * dt
+
+            self.walk_t += dt
 
             self.walk_dir = _dir_name(to, self.walk_dir)
 
@@ -1103,10 +1138,10 @@ class Map2Rescue:
 
         if self.stage in ("walk", "settle"):
 
-            phase = (self.t / max(0.05, cfg.RESCUER_WALK_STEP)) * math.pi
+            phase = (self.walk_t / max(0.05, cfg.RESCUER_WALK_STEP)) * math.pi
 
             walk_img = anim().walk(
-                int(self.t * getattr(cfg, "FAROLERO_WALK_FPS", 6.0)), side_h,
+                int(self.walk_t * getattr(cfg, "FAROLERO_WALK_FPS", 6.0)), side_h,
                 self.walk_dir,
             )
 

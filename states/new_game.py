@@ -6698,6 +6698,14 @@ class NewGame:
         if self.farolero is not None and self.farolero.visible:
             self.collision_map.dynamic_blockers.append(self.farolero.hitbox())
 
+        # el Farolero tambien es solido mientras dura la escena del rescate
+        if self.map2_rescue is not None:
+
+            box = self.map2_rescue.hitbox()
+
+            if box is not None:
+                self.collision_map.dynamic_blockers.append(box)
+
         # el monstruo del ojo (mapa 2) tambien es solido
         if self._eye_visible():
             self.collision_map.dynamic_blockers.append(

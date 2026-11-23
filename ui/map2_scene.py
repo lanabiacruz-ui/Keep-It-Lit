@@ -1460,7 +1460,9 @@ class Map2Finale:
 
         # de la oscuridad empiezan a salir Aurantulas (de a poco, sin hacer
         # daño) y se acercan: ver world/spider.py (start_horde)
-        g.spiders.start_horde(g, cfg.HORDE_COUNT)
+        g.spiders.start_horde(
+            g, cfg.HORDE_COUNT, getattr(cfg, "HORDE_SPIDER_COUNT", 0)
+        )
 
         # se aleja del jugador (y hacia arriba: se mete en la oscuridad)
         away = pygame.Vector2(self.eye.pos) - pygame.Vector2(

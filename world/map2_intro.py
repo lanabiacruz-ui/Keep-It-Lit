@@ -63,10 +63,9 @@ SPIDER_POS = [
     (50, 1326), (252, 1350),
 ]
 
-# NARANJAS: aurantulas (x, y)
-AURA_POS = [
-    (200, 1238), (80, 1266),
-]
+# NARANJAS: aurantulas (x, y). Vacio: al principio hay SOLO arañas comunes;
+# las Aurantulas recien aparecen despues (la horda, mas abajo)
+AURA_POS = []
 
 # AZUL: monstruo del ojo (centro del dibujo en el mundo)
 # (con MONSTER_HEIGHT = 260 el centro sube a y=1123: los pies quedan donde
@@ -131,9 +130,6 @@ Y encima está lleno de patitas. ¡Muchas patitas!",
 
     "Esas son [[arañas]], eso sí lo sé. Lanzan telarañas que te ralentizan y, \
 si te atrapan, vienen a morderte. ¡Y muerden feo!",
-
-    "Y esas doradas... mmm, esas no sé qué son. Nunca vi unas así. Son más \
-grandes, brillan raro y no me dan ninguna confianza.",
 
     "Tú atácalas con tu luz y no te quedes quieto, ¿sí? Yo te animo desde \
 aquí atrás... con mucho respeto a la distancia. Espera...",
@@ -207,7 +203,8 @@ FINALE_WALK_HOP = 0.018      # que tanto salta en cada paso (fraccion de su alto
 # van acercando al jugador de a poco. NO hacen daño: son la amenaza. Al
 # principio no hay nada y despues aparecen cada vez mas.
 # La logica esta en world/spider.py (start_horde).
-HORDE_COUNT = 18               # cuantas aparecen en total
+HORDE_COUNT = 18               # cuantas Aurantulas aparecen en total
+HORDE_SPIDER_COUNT = 8         # y cuantas ARAÑAS comunes se mezclan con ellas (0 = ninguna)
 HORDE_FIRST_DELAY = 1.8        # segundos sin nada antes de la primera
 HORDE_SPAWN_TIME = 8.0         # en cuanto tiempo aparecen todas (cada vez mas juntas)
 HORDE_APPEAR_FADE = 0.05       # (ya no se desvanecen: vienen de afuera de la camara y se ven enteras)
@@ -246,6 +243,7 @@ RESCUER_NAME = "El Farolero"       # nombre que se ve en el panel
 RESCUER_ENTRY = (560, 1276)        # de donde sale (cuarto de la derecha, en la oscuridad)
 RESCUER_STOP = (195, 1277)         # PUNTO VERDE: donde se frena a tirar la luz
 RESCUER_WALK_SPEED = 80.0          # velocidad caminando (px del mundo por segundo)
+RESCUER_RUN_SPEED = 230.0          # velocidad ANTES de romper la puerta: entra corriendo (px del mundo por segundo)
 RESCUER_WALK_STEP = 0.5            # segundos por "paso" (el cuerpo sube y baja)
 RESCUER_WALK_HOP = 0.02            # que tanto salta en cada paso (fraccion de su alto)
 

@@ -1112,6 +1112,12 @@ def _glide(spider, direction, speed, dt):
     return True
 
 
+def _walk_rate(spider):
+    """Ciclos de patas segun el tipo: las Aurantulas van mas lento."""
+
+    return AURA_WALK_RATE if isinstance(spider, Aurantula) else WALK_RATE
+
+
 class SpiderManager:
 
     def __init__(self):
@@ -1795,7 +1801,7 @@ class SpiderManager:
         return web
 
     # ---- la horda: aparecen de a poco y se acercan sin hacer daño ---------------------
-    def start_horde(self, game, count):
+    def start_horde(self, game, count, spider_count=0):
         """Final del combate: de la oscuridad (pared izquierda y de arriba)
         empiezan a aparecer `count` Aurantulas, cada vez mas juntas, y se van
         acercando al jugador. No lo lastiman (no son arañas de combate: no
@@ -1807,12 +1813,20 @@ class SpiderManager:
         self.horde_t = 0.0
         self.peace = False
 
-        for i in range(count):
+        total = count + spider_count
+
+        # que arañas comunes y Aurantulas salgan mezcladas (no todas las
+        # arañas juntas): se reparten al azar entre los lugares de la fila
+        kinds = [Spider] * spider_count + [Aurantula] * count
+        random.shuffle(kinds)
+
+        for i in range(total):
 
             # al principio casi no hay nada y despues aparecen muchas
-            k = (i + random.random() * 0.6) / max(1, count)
+            k = (i + random.random() * 0.6) / max(1, total)
 
             self.horde.append({
+                "kind": kinds[i],
                 "s": None,
                 "delay": cfg.HORDE_FIRST_DELAY + cfg.HORDE_SPAWN_TIME * (k ** 1.35),
                 "fade": 1.0,
@@ -1888,7 +1902,7 @@ class SpiderManager:
             ):
                 continue
 
-            spider = Aurantula(sx, sy)
+            spider = h.get("kind", Aurantula)(sx, sy)
 
             spider.heading = math.degrees(math.atan2(py - sy, px - sx)) % 360.0
             spider.face = 1 if px >= sx else -1
@@ -1988,7 +2002,7 @@ class SpiderManager:
                     h["entering"] = False
 
                 if s.moving:
-                    s.walk_phase += dt * h["enter"] / AURA_WALK_RATE
+                    s.walk_phase += dt * h["enter"] / _walk_rate(s)
 
                 continue
 
@@ -2004,7 +2018,7 @@ class SpiderManager:
                 s.moving = s._move_dir(push, h["speed"] * 0.5, dt, cmap)
 
             if s.moving:
-                s.walk_phase += dt * h["speed"] / AURA_WALK_RATE
+                s.walk_phase += dt * h["speed"] / _walk_rate(s)
 
     # ---- rescate: la luz espanta a las Aurantulas (ui/map2_rescue.py) -----------------
     def pause(self):
@@ -2211,7 +2225,13 @@ class SpiderManager:
 
         if not self._active:
 
-            if TRIGGER_AREA.collidepoint(player.center):
+            # la secuencia del mapa 2 ya termino (el monstruo se fue): al
+            # volver a entrar NO nacen de nuevo las arañas del principio.
+            # (Si saliste en medio del combate, si nacen.)
+            if (
+                TRIGGER_AREA.collidepoint(player.center)
+                and not getattr(game, "map2_finale_done", False)
+            ):
 
                 self._active = True
 
