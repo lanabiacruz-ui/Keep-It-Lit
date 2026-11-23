@@ -2,18 +2,18 @@
   "stand": {
     "file": "salvador.png",
     "size": [
-      130,
-      234
+      141,
+      198
     ]
   },
   "walk": {
     "file": "farolero_caminar.png",
     "frames": 4,
     "cell": [
-      160,
-      245
+      176,
+      236
     ],
-    "stand_h": 237,
+    "stand_h": 198,
     "dirs": {
       "down": 0,
       "left": 1,
@@ -26,13 +26,13 @@
     "cols": 4,
     "rows": 4,
     "cell": [
-      384,
-      256
+      192,
+      240
     ],
-    "stand_h": 234,
+    "stand_h": 198,
     "foot": [
-      202,
-      241
+      96,
+      234
     ]
   },
   "sit": {
@@ -40,21 +40,21 @@
     "cols": 4,
     "rows": 4,
     "cell": [
-      384,
-      256
-    ],
-    "stand_h": 249,
-    "foot": [
       192,
-      253
+      240
+    ],
+    "stand_h": 198,
+    "foot": [
+      96,
+      234
     ],
     "down": [
       0,
-      15
+      3
     ],
     "idle": [
-      12,
-      15
+      3,
+      6
     ]
   }
 }
