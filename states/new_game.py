@@ -74,7 +74,7 @@ from ui.shop_plan import (
 )
 from ui.tutorial import Tutorial
 from ui.map2_scene import Map2Scene, Map2Finale, EyeMonster
-from ui.map2_rescue import Map2Rescue
+from ui.map2_rescue import Map2Rescue, FaroleroNPC, RescueDoor, ShopDecor
 from ui.cenizo_follower import CenizoFollower
 from ui.tutorial_texts import apply_texts
 from core import player_name as hero_name
@@ -553,6 +553,16 @@ class NewGame:
         # sala y las espanta (ver ui/map2_rescue.py). Una sola vez por partida.
         self.map2_rescue = None
         self.map2_rescue_done = bool(self.save_data.get("map2_rescue", False))
+
+        # despues del rescate el Farolero se queda en su lugar: ilumina y cura
+        # su cuarto para siempre y vende cosas (ver FaroleroNPC)
+        self.farolero = FaroleroNPC(self) if self.map2_rescue_done else None
+
+        # la puerta de la pared derecha (cerrada hasta que entra el Farolero)
+        # y la tiendita (mesita, alfombra, estante) que aparece cuando se queda
+        self.map2_door = RescueDoor(broken=self.map2_rescue_done)
+        self.shop_decor = ShopDecor(shown=self.map2_rescue_done)
+        self._shop_vendor = "escupin"    # quien atiende la tienda abierta
 
         # Cenizo flotando al lado del jugador (tutorial y escena del mapa 2)
         self.cenizo = CenizoFollower()
@@ -3441,6 +3451,8 @@ class NewGame:
                 self.map2_rescue = None
                 self.map2_rescue_done = True
 
+                self.farolero = FaroleroNPC(self)
+
                 self._save()
 
             return
@@ -4344,7 +4356,20 @@ class NewGame:
 
             self._save()
 
+    def _farolero_sells_all(self):
+        """El Farolero vende todo el catalogo sin bloqueos."""
+
+        from world import map2_intro as _cfg
+
+        return (
+            getattr(self, "_shop_vendor", "escupin") == "farolero"
+            and getattr(_cfg, "FAROLERO_SHOP_UNLOCKED", True)
+        )
+
     def shop_locks(self):
+
+        if self._farolero_sells_all():
+            return {}
 
         unlocked = self._shop_unlocked_now()
 
@@ -4357,6 +4382,9 @@ class NewGame:
     def shop_lock_zones(self):
 
         """{item: (nombre de la zona, oleada actual en esa zona, etiqueta)}"""
+
+        if self._farolero_sells_all():
+            return {}
 
         unlocked = self._shop_unlocked_now()
 
@@ -4498,10 +4526,12 @@ class NewGame:
 
             self.map2_rescue.after_dialog(closed)
 
-    def _open_shop(self):
+    def _open_shop(self, vendor="escupin"):
 
         if self.shop is not None:
             return
+
+        self._shop_vendor = vendor
 
         self.tuto_flags.add("shop_opened")
 
@@ -4533,6 +4563,24 @@ class NewGame:
             ]
 
         self.shop = None
+        self._shop_vendor = "escupin"
+
+    def _talk_to_farolero(self):
+        """El Farolero abre su tienda directo (todo desbloqueado)."""
+
+        self._open_shop("farolero")
+
+    def _vendor_spit(self, item_ids):
+        """Saca lo comprado por la boca de Escupin o de la mano del Farolero,
+        segun quien te atiende."""
+
+        if (
+            getattr(self, "_shop_vendor", "escupin") == "farolero"
+            and self.farolero is not None
+        ):
+            return self.farolero.deliver(item_ids, self.collision_map)
+
+        return self.shopkeeper.spit(item_ids, self.collision_map)
 
     def _shop_notice(self, text):
 
@@ -4583,6 +4631,11 @@ class NewGame:
         if self.shop is not None:
             self.shop.coins = int(self.coins)
 
+        from_farolero = (
+            getattr(self, "_shop_vendor", "escupin") == "farolero"
+            and self.farolero is not None
+        )
+
         rect = getattr(self.shopkeeper, "rect", None)
 
         if rect is not None:
@@ -4605,10 +4658,16 @@ class NewGame:
                 for _ in range(qty):
 
                     try:
-                        landing = self.shopkeeper._landing_point(
-                            self.collision_map
-                        )
-                        mouth = self.shopkeeper.MOUTH
+                        if from_farolero:
+                            landing = self.farolero._landing_point(
+                                self.collision_map
+                            )
+                            mouth = self.farolero.hand()
+                        else:
+                            landing = self.shopkeeper._landing_point(
+                                self.collision_map
+                            )
+                            mouth = self.shopkeeper.MOUTH
                     except Exception:
                         landing = self.player.rect.center
                         mouth = None
@@ -4618,14 +4677,15 @@ class NewGame:
                         src=mouth, delay=0.3
                     )
 
-                    self.shopkeeper.add_shot(landing, 0.3)
+                    if not from_farolero:
+                        self.shopkeeper.add_shot(landing, 0.3)
 
                 continue
 
             item_ids.extend([item_id] * qty)
 
         for item in (
-            self.shopkeeper.spit(item_ids, self.collision_map)
+            self._vendor_spit(item_ids)
             if item_ids else []
         ):
 
@@ -4720,7 +4780,7 @@ class NewGame:
                 self.equip_match(light, 1.0)
 
         for item in (
-            self.shopkeeper.spit(spill, self.collision_map)
+            self._vendor_spit(spill)
             if spill else []
         ):
 
@@ -6007,6 +6067,9 @@ class NewGame:
                 self.map2_finale_done = False
                 self.map2_rescue = None
                 self.map2_rescue_done = False
+                self.farolero = None
+                self.map2_door = RescueDoor(broken=False)
+                self.shop_decor = ShopDecor(shown=False)
                 self._finale_wait = 0.0
 
                 self.spiders.peace = False
@@ -6134,6 +6197,16 @@ class NewGame:
                 fd = self.doors.final_door
 
                 if fd is not None and fd.try_interact(self):
+                    return None
+
+                if (
+                    self.farolero is not None
+                    and self.shop is None
+                    and self.farolero.can_talk(self.player)
+                ):
+
+                    self._talk_to_farolero()
+
                     return None
 
                 if self.shopkeeper.can_talk(
@@ -6456,6 +6529,10 @@ class NewGame:
             self.player
         ) > 0
 
+        # el cuarto del Farolero cura igual que la sala de la tienda
+        if not in_shop and self.farolero is not None:
+            in_shop = self.farolero.in_room(self.player)
+
         lock = self.cinematic_lock()
 
         if self.has_match:
@@ -6606,6 +6683,21 @@ class NewGame:
         if getattr(self, "current_map", "mapa1") == "mapa2":
             self.collision_map.dynamic_blockers.extend(self.spiders.solid_rects())
 
+        # la puerta cerrada, la tiendita y el Farolero (mapa 2) tambien son solidos
+        if getattr(self, "current_map", "mapa1") == "mapa2":
+
+            door_rect = self.map2_door.solid_rect()
+
+            if door_rect is not None:
+                self.collision_map.dynamic_blockers.append(door_rect)
+
+            self.collision_map.dynamic_blockers.extend(
+                self.shop_decor.solids()
+            )
+
+        if self.farolero is not None and self.farolero.visible:
+            self.collision_map.dynamic_blockers.append(self.farolero.hitbox())
+
         # el monstruo del ojo (mapa 2) tambien es solido
         if self._eye_visible():
             self.collision_map.dynamic_blockers.append(
@@ -6656,6 +6748,9 @@ class NewGame:
         self._update_map2_finale(dt)
 
         self._update_map2_rescue(dt)
+
+        self.map2_door.update(dt)
+        self.shop_decor.update(dt)
 
 
         # yunque "Manos agiles": cofres con menos espera
@@ -6792,6 +6887,9 @@ class NewGame:
         in_shop_now = self.shopkeeper.zone_inset(
             self.player
         ) > 0
+
+        if not in_shop_now and self.farolero is not None:
+            in_shop_now = self.farolero.in_room(self.player)
 
         if not self.has_match and in_shop_now:
 
@@ -7329,6 +7427,12 @@ class NewGame:
             self.camera
         )
 
+        if getattr(self, "current_map", "mapa1") == "mapa2":
+
+            self.map2_door.draw(self.screen, self.camera)
+
+            self.shop_decor.draw(self.screen, self.camera)
+
         self.shopkeeper.draw_body(self.screen, self.camera)
 
         for drop in self.light_drops:
@@ -7447,6 +7551,12 @@ class NewGame:
         if rescue is not None:
             sources.extend(rescue.light_sources(self.camera.zoom))
 
+        if self.farolero is not None:
+            sources.extend(self.farolero.light_sources(self.camera.zoom))
+
+        if self.shop_decor.visible(self):
+            sources.extend(self.shop_decor.light_sources(self.camera.zoom))
+
         if self.tutorial is None and DOOR_GLOW_RADIUS > 0:
 
             for door in self.doors.doors:
@@ -7466,6 +7576,9 @@ class NewGame:
 
         if rescue is not None:
             lit_rects.extend(rescue.lit_rects())
+
+        if self.farolero is not None:
+            lit_rects.extend(self.farolero.lit_rects())
 
         self.light.draw(
             self.screen,
@@ -7487,6 +7600,9 @@ class NewGame:
 
         if rescue is not None:
             rescue.draw(self.screen, self.camera)
+
+        if self.farolero is not None:
+            self.farolero.draw(self.screen, self.camera)
 
         if self.cine_player_boost > 0.01:
             self._draw_player_boost()
@@ -7592,6 +7708,14 @@ class NewGame:
             and self.shopkeeper.can_talk(self.player)
         ):
             self.shopkeeper.draw_prompt(self.screen, self.camera)
+
+        if (
+            self.state == "playing"
+            and self.shop is None
+            and self.farolero is not None
+            and self.farolero.can_talk(self.player)
+        ):
+            self.farolero.draw_prompt(self.screen, self.camera)
 
         if self.state == "playing" and self.minigame is None:
 

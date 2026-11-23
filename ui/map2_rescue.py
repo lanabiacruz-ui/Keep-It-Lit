@@ -15,8 +15,12 @@ no existe se usa un dibujo provisorio).
   5. hold    se queda quieto en el punto verde cargando luz (suspenso)
   6. burst   la onda de luz explota: se ilumina todo el cuarto, flash y
              temblor, y las Aurantulas salen corriendo y se desvanecen
-  7. talk2   habla (panel): paz. Le saca el veneno al jugador
-  8. leave   la luz se apaga de a poco y el tipo se desvanece
+  7. talk2   habla (panel): paz. Le saca el veneno al jugador. Cuenta que se
+             queda y que le ayudo a Escupin a vender sus cosas
+  8. settle  camina hasta el lugar donde se va a quedar (FAROLERO_SPOT)
+  9. leave   la onda se calma y queda un resplandor fijo. El cuarto queda
+             ILUMINADO PARA SIEMPRE y el tipo NO se desvanece: pasa a ser
+             FaroleroNPC (mas abajo), un vendedor fijo que ademas cura
 
 Lo que hay que enganchar en states/new_game.py (ya esta hecho):
   - update(dt) y tick(dt) cada cuadro, after_dialog(closed) al cerrar un dialogo
@@ -26,6 +30,7 @@ Lo que hay que enganchar en states/new_game.py (ya esta hecho):
 """
 
 import math
+import random
 
 import pygame
 
@@ -59,8 +64,10 @@ RESCUER_THEME = dict(
 
 PORTRAIT = "salvador.png"
 
-# el cuarto que se ilumina (el contorno AZUL del dibujo)
-ROOM = pygame.Rect(*cfg.RESCUE_ROOM)
+# el cuarto que se ilumina: BANDAS que siguen el interior de la sala (asi la
+# luz no se escapa afuera de las paredes)
+ROOM_BANDS = [pygame.Rect(*b) for b in cfg.RESCUE_ROOM_BANDS]
+ROOM_FEATHER = int(getattr(cfg, "RESCUE_ROOM_FEATHER", 3))
 
 STEP_RADIUS = 24        # la luz crece de a saltos (evita miles de imagenes en cache)
 STEP_STRENGTH = 0.05
@@ -227,6 +234,7 @@ class Map2Rescue:
         self._current = None
         self._old_smooth = None
         self._sprites = {}
+        self._path = []
 
     # ---- datos
 
@@ -243,7 +251,7 @@ class Map2Rescue:
         """Mientras llega, carga y suelta la luz, la camara se desplaza hacia
         el (a medias entre el jugador y el Farolero)."""
 
-        if self.stage not in ("walk", "hold", "talk1", "burst", "talk2"):
+        if self.stage not in ("walk", "hold", "talk1", "burst", "talk2", "settle"):
             return None
 
         p = pygame.Vector2(self.game.player.image_rect.center)
@@ -364,8 +372,19 @@ class Map2Rescue:
 
         g = self.game
 
-        self.stage = "leave"
+        # primero camina hasta el lugar donde se va a quedar (detras de la
+        # mesita), por los puntos de FAROLERO_PATH
+        self.stage = "settle"
         self.t = 0.0
+
+        self._path = [pygame.Vector2(p) for p in cfg.FAROLERO_PATH]
+        self._path.append(pygame.Vector2(cfg.FAROLERO_SPOT))
+
+        # la tiendita (mesita, alfombra, estante...) aparece
+        decor = getattr(g, "shop_decor", None)
+
+        if decor is not None:
+            decor.reveal()
 
         old = self._old_smooth
 
@@ -426,9 +445,29 @@ class Map2Rescue:
                 self.pos += to.normalize() * step
                 self.walked += step
 
-            # sale de la oscuridad de a poco y trae su luz
-            self.fade = min(1.0, self.walked / 120.0)
-            self.aura = 110.0 * self.fade
+            door = getattr(g, "map2_door", None)
+
+            if door is not None and not door.broken:
+
+                # viene por detras de la puerta cerrada: no se lo ve, solo se
+                # ve su luz crecer del otro lado. Al llegar, la rompe.
+                total = max(1.0, cfg.RESCUER_ENTRY[0] - door.rect.right)
+
+                self.fade = 0.0
+                self.aura = 40.0 + 70.0 * min(1.0, self.walked / total)
+
+                if self.pos.x <= door.rect.right + cfg.DOOR_BREAK_DIST:
+
+                    door.smash(g)
+
+                    self.fade = 1.0
+                    self.aura = 110.0
+
+            else:
+
+                # sale de la oscuridad de a poco y trae su luz
+                self.fade = min(1.0, self.walked / 120.0)
+                self.aura = 110.0 * self.fade
 
         elif self.stage == "hold":
 
@@ -464,15 +503,44 @@ class Map2Rescue:
             if self.t >= cfg.RESCUE_BURST_TIME:
                 self._open(cfg.RESCUER_2, "talk2")
 
+        elif self.stage == "settle":
+
+            self.t += dt
+
+            target = self._path[0]
+
+            to = target - self.pos
+
+            step = cfg.RESCUER_WALK_SPEED * dt
+
+            if to.length() <= step:
+
+                self.pos = pygame.Vector2(target)
+
+                self._path.pop(0)
+
+                if not self._path:
+
+                    self.stage = "leave"
+                    self.t = 0.0
+
+            else:
+
+                self.pos += to.normalize() * step
+
         elif self.stage == "leave":
 
             self.t += dt
 
             k = min(1.0, self.t / cfg.RESCUE_LEAVE_TIME)
 
-            self.fade = 1.0 - k
-            self.aura = cfg.RESCUE_AURA_RADIUS * (1.0 - k)
-            self.room = 1.0 - k
+            # la onda se calma hasta un resplandor fijo; el cuarto sigue
+            # iluminado y el tipo se queda
+            glow = cfg.FAROLERO_GLOW_RADIUS
+
+            self.fade = 1.0
+            self.aura = cfg.RESCUE_AURA_RADIUS + (glow - cfg.RESCUE_AURA_RADIUS) * k
+            self.room = 1.0
 
             if k >= 1.0:
 
@@ -507,7 +575,7 @@ class Map2Rescue:
         if strength <= 0:
             return []
 
-        return [(ROOM, min(1.0, strength), 60)]
+        return [(b, min(1.0, strength), ROOM_FEATHER) for b in ROOM_BANDS]
 
     # ---- dibujo
 
@@ -605,7 +673,7 @@ class Map2Rescue:
         bob = math.sin(t * 2.2) * 2.5 * zoom
 
         # caminando: sube y baja con cada paso
-        if self.stage == "walk":
+        if self.stage in ("walk", "settle"):
 
             phase = (self.t / max(0.05, cfg.RESCUER_WALK_STEP)) * math.pi
 
@@ -660,3 +728,747 @@ class Map2Rescue:
         screen.blit(body, body.get_rect(midbottom=(sx, sy)))
 
         self._draw_wave(screen, camera, sx, sy - img.get_height() // 2)
+
+
+# ------------------------------------------------------------- imagenes opcionales
+
+_img_cache = {}
+
+
+def _combat_image(name):
+    """assets/maps/combate/<name> o None si falta."""
+
+    if not name:
+        return None
+
+    if name not in _img_cache:
+
+        try:
+            _img_cache[name] = pygame.image.load(
+                str(COMBAT_DIR / name)
+            ).convert_alpha()
+        except (pygame.error, FileNotFoundError, OSError):
+            _img_cache[name] = None
+
+    return _img_cache[name]
+
+
+_deco_cache = {}
+
+
+def _scaled_art(key, size, zoom, builder):
+    """Dibujo provisorio (hecho a pixel real del mundo) agrandado `zoom` veces
+    sin suavizar; se guarda para no rehacerlo cada cuadro."""
+
+    ck = (key, size, zoom)
+
+    img = _deco_cache.get(ck)
+
+    if img is None:
+
+        if len(_deco_cache) > 60:
+            _deco_cache.clear()
+
+        base = builder(*size)
+
+        w = max(1, int(round(size[0] * zoom)))
+        h = max(1, int(round(size[1] * zoom)))
+
+        img = pygame.transform.scale(base, (w, h))
+
+        _deco_cache[ck] = img
+
+    return img
+
+
+def _fit_image(img, size, zoom):
+    """Imagen del usuario ajustada al rectangulo (conserva la proporcion)."""
+
+    ck = (id(img), size, zoom)
+
+    out = _deco_cache.get(ck)
+
+    if out is None:
+
+        if len(_deco_cache) > 60:
+            _deco_cache.clear()
+
+        tw = max(1, int(size[0] * zoom))
+        th = max(1, int(size[1] * zoom))
+
+        k = min(tw / img.get_width(), th / img.get_height())
+
+        out = pygame.transform.smoothscale(
+            img,
+            (max(1, int(img.get_width() * k)), max(1, int(img.get_height() * k)))
+        )
+
+        _deco_cache[ck] = out
+
+    return out
+
+
+# ---- dibujos provisorios (pixel art chiquito)
+
+WOOD = (122, 84, 48)
+WOOD_LIGHT = (160, 114, 66)
+WOOD_DARK = (74, 48, 26)
+IRON = (62, 62, 70)
+
+
+def _build_door(w, h):
+
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    surf.fill(WOOD)
+
+    # tablas verticales
+    for x in range(2, w - 1, 3):
+        pygame.draw.line(surf, WOOD_DARK, (x, 0), (x, h - 1))
+
+    pygame.draw.line(surf, WOOD_LIGHT, (1, 0), (1, h - 1))
+
+    # herrajes
+    for y in (int(h * 0.18), int(h * 0.80)):
+        pygame.draw.rect(surf, IRON, (0, y, w, 3))
+        pygame.draw.rect(surf, (110, 110, 120), (0, y, w, 1))
+
+    # manija
+    pygame.draw.rect(surf, (214, 178, 80), (w - 4, h // 2 - 1, 2, 3))
+
+    pygame.draw.rect(surf, WOOD_DARK, surf.get_rect(), 1)
+
+    return surf
+
+
+def _build_table(w, h):
+
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    top_h = max(6, int(h * 0.55))
+
+    # patas
+    for x in (3, w - 6):
+        pygame.draw.rect(surf, WOOD_DARK, (x, top_h, 3, h - top_h))
+
+    # tapa
+    pygame.draw.rect(surf, WOOD_LIGHT, (0, 0, w, top_h))
+    pygame.draw.rect(surf, WOOD, (0, top_h - 3, w, 3))
+    pygame.draw.rect(surf, WOOD_DARK, (0, 0, w, top_h), 1)
+
+    # mantel (franja)
+    pygame.draw.rect(surf, (150, 52, 52), (6, 1, w - 12, top_h - 2))
+    pygame.draw.rect(surf, (214, 168, 80), (6, 1, w - 12, 1))
+
+    # lo que vende: botellas, hongos, un candil
+    for i, col in enumerate(((120, 70, 190), (200, 140, 60), (90, 150, 220))):
+        bx = 11 + i * 6
+        pygame.draw.rect(surf, col, (bx, 2, 3, 5))
+        pygame.draw.rect(surf, (230, 230, 240), (bx + 1, 1, 1, 1))
+
+    for hx in (31, 37):
+        pygame.draw.rect(surf, (40, 90, 190), (hx, 3, 5, 3))
+        pygame.draw.rect(surf, (230, 230, 240), (hx + 1, 6, 3, 1))
+
+    lx = w - 15
+    pygame.draw.rect(surf, (255, 226, 120), (lx, 1, 4, 5))
+    pygame.draw.rect(surf, IRON, (lx, 1, 4, 5), 1)
+
+    return surf
+
+
+def _build_rug(w, h):
+
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    pygame.draw.rect(surf, (96, 38, 40), surf.get_rect(), border_radius=3)
+    pygame.draw.rect(surf, (186, 140, 70), surf.get_rect(), 1, border_radius=3)
+    pygame.draw.rect(surf, (140, 62, 56), surf.get_rect().inflate(-8, -8), 1)
+
+    for x in range(8, w - 6, 8):
+        pygame.draw.rect(surf, (186, 140, 70), (x, h // 2 - 1, 3, 3))
+
+    return surf
+
+
+def _build_shelf(w, h):
+
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    pygame.draw.rect(surf, WOOD_DARK, (0, h - 4, w, 4))
+    pygame.draw.rect(surf, WOOD, (0, h - 4, w, 2))
+
+    cols = ((120, 70, 190), (214, 168, 80), (90, 150, 220), (150, 52, 52),
+            (60, 150, 90), (200, 140, 60))
+
+    x = 3
+
+    for i in range(6):
+
+        if x > w - 7:
+            break
+
+        bh = 5 + (i % 3) * 2
+
+        pygame.draw.rect(surf, cols[i % len(cols)], (x, h - 4 - bh, 5, bh))
+        pygame.draw.rect(surf, (235, 235, 245), (x + 1, h - 4 - bh - 1, 3, 1))
+
+        x += 8
+
+    return surf
+
+
+def _build_crate(w, h):
+
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+
+    surf.fill(WOOD)
+
+    pygame.draw.rect(surf, WOOD_DARK, surf.get_rect(), 1)
+    pygame.draw.line(surf, WOOD_DARK, (1, 1), (w - 2, h - 2))
+    pygame.draw.line(surf, WOOD_DARK, (w - 2, 1), (1, h - 2))
+    pygame.draw.rect(surf, WOOD_LIGHT, (1, 1, w - 2, 1))
+
+    return surf
+
+
+# ------------------------------------------------------------- la puerta
+
+class RescueDoor:
+    """Tapa el hueco de la pared derecha. Cerrada y SOLIDA hasta que el
+    Farolero entra y la rompe con efecto (astillas, polvo, flash, temblor).
+    Imagen: assets/maps/combate/<DOOR_IMAGE> (o un dibujo provisorio)."""
+
+    COLORS = (WOOD, WOOD_LIGHT, WOOD_DARK, IRON)
+
+    def __init__(self, broken=False):
+
+        self.rect = pygame.Rect(*cfg.DOOR_RECT)
+
+        self.broken = bool(broken)
+
+        self.debris = []
+        self.dust = []
+
+        rng = random.Random(7)
+
+        self.rubble = []
+
+        for _ in range(int(getattr(cfg, "DOOR_RUBBLE", 9))):
+
+            self.rubble.append((
+                rng.uniform(self.rect.left - 9, self.rect.right + 3),
+                rng.uniform(self.rect.top + 1, self.rect.bottom - 3),
+                rng.choice((2, 2, 3, 4)),
+                rng.choice((1, 2, 2, 3)),
+                rng.choice(self.COLORS),
+            ))
+
+    def solid_rect(self):
+        """Caja que bloquea al jugador (None si ya se rompio)."""
+
+        return None if self.broken else self.rect
+
+    def smash(self, game):
+        """Se rompe de golpe."""
+
+        if self.broken:
+            return
+
+        self.broken = True
+
+        cx, cy = self.rect.center
+
+        for _ in range(int(getattr(cfg, "DOOR_DEBRIS", 34))):
+
+            # salen sobre todo hacia adentro de la sala (izquierda)
+            ang = math.radians(random.uniform(125, 235))
+            speed = random.uniform(70, 230)
+
+            self.debris.append({
+                "x": cx + random.uniform(-2, 2),
+                "y": cy + random.uniform(-self.rect.height * 0.45, self.rect.height * 0.45),
+                "vx": math.cos(ang) * speed,
+                "vy": math.sin(ang) * speed * 0.8,
+                "size": random.choice((2, 2, 3, 3, 4)),
+                "col": random.choice(self.COLORS),
+                "age": 0.0,
+                "life": cfg.DOOR_DEBRIS_LIFE * random.uniform(0.7, 1.1),
+            })
+
+        for _ in range(10):
+
+            self.dust.append({
+                "x": cx + random.uniform(-6, 4),
+                "y": cy + random.uniform(-self.rect.height * 0.4, self.rect.height * 0.4),
+                "vx": random.uniform(-40, -6),
+                "vy": random.uniform(-10, 10),
+                "r": random.uniform(4, 7),
+                "age": 0.0,
+                "life": random.uniform(0.7, 1.2),
+            })
+
+        fx = getattr(game, "fx", None)
+
+        if fx is not None:
+
+            try:
+                fx.flash(0.55, (255, 232, 170), 0.5)
+                fx.shake(6.0, 0.7)
+            except Exception as error:
+                print(f"[puerta] efecto: {error}")
+
+        audio.play("door_break")
+        audio.play("explosion", 0.6)
+
+    def update(self, dt):
+
+        if not self.broken:
+            return
+
+        for d in self.debris:
+
+            d["age"] += dt
+
+            k = math.exp(-3.2 * dt)
+
+            d["vx"] *= k
+            d["vy"] *= k
+
+            d["x"] += d["vx"] * dt
+            d["y"] += d["vy"] * dt
+
+        self.debris = [d for d in self.debris if d["age"] < d["life"]]
+
+        for p in self.dust:
+
+            p["age"] += dt
+
+            p["x"] += p["vx"] * dt
+            p["y"] += p["vy"] * dt
+            p["vx"] *= math.exp(-2.0 * dt)
+
+            p["r"] += 9.0 * dt
+
+        self.dust = [p for p in self.dust if p["age"] < p["life"]]
+
+    def draw(self, screen, camera):
+
+        zoom = camera.zoom
+
+        r = self.rect
+
+        if not self.broken:
+
+            dest = camera.apply(r)
+
+            if not dest.colliderect(screen.get_rect()):
+                return
+
+            img = _combat_image(getattr(cfg, "DOOR_IMAGE", None))
+
+            if img is not None:
+                art = _fit_image(img, (r.width, r.height), zoom)
+            else:
+                art = _scaled_art("door", (r.width, r.height), zoom, _build_door)
+
+            screen.blit(art, art.get_rect(center=dest.center))
+
+            return
+
+        # astillas que quedan en el piso para siempre
+        for x, y, w, h, col in self.rubble:
+
+            pygame.draw.rect(screen, col, (
+                int(x * zoom - camera.x), int(y * zoom - camera.y),
+                int(w * zoom), int(h * zoom),
+            ))
+
+        for d in self.debris:
+
+            left = d["life"] - d["age"]
+
+            size = d["size"] * min(1.0, left / 0.35) * zoom
+
+            if size < 1:
+                continue
+
+            pygame.draw.rect(screen, d["col"], (
+                int(d["x"] * zoom - camera.x - size / 2),
+                int(d["y"] * zoom - camera.y - size / 2),
+                int(size), int(size),
+            ))
+
+        for p in self.dust:
+
+            k = 1.0 - p["age"] / p["life"]
+
+            rad = max(2, int(p["r"] * zoom))
+
+            puff = pygame.Surface((rad * 2, rad * 2), pygame.SRCALPHA)
+
+            pygame.draw.circle(puff, (190, 184, 170, int(110 * k)), (rad, rad), rad)
+
+            screen.blit(puff, (
+                int(p["x"] * zoom - camera.x - rad),
+                int(p["y"] * zoom - camera.y - rad),
+            ))
+
+
+# ------------------------------------------------------------- la tiendita
+
+class ShopDecor:
+    """Lo que hace que el cuarto del Farolero se sienta una tienda: alfombra,
+    estante en la pared, mesita con mercaderia, cajas y lamparas. Aparece
+    (con un fundido) cuando el Farolero va a su lugar. Los dibujos provisorios
+    se pueden reemplazar con assets/maps/combate/<TABLE_IMAGE>."""
+
+    FADE_TIME = 1.2
+
+    def __init__(self, shown=False):
+
+        self.shown = bool(shown)
+        self.appear = 1.0 if shown else 0.0
+
+        self.table = pygame.Rect(*cfg.TABLE_RECT)
+        self.rug = pygame.Rect(*cfg.SHOP_RUG)
+        self.shelf = pygame.Rect(*cfg.SHOP_SHELF)
+        self.crates = [pygame.Rect(*c) for c in cfg.SHOP_CRATES]
+
+    def reveal(self):
+
+        self.shown = True
+
+    def update(self, dt):
+
+        if self.shown and self.appear < 1.0:
+            self.appear = min(1.0, self.appear + dt / self.FADE_TIME)
+
+    def visible(self, game):
+
+        return self.shown and getattr(game, "current_map", "mapa1") == "mapa2"
+
+    def solids(self):
+        """Cajas que bloquean al jugador (la mesita y las cajas)."""
+
+        if not self.shown:
+            return []
+
+        return [self.table] + list(self.crates)
+
+    def light_sources(self, zoom):
+        """Las lamparas de la mesa (luz fija)."""
+
+        if self.appear < 0.99:
+            return []
+
+        return [
+            (x, y, int(r * zoom)) for x, y, r in cfg.SHOP_LAMPS
+        ]
+
+    def _blit(self, screen, camera, rect, key, builder, img=None):
+
+        dest = camera.apply(rect)
+
+        if not dest.colliderect(screen.get_rect()):
+            return
+
+        zoom = camera.zoom
+
+        if img is not None:
+            art = _fit_image(img, (rect.width, rect.height), zoom)
+        else:
+            art = _scaled_art(key, (rect.width, rect.height), zoom, builder)
+
+        alpha = int(255 * self.appear)
+
+        if alpha < 255:
+            art.set_alpha(alpha)
+
+        screen.blit(art, art.get_rect(midbottom=dest.midbottom))
+
+        if alpha < 255:
+            art.set_alpha(255)
+
+    def draw(self, screen, camera):
+        """Se dibuja en el mundo (antes de la luz, asi lo alumbra el cuarto)."""
+
+        if self.appear <= 0.01:
+            return
+
+        self._blit(screen, camera, self.rug, "rug", _build_rug)
+        self._blit(screen, camera, self.shelf, "shelf", _build_shelf)
+
+        for crate in self.crates:
+            self._blit(screen, camera, crate, "crate", _build_crate)
+
+        self._blit(
+            screen, camera, self.table, "table", _build_table,
+            img=_combat_image(getattr(cfg, "TABLE_IMAGE", None)),
+        )
+
+
+# ------------------------------------------------------------- el Farolero fijo
+
+_f_icon = [None]
+
+
+def _prompt_icon():
+
+    if _f_icon[0] is None:
+
+        from world.shop import Shopkeeper
+
+        _f_icon[0] = Shopkeeper._load_f_icon()
+
+    return _f_icon[0]
+
+
+class FaroleroNPC:
+    """El Farolero DESPUES del rescate: se queda en su lugar (FAROLERO_SPOT).
+
+    - El cuarto (RESCUE_ROOM) queda iluminado para siempre y CURA al jugador
+      mientras este adentro, igual que la sala de la tienda.
+    - Es solido (no se lo puede atravesar) y se le habla con la tecla de uso.
+    - Es un segundo vendedor: abre la tienda con todo desbloqueado (ver
+      FAROLERO_SHOP_UNLOCKED) y lo que compras cae al piso cerca de el.
+    Solo existe en el mapa 2 (new_game lo crea cuando el rescate termina o
+    cuando se carga una partida que ya lo paso).
+    """
+
+    ZONE_FEATHER = ROOM_FEATHER
+
+    def __init__(self, game):
+
+        self.game = game
+
+        self.pos = pygame.Vector2(cfg.FAROLERO_SPOT)
+
+        self.zone = ROOM_BANDS
+
+        dx, dy, w, h = cfg.FAROLERO_TALK_RECT
+
+        self._talk = pygame.Rect(dx, dy, w, h)
+
+        hw, hh = cfg.FAROLERO_HITBOX
+
+        self._hit = pygame.Rect(0, 0, hw, hh)
+
+        self._sprites = {}
+
+        # sale de donde termino el rescate: la luz no pega un salto
+        self.spit_time = 0.0
+
+    # ---- datos
+
+    @property
+    def visible(self):
+
+        return getattr(self.game, "current_map", "mapa1") == "mapa2"
+
+    @property
+    def talk_rect(self):
+
+        r = self._talk.copy()
+        r.move_ip(int(self.pos.x), int(self.pos.y))
+
+        return r
+
+    def hitbox(self):
+
+        r = self._hit.copy()
+        r.midbottom = (int(self.pos.x), int(self.pos.y))
+
+        return r
+
+    def can_talk(self, player):
+
+        return self.visible and player.rect.colliderect(self.talk_rect)
+
+    def in_room(self, player):
+        """El jugador esta en el cuarto que ilumina y cura."""
+
+        c = player.rect.center
+
+        return self.visible and any(b.collidepoint(c) for b in self.zone)
+
+    # ---- luz
+
+    def light_sources(self, zoom):
+
+        if not self.visible:
+            return []
+
+        radius = int(round(cfg.FAROLERO_GLOW_RADIUS / STEP_RADIUS)) * STEP_RADIUS
+
+        if radius < STEP_RADIUS:
+            return []
+
+        return [(self.pos.x, self.pos.y, int(radius * zoom))]
+
+    def lit_rects(self):
+        """El cuarto entero, iluminado siempre."""
+
+        if not self.visible:
+            return []
+
+        return [(b, 1.0, self.ZONE_FEATHER) for b in self.zone]
+
+    # ---- lo que compras
+
+    def hand(self):
+        """De donde sale lo que vende."""
+
+        return (self.pos.x + 8, self.pos.y - 26)
+
+    def _landing_point(self, collision_map):
+
+        dx, dy, w, h = cfg.FAROLERO_LAND_RECT
+
+        area = pygame.Rect(
+            int(self.pos.x + dx), int(self.pos.y + dy), w, h
+        )
+
+        for _ in range(30):
+
+            x = random.randint(area.left, area.right)
+            y = random.randint(area.top, area.bottom)
+
+            if collision_map.point_is_walkable(x, y):
+                return (x, y)
+
+        return area.center
+
+    def deliver(self, item_ids, collision_map):
+        """Saca las cosas compradas y las tira al piso cerca de el (el
+        equivalente de Shopkeeper.spit). Devuelve los objetos creados."""
+
+        from world.items import WorldItem, LightItem, set_expiry
+        from world.lights import LIGHTS
+
+        count = len(item_ids)
+
+        if count == 0:
+            return []
+
+        gap = min(0.14, 4.0 / count)
+
+        hx, hy = self.hand()
+
+        items = []
+
+        for n, item_id in enumerate(item_ids):
+
+            if item_id in LIGHTS:
+                item = LightItem(item_id, hx, hy)
+            else:
+                item = WorldItem(item_id, hx, hy)
+
+            set_expiry(item)
+
+            item.start_fly(
+                (hx, hy),
+                self._landing_point(collision_map),
+                delay=0.25 + n * gap,
+                height=22,
+                duration=0.55,
+                fancy=True,
+            )
+
+            items.append(item)
+
+        return items
+
+    # ---- dibujo
+
+    def _sprite(self, side_h):
+
+        img = self._sprites.get(side_h)
+
+        if img is None:
+
+            src = None
+
+            try:
+                src = pygame.image.load(str(COMBAT_DIR / PORTRAIT)).convert_alpha()
+            except (pygame.error, FileNotFoundError, OSError):
+                pass
+
+            if src is None:
+                src = draw_rescuer(256)
+            else:
+
+                area = src.get_bounding_rect()
+
+                if area.width > 0 and area.height > 0:
+                    src = src.subsurface(area).copy()
+
+            w = max(2, int(src.get_width() * side_h / src.get_height()))
+
+            img = pygame.transform.smoothscale(src, (w, side_h))
+
+            if len(self._sprites) > 12:
+                self._sprites.clear()
+
+            self._sprites[side_h] = img
+
+        return img
+
+    def draw(self, screen, camera):
+
+        if not self.visible:
+            return
+
+        zoom = camera.zoom
+
+        base_h = getattr(getattr(self.game.player, "image_rect", None), "height", 40)
+
+        side_h = max(16, int(base_h * cfg.RESCUE_HEIGHT * zoom / 4) * 4)
+
+        img = self._sprite(side_h)
+
+        t = pygame.time.get_ticks() / 1000.0
+
+        bob = math.sin(t * 2.2) * 2.5 * zoom
+
+        sx = int(self.pos.x * zoom - camera.x)
+        sy = int(self.pos.y * zoom - camera.y + bob)
+
+        # fuera de pantalla: no se dibuja
+        if not screen.get_rect().inflate(img.get_width() * 2, img.get_height() * 2).collidepoint(sx, sy):
+            return
+
+        # resplandor de su farol (luz sumada)
+        gr = int(img.get_height() * (0.95 + 0.08 * math.sin(t * 5.0)))
+
+        halo = _glow(gr // STEP_RADIUS * STEP_RADIUS or STEP_RADIUS)
+
+        halo = halo.copy()
+        halo.fill((217, 217, 217), special_flags=pygame.BLEND_RGB_MULT)
+
+        screen.blit(
+            halo,
+            halo.get_rect(center=(sx, sy - img.get_height() // 2)),
+            special_flags=pygame.BLEND_RGB_ADD,
+        )
+
+        # sombra en el piso
+        shadow = pygame.Surface(
+            (max(4, int(img.get_width() * 0.9)), max(2, int(img.get_width() * 0.28))),
+            pygame.SRCALPHA,
+        )
+
+        pygame.draw.ellipse(shadow, (0, 0, 0, 90), shadow.get_rect())
+
+        screen.blit(shadow, shadow.get_rect(center=(sx, sy)))
+
+        screen.blit(img, img.get_rect(midbottom=(sx, sy)))
+
+    def draw_prompt(self, screen, camera):
+        """El icono de la tecla de uso arriba de su cabeza."""
+
+        dest = camera.apply(pygame.Rect(int(self.pos.x) - 1, int(self.pos.y) - 40, 2, 2))
+
+        icon = _prompt_icon()
+
+        screen.blit(icon, icon.get_rect(midbottom=(dest.centerx, dest.top - 6)))

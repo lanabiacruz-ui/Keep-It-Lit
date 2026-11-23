@@ -137,7 +137,9 @@ RETURN_HIT_DELAY = 0.10      # al volver, tardan esto en pegar: el golpe sigue s
 FIRST_HIT_SPREAD = 0.25      # (0 a esto) de demora extra al azar para que no peguen todas juntas
 FLEE_AWAY_SPEED = 330.0      # huida de las Aurantulas cuando las espanta la luz (rescate)
 FLEE_AWAY_TIME = 2.2         # segundos corriendo antes de desaparecer del todo
-FLEE_AWAY_FADE = 0.9         # los ultimos segundos se van desvaneciendo
+FLEE_AWAY_FADE = 0.0         # (ya no se desvanecen: salen corriendo de la camara y listo)
+FLEE_AWAY_MAX = 6.0          # tope de seguridad (segundos) por si alguna no llega a salir de la camara
+FLEE_OFFSCREEN_PAD = 36      # cuanto afuera del borde de la camara tiene que estar para borrarla (px del mundo)
 WEB_SLIDE_SPEED = 320.0      # velocidad (px/s) con la que las telarañas se apartan entre si
 CHASE_MAX = 12.0
 LOSE_DIST = 480
@@ -1078,6 +1080,38 @@ class Aurantula(Spider):
         self._melee(dt, game, mgr, d, dist, cmap, needs_web=True)
 
 
+def _view_rect(game, pad=0.0):
+    """Lo que ve la camara, en pixeles del mundo (con `pad` de margen)."""
+
+    cam = game.camera
+
+    z = float(cam.zoom) or 1.0
+
+    return pygame.Rect(
+        int(cam.x / z - pad),
+        int(cam.y / z - pad),
+        int(cam.screen_width / z + pad * 2),
+        int(cam.screen_height / z + pad * 2),
+    )
+
+
+def _glide(spider, direction, speed, dt):
+    """Mueve la araña SIN chocar con paredes (entra / sale por afuera de la
+    camara, donde el mapa es pared). Devuelve True si se movio."""
+
+    if direction.length_squared() < 1e-9:
+        return False
+
+    step = direction.normalize() * speed * dt
+
+    spider.pos.x += step.x
+    spider.pos.y += step.y
+
+    spider.rect.center = (round(spider.pos.x), round(spider.pos.y))
+
+    return True
+
+
 class SpiderManager:
 
     def __init__(self):
@@ -1781,9 +1815,11 @@ class SpiderManager:
             self.horde.append({
                 "s": None,
                 "delay": cfg.HORDE_FIRST_DELAY + cfg.HORDE_SPAWN_TIME * (k ** 1.35),
-                "fade": 0.0,
+                "fade": 1.0,
                 "ring": random.uniform(*cfg.HORDE_RING),
                 "speed": random.uniform(*cfg.HORDE_SPEED),
+                "enter": random.uniform(*cfg.HORDE_ENTER_SPEED),
+                "entering": True,
                 "tries": 0,
             })
 
@@ -1826,29 +1862,24 @@ class SpiderManager:
         return sum(1 for h in self.horde if h["s"] is not None)
 
     def _spawn_horde_member(self, game, h):
+        """Nace FUERA de la camara, por encima del borde de arriba: no se ve
+        de donde vienen, de pronto estan entrando."""
 
         from world import map2_intro as cfg
 
-        cmap = game.collision_map
-
         px, py = game.player.rect.center
 
-        areas = cfg.HORDE_SPAWN_AREAS
+        view = _view_rect(game)
+
+        pad = cfg.HORDE_SPAWN_X_PAD
+
+        lo_x = view.left + pad
+        hi_x = max(lo_x + 1, view.right - pad)
 
         for _ in range(40):
 
-            x, y, w, hh = random.choice(areas)
-
-            sx = random.uniform(x, x + w)
-            sy = random.uniform(y, y + hh)
-
-            if math.hypot(sx - px, sy - py) < cfg.HORDE_SPAWN_MIN_DIST:
-                continue
-
-            spider = Aurantula(sx, sy)
-
-            if not cmap.can_move(spider.rect):
-                continue
+            sx = random.uniform(lo_x, hi_x)
+            sy = view.top - random.uniform(*cfg.HORDE_OFFSCREEN_MARGIN)
 
             if any(
                 o["s"] is not None
@@ -1856,6 +1887,8 @@ class SpiderManager:
                 for o in self.horde
             ):
                 continue
+
+            spider = Aurantula(sx, sy)
 
             spider.heading = math.degrees(math.atan2(py - sy, px - sx)) % 360.0
             spider.face = 1 if px >= sx else -1
@@ -1907,7 +1940,7 @@ class SpiderManager:
 
             s = h["s"]
 
-            h["fade"] = min(1.0, h["fade"] + dt / max(0.05, cfg.HORDE_APPEAR_FADE))
+            h["fade"] = 1.0
 
             s.anim_t += dt
 
@@ -1938,6 +1971,26 @@ class SpiderManager:
                     push += delta / length * ((30.0 - length) / 30.0)
 
             s.moving = False
+
+            # entrando: viene de arriba, de afuera de la camara, y atraviesa la
+            # pared sin chocar. Cuando ya esta dentro de la vista y pisa suelo
+            # transitable pasa a moverse normal (con colision).
+            if h["entering"]:
+
+                if dist > 1e-3:
+                    s.moving = _glide(s, d / dist + push * 0.8, h["enter"], dt)
+
+                if (
+                    s.moving
+                    and _view_rect(game).contains(s.rect)
+                    and cmap.can_move(s.rect)
+                ):
+                    h["entering"] = False
+
+                if s.moving:
+                    s.walk_phase += dt * h["enter"] / AURA_WALK_RATE
+
+                continue
 
             if dist > h["ring"]:
 
@@ -1978,13 +2031,14 @@ class SpiderManager:
             if spider.dead:
                 continue
 
-            d = pygame.Vector2(spider.pos) - origin
+            # huyen por donde vinieron: hacia ARRIBA, saliendo de la camara
+            # (con algo de abanico hacia los costados, alejandose de la luz)
+            side = spider.pos.x - origin.x
 
-            if d.length_squared() < 1.0:
-                d = pygame.Vector2(random.uniform(-1, 1), random.uniform(-1, 1))
-
-                if d.length_squared() < 1e-6:
-                    d = pygame.Vector2(1, 0)
+            d = pygame.Vector2(
+                max(-0.6, min(0.6, side / 220.0)) + random.uniform(-0.18, 0.18),
+                -1.0,
+            )
 
             spider.mode = "idle"
             spider.wind = 0.0
@@ -2012,11 +2066,15 @@ class SpiderManager:
         audio.play("aura_screech")
 
     def _update_fleeing(self, dt, game):
+        """Las espantadas corren (sin chocar con paredes) hasta salir de la
+        camara y ahi se borran, sin desvanecerse."""
 
         if not self.fleeing:
             return
 
-        cmap = game.collision_map
+        view = _view_rect(game, FLEE_OFFSCREEN_PAD)
+
+        keep = []
 
         for f in self.fleeing:
 
@@ -2030,6 +2088,8 @@ class SpiderManager:
                 f["delay"] -= dt
                 spider.moving = False
 
+                keep.append(f)
+
                 continue
 
             d = f["dir"]
@@ -2037,15 +2097,20 @@ class SpiderManager:
             spider.heading = math.degrees(math.atan2(d.y, d.x)) % 360.0
             spider.face = 1 if d.x >= 0 else -1
 
-            spider.moving = spider._move_dir(d, FLEE_AWAY_SPEED, dt, cmap)
+            spider.moving = _glide(spider, d, FLEE_AWAY_SPEED, dt)
 
-            if spider.moving:
-                spider.walk_phase += dt * FLEE_AWAY_SPEED / AURA_WALK_RATE
-            else:
-                # contra una pared: prueba correr de costado
-                f["dir"] = d.rotate(random.choice((70, -70)))
+            spider.walk_phase += dt * FLEE_AWAY_SPEED / AURA_WALK_RATE
 
-        self.fleeing = [f for f in self.fleeing if f["t"] < FLEE_AWAY_TIME]
+            # ya salio de la camara: se va y listo
+            if not view.colliderect(spider.rect):
+                continue
+
+            if f["t"] >= FLEE_AWAY_MAX:
+                continue
+
+            keep.append(f)
+
+        self.fleeing = keep
 
     # ---- el bloque te dio ------------------------------------------------------------
     def _hit_player(self, game, shot):
@@ -2609,22 +2674,14 @@ class SpiderManager:
 
         for f in self.fleeing:
 
-            left = FLEE_AWAY_TIME - f["t"]
-
-            alpha = 255 if left >= FLEE_AWAY_FADE else int(
-                255 * max(0.0, left / FLEE_AWAY_FADE)
-            )
-
-            self._draw_spider(screen, camera, f["s"], alpha=alpha)
+            self._draw_spider(screen, camera, f["s"], alpha=255)
 
         # la horda sale de la oscuridad: aparece de a poco (se hace visible)
         for h in sorted(
             (h for h in self.horde if h["s"] is not None),
             key=lambda h: h["s"].pos.y,
         ):
-            self._draw_spider(
-                screen, camera, h["s"], alpha=int(255 * h["fade"])
-            )
+            self._draw_spider(screen, camera, h["s"], alpha=255)
 
         for spider in self.spiders:
             self._draw_spider(screen, camera, spider)

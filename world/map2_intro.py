@@ -210,23 +210,23 @@ FINALE_WALK_HOP = 0.018      # que tanto salta en cada paso (fraccion de su alto
 HORDE_COUNT = 18               # cuantas aparecen en total
 HORDE_FIRST_DELAY = 1.8        # segundos sin nada antes de la primera
 HORDE_SPAWN_TIME = 8.0         # en cuanto tiempo aparecen todas (cada vez mas juntas)
-HORDE_APPEAR_FADE = 1.4        # cada una sale de la oscuridad (se hace visible) en este tiempo
-HORDE_SPEED = (14.0, 22.0)     # velocidad de avance (px del mundo por segundo): lento, inquietante
-HORDE_RING = (40.0, 80.0)      # a que distancia del jugador se frenan (rodean sin pisarlo)
+HORDE_APPEAR_FADE = 0.05       # (ya no se desvanecen: vienen de afuera de la camara y se ven enteras)
+HORDE_SPEED = (14.0, 22.0)     # velocidad de avance una vez dentro de la camara (px/s): lento, inquietante
+HORDE_RING = (40.0, 80.0)      # a que distancia del jugador se frenan (lo rodean sin pisarlo)
 
-# Donde aparecen (x, y, ancho, alto) en pixeles del mundo: pegadas a la
-# pared de la izquierda y a la de arriba del cuarto (lo ROJO del dibujo).
-HORDE_SPAWN_AREAS = [
-    (26, 1186, 64, 176),       # pared izquierda
-    (60, 1178, 190, 36),       # pared de arriba
-]
+# Las Aurantulas NO nacen dentro de la sala: vienen de ARRIBA, desde afuera de
+# la camara (no se ve de donde salen), entran atravesando la pared de arriba
+# y recien cuando ya estan dentro de la vista pasan a chocar con las paredes.
+HORDE_ENTER_SPEED = (46.0, 64.0)   # velocidad mientras entran (px/s del mundo), mas rapido para que te acorralen
+HORDE_OFFSCREEN_MARGIN = (16, 70)  # a cuanto por ENCIMA del borde de arriba de la camara nacen (px del mundo)
+HORDE_SPAWN_X_PAD = 12             # margen lateral dentro de lo que ve la camara
 HORDE_SPAWN_MIN_DIST = 110     # no nacen encima del jugador
 
 # Cenizo, al ver la horda (por el panel de dialogo, herido como despues del rayo)
 CENIZO_FIN = [
     "¡¡AAAAH!! ¡Mira cuántas! ¡Vienen TODAS hacia acá! ¡Y siguen saliendo!",
 
-    "Oh no... ¡Este es nuestro fin! ¡Y yo que ni te conté lo de mi tío, el candil!",
+    "Oh no... ¡Este es nuestro fin! ¡Y yo que ni te conté de mi amigo, el Farolero! Él sabría qué hacer...",
 ]
 HORDE_CENIZO_DELAY = 3.2       # segundos de horda antes de que Cenizo hable
 
@@ -252,7 +252,17 @@ RESCUER_WALK_HOP = 0.02            # que tanto salta en cada paso (fraccion de s
 # CIRCULO AMARILLO: la luz que carga alrededor de el antes de explotar
 RESCUE_CHARGE_RADIUS = 80
 # el cuarto que se ilumina del todo (x, y, ancho, alto): el contorno AZUL
-RESCUE_ROOM = (14, 1166, 304, 214)
+RESCUE_ROOM = (14, 1166, 304, 214)   # (ya no se usa para la luz: ver RESCUE_ROOM_BANDS)
+
+# La luz permanente y la curacion usan estas BANDAS, que siguen el interior de
+# la sala (medidas sobre mapa2.png, ~3 px adentro de las paredes) para que la
+# luz NO se escape afuera. (x, y, ancho, alto); el borde se difumina RESCUE_ROOM_FEATHER px.
+RESCUE_ROOM_BANDS = [
+    (66, 1183, 233, 11),      # arriba (con el rincon de la esquina)
+    (19, 1194, 281, 156),     # el cuerpo de la sala
+    (42, 1350, 258, 14),      # abajo (con los escalones de la izquierda)
+]
+RESCUE_ROOM_FEATHER = 3
 
 RESCUE_GAP = 1.8         # pausa despues de Cenizo antes de que se lo vea llegar
 RESCUE_HOLD_MIN = 1.4    # se queda quieto cargando la luz, como minimo (suspenso)
@@ -264,15 +274,58 @@ RESCUER_1 = []
 
 # Lo que dice DESPUES, cuando ya no hay peligro
 RESCUER_2 = [
-    "Ya pasó. No volverán por un buen rato... la luz les duele más a ellas que a ti.",
+    "Perdón por la demora, Cenizo me dijo que vendrías por aquí. Ya pasó: no volverán por un buen rato... la luz les duele más a ellas que a ti.",
 
     "Respira. Tu luz sigue encendida, y eso no es poca cosa aquí abajo.",
+
+    "Esta sala va a quedar iluminada para siempre, y quien se quede en ella se va a curar. Es lo mínimo.",
+
+    "Yo me quedo aquí. Hace tiempo le ayudé a Escupín a vender sus cosas... y ahora también vendo yo. Y tengo muchas más.",
 
     "Ve con calma. Lo que viene es peor que unas arañas... pero ya no vas solo.",
 ]
 
 RESCUE_BURST_TIME = 2.2      # la onda de luz se expande y llena el cuarto (las arañas huyen)
-RESCUE_LEAVE_TIME = 3.0      # se va apagando de a poco y el tipo se desvanece
+RESCUE_LEAVE_TIME = 2.0      # la onda se calma y queda un resplandor fijo (el tipo YA NO se desvanece: se queda)
 RESCUE_HEIGHT = 1.25         # alto del tipo (multiplo del alto del jugador)
-RESCUE_AURA_RADIUS = 330     # radio (mundo) maximo de la onda de luz
+RESCUE_AURA_RADIUS = 170     # radio (mundo) maximo de la onda de luz (chico: que no se cuele afuera de las paredes)
 RESCUE_CURE_POISON = True    # al final le saca el veneno al jugador (si tiene)
+
+# Despues del rescate el Farolero ELIGE UN LUGAR Y SE QUEDA ahi para siempre
+# (world/farolero en ui/map2_rescue.py: FaroleroNPC). El cuarto queda
+# iluminado POR SIEMPRE y cura al jugador como la sala de la tienda. Ademas
+# vende cosas: es un segundo vendedor, y con TODO desbloqueado.
+FAROLERO_SPOT = (245, 1224)        # donde se queda: DETRAS de la mesita (camina hasta ahi pasando por FAROLERO_PATH)
+FAROLERO_GLOW_RADIUS = 80          # resplandor fijo de su farol (mundo)
+FAROLERO_TALK_RECT = (-44, -4, 88, 62)    # (dx, dy, ancho, alto) respecto a el: la mesita y el frente (desde donde se le puede hablar)
+FAROLERO_HITBOX = (22, 12)         # (ancho, alto) de su caja en los pies: es solido
+FAROLERO_LAND_RECT = (-44, 32, 88, 26)    # (dx, dy, ancho, alto): donde caen las cosas que compras (sobre la alfombra, delante de la mesa)
+FAROLERO_SHOP_UNLOCKED = True      # True: vende TODO el catalogo sin bloqueos (mas cosas que Escupin)
+
+# ------------------------------------------------------------ LA PUERTA
+# Tapa el hueco de la pared derecha del cuarto (lo marcado en ROJO). Es una
+# IMAGEN: assets/maps/combate/puerta_farolero.png (vertical; se ajusta al alto
+# de DOOR_RECT). Si no existe se usa un dibujo provisorio de madera.
+# Esta cerrada y es SOLIDA hasta que el Farolero entra: la rompe con efecto.
+# (Si despues rompes la puerta de otra forma, usar RescueDoor.smash.)
+DOOR_RECT = (303, 1250, 10, 53)    # (x, y, ancho, alto) en pixeles del mundo
+DOOR_IMAGE = "puerta_farolero.png"
+DOOR_BREAK_DIST = 8                # la rompe cuando llega a esta distancia de su borde derecho
+DOOR_DEBRIS = 34                   # cantidad de astillas al romperse
+DOOR_DEBRIS_LIFE = 1.3             # segundos que vuelan las astillas
+DOOR_RUBBLE = 9                    # astillas que quedan en el piso para siempre
+
+# ------------------------------------------------------------ LA TIENDITA
+# El Farolero se apoya en una mesita y desde ahi te vende. La mesa y lo que
+# la rodea tienen imagenes opcionales (si faltan se usa un dibujo provisorio):
+#   assets/maps/combate/mesita_farolero.png   (se ajusta a TABLE_RECT)
+TABLE_RECT = (213, 1224, 64, 22)   # (x, y, ancho, alto): la mesita (es solida)
+TABLE_IMAGE = "mesita_farolero.png"
+# Alfombra (suelo), estante en la pared de arriba y cajas. (x, y, ancho, alto)
+SHOP_RUG = (203, 1246, 84, 40)
+SHOP_SHELF = (219, 1181, 52, 14)
+SHOP_CRATES = [(281, 1226, 16, 16), (284, 1214, 13, 12)]   # solidas
+# Luces extra de la tienda: (x, y, radio) lamparas encendidas sobre la mesa
+SHOP_LAMPS = [(224, 1226, 38), (266, 1226, 38)]
+# camino del Farolero hasta su lugar (puntos intermedios; despues FAROLERO_SPOT)
+FAROLERO_PATH = [(195, 1224)]
