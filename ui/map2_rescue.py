@@ -39,6 +39,7 @@ Lo que hay que enganchar en states/new_game.py (ya esta hecho):
 import json
 import math
 import random
+from pathlib import Path
 
 import pygame
 
@@ -47,6 +48,8 @@ from ui.boss_dialog import BossDialog, COMBAT_DIR
 from ui.map2_scene import CenizoHurtDialog, CENIZO_HURT_DIALOG_HEIGHT
 from ui.tutorial import DEFAULT_THEME
 from world import map2_intro as cfg
+
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
 RESCUER_THEME = dict(
@@ -245,16 +248,21 @@ class FaroleroAnim:
         self._sheets = {}
         self._cache = {}
 
-        try:
+        nombre = getattr(cfg, "FAROLERO_ANIM_JSON", "farolero_anim.json")
 
-            with open(
-                COMBAT_DIR / getattr(cfg, "FAROLERO_ANIM_JSON", "farolero_anim.json"),
-                encoding="utf-8",
-            ) as f:
-                self.meta = json.load(f)
+        # el json lo genera tools/make_farolero_assets.py en assets/maps/combate;
+        # si está en data/ (como en el zip del proyecto) también se lee de ahí
+        for carpeta in (COMBAT_DIR, DATA_DIR):
 
-        except (OSError, ValueError):
-            self.meta = None
+            try:
+
+                with open(carpeta / nombre, encoding="utf-8") as f:
+                    self.meta = json.load(f)
+
+                break
+
+            except (OSError, ValueError):
+                self.meta = None
 
         if self.meta is None:
             # sin json: medidas de las hojas que vienen en assets/maps/combate
@@ -334,6 +342,10 @@ class FaroleroAnim:
             faces_right = info.get("faces", "right") == "right"
             flip = (direction == "right") != faces_right
 
+        cw_, ch_ = int(cw), int(ch)
+        if not _dentro(sheet, pygame.Rect(n * cw_, row * ch_, cw_, ch_)):
+            return None
+
         key = ("walk", n, side_h, row, flip)
 
         img = self._cache.get(key)
@@ -380,7 +392,12 @@ class FaroleroAnim:
 
             r, c = divmod(n, cols)
 
-            cell = sheet.subsurface(pygame.Rect(c * cw, r * ch, cw, ch))
+            cuadro = pygame.Rect(c * cw, r * ch, cw, ch)
+
+            if not _dentro(sheet, cuadro):
+                return None
+
+            cell = sheet.subsurface(cuadro)
 
             img = pygame.transform.smoothscale(
                 cell, (max(2, int(cw * scale)), max(2, int(ch * scale)))
@@ -406,6 +423,16 @@ class FaroleroAnim:
         quedan sentado y se repiten (ver sit_idle_frame)."""
 
         return self._grid("sit", n, side_h)
+
+
+def _dentro(sheet, rect):
+    """True si el recorte cae dentro de la hoja (si no, pygame lanza ValueError)."""
+
+    return (
+        rect.x >= 0 and rect.y >= 0
+        and rect.x + rect.width <= sheet.get_width()
+        and rect.y + rect.height <= sheet.get_height()
+    )
 
 
 def _dir_name(vec, last="down"):
