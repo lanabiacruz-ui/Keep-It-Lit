@@ -168,6 +168,28 @@ DEFAULT_DATA = {
         ),
     },
 
+    "slime4": {
+        "nombre": "Slime Resorte",
+        "imagen": "slime4.png",
+        "descripcion": (
+            "Mas grande y con bastante vida. Si lo golpeas no huye: se queda "
+            "temblando un momento y despues sale disparado contra vos como un "
+            "resorte. Cuando le queda poca vida sale corriendo. Si lo atrapas "
+            "suelta 14 monedas, 2 gelea, de 1 a 4 gelea elastica y de 1 a 2 cristales rojos. Solo aparece en el mapa 2."
+        ),
+    },
+
+    "slime5": {
+        "nombre": "Slime Pimentón",
+        "imagen": "slime5.png",
+        "descripcion": (
+            "El más grande y duro de los slimes, rojo de furia. Si lo "
+            "golpeas se pone a echar humo, tiembla y se lanza contra vos con "
+            "mucha mas fuerza, y su golpe pega el doble. Con poca vida huye. "
+            "Si lo atrapas suelta 36 monedas, 6 gelea, de 1 a 4 gelea elastica y de 1 a 2 cristales rojos. Solo aparece en el mapa 2."
+        ),
+    },
+
     "slime3": {
         "nombre": "Slime Brillante",
         "imagen": "slime3.png",
@@ -243,6 +265,8 @@ class EnemyEncyclopedia:
         "slime",             # comun (55% de las apariciones)
         "slime2",            # dorado (30%)
         "slime3",            # brillante, el mas raro (15%)
+        "slime4",            # rebote: contraataca al golpearlo
+        "slime5",            # enojado: contraataca fuerte, mas vida
         "pino",              # zona 1, oleada 1
         "tronco",            # zona 1, oleada 3
         "mosquito",          # zona 1, oleada 6
@@ -298,6 +322,8 @@ class EnemyEncyclopedia:
         "slime": 100,
         "slime2": 100,
         "slime3": 100,
+        "slime4": 150,
+        "slime5": 300,
         "jefe_pina": 1500,
         "jefe_golem": 2500,
         "arana": 400,

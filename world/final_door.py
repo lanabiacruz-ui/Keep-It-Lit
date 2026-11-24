@@ -1063,6 +1063,49 @@ def _apply(game, st):
     cam.scaled_height = int(wm.height * cam.zoom)
 
 
+def _valid_spot(game, center):
+    """True si el jugador puede estar parado en `center` (dentro del mapa y
+    sin pared encima)."""
+
+    rect = game.player.rect.copy()
+    rect.center = (int(center[0]), int(center[1]))
+
+    col = game.collision_map
+
+    if (
+        rect.left < 0
+        or rect.top < 0
+        or rect.right > col.world_width
+        or rect.bottom > col.world_height
+    ):
+        return False
+
+    return col.can_move(rect)
+
+
+def _safe_pos(game, pos, fallback, max_radius=400, step=8):
+    """Devuelve `pos` si es un lugar valido; si no, el punto valido mas
+    cercano; si no hay ninguno, `fallback` (el inicio del mapa)."""
+
+    if _valid_spot(game, pos):
+        return pos
+
+    for r in range(step, max_radius + 1, step):
+
+        for dx in range(-r, r + 1, step):
+            for dy in range(-r, r + 1, step):
+
+                if max(abs(dx), abs(dy)) != r:
+                    continue
+
+                cand = (pos[0] + dx, pos[1] + dy)
+
+                if _valid_spot(game, cand):
+                    return cand
+
+    return fallback
+
+
 def enter_map(game, target, pos=None):
 
     cur = getattr(game, "current_map", "mapa1")
@@ -1102,8 +1145,14 @@ def enter_map(game, target, pos=None):
 
     game.current_map = target
 
+    fallback = MAP2_SPAWN if target == "mapa2" else MAP1_RETURN
+
     if pos is None:
-        pos = MAP2_SPAWN if target == "mapa2" else MAP1_RETURN
+        pos = fallback
+
+    # una posicion guardada puede haber quedado dentro de una pared o fuera
+    # del mapa: se busca el lugar valido mas cercano (o el inicio del mapa)
+    pos = _safe_pos(game, pos, fallback)
 
     game.player.rect.center = pos
 

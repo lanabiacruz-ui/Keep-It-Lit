@@ -51,6 +51,10 @@ from world.final_door import (
 from world.crusher import CrusherBlocks
 from world.zones import ZoneTracker, ZONES, APPROACH_ZONES
 from world.slime import SlimeManager
+from world.elastic import (
+    ElasticShot, RADIUS as ELASTIC_RADIUS, HIT_COOLDOWN as ELASTIC_COOLDOWN,
+    ENEMY_DAMAGE as ELASTIC_ENEMY_DAMAGE, ARENA_DAMAGE as ELASTIC_ARENA_DAMAGE,
+)
 from world.spider import SpiderManager
 from world.shop import (
     Shopkeeper, load_catalog, price_table, SHOP_UNLOCK_WAVES,
@@ -554,6 +558,14 @@ class NewGame:
         self.map2_rescue = None
         self.map2_rescue_done = bool(self.save_data.get("map2_rescue", False))
 
+        # punto de control de la pelea (si se murio o se salio en medio)
+        self.map2_fight_cp = self.save_data.get("map2_fight_cp") or None
+        self._fight_restart_pending = bool(
+            self.map2_fight_cp
+            and not self.map2_rescue_done
+            and self.save_data.get("current_map") == "mapa2"
+        )
+
         # despues del rescate el Farolero se queda en su lugar: ilumina y cura
         # su cuarto para siempre y vende cosas (ver FaroleroNPC)
         self.farolero = FaroleroNPC(self) if self.map2_rescue_done else None
@@ -1001,6 +1013,9 @@ class NewGame:
         self.dummies = []
 
         self.slimes = SlimeManager()
+
+        # gelatinas elasticas en vuelo (las tira el jugador)
+        self.elastic_shots = []
 
         # arañas: solo existen en el mapa 2 (no van en ninguna oleada)
         self.spiders = SpiderManager()
@@ -2924,6 +2939,10 @@ class NewGame:
             self.vida = min(1.0, self.vida + valor)
             self.last_heal = valor
 
+        elif tipo == "lanzar_elastica":
+
+            self._launch_elastic()
+
         elif tipo == "vida_fijar":
 
             self.vida = max(
@@ -3281,6 +3300,63 @@ class NewGame:
                 return arena
 
         return None
+
+    def _launch_elastic(self):
+
+        p = self.player
+
+        vx, vy = p.FACING_VEC[p.direction]
+
+        x, y = p.rect.center
+
+        self.elastic_shots.append(ElasticShot(x, y, (vx, vy)))
+
+        audio.play("shot")
+
+    def _elastic_hit(self, shot):
+
+        center = (round(shot.pos.x), round(shot.pos.y))
+
+        for arena in self.arenas:
+
+            arena.hurt_in_radius(center, ELASTIC_RADIUS, ELASTIC_ARENA_DAMAGE)
+
+        cx, cy = center
+
+        for slime in self.slimes.targets():
+
+            size = max(slime.rect.width, slime.rect.height) / 2
+
+            if math.hypot(slime.rect.centerx - cx, slime.rect.centery - cy) <= ELASTIC_RADIUS + size:
+                slime.take_damage(ELASTIC_ENEMY_DAMAGE)
+
+        for spider in self.spiders.targets():
+
+            size = max(spider.rect.width, spider.rect.height) / 2
+
+            if math.hypot(spider.rect.centerx - cx, spider.rect.centery - cy) <= ELASTIC_RADIUS + size:
+                spider.take_damage(ELASTIC_ENEMY_DAMAGE)
+
+    def _update_elastic(self, dt):
+
+        alive = []
+
+        for shot in self.elastic_shots:
+
+            shot.update(dt, self.collision_map)
+
+            if shot.done:
+                continue
+
+            if shot.hit_t <= 0:
+
+                self._elastic_hit(shot)
+
+                shot.hit_t = ELASTIC_COOLDOWN
+
+            alive.append(shot)
+
+        self.elastic_shots = alive
 
     def _polvora_hit(self, damage):
 
@@ -4808,10 +4884,7 @@ class NewGame:
 
         self._save()
 
-    def _save(self):
-
-        if not self.save_path:
-            return
+    def _inventory_for_save(self):
 
         inventory = []
 
@@ -4834,6 +4907,63 @@ class NewGame:
                         count
                     ]
                 )
+
+        return inventory
+
+    # ---- punto de control de la pelea contra las arañas (mapa 2) ----------
+
+    def start_map2_checkpoint(self):
+        """Empieza la pelea: si el jugador muere, reaparece aca (donde
+        termino la ultima charla) con los items que tenia antes de pelear."""
+
+        self.map2_fight_cp = {
+            "x": self.player.rect.centerx,
+            "y": self.player.rect.centery,
+            "inventory": self._inventory_for_save(),
+            "light": self.light_type,
+            "has_match": bool(self.has_match),
+            "vida": self.vida,
+            "escudo": self.escudo,
+            "coins": self.coins,
+            "gel_coins": self.gel_coins,
+            "gems": self.gems,
+            "gems_green": self.gems_green,
+            "ganzua_uses": self.ganzua_uses,
+            "first_match": bool(self.first_match and self.has_match),
+            "death_drops": self._collect_drops_for_save(),
+        }
+
+        print(
+            f"[pelea] punto de control: x={self.map2_fight_cp['x']} "
+            f"y={self.map2_fight_cp['y']} items={len(self.map2_fight_cp['inventory'])} "
+            f"guardar={'si' if self.save_path else 'NO (sin archivo de partida)'}"
+        )
+
+        self._save()
+
+    def begin_map2_fight(self):
+        """Vuelve a armar la pelea de arañas (al reaparecer tras morir)."""
+
+        from world import map2_intro
+
+        print("[pelea] reaparece: se vuelve a armar la pelea de arañas")
+
+        self.spiders.spawn_intro(
+            self, map2_intro.SPIDER_POS, map2_intro.AURA_POS
+        )
+
+        self.spiders.start_horde(
+            self,
+            map2_intro.HORDE_COUNT,
+            getattr(map2_intro, "HORDE_SPIDER_COUNT", 0),
+        )
+
+    def _save(self):
+
+        if not self.save_path:
+            return
+
+        inventory = self._inventory_for_save()
 
         data = {
             "x": self.player.rect.centerx,
@@ -4919,6 +5049,14 @@ class NewGame:
         elif self._objective_saved is not None:
             data["objective_index"] = int(self._objective_saved)
             data["objective_version"] = OBJECTIVE_VERSION
+
+        # durante la pelea el archivo guarda el punto de control (no lo que
+        # se junto despues): si muere, vuelve a ese lugar con esos items
+        cp = getattr(self, "map2_fight_cp", None)
+
+        if cp:
+            data.update(cp)
+            data["map2_fight_cp"] = cp
 
         save_progress(
             self.save_path,
@@ -5478,6 +5616,11 @@ class NewGame:
         if self._death_dropped or self.mode == MODE_HARDCORE:
             return
 
+        # en la pelea contra las arañas no se pierde nada: se vuelve al punto
+        # de control con los items que tenias antes de pelear
+        if getattr(self, "map2_fight_cp", None):
+            return
+
         self._death_dropped = True
 
         cx, cy = self.player.rect.center
@@ -5533,6 +5676,12 @@ class NewGame:
             else:
                 self._save()
 
+            return
+
+        # pelea contra las arañas: no hay perdida. El archivo ya guarda el
+        # punto de control, asi que al reaparecer vuelve a ese lugar.
+        if getattr(self, "map2_fight_cp", None):
+            self._loss_applied = True
             return
 
         self._drop_death_items()
@@ -6251,6 +6400,36 @@ class NewGame:
 
         self._update_map_zoom(dt)
 
+        # el fundido de la tiendita tiene que avanzar SIEMPRE (tambien durante
+        # las cinematicas y los pasos que cortan el update mas abajo), si no
+        # los muebles quedan invisibles en la pelea
+        if getattr(self, "_fight_restart_pending", False):
+
+            self._fight_restart_pending = False
+
+            self.begin_map2_fight()
+        if getattr(self, "map2_fight_cp", None) and not getattr(self, "_fight_logged", False):
+            self._fight_logged = True
+            print(f"[pelea] punto de control activo en {self.map2_fight_cp['x']},{self.map2_fight_cp['y']}")
+
+        # la pelea termino (el rescate espanto a las arañas): se borra el punto
+        if getattr(self, "map2_fight_cp", None) and self.spiders.peace:
+
+            self.map2_fight_cp = None
+
+            self._save()
+
+        # la tiendita (mesita, estante, etc.) aparece YA al entrar al mapa 2,
+        # desde el principio del comic y la cinematica
+        decor = self.shop_decor
+
+        if getattr(self, "current_map", "mapa1") == "mapa2" and not decor.shown:
+            # se ven los muebles, pero las lamparas quedan apagadas
+            decor.reveal(lit=False)
+            decor.appear = 1.0
+
+        decor.update(dt)
+
         if (
             self.fx.hitstop > 0
             and self.state == "playing"
@@ -6483,29 +6662,40 @@ class NewGame:
             return None
 
 
-        zone = self.zone_tracker.update(
-            self.player.rect.center
-        )
+        # las zonas (Zona 1, Zona 2, avisos) son del mapa 1: en el mapa 2 no
+        # se muestran
+        if getattr(self, "current_map", "mapa1") != "mapa1":
 
-        if zone is not None:
+            self.zone_tracker.current = None
+            self._approach_current = None
 
-            self.zone_banner.show(
-                zone.name
+            zone = None
+
+        else:
+
+            zone = self.zone_tracker.update(
+                self.player.rect.center
             )
 
-        approach = None
+            if zone is not None:
 
-        for az in APPROACH_ZONES:
+                self.zone_banner.show(
+                    zone.name
+                )
 
-            if az.rect.collidepoint(self.player.rect.center):
-                approach = az
-                break
+            approach = None
 
-        if approach is not None and approach is not self._approach_current:
+            for az in APPROACH_ZONES:
 
-            self.zone_banner.show(approach.name)
+                if az.rect.collidepoint(self.player.rect.center):
+                    approach = az
+                    break
 
-        self._approach_current = approach
+            if approach is not None and approach is not self._approach_current:
+
+                self.zone_banner.show(approach.name)
+
+            self._approach_current = approach
 
         if zone is not None:
             self.zones_seen.add(zone.id)
@@ -6753,12 +6943,13 @@ class NewGame:
 
         self.spiders.update(dt, self)
 
+        self._update_elastic(dt)
+
         self._update_map2_finale(dt)
 
         self._update_map2_rescue(dt)
 
         self.map2_door.update(dt)
-        self.shop_decor.update(dt)
 
 
         # yunque "Manos agiles": cofres con menos espera
@@ -7461,6 +7652,9 @@ class NewGame:
             dummy.draw(self.screen, self.camera)
 
         self.slimes.draw(self.screen, self.camera)
+
+        for shot in self.elastic_shots:
+            shot.draw(self.screen, self.camera)
 
         self.spiders.draw(self.screen, self.camera)
 

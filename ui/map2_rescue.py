@@ -1642,14 +1642,20 @@ class ShopDecor:
         self.shown = bool(shown)
         self.appear = 1.0 if shown else 0.0
 
+        # las lamparas solo encienden cuando llega el Farolero (lit)
+        self.lit = bool(shown)
+
         self.table = pygame.Rect(*cfg.TABLE_RECT)
         self.rug = pygame.Rect(*cfg.SHOP_RUG)
         self.shelf = pygame.Rect(*cfg.SHOP_SHELF)
         self.crates = [pygame.Rect(*c) for c in cfg.SHOP_CRATES]
 
-    def reveal(self):
+    def reveal(self, lit=True):
 
         self.shown = True
+
+        if lit:
+            self.lit = True
 
     def update(self, dt):
 
@@ -1671,7 +1677,7 @@ class ShopDecor:
     def light_sources(self, zoom):
         """Las lamparas de la mesa (luz fija)."""
 
-        if self.appear < 0.99:
+        if self.appear < 0.99 or not self.lit:
             return []
 
         return [

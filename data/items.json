@@ -304,5 +304,18 @@
     "requiere_fosforo": false,
     "max_pila": 3,
     "efectos": []
+  },
+  "gelea_elastica": {
+    "nombre": "Gelea elástica",
+    "descripcion": "Tirala hacia donde mirás: rebota en las paredes hasta 3 veces y pega a los enemigos que toca. No necesita luz.",
+    "efectos": [
+      {
+        "tipo": "lanzar_elastica"
+      }
+    ]
+  },
+  "cristal_rojo": {
+    "nombre": "Cristal rojo",
+    "descripcion": "Un cristal que brilla rojo. Por ahora no sirve para nada."
   }
 }

@@ -1460,6 +1460,10 @@ class Map2Finale:
 
         # de la oscuridad empiezan a salir Aurantulas (de a poco, sin hacer
         # daño) y se acercan: ver world/spider.py (start_horde)
+        # la charla termino: aca empieza la pelea. Si el jugador muere, vuelve
+        # a este lugar con los items que tenia ahora
+        g.start_map2_checkpoint()
+
         g.spiders.start_horde(
             g, cfg.HORDE_COUNT, getattr(cfg, "HORDE_SPIDER_COUNT", 0)
         )

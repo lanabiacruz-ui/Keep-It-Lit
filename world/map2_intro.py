@@ -61,6 +61,7 @@ SPIDER_POS = [
     (72, 1250), (234, 1254),
     (60, 1292), (234, 1298),
     (50, 1326), (252, 1350),
+    (150, 1298), (150, 1334), (114, 1298),  # 3 arañas mas: en total 9
 ]
 
 # NARANJAS: aurantulas (x, y). Vacio: al principio hay SOLO arañas comunes;
